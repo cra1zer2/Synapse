@@ -1,13 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  background-color: #f3f4f6;
-  color: #111827;
+  --font-apple: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  --bg-ios: #f2f2f7;
+  --card-ios: #ffffff;
+  --separator-ios: #e5e5ea;
 }
 
+html,
 body {
+  background-color: var(--bg-ios);
+  font-family: var(--font-apple);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   margin: 0;
   padding: 0;
-  background-color: #f3f4f6;
-  color: #111827;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input[type="checkbox"][switch] {
+  appearance: auto;
+  cursor: pointer;
 }

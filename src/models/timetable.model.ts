@@ -11,6 +11,7 @@ export interface LessonItem {
     flag: string | null
     teacherAbsent: boolean
     teacherAbsenceReason?: string
+    lessonCount?: number
 }
 
 export interface DaySchedule {

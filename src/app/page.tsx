@@ -1,34 +1,48 @@
 'use client'
 
 import { useState } from 'react'
-import { testLibrusConnection } from './actions'
+import { executeLibrusDiagnostics } from './actions'
+
+type TabKey = 'accountInfo' | 'luckyNumber' | 'timetable' | 'grades' | 'absences' | 'calendar' | 'inbox' | 'announcements'
 
 export default function Home() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState<TabKey>('accountInfo')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    const res = await testLibrusConnection(username, password)
+    const res = await executeLibrusDiagnostics(username, password)
     setResult(res)
     setLoading(false)
   }
 
+  const tabs: TabKey[] = [
+    'accountInfo',
+    'luckyNumber',
+    'timetable',
+    'grades',
+    'absences',
+    'calendar',
+    'inbox',
+    'announcements'
+  ]
+
   return (
-    <main className="min-h-screen bg-gray-100 text-gray-900 flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white border border-gray-300 rounded-xl p-6 shadow-sm">
-        <h1 className="text-xl font-bold text-gray-900 mb-6 text-center">Synapse API Test</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <main className="min-h-screen p-6 max-w-5xl mx-auto flex flex-col gap-6">
+      <div className="bg-white border border-gray-300 rounded-xl p-6 shadow-sm">
+        <h1 className="text-2xl font-bold mb-4">Synapse Diagnostics Suite</h1>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full border border-gray-400 bg-white text-gray-900 rounded-lg p-2.5 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+              className="w-full border border-gray-400 bg-white text-gray-900 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-600"
               required
             />
           </div>
@@ -38,27 +52,58 @@ export default function Home() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-400 bg-white text-gray-900 rounded-lg p-2.5 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+              className="w-full border border-gray-400 bg-white text-gray-900 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-600"
               required
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white font-medium p-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Connecting...' : 'Test Connection'}
-          </button>
+          <div className="flex items-end">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white font-medium p-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors h-[42px]"
+            >
+              {loading ? 'Testing All Endpoints...' : 'Run Full Diagnostics'}
+            </button>
+          </div>
         </form>
+      </div>
 
-        {result && (
-          <div className="mt-6 border border-gray-200 bg-gray-50 rounded-lg p-3 max-h-60 overflow-y-auto">
+      {result && !result.success && (
+        <div className="bg-red-50 border border-red-300 text-red-800 p-4 rounded-xl">
+          <p className="font-semibold">Authentication or Gateway Error:</p>
+          <pre className="text-xs mt-2 whitespace-pre-wrap">{result.error}</pre>
+        </div>
+      )}
+
+      {result && result.success && (
+        <div className="bg-white border border-gray-300 rounded-xl p-6 shadow-sm flex flex-col gap-4">
+          <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
+            {tabs.map((tab) => {
+              const tabData = result.data[tab]
+              const isOk = tabData?.success
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === tab
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${isOk ? 'bg-green-400' : 'bg-red-400'}`} />
+                  {tab}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-[600px] overflow-y-auto">
             <pre className="text-xs text-gray-800 break-all whitespace-pre-wrap">
-              {JSON.stringify(result, null, 2)}
+              {JSON.stringify(result.data[activeTab], null, 2)}
             </pre>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </main>
   )
 }

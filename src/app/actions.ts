@@ -1,16 +1,13 @@
 'use server'
 
-import Librus from 'librus-api'
+import { runFullLibrusDiagnostics } from '@/services/librus.service'
 
-export async function testLibrusConnection(username: string, password: string) {
+export async function executeLibrusDiagnostics(username: string, pass: string) {
     try {
-        const client = new Librus()
-        await client.authorize(username, password)
-        const announcements = await client.inbox.listAnnouncements()
-
+        const results = await runFullLibrusDiagnostics(username, pass)
         return {
             success: true,
-            data: announcements
+            data: results
         }
     } catch (error) {
         return {

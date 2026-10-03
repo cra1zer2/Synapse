@@ -9,6 +9,7 @@ export interface DiagnosticResult {
     calendar: any
     inbox: any
     announcements: any
+    clientInternals: any
 }
 
 export async function runFullLibrusDiagnostics(username: string, pass: string): Promise<DiagnosticResult> {
@@ -44,6 +45,11 @@ export async function runFullLibrusDiagnostics(username: string, pass: string): 
         fetchSafe(() => client.inbox.listAnnouncements())
     ])
 
+    const clientInternals = {
+        keys: Object.keys(client),
+        callerAvailable: Boolean((client as any)._caller || (client as any).caller)
+    }
+
     return {
         accountInfo,
         luckyNumber,
@@ -52,6 +58,7 @@ export async function runFullLibrusDiagnostics(username: string, pass: string): 
         absences,
         calendar,
         inbox,
-        announcements
+        announcements,
+        clientInternals
     }
 }

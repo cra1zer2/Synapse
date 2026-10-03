@@ -1,16 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { executeLibrusDiagnostics } from './actions'
 
-type TabKey = 'accountInfo' | 'luckyNumber' | 'timetable' | 'grades' | 'absences' | 'calendar' | 'inbox' | 'announcements'
+type TabKey =
+  | 'accountInfo'
+  | 'luckyNumber'
+  | 'timetable'
+  | 'grades'
+  | 'absences'
+  | 'calendar'
+  | 'inbox'
+  | 'announcements'
+  | 'clientInternals'
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<TabKey>('accountInfo')
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return null
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,7 +46,8 @@ export default function Home() {
     'absences',
     'calendar',
     'inbox',
-    'announcements'
+    'announcements',
+    'clientInternals'
   ]
 
   return (
@@ -80,7 +99,7 @@ export default function Home() {
           <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
             {tabs.map((tab) => {
               const tabData = result.data[tab]
-              const isOk = tabData?.success
+              const isOk = tab === 'clientInternals' ? true : tabData?.success
               return (
                 <button
                   key={tab}

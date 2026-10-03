@@ -63,11 +63,15 @@ export default function Home() {
   const t = getDictionary(translate)
 
   const resolveSmartDefaultDay = (schedule: DaySchedule[]): string => {
+    if (!Array.isArray(schedule) || schedule.length === 0) {
+      return 'Monday'
+    }
+
     const dayMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     const todayName = dayMap[new Date().getDay()]
 
     const todaySchedule = schedule.find((d) => d.dayName === todayName)
-    if (todaySchedule && todaySchedule.lessons.length > 0) {
+    if (todaySchedule && Array.isArray(todaySchedule.lessons) && todaySchedule.lessons.length > 0) {
       return todayName
     }
 
@@ -77,7 +81,7 @@ export default function Home() {
     if (todayIdx !== -1) {
       for (let i = todayIdx + 1; i < weekdaysOrder.length; i++) {
         const nextDay = schedule.find((d) => d.dayName === weekdaysOrder[i])
-        if (nextDay && nextDay.lessons.length > 0) {
+        if (nextDay && Array.isArray(nextDay.lessons) && nextDay.lessons.length > 0) {
           return weekdaysOrder[i]
         }
       }
@@ -85,7 +89,7 @@ export default function Home() {
 
     for (const day of weekdaysOrder) {
       const match = schedule.find((d) => d.dayName === day)
-      if (match && match.lessons.length > 0) {
+      if (match && Array.isArray(match.lessons) && match.lessons.length > 0) {
         return day
       }
     }
@@ -109,9 +113,24 @@ export default function Home() {
     if (cachedSnapshot) {
       try {
         const parsed = JSON.parse(cachedSnapshot)
-        if (parsed.t) {
-          setTimetableData(parsed.t)
-          setSelectedDay(resolveSmartDefaultDay(parsed.t.schedule))
+        if (parsed.t && Array.isArray(parsed.t.schedule)) {
+          const sanitizedSchedule = parsed.t.schedule.map((d: any) => ({
+            ...d,
+            date: d.date || '',
+            isoDate: d.isoDate || '',
+            events: Array.isArray(d.events) ? d.events : [],
+            lessons: Array.isArray(d.lessons) ? d.lessons : []
+          }))
+
+          const sanitizedTimetable: SmartTimetableResult = {
+            ...parsed.t,
+            schedule: sanitizedSchedule,
+            allAbsentTeachers: Array.isArray(parsed.t.allAbsentTeachers) ? parsed.t.allAbsentTeachers : [],
+            calendarEvents: Array.isArray(parsed.t.calendarEvents) ? parsed.t.calendarEvents : []
+          }
+
+          setTimetableData(sanitizedTimetable)
+          setSelectedDay(resolveSmartDefaultDay(sanitizedSchedule))
         }
         if (parsed.g) setGradesData(parsed.g)
         if (parsed.a) setAttendanceData(parsed.a)
@@ -455,7 +474,7 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col gap-2">
-              {selectedSubjectDetail.absences.length > 0 ? (
+              {selectedSubjectDetail.absences && selectedSubjectDetail.absences.length > 0 ? (
                 selectedSubjectDetail.absences.map((item, idx) => (
                   <div
                     key={idx}

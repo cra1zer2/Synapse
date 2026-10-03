@@ -71,12 +71,14 @@ export function ScheduleWidget({
                             }`}
                     >
                         <span>{day.dayName.slice(0, 3)}</span>
-                        <span className="text-[10px] opacity-75">{day.date.split('.')[0]}</span>
+                        <span className="text-[10px] opacity-75">
+                            {day.date ? day.date.split('.')[0] : ''}
+                        </span>
                     </button>
                 ))}
             </div>
 
-            {currentDaySchedule && currentDaySchedule.events.length > 0 && (
+            {currentDaySchedule && currentDaySchedule.events && currentDaySchedule.events.length > 0 && (
                 <div className="flex flex-col gap-1.5">
                     {currentDaySchedule.events.map((ev, idx) => (
                         <div
@@ -96,7 +98,7 @@ export function ScheduleWidget({
             )}
 
             <div className="flex flex-col gap-2.5">
-                {currentDaySchedule && currentDaySchedule.lessons.length > 0 ? (
+                {currentDaySchedule && currentDaySchedule.lessons && currentDaySchedule.lessons.length > 0 ? (
                     currentDaySchedule.lessons.map((lesson) => (
                         <article
                             key={`${lesson.number}-${lesson.subject}-${lesson.time}`}

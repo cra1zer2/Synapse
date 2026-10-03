@@ -58,9 +58,9 @@ export async function createJustificationAction(username: string, pass: string, 
     }
 }
 
-export async function getSmartTimetableAction(username: string, pass: string, translate: boolean) {
+export async function getSmartTimetableAction(username: string, pass: string, translate: boolean, targetDateIso?: string) {
     try {
-        const result = await fetchSmartTimetable(username, pass, translate)
+        const result = await fetchSmartTimetable(username, pass, translate, targetDateIso)
         return result
     } catch (error) {
         return {

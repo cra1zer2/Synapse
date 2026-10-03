@@ -14,20 +14,36 @@ export interface LessonItem {
     lessonCount?: number
 }
 
+export interface TimetableEvent {
+    id?: string | number
+    title: string
+    date: string
+    isoDate: string
+    isAbsence: boolean
+    category: 'holiday' | 'exam' | 'info'
+}
+
 export interface DaySchedule {
     dayName: string
-    date?: string
+    date: string
+    isoDate: string
+    isToday: boolean
+    events: TimetableEvent[]
     lessons: LessonItem[]
 }
 
 export interface AbsentTeacherItem {
     teacher: string
     date: string
+    isoDate: string
     reason?: string
     isRelevantToStudent: boolean
 }
 
 export interface SmartTimetableResult {
+    weekStart: string
+    weekEnd: string
     schedule: DaySchedule[]
     allAbsentTeachers: AbsentTeacherItem[]
+    calendarEvents: TimetableEvent[]
 }

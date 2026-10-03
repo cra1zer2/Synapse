@@ -1,5 +1,11 @@
 import Librus from 'librus-api'
-import { LessonItem, DaySchedule, AbsentTeacherItem, SmartTimetableResult } from '@/models/timetable.model'
+import {
+    LessonItem,
+    DaySchedule,
+    AbsentTeacherItem,
+    TimetableEvent,
+    SmartTimetableResult
+} from '@/models/timetable.model'
 import { translateBatch } from '@/services/translation.service'
 import { formatDisplayDate, extractTimeInterval } from '@/utils/date.util'
 
@@ -40,58 +46,6 @@ function flattenCalendarEvents(raw: any): any[] {
         return Object.values(raw).flatMap((val) => flattenCalendarEvents(val))
     }
     return []
-}
-
-function extractTeacherFromEvent(event: any, defaultYear: number, defaultMonth: number): AbsentTeacherItem | null {
-    if (!event || typeof event !== 'object') {
-        return null
-    }
-
-    const title = (event.title || '').trim()
-    const desc = (event.description || '').trim()
-    const isAbsence = Boolean(
-        event.isAbsence ||
-        title.toLowerCase().includes('nieobecn') ||
-        desc.toLowerCase().includes('nieobecn')
-    )
-
-    if (!isAbsence) {
-        return null
-    }
-
-    let teacher = event.teacher || ''
-    if (!teacher) {
-        teacher = title
-            .replace(/^(nieobecność|nieobecnosc|zastępstwo|zastepstwo|odwołane|odwolane)\s*[:\-]?\s*/i, '')
-            .replace(/^nauczyciel\s*[:\-]?\s*/i, '')
-            .replace(/godziny:.*$/i, '')
-            .trim()
-    }
-
-    if (!teacher && desc) {
-        teacher = desc
-            .replace(/^(nieobecność|nieobecnosc)\s*[:\-]?\s*/i, '')
-            .replace(/^nauczyciel\s*[:\-]?\s*/i, '')
-            .replace(/godziny:.*$/i, '')
-            .trim()
-    }
-
-    const cleanedTeacher = cleanTeacherName(teacher)
-    if (!cleanedTeacher) {
-        return null
-    }
-
-    const rawDate = event.date || event.day
-    const formattedDate = formatDisplayDate(rawDate, defaultYear, defaultMonth)
-    const fullText = `${title} ${desc}`
-    const { timeBadge } = extractTimeInterval(fullText)
-
-    return {
-        teacher: cleanedTeacher,
-        date: formattedDate,
-        reason: timeBadge || 'Nieobecność',
-        isRelevantToStudent: false
-    }
 }
 
 function groupConsecutiveLessons(lessons: LessonItem[]): LessonItem[] {
@@ -149,35 +103,126 @@ function groupConsecutiveLessons(lessons: LessonItem[]): LessonItem[] {
     return grouped
 }
 
+function getWeekDates(pivotDate: Date): { monday: Date; friday: Date; weekDates: Record<string, { dateStr: string; isoStr: string }> } {
+    const current = new Date(pivotDate)
+    const day = current.getDay()
+    const diffToMonday = day === 0 ? -6 : 1 - day
+
+    const monday = new Date(current)
+    monday.setDate(current.getDate() + diffToMonday)
+
+    const friday = new Date(monday)
+    friday.setDate(monday.getDate() + 4)
+
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    const weekDates: Record<string, { dateStr: string; isoStr: string }> = {}
+
+    dayNames.forEach((name, idx) => {
+        const d = new Date(monday)
+        d.setDate(monday.getDate() + idx)
+        const y = d.getFullYear()
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        const dayNum = String(d.getDate()).padStart(2, '0')
+        weekDates[name] = {
+            dateStr: `${dayNum}.${m}.${y}`,
+            isoStr: `${y}-${m}-${dayNum}`
+        }
+    })
+
+    return { monday, friday, weekDates }
+}
+
 export async function fetchSmartTimetable(
     username: string,
     pass: string,
-    translate: boolean = false
+    translate: boolean = false,
+    targetDateIso?: string
 ): Promise<{ success: boolean; data?: SmartTimetableResult; error?: string }> {
     try {
         const client = new Librus()
         await client.authorize(username, pass)
 
-        const now = new Date()
-        const currentMonth = now.getMonth() + 1
-        const currentYear = now.getFullYear()
+        const pivotDate = targetDateIso ? new Date(targetDateIso) : new Date()
+        const { monday, friday, weekDates } = getWeekDates(pivotDate)
+
+        const formatIso = (d: Date) => {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, '0')
+            const dayNum = String(d.getDate()).padStart(2, '0')
+            return `${y}-${m}-${dayNum}`
+        }
+
+        const mondayIso = formatIso(monday)
+        const fridayIso = formatIso(friday)
+
+        const currentYear = monday.getFullYear()
+        const currentMonth = monday.getMonth() + 1
 
         const [rawTimetable, rawCalendar] = await Promise.all([
-            client.calendar.getTimetable(),
+            client.calendar.getTimetable(mondayIso, fridayIso),
             client.calendar.getCalendar(currentMonth, currentYear).catch(() => [])
         ])
 
         const allAbsentTeachers: AbsentTeacherItem[] = []
+        const calendarEvents: TimetableEvent[] = []
         const absentTeacherSet = new Set<string>()
 
         const flatEvents = flattenCalendarEvents(rawCalendar)
         for (const ev of flatEvents) {
-            const parsed = extractTeacherFromEvent(ev, currentYear, currentMonth)
-            if (parsed && parsed.teacher) {
-                const key = `${parsed.teacher.toLowerCase()}-${parsed.date}`
-                if (!absentTeacherSet.has(key)) {
-                    absentTeacherSet.add(key)
-                    allAbsentTeachers.push(parsed)
+            if (!ev || typeof ev !== 'object') continue
+
+            const title = (ev.title || '').trim()
+            const desc = (ev.description || '').trim()
+            const fullText = `${title} ${desc}`.toLowerCase()
+
+            const isAbsence = Boolean(ev.isAbsence || fullText.includes('nieobecn'))
+
+            let category: 'holiday' | 'exam' | 'info' = 'info'
+            if (fullText.includes('ferie') || fullText.includes('wolne') || fullText.includes('nowy rok') || fullText.includes('święto')) {
+                category = 'holiday'
+            } else if (fullText.includes('termin') || fullText.includes('ocen') || fullText.includes('egzamin') || fullText.includes('sprawdzian')) {
+                category = 'exam'
+            }
+
+            const rawDate = ev.date || ev.day
+            const displayDate = formatDisplayDate(rawDate, currentYear, currentMonth)
+
+            const parts = displayDate.split('.')
+            const isoDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : mondayIso
+
+            if (!isAbsence) {
+                calendarEvents.push({
+                    id: ev.id,
+                    title: title || desc,
+                    date: displayDate,
+                    isoDate,
+                    isAbsence: false,
+                    category
+                })
+            } else {
+                let teacher = ev.teacher || ''
+                if (!teacher) {
+                    teacher = title
+                        .replace(/^(nieobecność|nieobecnosc|zastępstwo|zastepstwo|odwołane|odwolane)\s*[:\-]?\s*/i, '')
+                        .replace(/^nauczyciel\s*[:\-]?\s*/i, '')
+                        .replace(/godziny:.*$/i, '')
+                        .trim()
+                }
+
+                const cleanedTeacher = cleanTeacherName(teacher)
+                if (cleanedTeacher) {
+                    const { timeBadge } = extractTimeInterval(`${title} ${desc}`)
+                    const key = `${cleanedTeacher.toLowerCase()}-${displayDate}`
+                    if (!absentTeacherSet.has(key)) {
+                        absentTeacherSet.add(key)
+                        allAbsentTeachers.push({
+                            teacher: cleanedTeacher,
+                            date: displayDate,
+                            isoDate,
+                            reason: timeBadge || 'Nieobecność',
+                            isRelevantToStudent: false
+                        })
+                    }
                 }
             }
         }
@@ -185,18 +230,18 @@ export async function fetchSmartTimetable(
         const studentTeacherSet = new Set<string>()
         const targetDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
         const tableData = rawTimetable?.table || {}
+        const todayIso = formatIso(new Date())
 
         const schedule: DaySchedule[] = []
 
         for (const day of targetDays) {
             const daySlots = tableData[day]
             const lessons: LessonItem[] = []
+            const { dateStr, isoStr } = weekDates[day]
 
             if (Array.isArray(daySlots)) {
                 daySlots.forEach((slot, index) => {
-                    if (!slot) {
-                        return
-                    }
+                    if (!slot) return
 
                     const cleanedTeacher = cleanTeacherName(slot.teacher || '')
                     if (cleanedTeacher) {
@@ -210,20 +255,20 @@ export async function fetchSmartTimetable(
 
                     let isAbsent = false
                     for (const key of absentTeacherSet) {
-                        if (cleanedTeacher && key.startsWith(cleanedTeacher.toLowerCase())) {
+                        if (cleanedTeacher && key.startsWith(cleanedTeacher.toLowerCase()) && key.includes(dateStr)) {
                             isAbsent = true
                             break
                         }
                     }
 
                     if (isCancelled && cleanedTeacher) {
-                        const dateStr = formatDisplayDate(day, currentYear, currentMonth)
                         const key = `${cleanedTeacher.toLowerCase()}-${dateStr}`
                         if (!absentTeacherSet.has(key)) {
                             absentTeacherSet.add(key)
                             allAbsentTeachers.push({
                                 teacher: cleanedTeacher,
                                 date: dateStr,
+                                isoDate: isoStr,
                                 reason: slot.flag || 'Odwołane zajęcia',
                                 isRelevantToStudent: true
                             })
@@ -242,13 +287,19 @@ export async function fetchSmartTimetable(
                         isSubstitution,
                         flag: slot.flag || null,
                         teacherAbsent: isAbsent || isCancelled,
-                        teacherAbsenceReason: isAbsent || isCancelled ? 'Teacher absent or lesson cancelled' : undefined
+                        teacherAbsenceReason: isAbsent || isCancelled ? 'Nauczyciel nieobecny' : undefined
                     })
                 })
             }
 
+            const dayEvents = calendarEvents.filter((e) => e.date === dateStr || e.isoDate === isoStr)
+
             schedule.push({
                 dayName: day,
+                date: dateStr,
+                isoDate: isoStr,
+                isToday: isoStr === todayIso,
+                events: dayEvents,
                 lessons: groupConsecutiveLessons(lessons)
             })
         }
@@ -265,16 +316,15 @@ export async function fetchSmartTimetable(
 
             schedule.forEach((day) => {
                 day.lessons.forEach((lesson) => {
-                    if (lesson.subject) {
-                        subjectsToTranslate.add(lesson.subject)
-                    }
+                    if (lesson.subject) subjectsToTranslate.add(lesson.subject)
+                })
+                day.events.forEach((ev) => {
+                    if (ev.title) reasonsToTranslate.add(ev.title)
                 })
             })
 
             allAbsentTeachers.forEach((item) => {
-                if (item.reason) {
-                    reasonsToTranslate.add(item.reason)
-                }
+                if (item.reason) reasonsToTranslate.add(item.reason)
             })
 
             const translatedMap = await translateBatch(
@@ -285,6 +335,11 @@ export async function fetchSmartTimetable(
                 day.lessons.forEach((lesson) => {
                     if (translatedMap[lesson.subject]) {
                         lesson.subject = translatedMap[lesson.subject]
+                    }
+                })
+                day.events.forEach((ev) => {
+                    if (translatedMap[ev.title]) {
+                        ev.title = translatedMap[ev.title]
                     }
                 })
             })
@@ -299,8 +354,11 @@ export async function fetchSmartTimetable(
         return {
             success: true,
             data: {
+                weekStart: mondayIso,
+                weekEnd: fridayIso,
                 schedule,
-                allAbsentTeachers
+                allAbsentTeachers,
+                calendarEvents
             }
         }
     } catch (error) {

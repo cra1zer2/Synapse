@@ -45,9 +45,11 @@ export async function runFullLibrusDiagnostics(username: string, pass: string): 
         fetchSafe(() => client.inbox.listAnnouncements())
     ])
 
+    const callerInstance = (client as any)._caller || (client as any).caller
     const clientInternals = {
-        keys: Object.keys(client),
-        callerAvailable: Boolean((client as any)._caller || (client as any).caller)
+        clientKeys: Object.keys(client),
+        callerAvailable: Boolean(callerInstance),
+        callerKeys: callerInstance ? Object.keys(callerInstance) : []
     }
 
     return {
@@ -60,5 +62,23 @@ export async function runFullLibrusDiagnostics(username: string, pass: string): 
         inbox,
         announcements,
         clientInternals
+    }
+}
+
+export async function testGatewayRequest(username: string, pass: string, targetPath: string) {
+    try {
+        const client = new Librus()
+        await client.authorize(username, pass)
+        const caller = (client as any)._caller || (client as any).caller
+
+        if (!caller) {
+            return { success: false, error: 'Caller not found on Librus client' }
+        }
+
+        const cleanPath = targetPath.startsWith('/') ? targetPath.slice(1) : targetPath
+        const response = await caller.get(`https://synergia.librus.pl/${cleanPath}`)
+        return { success: true, data: response }
+    } catch (error) {
+        return { success: false, error: String(error) }
     }
 }

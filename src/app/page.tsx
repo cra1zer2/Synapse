@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { executeLibrusDiagnostics } from './actions'
+import { executeLibrusDiagnostics, executeGatewayProbe } from './actions'
 
 type TabKey =
   | 'accountInfo'
@@ -22,6 +22,10 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<TabKey>('accountInfo')
 
+  const [probePath, setProbePath] = useState('gateway/ms/studentdatapanel/api/Justifications')
+  const [probeResult, setProbeResult] = useState<any>(null)
+  const [probeLoading, setProbeLoading] = useState(false)
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -36,6 +40,14 @@ export default function Home() {
     const res = await executeLibrusDiagnostics(username, password)
     setResult(res)
     setLoading(false)
+  }
+
+  const handleProbe = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setProbeLoading(true)
+    const res = await executeGatewayProbe(username, password, probePath)
+    setProbeResult(res)
+    setProbeLoading(false)
   }
 
   const tabs: TabKey[] = [
@@ -85,6 +97,35 @@ export default function Home() {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="bg-white border border-gray-300 rounded-xl p-6 shadow-sm">
+        <h2 className="text-lg font-bold mb-3">Gateway Endpoint Probe (eUsprawiedliwienia)</h2>
+        <form onSubmit={handleProbe} className="flex flex-col md:flex-row gap-3">
+          <input
+            type="text"
+            value={probePath}
+            onChange={(e) => setProbePath(e.target.value)}
+            placeholder="gateway/ms/studentdatapanel/api/..."
+            className="flex-1 border border-gray-400 bg-white text-gray-900 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-600"
+            required
+          />
+          <button
+            type="submit"
+            disabled={probeLoading || !username || !password}
+            className="bg-emerald-600 text-white font-medium px-6 py-2.5 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          >
+            {probeLoading ? 'Probing...' : 'Probe Gateway'}
+          </button>
+        </form>
+
+        {probeResult && (
+          <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-[300px] overflow-y-auto">
+            <pre className="text-xs text-gray-800 break-all whitespace-pre-wrap">
+              {JSON.stringify(probeResult, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
 
       {result && !result.success && (

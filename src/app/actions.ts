@@ -1,6 +1,6 @@
 'use server'
 
-import { runFullLibrusDiagnostics } from '@/services/librus.service'
+import { runFullLibrusDiagnostics, testGatewayRequest } from '@/services/librus.service'
 
 export async function executeLibrusDiagnostics(username: string, pass: string) {
     try {
@@ -9,6 +9,18 @@ export async function executeLibrusDiagnostics(username: string, pass: string) {
             success: true,
             data: results
         }
+    } catch (error) {
+        return {
+            success: false,
+            error: String(error)
+        }
+    }
+}
+
+export async function executeGatewayProbe(username: string, pass: string, targetPath: string) {
+    try {
+        const result = await testGatewayRequest(username, pass, targetPath)
+        return result
     } catch (error) {
         return {
             success: false,

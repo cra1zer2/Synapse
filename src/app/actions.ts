@@ -82,9 +82,9 @@ export async function getStudentGradesAction(username: string, pass: string, tra
     }
 }
 
-export async function getAttendanceAction(username: string, pass: string) {
+export async function getAttendanceAction(username: string, pass: string, translate: boolean) {
     try {
-        const result = await fetchAttendanceMetrics(username, pass)
+        const result = await fetchAttendanceMetrics(username, pass, translate)
         return result
     } catch (error) {
         return {

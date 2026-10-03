@@ -1,26 +1,33 @@
-export interface AttendanceStats {
-    totalLessons: number
-    presences: number
-    absences: number
-    excused: number
-    unexcused: number
-    lateness: number
-    latenessOverLimit: number
-    attendancePercentage: number
-    isAtRisk: boolean
-    safeAbsencesRemaining: number
-    lessonsToRecover: number
+export interface AbsenceDetail {
+    id?: number | string
+    date: string
+    lessonNumber: number
+    time: string
+    subject: string
+    teacher: string
+    type: 'nb' | 'u' | 'sl' | 'sp' | 'zw'
+    typeName: string
+    isUnexcused: boolean
 }
 
 export interface SubjectAttendance {
     subject: string
     totalLessons: number
     absentLessons: number
+    excusedCount: number
+    unexcusedCount: number
     percentage: number
-    isAtRisk: boolean
+    status: 'danger' | 'warning' | 'safe'
+    absences: AbsenceDetail[]
 }
 
 export interface AttendanceResult {
-    overall: AttendanceStats
+    overallPercentage: number
+    overallStatus: 'danger' | 'warning' | 'safe'
+    totalScheduled: number
+    totalAbsent: number
+    safeAbsencesRemaining: number
+    lessonsToRecover: number
     subjects: SubjectAttendance[]
+    unexcusedAbsences: AbsenceDetail[]
 }

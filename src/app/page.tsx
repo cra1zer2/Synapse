@@ -4,16 +4,18 @@ import { useState, useEffect } from 'react'
 import {
   getSmartTimetableAction,
   getStudentGradesAction,
-  getAttendanceAction
+  getAttendanceAction,
+  createJustificationAction
 } from './actions'
 import { SmartTimetableResult, DaySchedule } from '@/models/timetable.model'
 import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
-import { AttendanceResult } from '@/models/attendance.model'
+import { AttendanceResult, SubjectAttendance, AbsenceDetail } from '@/models/attendance.model'
 
-type MainSection = 'schedule' | 'grades' | 'attendance' | 'absences'
+type MainSection = 'schedule' | 'grades' | 'attendance' | 'teachers'
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
+  const [isConfigured, setIsConfigured] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [translate, setTranslate] = useState(false)
@@ -34,7 +36,46 @@ export default function Home() {
   const [selectedDay, setSelectedDay] = useState<string>('Monday')
   const [selectedGrade, setSelectedGrade] = useState<GradeItem | null>(null)
   const [selectedWarningSubject, setSelectedWarningSubject] = useState<SubjectGrades | null>(null)
+  const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<SubjectAttendance | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+
+  const [teacherSearch, setTeacherSearch] = useState('')
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
+  const [showAllDates, setShowAllDates] = useState(false)
+
+  const [justifyingAbsence, setJustifyingAbsence] = useState<AbsenceDetail | null>(null)
+  const [parentMessage, setParentMessage] = useState('')
+  const [isSubmittingJustification, setIsSubmittingJustification] = useState(false)
+  const [justificationSuccess, setJustificationSuccess] = useState(false)
+
+  const t = {
+    schedule: translate ? 'Schedule' : 'Plan',
+    grades: translate ? 'Grades' : 'Oceny',
+    attendance: translate ? 'Frekwencja' : 'Frekwencja',
+    teachers: translate ? 'Teachers' : 'Nauczyciele',
+    attendanceRate: translate ? 'Attendance Rate' : 'Wskaźnik frekwencji',
+    dangerBadge: translate ? 'Critical Risk < 50%' : 'Zagrożenie < 50%',
+    warningBadge: translate ? 'Sub-optimal < 75%' : 'Nierekomendowana < 75%',
+    safeBadge: translate ? 'Safe' : 'Bezpiecznie',
+    missedOf: (m: number, tot: number) => translate ? `${m} missed of ${tot}` : `${m} opuszczonych z ${tot}`,
+    safeToMiss: translate ? 'Safe to miss' : 'Bezpieczny zapas',
+    neededToRecover: translate ? 'Needed to recover' : 'Wymagane do 50%',
+    lessons: translate ? 'lessons' : 'lekcji',
+    excuseAction: translate ? 'Excuse Absences' : 'Usprawiedliw',
+    searchTeacher: translate ? 'Search teacher...' : 'Szukaj nauczyciela...',
+    allDates: translate ? 'All dates' : 'Wszystkie daty',
+    today: translate ? 'Today' : 'Dzisiaj',
+    myTeacher: translate ? 'My Teacher' : 'Mój nauczyciel',
+    saveCreds: translate ? 'Save Credentials' : 'Zapisz dane',
+    updateNow: translate ? 'Update Now' : 'Zaktualizuj',
+    newChanges: translate ? 'New changes detected on Librus' : 'Wykryto zmiany w Librusie',
+    noAbsencesToday: translate ? 'No teacher absences recorded for this date' : 'Brak nieobecności nauczycieli w tym dniu',
+    subjectDetails: translate ? 'Attendance Details' : 'Szczegóły frekwencji',
+    justificationSent: translate ? 'Justification submitted successfully' : 'Usprawiedliwienie wysłane pomyślnie'
+  }
 
   useEffect(() => {
     setMounted(true)
@@ -46,6 +87,7 @@ export default function Home() {
     setUsername(savedUser)
     setPassword(savedPass)
     setTranslate(savedLang)
+    setIsConfigured(Boolean(savedUser && savedPass))
 
     const cachedSnapshot = localStorage.getItem('synapse_cache')
     if (cachedSnapshot) {
@@ -68,7 +110,7 @@ export default function Home() {
       const [tRes, gRes, aRes] = await Promise.all([
         getSmartTimetableAction(u, p, tr),
         getStudentGradesAction(u, p, tr),
-        getAttendanceAction(u, p)
+        getAttendanceAction(u, p, tr)
       ])
 
       if (tRes.success && gRes.success && aRes.success && tRes.data && gRes.data && aRes.data) {
@@ -106,11 +148,12 @@ export default function Home() {
     }
   }
 
-  const handleInitialLogin = (e: React.FormEvent) => {
+  const handleSaveCredentials = (e: React.FormEvent) => {
     e.preventDefault()
     localStorage.setItem('synapse_user', username)
     localStorage.setItem('synapse_pass', password)
     localStorage.setItem('synapse_lang', translate ? 'en' : 'pl')
+    setIsConfigured(true)
     setShowSettings(false)
     performBackgroundSync(username, password, translate)
   }
@@ -123,6 +166,38 @@ export default function Home() {
     }
   }
 
+  const handleSubmitJustification = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!justifyingAbsence) return
+
+    setIsSubmittingJustification(true)
+    try {
+      const isoDate = justifyingAbsence.date.includes('.')
+        ? justifyingAbsence.date.split('.').reverse().join('-')
+        : justifyingAbsence.date
+
+      const res = await createJustificationAction(username, password, {
+        dateFrom: isoDate,
+        dateTo: isoDate,
+        lessons: [justifyingAbsence.lessonNumber],
+        messageFromParent: parentMessage,
+        sendNotify: false
+      })
+
+      if (res.success) {
+        setJustificationSuccess(true)
+        setTimeout(() => {
+          setJustificationSuccess(false)
+          setJustifyingAbsence(null)
+          setParentMessage('')
+          performBackgroundSync(username, password, translate)
+        }, 1500)
+      }
+    } catch { } finally {
+      setIsSubmittingJustification(false)
+    }
+  }
+
   if (!mounted) {
     return null
   }
@@ -131,40 +206,39 @@ export default function Home() {
     (d) => d.dayName === selectedDay
   )
 
-  const getGradeBadgeStyle = (numeric: number | null) => {
-    if (numeric === null) {
-      return 'bg-gray-100 text-gray-700 border-gray-200'
+  const formattedSelectedCalendarDate = (() => {
+    const p = selectedCalendarDate.split('-')
+    if (p.length === 3) {
+      return `${p[2]}.${p[1]}.${p[0]}`
     }
-    if (numeric >= 5) {
-      return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    return selectedCalendarDate
+  })()
+
+  const filteredTeachers = (timetableData?.allAbsentTeachers || []).filter((item) => {
+    const matchesSearch = teacherSearch === '' || item.teacher.toLowerCase().includes(teacherSearch.toLowerCase())
+    if (showAllDates) {
+      return matchesSearch
     }
-    if (numeric >= 4) {
-      return 'bg-blue-50 text-blue-700 border-blue-200'
-    }
-    if (numeric >= 3) {
-      return 'bg-amber-50 text-amber-700 border-amber-200'
-    }
-    return 'bg-rose-50 text-rose-700 border-rose-200'
-  }
+    const matchesDate = item.date === formattedSelectedCalendarDate || item.date === selectedCalendarDate
+    return matchesSearch && matchesDate
+  })
 
   return (
-    <main className="min-h-screen pb-20 pt-safe px-4 max-w-lg mx-auto flex flex-col gap-4">
+    <main className="min-h-screen pb-20 pt-safe px-4 max-w-xl mx-auto flex flex-col gap-4">
       <header className="pt-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#1c1c1e]">Synapse</h1>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} />
-              <p className="text-[11px] text-[#8e8e93]">
-                {isUpdating ? 'Refreshing background...' : 'Synced offline-first'}
-              </p>
-            </div>
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-[#1c1c1e]">Synapse</h1>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} />
+            <p className="text-[11px] font-medium text-[#8e8e93]">
+              {isUpdating ? 'Synchronizing...' : 'Synced offline-first'}
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-1.5 cursor-pointer bg-white px-3 py-1.5 rounded-full shadow-xs border border-[#e5e5ea]">
-            <span className="text-xs font-semibold text-[#1c1c1e]">EN</span>
+            <span className="text-xs font-bold text-[#1c1c1e]">EN</span>
             <input
               type="checkbox"
               {...{ switch: '' }}
@@ -186,34 +260,28 @@ export default function Home() {
       {hasNewUpdate && (
         <div
           onClick={applyPendingUpdates}
-          className="bg-[#007aff] text-white p-3 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer active:opacity-90 animate-in fade-in"
+          className="bg-[#007aff] text-white p-3.5 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer active:opacity-90 animate-in fade-in"
         >
           <div className="flex items-center gap-2">
             <span className="text-sm">✨</span>
-            <p className="text-xs font-semibold">New changes detected on Librus</p>
+            <p className="text-xs font-semibold">{t.newChanges}</p>
           </div>
-          <span className="text-xs font-bold underline bg-white/20 px-2.5 py-1 rounded-xl">
-            Update Now
+          <span className="text-xs font-bold underline bg-white/20 px-3 py-1 rounded-xl">
+            {t.updateNow}
           </span>
-        </div>
-      )}
-
-      {gradesData?.globalWarning && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-2xl text-xs font-bold text-center">
-          💀 {gradesData.globalWarning}
         </div>
       )}
 
       {showSettings && (
         <section className="bg-white rounded-3xl p-5 shadow-xs border border-[#e5e5ea] flex flex-col gap-3">
-          <h2 className="text-sm font-bold text-[#1c1c1e]">Librus Credentials</h2>
-          <form onSubmit={handleInitialLogin} className="flex flex-col gap-2.5">
+          <h2 className="text-sm font-bold text-[#1c1c1e]">{t.saveCreds}</h2>
+          <form onSubmit={handleSaveCredentials} className="flex flex-col gap-2.5">
             <input
               type="text"
               placeholder="Login / ID"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
+              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
               required
             />
             <input
@@ -221,32 +289,32 @@ export default function Home() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
+              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
               required
             />
             <button
               type="submit"
-              className="w-full bg-[#1c1c1e] text-white text-xs font-bold py-2.5 rounded-xl active:opacity-80 transition-all"
+              className="w-full bg-[#1c1c1e] text-white text-xs font-bold py-3 rounded-xl active:opacity-80 transition-all shadow-xs"
             >
-              Save Credentials
+              {t.saveCreds}
             </button>
           </form>
         </section>
       )}
 
-      {(!timetableData && !gradesData && !username) && (
+      {!isConfigured && !showSettings && (
         <section className="bg-white rounded-3xl p-6 shadow-xs border border-[#e5e5ea] flex flex-col gap-4 text-center">
           <div>
-            <h2 className="text-lg font-extrabold text-[#1c1c1e]">Welcome to Synapse</h2>
-            <p className="text-xs text-[#8e8e93] mt-1">Enter your account once. Data will be saved locally.</p>
+            <h2 className="text-lg font-black text-[#1c1c1e]">Synapse Gateway</h2>
+            <p className="text-xs text-[#8e8e93] mt-1">Configure account once. Data will be saved locally.</p>
           </div>
-          <form onSubmit={handleInitialLogin} className="flex flex-col gap-2.5">
+          <form onSubmit={handleSaveCredentials} className="flex flex-col gap-2.5">
             <input
               type="text"
               placeholder="Login / ID"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
+              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
               required
             />
             <input
@@ -254,14 +322,14 @@ export default function Home() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
+              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
               required
             />
             <button
               type="submit"
               className="w-full bg-[#007aff] text-white text-xs font-bold py-3 rounded-xl active:opacity-80 transition-all shadow-xs"
             >
-              Connect & Save
+              {t.saveCreds}
             </button>
           </form>
         </section>
@@ -270,42 +338,42 @@ export default function Home() {
       <nav className="bg-[#e5e5ea] p-1 rounded-2xl flex gap-1 shadow-inner">
         <button
           onClick={() => setActiveSection('schedule')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeSection === 'schedule' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all ${activeSection === 'schedule' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
             }`}
         >
-          Schedule
+          {t.schedule}
         </button>
         <button
           onClick={() => setActiveSection('grades')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeSection === 'grades' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all ${activeSection === 'grades' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
             }`}
         >
-          Grades {gradesData?.overallAverage ? `(${gradesData.overallAverage})` : ''}
+          {t.grades}
         </button>
         <button
           onClick={() => setActiveSection('attendance')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeSection === 'attendance' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all ${activeSection === 'attendance' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
             }`}
         >
-          Frekwencja
+          {t.attendance}
         </button>
         <button
-          onClick={() => setActiveSection('absences')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeSection === 'absences' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          onClick={() => setActiveSection('teachers')}
+          className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all ${activeSection === 'teachers' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
             }`}
         >
-          Teachers ({timetableData?.allAbsentTeachers.length || 0})
+          {t.teachers}
         </button>
       </nav>
 
       {activeSection === 'schedule' && timetableData && (
-        <section className="flex flex-col gap-3">
+        <section className="flex flex-col gap-3 min-h-[460px]">
           <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             {timetableData.schedule.map((day) => (
               <button
                 key={day.dayName}
                 onClick={() => setSelectedDay(day.dayName)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${selectedDay === day.dayName
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedDay === day.dayName
                     ? 'bg-[#1c1c1e] text-white shadow-xs'
                     : 'bg-white text-[#8e8e93] border border-[#e5e5ea]'
                   }`}
@@ -320,11 +388,11 @@ export default function Home() {
               currentDaySchedule.lessons.map((lesson) => (
                 <article
                   key={`${lesson.number}-${lesson.subject}-${lesson.time}`}
-                  className="bg-white rounded-2xl p-4 border border-[#e5e5ea] shadow-xs flex flex-col gap-2"
+                  className="bg-white rounded-3xl p-4 border border-[#e5e5ea] shadow-xs flex flex-col gap-2"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-semibold text-[#8e8e93] bg-[#f2f2f7] px-2.5 py-1 rounded-lg">
+                      <span className="text-xs font-bold text-[#8e8e93] bg-[#f2f2f7] px-2.5 py-1 rounded-lg">
                         {lesson.time}
                       </span>
                       {lesson.lessonCount && lesson.lessonCount > 1 && (
@@ -341,7 +409,7 @@ export default function Home() {
                         </span>
                       )}
                       {lesson.isCancelled && (
-                        <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full border border-red-200">
+                        <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full border border-rose-200">
                           Cancelled
                         </span>
                       )}
@@ -363,7 +431,7 @@ export default function Home() {
                       {lesson.subject}
                     </h2>
                     {lesson.room && (
-                      <span className="text-xs font-semibold text-[#007aff] bg-blue-50 px-2.5 py-1 rounded-lg shrink-0">
+                      <span className="text-xs font-bold text-[#007aff] bg-blue-50 px-2.5 py-1 rounded-lg shrink-0">
                         {lesson.room}
                       </span>
                     )}
@@ -375,7 +443,7 @@ export default function Home() {
                 </article>
               ))
             ) : (
-              <div className="bg-white rounded-2xl p-8 border border-[#e5e5ea] text-center text-[#8e8e93] text-sm font-medium">
+              <div className="bg-white rounded-3xl p-8 border border-[#e5e5ea] text-center text-[#8e8e93] text-sm font-medium">
                 No scheduled lessons for this day
               </div>
             )}
@@ -384,11 +452,11 @@ export default function Home() {
       )}
 
       {activeSection === 'grades' && gradesData && (
-        <section className="flex flex-col gap-3">
+        <section className="flex flex-col gap-3 min-h-[460px]">
           <div className="bg-white rounded-3xl p-5 border border-[#e5e5ea] shadow-xs flex items-center justify-between">
             <div>
               <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-wider">Overall GPA</p>
-              <h2 className="text-3xl font-extrabold text-[#1c1c1e] mt-0.5">
+              <h2 className="text-3xl font-black text-[#1c1c1e] mt-0.5">
                 {gradesData.overallAverage ?? 'N/A'}
               </h2>
             </div>
@@ -401,7 +469,7 @@ export default function Home() {
             {gradesData.subjects.map((sub) => (
               <article
                 key={sub.subject}
-                className="bg-white rounded-2xl p-4 border border-[#e5e5ea] shadow-xs flex flex-col gap-2.5"
+                className="bg-white rounded-3xl p-4 border border-[#e5e5ea] shadow-xs flex flex-col gap-2.5"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
@@ -417,7 +485,7 @@ export default function Home() {
                   </div>
 
                   {sub.finalAverage !== null && (
-                    <span className="text-xs font-extrabold text-[#1c1c1e] bg-[#f2f2f7] px-2.5 py-1 rounded-lg">
+                    <span className="text-xs font-black text-[#1c1c1e] bg-[#f2f2f7] px-2.5 py-1 rounded-lg">
                       {sub.finalAverage}
                     </span>
                   )}
@@ -428,9 +496,7 @@ export default function Home() {
                     <button
                       key={`${item.grade}-${item.date}-${idx}`}
                       onClick={() => setSelectedGrade(item)}
-                      className={`w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center border transition-transform active:scale-95 ${getGradeBadgeStyle(
-                        item.numericValue
-                      )}`}
+                      className="w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center border transition-transform active:scale-95 bg-[#f2f2f7] text-[#1c1c1e] border-gray-200"
                     >
                       {item.grade}
                     </button>
@@ -446,34 +512,46 @@ export default function Home() {
       )}
 
       {activeSection === 'attendance' && attendanceData && (
-        <section className="flex flex-col gap-3">
+        <section className="flex flex-col gap-3 min-h-[460px]">
           <div className="bg-white rounded-3xl p-5 border border-[#e5e5ea] shadow-xs flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-wider">Attendance Rate</p>
-                <h2 className={`text-3xl font-extrabold mt-0.5 ${attendanceData.overall.isAtRisk ? 'text-rose-600' : 'text-[#1c1c1e]'}`}>
-                  {attendanceData.overall.attendancePercentage}%
+                <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-wider">{t.attendanceRate}</p>
+                <h2 className={`text-3xl font-black mt-0.5 ${attendanceData.overallStatus === 'danger'
+                    ? 'text-rose-600'
+                    : attendanceData.overallStatus === 'warning'
+                      ? 'text-amber-600'
+                      : 'text-[#1c1c1e]'
+                  }`}>
+                  {attendanceData.overallPercentage}%
                 </h2>
               </div>
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border ${attendanceData.overall.isAtRisk
+
+              <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border ${attendanceData.overallStatus === 'danger'
                   ? 'bg-rose-50 text-rose-700 border-rose-200'
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : attendanceData.overallStatus === 'warning'
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 }`}>
-                {attendanceData.overall.isAtRisk ? 'Risk < 50%' : 'Safe'}
+                {attendanceData.overallStatus === 'danger'
+                  ? t.dangerBadge
+                  : attendanceData.overallStatus === 'warning'
+                    ? t.warningBadge
+                    : t.safeBadge}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e5e5ea] text-xs">
               <div className="bg-[#f2f2f7] p-2.5 rounded-xl">
-                <p className="text-[#8e8e93]">Safe to miss</p>
-                <p className="font-extrabold text-[#1c1c1e] text-sm mt-0.5">
-                  {attendanceData.overall.safeAbsencesRemaining} lessons
+                <p className="text-[#8e8e93] font-medium">{t.safeToMiss}</p>
+                <p className="font-black text-[#1c1c1e] text-sm mt-0.5">
+                  {attendanceData.safeAbsencesRemaining} {t.lessons}
                 </p>
               </div>
               <div className="bg-[#f2f2f7] p-2.5 rounded-xl">
-                <p className="text-[#8e8e93]">Needed to recover</p>
-                <p className="font-extrabold text-[#1c1c1e] text-sm mt-0.5">
-                  {attendanceData.overall.lessonsToRecover} lessons
+                <p className="text-[#8e8e93] font-medium">{t.neededToRecover}</p>
+                <p className="font-black text-[#1c1c1e] text-sm mt-0.5">
+                  {attendanceData.lessonsToRecover} {t.lessons}
                 </p>
               </div>
             </div>
@@ -483,59 +561,224 @@ export default function Home() {
             {attendanceData.subjects.map((sub) => (
               <article
                 key={sub.subject}
-                className="bg-white rounded-2xl p-3.5 border border-[#e5e5ea] shadow-xs flex items-center justify-between"
+                onClick={() => setSelectedSubjectDetail(sub)}
+                className="bg-white rounded-3xl p-4 border border-[#e5e5ea] shadow-xs flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform"
               >
                 <div>
-                  <h4 className="text-xs font-bold text-[#1c1c1e]">{sub.subject}</h4>
-                  <p className="text-[11px] text-[#8e8e93] mt-0.5">
-                    {sub.absentLessons} missed of {sub.totalLessons}
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="text-sm font-bold text-[#1c1c1e]">{sub.subject}</h4>
+                    {sub.unexcusedCount > 0 && (
+                      <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">
+                        {sub.unexcusedCount} nb
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#8e8e93] mt-0.5">
+                    {t.missedOf(sub.absentLessons, sub.totalLessons)}
                   </p>
                 </div>
-                <span className={`text-xs font-extrabold px-2.5 py-1 rounded-lg border ${sub.isAtRisk
-                    ? 'bg-rose-50 text-rose-700 border-rose-200'
-                    : 'bg-[#f2f2f7] text-[#1c1c1e] border-transparent'
-                  }`}>
-                  {sub.percentage}%
-                </span>
+
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-black px-2.5 py-1 rounded-xl border ${sub.status === 'danger'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : sub.status === 'warning'
+                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                        : 'bg-[#f2f2f7] text-[#1c1c1e] border-transparent'
+                    }`}>
+                    {sub.percentage}%
+                  </span>
+                  <span className="text-xs text-[#8e8e93]">›</span>
+                </div>
               </article>
             ))}
           </div>
         </section>
       )}
 
-      {activeSection === 'absences' && timetableData && (
-        <section className="flex flex-col gap-2.5">
-          {timetableData.allAbsentTeachers.length > 0 ? (
-            timetableData.allAbsentTeachers.map((absence, idx) => (
-              <article
-                key={`${absence.teacher}-${absence.date}-${idx}`}
-                className="bg-white rounded-2xl p-4 border border-[#e5e5ea] shadow-xs flex flex-col gap-2"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-[#1c1c1e]">{absence.teacher}</h3>
-                  {absence.isRelevantToStudent && (
-                    <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
-                      My Teacher
-                    </span>
-                  )}
-                </div>
+      {activeSection === 'teachers' && (
+        <section className="flex flex-col gap-3 min-h-[460px]">
+          <div className="bg-white rounded-3xl p-3.5 border border-[#e5e5ea] shadow-xs flex flex-col gap-2.5">
+            <input
+              type="text"
+              placeholder={t.searchTeacher}
+              value={teacherSearch}
+              onChange={(e) => setTeacherSearch(e.target.value)}
+              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-xs font-medium rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
+            />
 
-                <div className="flex items-center justify-between text-xs text-[#8e8e93]">
-                  <span className="font-semibold bg-[#f2f2f7] px-2 py-0.5 rounded-md text-[#1c1c1e]">
-                    {absence.date}
-                  </span>
-                  <span className="font-medium text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
-                    {absence.reason}
-                  </span>
-                </div>
-              </article>
-            ))
-          ) : (
-            <div className="bg-white rounded-2xl p-8 border border-[#e5e5ea] text-center text-[#8e8e93] text-sm font-medium">
-              No recorded teacher absences
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={selectedCalendarDate}
+                onChange={(e) => {
+                  setSelectedCalendarDate(e.target.value)
+                  setShowAllDates(false)
+                }}
+                className="flex-1 bg-[#f2f2f7] text-[#1c1c1e] text-xs font-medium rounded-xl px-3 py-2 outline-none cursor-pointer"
+              />
+              <button
+                onClick={() => setShowAllDates(!showAllDates)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${showAllDates
+                    ? 'bg-[#1c1c1e] text-white shadow-xs'
+                    : 'bg-[#f2f2f7] text-[#8e8e93]'
+                  }`}
+              >
+                {t.allDates}
+              </button>
             </div>
-          )}
+          </div>
+
+          <div className="flex flex-col gap-2.5">
+            {filteredTeachers.length > 0 ? (
+              filteredTeachers.map((absence, idx) => (
+                <article
+                  key={`${absence.teacher}-${absence.date}-${idx}`}
+                  className="bg-white rounded-3xl p-4 border border-[#e5e5ea] shadow-xs flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-[#1c1c1e]">{absence.teacher}</h3>
+                    {absence.isRelevantToStudent && (
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                        {t.myTeacher}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-[#8e8e93]">
+                    <span className="font-semibold bg-[#f2f2f7] px-2.5 py-1 rounded-lg text-[#1c1c1e]">
+                      {absence.date}
+                    </span>
+                    <span className="font-medium text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-100">
+                      {absence.reason}
+                    </span>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="bg-white rounded-3xl p-8 border border-[#e5e5ea] text-center text-[#8e8e93] text-sm font-medium">
+                {t.noAbsencesToday}
+              </div>
+            )}
+          </div>
         </section>
+      )}
+
+      {selectedSubjectDetail && (
+        <div
+          onClick={() => setSelectedSubjectDetail(null)}
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-4 z-50 animate-in fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl p-5 w-full max-w-sm border border-[#e5e5ea] shadow-xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-extrabold text-[#1c1c1e]">{selectedSubjectDetail.subject}</h3>
+                <p className="text-xs text-[#8e8e93] mt-0.5">
+                  {selectedSubjectDetail.percentage}% attendance ({selectedSubjectDetail.absentLessons} missed)
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedSubjectDetail(null)}
+                className="w-7 h-7 rounded-full bg-[#f2f2f7] text-[#8e8e93] text-xs font-bold flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {selectedSubjectDetail.absences.length > 0 ? (
+                selectedSubjectDetail.absences.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-[#f2f2f7] p-3 rounded-2xl flex flex-col gap-1.5 text-xs text-[#1c1c1e]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">{item.date}</span>
+                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${item.isUnexcused
+                          ? 'bg-rose-100 text-rose-700 border-rose-200'
+                          : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                        }`}>
+                        {item.type.toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[#8e8e93]">
+                      <span>Lekcja {item.lessonNumber} {item.time ? `(${item.time})` : ''}</span>
+                      <span>{item.typeName}</span>
+                    </div>
+
+                    {item.isUnexcused && (
+                      <button
+                        onClick={() => {
+                          setSelectedSubjectDetail(null)
+                          setJustifyingAbsence(item)
+                        }}
+                        className="mt-1 w-full bg-[#007aff] text-white text-xs font-bold py-2 rounded-xl active:opacity-80 transition-all shadow-xs"
+                      >
+                        {t.excuseAction}
+                      </button>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-xs text-[#8e8e93] py-4">No absences recorded</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {justifyingAbsence && (
+        <div
+          onClick={() => setJustifyingAbsence(null)}
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-4 z-50 animate-in fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl p-5 w-full max-w-sm border border-[#e5e5ea] shadow-xl flex flex-col gap-3.5"
+          >
+            <div>
+              <h3 className="text-base font-extrabold text-[#1c1c1e]">Usprawiedliwienie</h3>
+              <p className="text-xs text-[#8e8e93] mt-0.5">
+                {justifyingAbsence.subject} • {justifyingAbsence.date} (Lekcja {justifyingAbsence.lessonNumber})
+              </p>
+            </div>
+
+            {justificationSuccess ? (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl text-center text-xs font-bold">
+                ✓ {t.justificationSent}
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitJustification} className="flex flex-col gap-3">
+                <textarea
+                  placeholder="Komentarz do wychowawcy (opcjonalnie)..."
+                  value={parentMessage}
+                  onChange={(e) => setParentMessage(e.target.value)}
+                  className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-xs rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#007aff] resize-none h-20"
+                />
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setJustifyingAbsence(null)}
+                    className="flex-1 bg-[#f2f2f7] text-[#1c1c1e] text-xs font-bold py-2.5 rounded-xl active:opacity-80"
+                  >
+                    Anuluj
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingJustification}
+                    className="flex-1 bg-[#007aff] text-white text-xs font-bold py-2.5 rounded-xl active:opacity-80 disabled:opacity-50 transition-all shadow-xs"
+                  >
+                    {isSubmittingJustification ? 'Wysyłanie...' : 'Wyślij'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
       )}
 
       {selectedWarningSubject && selectedWarningSubject.warning && (
@@ -597,7 +840,7 @@ export default function Home() {
             className="bg-white rounded-3xl p-5 w-full max-w-sm border border-[#e5e5ea] shadow-xl flex flex-col gap-3"
           >
             <div className="flex items-center justify-between">
-              <span className={`text-xl font-extrabold px-3 py-1 rounded-2xl border ${getGradeBadgeStyle(selectedGrade.numericValue)}`}>
+              <span className="text-xl font-extrabold px-3 py-1 rounded-2xl border bg-[#f2f2f7] text-[#1c1c1e] border-gray-200">
                 {selectedGrade.grade}
               </span>
               <span className="text-xs font-semibold text-[#8e8e93] bg-[#f2f2f7] px-2.5 py-1 rounded-lg">

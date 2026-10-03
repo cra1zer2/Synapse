@@ -1,121 +1,230 @@
 import Librus from 'librus-api'
-import { AttendanceStats, SubjectAttendance, AttendanceResult } from '@/models/attendance.model'
+import { AbsenceDetail, SubjectAttendance, AttendanceResult } from '@/models/attendance.model'
+import { translateBatch } from '@/services/translation.service'
+import { formatDisplayDate } from '@/utils/date.util'
+
+function mapDayStringToWeekDay(dayStr: string): string {
+    const lower = dayStr.toLowerCase()
+    if (lower.includes('czw') || lower.includes('czwartek')) return 'Thursday'
+    if (lower.includes('pt') || lower.includes('piątek') || lower.includes('piatek')) return 'Friday'
+    if (lower.includes('śr') || lower.includes('środa') || lower.includes('sroda')) return 'Wednesday'
+    if (lower.includes('wt') || lower.includes('wtorek')) return 'Tuesday'
+    if (lower.includes('pn') || lower.includes('poniedziałek') || lower.includes('poniedzialek')) return 'Monday'
+    return ''
+}
 
 export async function fetchAttendanceMetrics(
     username: string,
-    pass: string
+    pass: string,
+    translate: boolean = false
 ): Promise<{ success: boolean; data?: AttendanceResult; error?: string }> {
     try {
         const client = new Librus()
         await client.authorize(username, pass)
 
-        const rawAbsences = await client.absence.getAbsences()
-        const subjectsMap: Record<string, { total: number; absent: number }> = {}
+        const now = new Date()
+        const currentYear = now.getFullYear()
+        const currentMonth = now.getMonth() + 1
 
-        let excused = 0
-        let unexcused = 0
-        let lateness = 0
-        let latenessOverLimit = 0
+        const [rawAbsences, rawTimetable] = await Promise.all([
+            client.absence.getAbsences(),
+            client.calendar.getTimetable()
+        ])
 
-        const scanAbsenceEntry = (entry: any) => {
-            if (!entry || typeof entry !== 'object') {
-                return
-            }
+        const timetableData = rawTimetable?.table || {}
+        const subjectBaselineLessons: Record<string, number> = {}
 
-            const type = String(entry.type || entry.symbol || '').trim().toLowerCase()
-            const subject = (entry.subject || 'All Subjects').trim()
-
-            if (!subjectsMap[subject]) {
-                subjectsMap[subject] = { total: 0, absent: 0 }
-            }
-
-            subjectsMap[subject].total++
-
-            if (type === 'nb') {
-                unexcused++
-                subjectsMap[subject].absent++
-            } else if (type === 'u') {
-                excused++
-                subjectsMap[subject].absent++
-            } else if (type === 'sl') {
-                latenessOverLimit++
-                unexcused++
-                subjectsMap[subject].absent++
-            } else if (type === 'sp') {
-                lateness++
-            }
-        }
-
-        const traverseObject = (obj: any) => {
-            if (!obj) {
-                return
-            }
-            if (Array.isArray(obj)) {
-                for (const item of obj) {
-                    traverseObject(item)
-                }
-            } else if (typeof obj === 'object') {
-                if ('type' in obj || 'symbol' in obj) {
-                    scanAbsenceEntry(obj)
-                } else {
-                    for (const key of Object.keys(obj)) {
-                        traverseObject(obj[key])
+        for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) {
+            const slots = timetableData[day]
+            if (Array.isArray(slots)) {
+                for (const slot of slots) {
+                    if (slot && slot.subject) {
+                        const cleanSub = slot.subject.trim()
+                        subjectBaselineLessons[cleanSub] = (subjectBaselineLessons[cleanSub] || 0) + 1
                     }
                 }
             }
         }
 
-        traverseObject(rawAbsences)
+        const absencesList: AbsenceDetail[] = []
+        const subjectsMap: Record<string, { absent: number; excused: number; unexcused: number; items: AbsenceDetail[] }> = {}
 
-        const totalAbsences = excused + unexcused
-        const estimatedCompletedLessons = Math.max(totalAbsences + 20, 50)
-        const presences = Math.max(0, estimatedCompletedLessons - totalAbsences)
-        const attendancePercentage =
-            estimatedCompletedLessons > 0
-                ? Math.round((presences / estimatedCompletedLessons) * 1000) / 10
-                : 100
-
-        const isAtRisk = attendancePercentage < 50.0
-
-        const safeAbsencesRemaining = Math.max(0, Math.floor(presences - estimatedCompletedLessons * 0.5))
-        const lessonsToRecover = isAtRisk
-            ? Math.max(0, Math.ceil(totalAbsences * 2 - estimatedCompletedLessons))
-            : 0
-
-        const overallStats: AttendanceStats = {
-            totalLessons: estimatedCompletedLessons,
-            presences,
-            absences: totalAbsences,
-            excused,
-            unexcused,
-            lateness,
-            latenessOverLimit,
-            attendancePercentage,
-            isAtRisk,
-            safeAbsencesRemaining,
-            lessonsToRecover
+        for (const sub of Object.keys(subjectBaselineLessons)) {
+            subjectsMap[sub] = { absent: 0, excused: 0, unexcused: 0, items: [] }
         }
 
-        const subjectsList: SubjectAttendance[] = Object.keys(subjectsMap).map((subName) => {
+        const daysArray = rawAbsences && rawAbsences['0'] && Array.isArray(rawAbsences['0'])
+            ? rawAbsences['0']
+            : Array.isArray(rawAbsences)
+                ? rawAbsences
+                : []
+
+        for (const dayEntry of daysArray) {
+            if (!dayEntry || !dayEntry.date || !Array.isArray(dayEntry.table)) {
+                continue
+            }
+
+            const rawDateStr = String(dayEntry.date)
+            const formattedDate = formatDisplayDate(rawDateStr, currentYear, currentMonth)
+            const mappedWeekday = mapDayStringToWeekDay(rawDateStr)
+            const daySlots = mappedWeekday ? timetableData[mappedWeekday] : []
+
+            dayEntry.table.forEach((slotData: any, lessonIdx: number) => {
+                if (!slotData || typeof slotData !== 'object') {
+                    return
+                }
+
+                const symbol = String(slotData.type || slotData.symbol || '').trim().toLowerCase()
+                if (!symbol) {
+                    return
+                }
+
+                const matchedLesson = Array.isArray(daySlots) ? daySlots[lessonIdx] : null
+                const subjectName = (matchedLesson?.subject || `Lekcja ${lessonIdx}`).trim()
+                const teacherName = matchedLesson?.teacher || ''
+                const timeRange = matchedLesson?.time || ''
+
+                const isUnexcused = symbol === 'nb' || symbol === 'sl'
+                const isExcused = symbol === 'u'
+
+                const typeMap: Record<string, { type: 'nb' | 'u' | 'sl' | 'sp' | 'zw'; label: string }> = {
+                    nb: { type: 'nb', label: 'Nieobecność nieusprawiedliwiona' },
+                    u: { type: 'u', label: 'Nieobecność usprawiedliwiona' },
+                    sl: { type: 'sl', label: 'Spóźnienie > limit' },
+                    sp: { type: 'sp', label: 'Spóźnienie' },
+                    zw: { type: 'zw', label: 'Zwolnienie' }
+                }
+
+                const mappedType = typeMap[symbol] || { type: 'nb', label: symbol.toUpperCase() }
+
+                const detail: AbsenceDetail = {
+                    id: slotData.id,
+                    date: formattedDate,
+                    lessonNumber: lessonIdx,
+                    time: timeRange,
+                    subject: subjectName,
+                    teacher: teacherName,
+                    type: mappedType.type,
+                    typeName: mappedType.label,
+                    isUnexcused
+                }
+
+                absencesList.push(detail)
+
+                if (!subjectsMap[subjectName]) {
+                    subjectsMap[subjectName] = { absent: 0, excused: 0, unexcused: 0, items: [] }
+                }
+
+                if (symbol === 'nb' || symbol === 'u' || symbol === 'sl') {
+                    subjectsMap[subjectName].absent++
+                    if (isUnexcused) {
+                        subjectsMap[subjectName].unexcused++
+                    } else if (isExcused) {
+                        subjectsMap[subjectName].excused++
+                    }
+                }
+
+                subjectsMap[subjectName].items.push(detail)
+            })
+        }
+
+        let grandTotalScheduled = 0
+        let grandTotalAbsent = 0
+
+        const subjectsResult: SubjectAttendance[] = Object.keys(subjectsMap).map((subName) => {
             const data = subjectsMap[subName]
-            const subTotal = Math.max(data.total, data.absent + 5)
-            const subPresences = Math.max(0, subTotal - data.absent)
-            const pct = Math.round((subPresences / subTotal) * 1000) / 10
+            const scheduled = Math.max(subjectBaselineLessons[subName] || 0, data.absent)
+            grandTotalScheduled += scheduled
+            grandTotalAbsent += data.absent
+
+            const present = Math.max(0, scheduled - data.absent)
+            const percentage = scheduled > 0 ? Math.round((present / scheduled) * 1000) / 10 : 100
+
+            let status: 'danger' | 'warning' | 'safe' = 'safe'
+            if (percentage < 50.0) {
+                status = 'danger'
+            } else if (percentage < 75.0) {
+                status = 'warning'
+            }
 
             return {
                 subject: subName,
-                totalLessons: subTotal,
+                totalLessons: scheduled,
                 absentLessons: data.absent,
-                percentage: pct,
-                isAtRisk: pct < 50.0
+                excusedCount: data.excused,
+                unexcusedCount: data.unexcused,
+                percentage,
+                status,
+                absences: data.items
             }
         })
+
+        const grandPresent = Math.max(0, grandTotalScheduled - grandTotalAbsent)
+        const overallPercentage =
+            grandTotalScheduled > 0
+                ? Math.round((grandPresent / grandTotalScheduled) * 1000) / 10
+                : 100
+
+        let overallStatus: 'danger' | 'warning' | 'safe' = 'safe'
+        if (overallPercentage < 50.0) {
+            overallStatus = 'danger'
+        } else if (overallPercentage < 75.0) {
+            overallStatus = 'warning'
+        }
+
+        const safeAbsencesRemaining = Math.max(0, Math.floor(grandPresent - grandTotalScheduled * 0.5))
+        const lessonsToRecover =
+            overallPercentage < 50.0
+                ? Math.max(0, Math.ceil(grandTotalAbsent * 2 - grandTotalScheduled))
+                : 0
+
+        const unexcusedAbsences = absencesList.filter((a) => a.isUnexcused)
+
+        if (translate) {
+            const textsToTranslate = new Set<string>()
+            subjectsResult.forEach((s) => textsToTranslate.add(s.subject))
+            absencesList.forEach((a) => {
+                textsToTranslate.add(a.subject)
+                textsToTranslate.add(a.typeName)
+            })
+
+            const translatedMap = await translateBatch(Array.from(textsToTranslate))
+
+            subjectsResult.forEach((s) => {
+                if (translatedMap[s.subject]) {
+                    s.subject = translatedMap[s.subject]
+                }
+                s.absences.forEach((a) => {
+                    if (translatedMap[a.subject]) {
+                        a.subject = translatedMap[a.subject]
+                    }
+                    if (translatedMap[a.typeName]) {
+                        a.typeName = translatedMap[a.typeName]
+                    }
+                })
+            })
+
+            unexcusedAbsences.forEach((a) => {
+                if (translatedMap[a.subject]) {
+                    a.subject = translatedMap[a.subject]
+                }
+                if (translatedMap[a.typeName]) {
+                    a.typeName = translatedMap[a.typeName]
+                }
+            })
+        }
 
         return {
             success: true,
             data: {
-                overall: overallStats,
-                subjects: subjectsList
+                overallPercentage,
+                overallStatus,
+                totalScheduled: grandTotalScheduled,
+                totalAbsent: grandTotalAbsent,
+                safeAbsencesRemaining,
+                lessonsToRecover,
+                subjects: subjectsResult,
+                unexcusedAbsences
             }
         }
     } catch (error) {

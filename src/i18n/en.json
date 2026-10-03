@@ -1,0 +1,11 @@
+{
+    "common": {
+        "loading": "Loading...",
+        "error": "An error occurred"
+    },
+    "auth": {
+        "login": "Login",
+        "password": "Password",
+        "submit": "Sign In"
+    }
+}

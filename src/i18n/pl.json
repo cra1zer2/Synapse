@@ -1,0 +1,11 @@
+{
+    "common": {
+        "loading": "Ładowanie...",
+        "error": "Wystąpił błąd"
+    },
+    "auth": {
+        "login": "Login",
+        "password": "Hasło",
+        "submit": "Zaloguj się"
+    }
+}

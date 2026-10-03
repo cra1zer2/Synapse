@@ -4,6 +4,7 @@ import { runFullLibrusDiagnostics, testGatewayRequest } from '@/services/librus.
 import { fetchJustificationsHistory, submitJustification } from '@/services/justification.service'
 import { fetchSmartTimetable } from '@/services/timetable.service'
 import { fetchStudentGrades } from '@/services/grade.service'
+import { fetchAttendanceMetrics } from '@/services/attendance.service'
 import { JustificationPayload } from '@/models/justification.model'
 
 export async function executeLibrusDiagnostics(username: string, pass: string) {
@@ -72,6 +73,18 @@ export async function getSmartTimetableAction(username: string, pass: string, tr
 export async function getStudentGradesAction(username: string, pass: string, translate: boolean) {
     try {
         const result = await fetchStudentGrades(username, pass, translate)
+        return result
+    } catch (error) {
+        return {
+            success: false,
+            error: String(error)
+        }
+    }
+}
+
+export async function getAttendanceAction(username: string, pass: string) {
+    try {
+        const result = await fetchAttendanceMetrics(username, pass)
         return result
     } catch (error) {
         return {

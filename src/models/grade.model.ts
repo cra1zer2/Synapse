@@ -10,6 +10,19 @@ export interface GradeItem {
     isRecent: boolean
 }
 
+export interface FixOption {
+    gradeNeeded: number
+    weight: number
+    count: number
+    description: string
+}
+
+export interface SubjectWarning {
+    status: 'critical' | 'done' | 'too_late'
+    message: string
+    fixOptions: FixOption[]
+}
+
 export interface SubjectGrades {
     subject: string
     semester1: GradeItem[]
@@ -17,10 +30,12 @@ export interface SubjectGrades {
     average1: number | null
     average2: number | null
     finalAverage: number | null
+    warning?: SubjectWarning
 }
 
 export interface GradesResult {
     subjects: SubjectGrades[]
     overallAverage: number | null
     recentGrades: GradeItem[]
+    globalWarning?: string
 }

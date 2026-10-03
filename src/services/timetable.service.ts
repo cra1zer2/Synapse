@@ -1,12 +1,16 @@
 import Librus from 'librus-api'
 import { LessonItem, DaySchedule, AbsentTeacherItem, SmartTimetableResult } from '@/models/timetable.model'
 import { translateBatch } from '@/services/translation.service'
+import { formatDisplayDate, extractTimeInterval } from '@/utils/date.util'
 
 function cleanTeacherName(rawTeacher: string): string {
     if (!rawTeacher) {
         return ''
     }
-    return rawTeacher.replace(/\s*\(.*?\)\s*/g, '').trim()
+    return rawTeacher
+        .replace(/^(nauczyciel|nieobecność|nieobecnosc|zastępstwo|zastepstwo)\s*[:\-]?\s*/i, '')
+        .replace(/\s*\(.*?\)\s*/g, '')
+        .trim()
 }
 
 function calculateDuration(timeRange: string): { durationMinutes: number; isShortened: boolean } {
@@ -59,29 +63,33 @@ function extractTeacherFromEvent(event: any, defaultYear: number, defaultMonth: 
     if (!teacher) {
         teacher = title
             .replace(/^(nieobecność|nieobecnosc|zastępstwo|zastepstwo|odwołane|odwolane)\s*[:\-]?\s*/i, '')
-            .replace(/\s*\(.*?\)\s*/g, '')
+            .replace(/^nauczyciel\s*[:\-]?\s*/i, '')
+            .replace(/godziny:.*$/i, '')
             .trim()
     }
 
     if (!teacher && desc) {
         teacher = desc
             .replace(/^(nieobecność|nieobecnosc)\s*[:\-]?\s*/i, '')
-            .replace(/\s*\(.*?\)\s*/g, '')
+            .replace(/^nauczyciel\s*[:\-]?\s*/i, '')
+            .replace(/godziny:.*$/i, '')
             .trim()
     }
 
-    if (!teacher) {
+    const cleanedTeacher = cleanTeacherName(teacher)
+    if (!cleanedTeacher) {
         return null
     }
 
-    const dayStr = event.day ? String(event.day).padStart(2, '0') : ''
-    const monthStr = String(defaultMonth).padStart(2, '0')
-    const dateStr = event.date || (dayStr ? `${defaultYear}-${monthStr}-${dayStr}` : '')
+    const rawDate = event.date || event.day
+    const formattedDate = formatDisplayDate(rawDate, defaultYear, defaultMonth)
+    const fullText = `${title} ${desc}`
+    const { timeBadge } = extractTimeInterval(fullText)
 
     return {
-        teacher: cleanTeacherName(teacher),
-        date: dateStr,
-        reason: desc || title || 'Absent',
+        teacher: cleanedTeacher,
+        date: formattedDate,
+        reason: timeBadge || 'Nieobecność',
         isRelevantToStudent: false
     }
 }
@@ -166,8 +174,11 @@ export async function fetchSmartTimetable(
         for (const ev of flatEvents) {
             const parsed = extractTeacherFromEvent(ev, currentYear, currentMonth)
             if (parsed && parsed.teacher) {
-                absentTeacherSet.add(parsed.teacher.toLowerCase())
-                allAbsentTeachers.push(parsed)
+                const key = `${parsed.teacher.toLowerCase()}-${parsed.date}`
+                if (!absentTeacherSet.has(key)) {
+                    absentTeacherSet.add(key)
+                    allAbsentTeachers.push(parsed)
+                }
             }
         }
 
@@ -196,18 +207,24 @@ export async function fetchSmartTimetable(
                     const flagStr = (slot.flag || '').toLowerCase()
                     const isCancelled = slot.cancelled === true || flagStr.includes('odwołane') || flagStr.includes('odwolane')
                     const isSubstitution = flagStr.includes('zastępstwo') || flagStr.includes('zastepstwo')
-                    const isAbsent = Boolean(cleanedTeacher && absentTeacherSet.has(cleanedTeacher.toLowerCase()))
+
+                    let isAbsent = false
+                    for (const key of absentTeacherSet) {
+                        if (cleanedTeacher && key.startsWith(cleanedTeacher.toLowerCase())) {
+                            isAbsent = true
+                            break
+                        }
+                    }
 
                     if (isCancelled && cleanedTeacher) {
-                        absentTeacherSet.add(cleanedTeacher.toLowerCase())
-                        const exists = allAbsentTeachers.some(
-                            (a) => a.teacher.toLowerCase() === cleanedTeacher.toLowerCase()
-                        )
-                        if (!exists) {
+                        const dateStr = formatDisplayDate(day, currentYear, currentMonth)
+                        const key = `${cleanedTeacher.toLowerCase()}-${dateStr}`
+                        if (!absentTeacherSet.has(key)) {
+                            absentTeacherSet.add(key)
                             allAbsentTeachers.push({
                                 teacher: cleanedTeacher,
-                                date: day,
-                                reason: slot.flag || 'Cancelled lesson',
+                                date: dateStr,
+                                reason: slot.flag || 'Odwołane zajęcia',
                                 isRelevantToStudent: true
                             })
                         }

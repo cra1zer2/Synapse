@@ -1,5 +1,5 @@
 import Librus from 'librus-api'
-import { GradeItem, SubjectGrades, GradesResult } from '@/models/grade.model'
+import { GradeItem, SubjectGrades, GradesResult, FixOption, SubjectWarning } from '@/models/grade.model'
 import { translateBatch } from '@/services/translation.service'
 
 function parseGradeValue(gradeStr: string): number | null {
@@ -65,6 +65,71 @@ function isDateRecent(dateStr: string, daysThreshold: number = 14): boolean {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
     return diffDays <= daysThreshold
+}
+
+function generateFixOptions(grades: GradeItem[], currentAverage: number): SubjectWarning {
+    let totalScore = 0
+    let totalWeight = 0
+
+    for (const g of grades) {
+        if (g.numericValue !== null && g.weight > 0) {
+            totalScore += g.numericValue * g.weight
+            totalWeight += g.weight
+        }
+    }
+
+    const targetAverage = 2.0
+    const solveForGrade = (addedWeight: number): number => {
+        const needed = (targetAverage * (totalWeight + addedWeight) - totalScore) / addedWeight
+        return Math.ceil(needed * 2) / 2
+    }
+
+    const gradeWeight2 = solveForGrade(2)
+    const gradeWeight3 = solveForGrade(3)
+
+    const fixOptions: FixOption[] = []
+
+    if (gradeWeight2 <= 6) {
+        fixOptions.push({
+            gradeNeeded: Math.max(2, gradeWeight2),
+            weight: 2,
+            count: 1,
+            description: `Get at least ${Math.max(2, gradeWeight2)} on a quiz (weight 2)`
+        })
+    }
+
+    if (gradeWeight3 <= 6) {
+        fixOptions.push({
+            gradeNeeded: Math.max(2, gradeWeight3),
+            weight: 3,
+            count: 1,
+            description: `Get at least ${Math.max(2, gradeWeight3)} on an exam (weight 3)`
+        })
+    }
+
+    const doubleGradeNeeded = Math.ceil(((targetAverage * (totalWeight + 4) - totalScore) / 4) * 2) / 2
+    if (doubleGradeNeeded <= 6) {
+        fixOptions.push({
+            gradeNeeded: Math.max(2, doubleGradeNeeded),
+            weight: 2,
+            count: 2,
+            description: `Get two ${Math.max(2, doubleGradeNeeded)} grades (weight 2 each)`
+        })
+    }
+
+    if (fixOptions.length === 0) {
+        return {
+            status: 'done',
+            message: 'You are done',
+            fixOptions: []
+        }
+    }
+
+    return {
+        status: 'critical',
+        message: 'Average below 2.0 — action required',
+        fixOptions
+    }
 }
 
 export async function fetchStudentGrades(
@@ -146,6 +211,7 @@ export async function fetchStudentGrades(
         const subjectsList = Object.values(subjectsMap)
         let totalSubjectAverages = 0
         let evaluatedSubjectsCount = 0
+        let failingSubjectsCount = 0
 
         for (const sub of subjectsList) {
             sub.average1 = calculateWeightedAverage(sub.semester1)
@@ -160,6 +226,12 @@ export async function fetchStudentGrades(
             if (sub.finalAverage !== null) {
                 totalSubjectAverages += sub.finalAverage
                 evaluatedSubjectsCount++
+
+                if (sub.finalAverage < 2.0) {
+                    failingSubjectsCount++
+                    const relevantGrades = sub.semester2.length > 0 ? sub.semester2 : sub.semester1
+                    sub.warning = generateFixOptions(relevantGrades, sub.finalAverage)
+                }
             }
         }
 
@@ -167,6 +239,11 @@ export async function fetchStudentGrades(
             evaluatedSubjectsCount > 0
                 ? Math.round((totalSubjectAverages / evaluatedSubjectsCount) * 100) / 100
                 : null
+
+        let globalWarning: string | undefined = undefined
+        if (evaluatedSubjectsCount > 0 && failingSubjectsCount === evaluatedSubjectsCount) {
+            globalWarning = 'Too late to be worried'
+        }
 
         if (translate) {
             const textsToTranslate = new Set<string>()
@@ -203,7 +280,8 @@ export async function fetchStudentGrades(
             data: {
                 subjects: subjectsList,
                 overallAverage,
-                recentGrades
+                recentGrades,
+                globalWarning
             }
         }
     } catch (error) {

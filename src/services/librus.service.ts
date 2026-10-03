@@ -1,4 +1,5 @@
 import Librus from 'librus-api'
+import { safeUnwrapResponse } from '@/utils/serializer.util'
 
 export interface DiagnosticResult {
     accountInfo: any
@@ -76,8 +77,10 @@ export async function testGatewayRequest(username: string, pass: string, targetP
         }
 
         const cleanPath = targetPath.startsWith('/') ? targetPath.slice(1) : targetPath
-        const response = await caller.get(`https://synergia.librus.pl/${cleanPath}`)
-        return { success: true, data: response }
+        const rawResponse = await caller.get(`https://synergia.librus.pl/${cleanPath}`)
+        const data = safeUnwrapResponse(rawResponse)
+
+        return { success: true, data }
     } catch (error) {
         return { success: false, error: String(error) }
     }

@@ -46,25 +46,40 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    const res = await executeLibrusDiagnostics(username, password)
-    setResult(res)
-    setLoading(false)
+    try {
+      const res = await executeLibrusDiagnostics(username, password)
+      setResult(res)
+    } catch (err) {
+      setResult({ success: false, error: String(err) })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleProbe = async (e: React.FormEvent) => {
     e.preventDefault()
     setProbeLoading(true)
-    const res = await executeGatewayProbe(username, password, probePath)
-    setProbeResult(res)
-    setProbeLoading(false)
+    try {
+      const res = await executeGatewayProbe(username, password, probePath)
+      setProbeResult(res)
+    } catch (err) {
+      setProbeResult({ success: false, error: String(err) })
+    } finally {
+      setProbeLoading(false)
+    }
   }
 
   const handleFetchJustifications = async (e: React.FormEvent) => {
     e.preventDefault()
     setJustificationsLoading(true)
-    const res = await getJustificationsAction(username, password, dateFrom, dateTo)
-    setJustificationsResult(res)
-    setJustificationsLoading(false)
+    try {
+      const res = await getJustificationsAction(username, password, dateFrom, dateTo)
+      setJustificationsResult(res)
+    } catch (err) {
+      setJustificationsResult({ success: false, error: String(err) })
+    } finally {
+      setJustificationsLoading(false)
+    }
   }
 
   const tabs: TabKey[] = [

@@ -42,6 +42,8 @@ export interface AppDictionary {
     dateLabel: string
     notSpecified: string
     settingsTitle: string
+    refresh: string
+    loadingTimetable: string
 }
 
 export function getDictionary(translate: boolean): AppDictionary {
@@ -89,7 +91,9 @@ export function getDictionary(translate: boolean): AppDictionary {
             teacherLabel: 'Teacher',
             dateLabel: 'Date',
             notSpecified: 'Not specified',
-            settingsTitle: 'Librus Credentials'
+            settingsTitle: 'Librus Credentials',
+            refresh: 'Refresh',
+            loadingTimetable: 'Loading timetable...'
         }
     }
 
@@ -136,6 +140,8 @@ export function getDictionary(translate: boolean): AppDictionary {
         teacherLabel: 'Nauczyciel',
         dateLabel: 'Data',
         notSpecified: 'Nie podano',
-        settingsTitle: 'Dane logowania Librus'
+        settingsTitle: 'Dane logowania Librus',
+        refresh: 'Odśwież',
+        loadingTimetable: 'Ładowanie planu lekcji...'
     }
 }

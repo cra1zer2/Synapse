@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   getSmartTimetableAction,
   getStudentGradesAction,
@@ -21,6 +21,26 @@ import { GradeModal } from './grade-modal'
 
 type MainSection = 'schedule' | 'grades' | 'attendance' | 'teachers'
 
+function getInitialWeekPivot(): string {
+  const now = new Date()
+  const day = now.getDay()
+  const target = new Date(now)
+
+  if (day === 6) {
+    target.setDate(now.getDate() + 2)
+  } else if (day === 0) {
+    target.setDate(now.getDate() + 1)
+  } else {
+    const diff = 1 - day
+    target.setDate(now.getDate() + diff)
+  }
+
+  const y = target.getFullYear()
+  const m = String(target.getMonth() + 1).padStart(2, '0')
+  const d = String(target.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export default function Home() {
   const [mounted, setMounted] = useState(false)
   const [isConfigured, setIsConfigured] = useState(false)
@@ -28,23 +48,21 @@ export default function Home() {
   const [password, setPassword] = useState('')
   const [translate, setTranslate] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isLoadingWeek, setIsLoadingWeek] = useState(false)
   const [hasNewUpdate, setHasNewUpdate] = useState(false)
   const [activeSection, setActiveSection] = useState<MainSection>('schedule')
+
+  const [currentWeekPivot, setCurrentWeekPivot] = useState(getInitialWeekPivot)
+  const [weekCache, setWeekCache] = useState<Record<string, SmartTimetableResult>>({})
 
   const [timetableData, setTimetableData] = useState<SmartTimetableResult | null>(null)
   const [gradesData, setGradesData] = useState<GradesResult | null>(null)
   const [attendanceData, setAttendanceData] = useState<AttendanceResult | null>(null)
-
   const [pendingSnapshot, setPendingSnapshot] = useState<{
     t: SmartTimetableResult
     g: GradesResult
     a: AttendanceResult
   } | null>(null)
-
-  const [currentWeekPivot, setCurrentWeekPivot] = useState(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })
 
   const [selectedDay, setSelectedDay] = useState<string>('Monday')
   const [selectedGrade, setSelectedGrade] = useState<GradeItem | null>(null)
@@ -53,16 +71,15 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false)
 
   const [teacherSearch, setTeacherSearch] = useState('')
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(getInitialWeekPivot)
   const [showAllDates, setShowAllDates] = useState(false)
   const [justifyingAbsence, setJustifyingAbsence] = useState<AbsenceDetail | null>(null)
 
+  const activeRequestCounter = useRef(0)
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const t = getDictionary(translate)
 
-  const resolveSmartDefaultDay = (schedule: DaySchedule[]): string => {
+  const resolveSmartDefaultDay = useCallback((schedule: DaySchedule[]): string => {
     if (!Array.isArray(schedule) || schedule.length === 0) {
       return 'Monday'
     }
@@ -95,7 +112,64 @@ export default function Home() {
     }
 
     return 'Monday'
-  }
+  }, [])
+
+  const executeSync = useCallback(async (u: string, p: string, tr: boolean, weekPivot: string, silentUpdate: boolean) => {
+    const requestId = ++activeRequestCounter.current
+
+    if (!silentUpdate) {
+      setIsLoadingWeek(true)
+    }
+    setIsUpdating(true)
+
+    try {
+      const [tRes, gRes, aRes] = await Promise.all([
+        getSmartTimetableAction(u, p, tr, weekPivot),
+        getStudentGradesAction(u, p, tr),
+        getAttendanceAction(u, p, tr)
+      ])
+
+      if (requestId !== activeRequestCounter.current) {
+        return
+      }
+
+      if (tRes.success && gRes.success && aRes.success && tRes.data && gRes.data && aRes.data) {
+        const fetchedData = tRes.data
+
+        setWeekCache((prev) => ({
+          ...prev,
+          [weekPivot]: fetchedData
+        }))
+
+        setGradesData(gRes.data)
+        setAttendanceData(aRes.data)
+
+        const oldWeekData = weekCache[weekPivot]
+        if (oldWeekData) {
+          const isIdentical = JSON.stringify(oldWeekData) === JSON.stringify(fetchedData)
+          if (!isIdentical) {
+            setPendingSnapshot({ t: fetchedData, g: gRes.data, a: aRes.data })
+            setHasNewUpdate(true)
+          }
+        } else {
+          setTimetableData(fetchedData)
+          setSelectedDay((prev) => {
+            const hasPrev = fetchedData.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
+            return hasPrev ? prev : resolveSmartDefaultDay(fetchedData.schedule)
+          })
+
+          const newSnapshot = { t: fetchedData, g: gRes.data, a: aRes.data }
+          localStorage.setItem('synapse_cache', JSON.stringify(newSnapshot))
+        }
+      }
+    } catch {
+    } finally {
+      if (requestId === activeRequestCounter.current) {
+        setIsLoadingWeek(false)
+        setIsUpdating(false)
+      }
+    }
+  }, [weekCache, resolveSmartDefaultDay])
 
   useEffect(() => {
     setMounted(true)
@@ -114,23 +188,9 @@ export default function Home() {
       try {
         const parsed = JSON.parse(cachedSnapshot)
         if (parsed.t && Array.isArray(parsed.t.schedule)) {
-          const sanitizedSchedule = parsed.t.schedule.map((d: any) => ({
-            ...d,
-            date: d.date || '',
-            isoDate: d.isoDate || '',
-            events: Array.isArray(d.events) ? d.events : [],
-            lessons: Array.isArray(d.lessons) ? d.lessons : []
-          }))
-
-          const sanitizedTimetable: SmartTimetableResult = {
-            ...parsed.t,
-            schedule: sanitizedSchedule,
-            allAbsentTeachers: Array.isArray(parsed.t.allAbsentTeachers) ? parsed.t.allAbsentTeachers : [],
-            calendarEvents: Array.isArray(parsed.t.calendarEvents) ? parsed.t.calendarEvents : []
-          }
-
-          setTimetableData(sanitizedTimetable)
-          setSelectedDay(resolveSmartDefaultDay(sanitizedSchedule))
+          setTimetableData(parsed.t)
+          setWeekCache({ [parsed.t.weekStart]: parsed.t })
+          setSelectedDay(resolveSmartDefaultDay(parsed.t.schedule))
         }
         if (parsed.g) setGradesData(parsed.g)
         if (parsed.a) setAttendanceData(parsed.a)
@@ -138,59 +198,60 @@ export default function Home() {
     }
 
     if (savedUser && savedPass) {
-      performBackgroundSync(savedUser, savedPass, savedLang, currentWeekPivot)
+      executeSync(savedUser, savedPass, savedLang, currentWeekPivot, false)
     }
-  }, [])
+  }, [currentWeekPivot, executeSync, resolveSmartDefaultDay])
 
-  const performBackgroundSync = async (u: string, p: string, tr: boolean, weekPivot: string) => {
-    setIsUpdating(true)
-    try {
-      const [tRes, gRes, aRes] = await Promise.all([
-        getSmartTimetableAction(u, p, tr, weekPivot),
-        getStudentGradesAction(u, p, tr),
-        getAttendanceAction(u, p, tr)
-      ])
+  const queueWeekChange = (targetPivot: string) => {
+    setHasNewUpdate(false)
+    setCurrentWeekPivot(targetPivot)
 
-      if (tRes.success && gRes.success && aRes.success && tRes.data && gRes.data && aRes.data) {
-        const newSnapshot = { t: tRes.data, g: gRes.data, a: aRes.data }
-        const oldCache = localStorage.getItem('synapse_cache')
+    if (weekCache[targetPivot]) {
+      const cached = weekCache[targetPivot]
+      setTimetableData(cached)
+      setSelectedDay((prev) => {
+        const hasPrev = cached.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
+        return hasPrev ? prev : resolveSmartDefaultDay(cached.schedule)
+      })
+      setIsLoadingWeek(false)
+    } else {
+      setIsLoadingWeek(true)
+    }
 
-        if (!oldCache) {
-          setTimetableData(newSnapshot.t)
-          setSelectedDay(resolveSmartDefaultDay(newSnapshot.t.schedule))
-          setGradesData(newSnapshot.g)
-          setAttendanceData(newSnapshot.a)
-          localStorage.setItem('synapse_cache', JSON.stringify(newSnapshot))
-        } else {
-          const oldString = JSON.stringify(JSON.parse(oldCache))
-          const newString = JSON.stringify(newSnapshot)
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
 
-          if (oldString !== newString) {
-            setPendingSnapshot(newSnapshot)
-            setHasNewUpdate(true)
-          } else {
-            setTimetableData(newSnapshot.t)
-          }
-        }
+    debounceTimerRef.current = setTimeout(() => {
+      if (username && password) {
+        const isSilent = Boolean(weekCache[targetPivot])
+        executeSync(username, password, translate, targetPivot, isSilent)
       }
-    } catch { } finally {
-      setIsUpdating(false)
-    }
+    }, 350)
   }
 
   const shiftWeek = (deltaDays: number) => {
     const current = new Date(currentWeekPivot)
     current.setDate(current.getDate() + deltaDays)
-    const newPivot = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`
-    setCurrentWeekPivot(newPivot)
+    const y = current.getFullYear()
+    const m = String(current.getMonth() + 1).padStart(2, '0')
+    const d = String(current.getDate()).padStart(2, '0')
+    queueWeekChange(`${y}-${m}-${d}`)
+  }
+
+  const handleManualRefresh = () => {
     if (username && password) {
-      performBackgroundSync(username, password, translate, newPivot)
+      executeSync(username, password, translate, currentWeekPivot, false)
     }
   }
 
   const applyPendingUpdates = () => {
     if (pendingSnapshot) {
       setTimetableData(pendingSnapshot.t)
+      setWeekCache((prev) => ({
+        ...prev,
+        [currentWeekPivot]: pendingSnapshot.t
+      }))
       setSelectedDay(resolveSmartDefaultDay(pendingSnapshot.t.schedule))
       setGradesData(pendingSnapshot.g)
       setAttendanceData(pendingSnapshot.a)
@@ -207,14 +268,14 @@ export default function Home() {
     localStorage.setItem('synapse_lang', translate ? 'en' : 'pl')
     setIsConfigured(true)
     setShowSettings(false)
-    performBackgroundSync(username, password, translate, currentWeekPivot)
+    executeSync(username, password, translate, currentWeekPivot, false)
   }
 
   const handleToggleLanguage = (checked: boolean) => {
     setTranslate(checked)
     localStorage.setItem('synapse_lang', checked ? 'en' : 'pl')
     if (username && password) {
-      performBackgroundSync(username, password, checked, currentWeekPivot)
+      executeSync(username, password, checked, currentWeekPivot, true)
     }
   }
 
@@ -234,7 +295,7 @@ export default function Home() {
       })
 
       if (res.success) {
-        performBackgroundSync(username, password, translate, currentWeekPivot)
+        executeSync(username, password, translate, currentWeekPivot, true)
         return true
       }
       return false
@@ -248,7 +309,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen pb-20 pt-safe px-4 max-w-xl mx-auto flex flex-col gap-4">
+    <main className="min-h-screen pb-20 pt-safe px-4 max-w-xl mx-auto flex flex-col gap-4 box-border">
       <header className="pt-3 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-[#1c1c1e]">Synapse</h1>
@@ -290,7 +351,7 @@ export default function Home() {
             <span className="text-xl">✨</span>
             <div>
               <p className="text-xs font-extrabold">{t.newChanges}</p>
-              <p className="text-[11px] opacity-80 mt-0.5">Click to load fresh timetable and grades</p>
+              <p className="text-[11px] opacity-80 mt-0.5">Tap to apply changes</p>
             </div>
           </div>
           <button
@@ -368,31 +429,31 @@ export default function Home() {
         </section>
       )}
 
-      <nav className="bg-[#e5e5ea] p-1 rounded-2xl grid grid-cols-4 gap-1.5 shadow-inner">
+      <nav className="bg-[#e5e5ea] p-1 rounded-2xl grid grid-cols-4 gap-1.5 shadow-inner h-11 box-border">
         <button
           onClick={() => setActiveSection('schedule')}
-          className={`py-2 text-xs font-extrabold rounded-xl transition-all text-center ${activeSection === 'schedule' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'schedule' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
             }`}
         >
           {t.schedule}
         </button>
         <button
           onClick={() => setActiveSection('grades')}
-          className={`py-2 text-xs font-extrabold rounded-xl transition-all text-center ${activeSection === 'grades' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'grades' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
             }`}
         >
           {t.grades}
         </button>
         <button
           onClick={() => setActiveSection('attendance')}
-          className={`py-2 text-xs font-extrabold rounded-xl transition-all text-center ${activeSection === 'attendance' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'attendance' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
             }`}
         >
           {t.attendance}
         </button>
         <button
           onClick={() => setActiveSection('teachers')}
-          className={`py-2 text-xs font-extrabold rounded-xl transition-all text-center ${activeSection === 'teachers' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'teachers' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
             }`}
         >
           {t.teachers}
@@ -406,12 +467,9 @@ export default function Home() {
           onSelectDay={setSelectedDay}
           currentWeekPivot={currentWeekPivot}
           onShiftWeek={shiftWeek}
-          onSelectDate={(iso) => {
-            setCurrentWeekPivot(iso)
-            if (username && password) {
-              performBackgroundSync(username, password, translate, iso)
-            }
-          }}
+          onSelectDate={queueWeekChange}
+          onManualRefresh={handleManualRefresh}
+          isLoadingWeek={isLoadingWeek}
           t={t}
         />
       )}

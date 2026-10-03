@@ -3,51 +3,76 @@ export function safeUnwrapResponse(response: any): any {
         return null
     }
 
-    let textContent = ''
-
-    if (typeof response === 'function') {
+    if (typeof response === 'string') {
         try {
-            if (typeof (response as any).text === 'function') {
-                textContent = (response as any).text()
-            } else if (typeof (response as any).html === 'function') {
-                textContent = response('body').text() || (response as any).html()
-            } else {
-                textContent = String(response)
-            }
+            return JSON.parse(response)
         } catch {
-            textContent = String(response)
+            return response
         }
-    } else if (typeof response === 'string') {
-        textContent = response
-    } else if (typeof response === 'object') {
-        if (typeof response.text === 'function') {
-            try {
-                textContent = response.text()
-            } catch {
-                textContent = ''
-            }
-        } else if (typeof response.html === 'function') {
-            try {
-                textContent = response('body').text() || response.html()
-            } catch {
-                textContent = ''
-            }
-        } else {
-            try {
-                return JSON.parse(JSON.stringify(response))
-            } catch {
-                textContent = String(response)
-            }
-        }
-    } else {
+    }
+
+    if (typeof response === 'number' || typeof response === 'boolean') {
         return response
     }
 
-    if (textContent) {
+    if (typeof response === 'function') {
         try {
-            return JSON.parse(textContent)
+            const bodyText = response('body').text()
+            if (bodyText && bodyText.trim().length > 0) {
+                try {
+                    return JSON.parse(bodyText.trim())
+                } catch {
+                    return bodyText.trim()
+                }
+            }
+            const allText = response.text ? response.text() : ''
+            if (allText && allText.trim().length > 0) {
+                try {
+                    return JSON.parse(allText.trim())
+                } catch {
+                    return allText.trim()
+                }
+            }
+            const htmlText = response.html ? response.html() : ''
+            return htmlText
+        } catch (err) {
+            return { functionError: String(err) }
+        }
+    }
+
+    if (typeof response === 'object') {
+        if ('data' in response && response.data !== undefined) {
+            return safeUnwrapResponse(response.data)
+        }
+        if ('body' in response && response.body !== undefined) {
+            return safeUnwrapResponse(response.body)
+        }
+        if ('payload' in response && response.payload !== undefined) {
+            return safeUnwrapResponse(response.payload)
+        }
+
+        try {
+            return JSON.parse(JSON.stringify(response))
         } catch {
-            return textContent
+            const result: Record<string, any> = {}
+            for (const key of Object.keys(response)) {
+                if (
+                    key === 'request' ||
+                    key === 'socket' ||
+                    key === 'client' ||
+                    key === 'req' ||
+                    key === 'res' ||
+                    key === 'connection'
+                ) {
+                    continue
+                }
+                try {
+                    result[key] = JSON.parse(JSON.stringify(response[key]))
+                } catch {
+                    result[key] = typeof response[key]
+                }
+            }
+            return result
         }
     }
 

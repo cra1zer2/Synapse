@@ -1,4 +1,5 @@
 import Librus from 'librus-api'
+import { extractCookieHeader } from '@/utils/cookie.util'
 import { safeUnwrapResponse } from '@/utils/serializer.util'
 
 export interface DiagnosticResult {
@@ -46,11 +47,14 @@ export async function runFullLibrusDiagnostics(username: string, pass: string): 
         fetchSafe(() => client.inbox.listAnnouncements())
     ])
 
+    const cookieHeader = extractCookieHeader(client)
     const callerInstance = (client as any)._caller || (client as any).caller
+
     const clientInternals = {
         clientKeys: Object.keys(client),
         callerAvailable: Boolean(callerInstance),
-        callerKeys: callerInstance ? Object.keys(callerInstance) : []
+        hasCookies: Boolean(cookieHeader),
+        cookieLength: cookieHeader.length
     }
 
     return {
@@ -70,14 +74,38 @@ export async function testGatewayRequest(username: string, pass: string, targetP
     try {
         const client = new Librus()
         await client.authorize(username, pass)
-        const caller = (client as any)._caller || (client as any).caller
+        const cookieHeader = extractCookieHeader(client)
 
+        const cleanPath = targetPath.startsWith('/') ? targetPath.slice(1) : targetPath
+        const url = `https://synergia.librus.pl/${cleanPath}`
+
+        if (cookieHeader) {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Cookie': cookieHeader,
+                    'Accept': 'application/json, text/plain, */*',
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+                }
+            })
+
+            const text = await response.text()
+            let parsedData: any
+            try {
+                parsedData = JSON.parse(text)
+            } catch {
+                parsedData = text
+            }
+
+            return { success: response.ok, data: parsedData }
+        }
+
+        const caller = (client as any)._caller || (client as any).caller
         if (!caller) {
             return { success: false, error: 'Caller not found on Librus client' }
         }
 
-        const cleanPath = targetPath.startsWith('/') ? targetPath.slice(1) : targetPath
-        const rawResponse = await caller.get(`https://synergia.librus.pl/${cleanPath}`)
+        const rawResponse = await caller.get(url)
         const data = safeUnwrapResponse(rawResponse)
 
         return { success: true, data }

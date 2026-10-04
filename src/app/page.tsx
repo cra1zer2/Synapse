@@ -423,23 +423,20 @@ export default function Home() {
   }
 
   return (
-    <main className="w-full min-h-screen pb-20 pt-safe px-4 max-w-xl mx-auto flex flex-col gap-4 box-border">
-      <header className="pt-3 flex items-center justify-between">
+    <main className="w-full min-h-screen pb-24 pt-safe px-4 max-w-md mx-auto flex flex-col gap-3 box-border">
+      <header className="pt-2 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-[var(--text-primary)]">Synapse</h1>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} />
-            <p className="text-[11px] font-medium text-[var(--text-secondary)]">
-              {isUpdating ? 'Synchronizing...' : t.syncedStatus}
-            </p>
-          </div>
+          <h1 className="text-xl font-extrabold tracking-tight text-[var(--ios-label)]">Synapse</h1>
+          <p className="text-[10px] text-[var(--ios-secondary)]">
+            {isUpdating ? 'Aktualizowanie...' : 'Zsynchronizowano'}
+          </p>
         </div>
 
         <button
           onClick={() => setShowSettings(true)}
-          className="w-9 h-9 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-primary)] shadow-xs active:scale-95 transition-transform"
+          className="p-1.5 rounded-full text-[var(--ios-secondary)] hover:text-[var(--ios-label)] transition-colors"
         >
-          <svg className="w-4 h-4 text-[var(--text-primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
@@ -449,65 +446,17 @@ export default function Home() {
       {hasNewUpdate && (
         <div
           onClick={applyPendingUpdates}
-          className="bg-[#007aff] text-white p-4 rounded-3xl shadow-md flex items-center justify-between cursor-pointer active:opacity-95 transition-all animate-in fade-in"
+          className="bg-[var(--ios-blue)] text-white p-3 rounded-2xl flex items-center justify-between cursor-pointer active:opacity-90"
         >
-          <div className="flex items-center gap-3">
-            <span className="text-xl">✨</span>
-            <div>
-              <p className="text-xs font-extrabold">{t.newChanges}</p>
-              <p className="text-[11px] opacity-80 mt-0.5">Tap to apply changes</p>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">✨</span>
+            <p className="text-xs font-semibold">Wykryto zmiany w Librusie</p>
           </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              applyPendingUpdates()
-            }}
-            className="text-xs font-bold bg-white text-[#007aff] px-3.5 py-2 rounded-2xl shadow-xs"
-          >
-            {t.updateNow}
-          </button>
+          <span className="text-xs font-bold underline bg-white/20 px-2 py-0.5 rounded-lg">
+            Zaktualizuj
+          </span>
         </div>
       )}
-
-      <nav className="bg-[var(--bg-element)] p-1 rounded-2xl grid grid-cols-4 gap-1.5 shadow-inner h-11 box-border">
-        <button
-          onClick={() => setActiveSection('schedule')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'schedule'
-              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs dark:bg-[#3a3a3c] dark:text-white dark:border dark:border-white/10'
-              : 'text-[var(--text-secondary)]'
-            }`}
-        >
-          {t.schedule}
-        </button>
-        <button
-          onClick={() => setActiveSection('grades')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'grades'
-              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs dark:bg-[#3a3a3c] dark:text-white dark:border dark:border-white/10'
-              : 'text-[var(--text-secondary)]'
-            }`}
-        >
-          {t.grades}
-        </button>
-        <button
-          onClick={() => setActiveSection('attendance')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'attendance'
-              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs dark:bg-[#3a3a3c] dark:text-white dark:border dark:border-white/10'
-              : 'text-[var(--text-secondary)]'
-            }`}
-        >
-          {t.attendance}
-        </button>
-        <button
-          onClick={() => setActiveSection('messages')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'messages'
-              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs dark:bg-[#3a3a3c] dark:text-white dark:border dark:border-white/10'
-              : 'text-[var(--text-secondary)]'
-            }`}
-        >
-          {t.messages}
-        </button>
-      </nav>
 
       {activeSection === 'schedule' && timetableData && (
         <ScheduleWidget
@@ -533,30 +482,12 @@ export default function Home() {
       )}
 
       {activeSection === 'attendance' && attendanceData && (
-        <div className="flex flex-col gap-3">
-          {attendanceData.unexcusedAbsences.length > 0 && (
-            <div className="bg-rose-500/10 border border-rose-500/20 rounded-3xl p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-black text-rose-500">Nieusprawiedliwione godziny</p>
-                <p className="text-[11px] text-rose-500/80 mt-0.5">
-                  Łącznie: {attendanceData.unexcusedAbsences.length} lekcji
-                </p>
-              </div>
-              <button
-                onClick={() => setShowExcuseMatrix(true)}
-                className="text-xs font-bold bg-rose-600 text-white px-3.5 py-2 rounded-2xl shadow-xs active:scale-95 transition-transform"
-              >
-                Usprawiedliw NB
-              </button>
-            </div>
-          )}
-
-          <AttendanceWidget
-            attendanceData={attendanceData}
-            onSelectSubject={setSelectedSubjectDetail}
-            t={t}
-          />
-        </div>
+        <AttendanceWidget
+          attendanceData={attendanceData}
+          onSelectSubject={setSelectedSubjectDetail}
+          onOpenExcuseModal={() => setShowExcuseMatrix(true)}
+          t={t}
+        />
       )}
 
       {activeSection === 'messages' && (
@@ -570,11 +501,70 @@ export default function Home() {
         />
       )}
 
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--ios-separator)]/20 bg-[var(--ios-card)]/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
+        <div className="max-w-md mx-auto grid grid-cols-4 h-12">
+          {[
+            {
+              id: 'schedule' as MainSection,
+              label: 'Plan',
+              icon: (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+              )
+            },
+            {
+              id: 'grades' as MainSection,
+              label: 'Oceny',
+              icon: (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              )
+            },
+            {
+              id: 'attendance' as MainSection,
+              label: 'Frekwencja',
+              icon: (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+              )
+            },
+            {
+              id: 'messages' as MainSection,
+              label: 'Wiadomości',
+              icon: (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              )
+            }
+          ].map((tab) => {
+            const isActive = activeSection === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSection(tab.id)}
+                className={`flex flex-col items-center justify-center transition-colors ${isActive ? 'text-[var(--ios-blue)]' : 'text-[var(--ios-secondary)]'
+                  }`}
+              >
+                {tab.icon}
+                <span className="text-[10px] font-medium tracking-tight mt-0.5">{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
       {selectedSubjectDetail && (
         <AttendanceDetailModal
           subjectDetail={selectedSubjectDetail}
           onClose={() => setSelectedSubjectDetail(null)}
-          onSelectAbsenceForExcuse={(item) => setShowExcuseMatrix(true)}
+          onSelectAbsenceForExcuse={() => setShowExcuseMatrix(true)}
           t={t}
         />
       )}

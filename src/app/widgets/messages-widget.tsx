@@ -114,7 +114,7 @@ export function MessagesWidget({
                     placeholder="Szukaj..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] text-xs font-medium rounded-xl px-3.5 py-2 outline-none focus:ring-2 focus:ring-[#007aff]"
+                    className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] text-xs font-medium rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
                 />
             </div>
 
@@ -127,15 +127,20 @@ export function MessagesWidget({
                                 onClick={() => handleReadMessage(msg)}
                                 className="bg-[var(--bg-card)] rounded-3xl p-4 border border-[var(--border-subtle)] shadow-xs flex flex-col gap-1.5 cursor-pointer active:scale-[0.99] transition-transform"
                             >
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs font-black text-[var(--text-primary)] truncate max-w-[200px]">
-                                        {cleanSenderName(msg.sender)}
-                                    </span>
-                                    <span className="text-[10px] text-[var(--text-secondary)] bg-[var(--bg-input)] px-2 py-0.5 rounded-lg">
-                                        {msg.date}
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 truncate">
+                                        {!msg.isRead && (
+                                            <span className="w-2 h-2 rounded-full bg-[#007aff] shrink-0" />
+                                        )}
+                                        <span className="text-xs font-black text-[var(--text-primary)] truncate">
+                                            {cleanSenderName(msg.sender)}
+                                        </span>
+                                    </div>
+                                    <span className="text-[10px] text-[var(--text-secondary)] shrink-0">
+                                        {msg.date.split(' ')[0]}
                                     </span>
                                 </div>
-                                <h4 className="text-xs font-bold text-[var(--text-primary)] line-clamp-1">{msg.subject}</h4>
+                                <h4 className="text-xs font-semibold text-[var(--text-secondary)] line-clamp-1">{msg.subject}</h4>
                             </article>
                         ))
                     ) : (
@@ -155,7 +160,7 @@ export function MessagesWidget({
                                     content: item.content
                                 })
                             }
-                            className="bg-[var(--bg-card)] rounded-3xl p-4 border border-[var(--border-subtle)] shadow-xs flex flex-col gap-2 cursor-pointer active:scale-[0.99] transition-transform"
+                            className="bg-[var(--bg-card)] rounded-3xl p-4.5 border border-[var(--border-subtle)] shadow-xs flex flex-col gap-2 cursor-pointer active:scale-[0.99] transition-transform"
                         >
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-black text-[#007aff]">{cleanSenderName(item.author)}</span>

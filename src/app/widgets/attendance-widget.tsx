@@ -14,46 +14,45 @@ export function AttendanceWidget({
     onSelectSubject,
     t
 }: AttendanceWidgetProps) {
+    const isDanger = attendanceData.overallStatus === 'danger'
+    const isWarning = attendanceData.overallStatus === 'warning'
+
     return (
         <section className="w-full flex flex-col gap-3 min-h-[540px]">
-            <div className="bg-white rounded-3xl p-5 border border-[#e5e5ea] shadow-xs flex flex-col gap-3">
+            <div className="bg-[var(--bg-card)] rounded-3xl p-5 border border-[var(--border-subtle)] shadow-xs flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-wider">{t.attendanceRate}</p>
-                        <h2 className={`text-3xl font-black mt-0.5 ${attendanceData.overallStatus === 'danger'
-                                ? 'text-rose-600'
-                                : attendanceData.overallStatus === 'warning'
-                                    ? 'text-amber-600'
-                                    : 'text-[#1c1c1e]'
+                        <p className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">{t.attendanceRate}</p>
+                        <h2 className={`text-4xl font-black tracking-tight mt-1 ${isDanger
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : isWarning
+                                    ? 'text-amber-600 dark:text-amber-400'
+                                    : 'text-[var(--text-primary)]'
                             }`}>
                             {attendanceData.overallPercentage}%
                         </h2>
                     </div>
 
-                    <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border ${attendanceData.overallStatus === 'danger'
-                            ? 'bg-rose-50 text-rose-700 border-rose-200'
-                            : attendanceData.overallStatus === 'warning'
-                                ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border ${isDanger
+                            ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                            : isWarning
+                                ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                                : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                         }`}>
-                        {attendanceData.overallStatus === 'danger'
-                            ? t.dangerBadge
-                            : attendanceData.overallStatus === 'warning'
-                                ? t.warningBadge
-                                : t.safeBadge}
+                        {isDanger ? t.dangerBadge : isWarning ? t.warningBadge : t.safeBadge}
                     </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e5e5ea] text-xs">
-                    <div className="bg-[#f2f2f7] p-2.5 rounded-xl">
-                        <p className="text-[#8e8e93] font-medium">{t.safeToMiss}</p>
-                        <p className="font-black text-[#1c1c1e] text-sm mt-0.5">
+                <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-[var(--border-subtle)] text-xs">
+                    <div className="bg-[var(--bg-element)] p-3 rounded-2xl flex flex-col justify-between">
+                        <p className="text-[var(--text-secondary)] font-medium">{t.safeToMiss}</p>
+                        <p className="font-black text-[var(--text-primary)] text-base mt-1">
                             {attendanceData.safeAbsencesRemaining} {t.lessons}
                         </p>
                     </div>
-                    <div className="bg-[#f2f2f7] p-2.5 rounded-xl">
-                        <p className="text-[#8e8e93] font-medium">{t.neededToRecover}</p>
-                        <p className="font-black text-[#1c1c1e] text-sm mt-0.5">
+                    <div className="bg-[var(--bg-element)] p-3 rounded-2xl flex flex-col justify-between">
+                        <p className="text-[var(--text-secondary)] font-medium">{t.neededToRecover}</p>
+                        <p className="font-black text-[var(--text-primary)] text-base mt-1">
                             {attendanceData.lessonsToRecover} {t.lessons}
                         </p>
                     </div>
@@ -61,39 +60,44 @@ export function AttendanceWidget({
             </div>
 
             <div className="flex flex-col gap-2">
-                {attendanceData.subjects.map((sub) => (
-                    <article
-                        key={sub.subject}
-                        onClick={() => onSelectSubject(sub)}
-                        className="bg-white rounded-3xl p-4 border border-[#e5e5ea] shadow-xs flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform"
-                    >
-                        <div>
-                            <div className="flex items-center gap-1.5">
-                                <h4 className="text-sm font-bold text-[#1c1c1e]">{sub.subject}</h4>
-                                {sub.unexcusedCount > 0 && (
-                                    <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">
-                                        {sub.unexcusedCount} nb
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-xs text-[#8e8e93] mt-0.5">
-                                {t.missedOf(sub.absentLessons, sub.totalLessons)}
-                            </p>
-                        </div>
+                {attendanceData.subjects.map((sub) => {
+                    const subDanger = sub.status === 'danger'
+                    const subWarning = sub.status === 'warning'
 
-                        <div className="flex items-center gap-2">
-                            <span className={`text-xs font-black px-2.5 py-1 rounded-xl border ${sub.status === 'danger'
-                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                    : sub.status === 'warning'
-                                        ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                        : 'bg-[#f2f2f7] text-[#1c1c1e] border-transparent'
-                                }`}>
-                                {sub.percentage}%
-                            </span>
-                            <span className="text-xs text-[#8e8e93]">›</span>
-                        </div>
-                    </article>
-                ))}
+                    return (
+                        <article
+                            key={sub.subject}
+                            onClick={() => onSelectSubject(sub)}
+                            className="bg-[var(--bg-card)] rounded-3xl p-4 border border-[var(--border-subtle)] shadow-xs flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform"
+                        >
+                            <div className="pr-3">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-xs font-bold text-[var(--text-primary)]">{sub.subject}</h4>
+                                    {sub.unexcusedCount > 0 && (
+                                        <span className="text-[10px] font-bold bg-rose-500/15 text-rose-600 px-2 py-0.5 rounded-full border border-rose-500/20">
+                                            {sub.unexcusedCount} nb
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                                    {t.missedOf(sub.absentLessons, sub.totalLessons)}
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                                <span className={`text-xs font-black px-2.5 py-1 rounded-xl border ${subDanger
+                                        ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                                        : subWarning
+                                            ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                                            : 'bg-[var(--bg-element)] text-[var(--text-primary)] border-transparent'
+                                    }`}>
+                                    {sub.percentage}%
+                                </span>
+                                <span className="text-xs text-[var(--text-secondary)] font-bold">›</span>
+                            </div>
+                        </article>
+                    )
+                })}
             </div>
         </section>
     )

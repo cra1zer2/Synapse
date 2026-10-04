@@ -59,7 +59,7 @@ export function ScheduleWidget({
     return (
         <section className="w-full flex flex-col gap-3 min-h-[540px]">
             <div className="bg-[var(--bg-card)] rounded-3xl border border-[var(--border-subtle)] shadow-xs flex flex-col overflow-hidden">
-                <div className="p-3 flex items-center justify-between">
+                <div className="px-4 py-3 flex items-center justify-between">
                     <button
                         onClick={() => onShiftWeek(-7)}
                         className="w-8 h-8 rounded-xl bg-[var(--bg-element)] text-[var(--text-primary)] font-black text-sm flex items-center justify-center active:scale-95 transition-transform shrink-0"
@@ -67,8 +67,8 @@ export function ScheduleWidget({
                         ‹
                     </button>
 
-                    <div className="flex items-center gap-1.5 overflow-hidden px-1">
-                        <span className="text-xs font-black text-[var(--text-primary)] truncate">
+                    <div className="flex items-center gap-2 overflow-hidden px-1">
+                        <span className="text-xs font-black text-[var(--text-primary)] tracking-tight truncate">
                             {formatWeekRange(timetableData.weekStart, timetableData.weekEnd)}
                         </span>
 
@@ -132,7 +132,7 @@ export function ScheduleWidget({
                             <button
                                 key={day.dayName}
                                 onClick={() => onSelectDay(day.dayName)}
-                                className={`py-2 rounded-2xl text-xs font-bold flex flex-col items-center justify-center transition-all ${isSelected
+                                className={`py-2.5 rounded-2xl text-xs font-bold flex flex-col items-center justify-center transition-all ${isSelected
                                         ? 'bg-[var(--text-primary)] text-[var(--bg-card)] shadow-xs dark:bg-[#3a3a3c] dark:text-white dark:border dark:border-white/10'
                                         : 'bg-[var(--bg-element)] text-[var(--text-secondary)] hover:opacity-90'
                                     }`}
@@ -181,7 +181,7 @@ export function ScheduleWidget({
                             currentDaySchedule.lessons.map((lesson) => (
                                 <article
                                     key={`${lesson.number}-${lesson.subject}-${lesson.time}`}
-                                    className="bg-[var(--bg-card)] rounded-3xl p-4 border border-[var(--border-subtle)] shadow-xs flex flex-col gap-2"
+                                    className="bg-[var(--bg-card)] rounded-3xl p-4.5 border border-[var(--border-subtle)] shadow-xs flex flex-col gap-2"
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-1.5">

@@ -90,10 +90,15 @@ export async function getStudentProfileAction(username: string, pass: string): P
             client.info.getLuckyNumber().catch(() => null)
         ])
 
-        const student = accountInfo?.student || accountInfo?.user || {}
-        const fullName = [student.name, student.surname].filter(Boolean).join(' ') || username
-        const className = student.class || student.className || 'Klasa Technikum'
-        const schoolName = student.school || 'TEB Edukacja'
+        const raw = accountInfo || {}
+        const candidate = raw.student || raw.user || raw.account || raw
+        const firstName = candidate.name || candidate.firstName || candidate.imie || ''
+        const lastName = candidate.surname || candidate.lastName || candidate.nazwisko || ''
+        const full = [firstName, lastName].filter(Boolean).join(' ')
+        const fullName = full.length > 0 ? full : 'Konto Librus'
+
+        const className = candidate.class || candidate.className || candidate.klasa || '4 Tsa Technikum'
+        const schoolName = candidate.school || candidate.schoolName || candidate.szkola || 'TEB Edukacja'
         const lucky = typeof luckyNum === 'number' ? luckyNum : parseInt(String(luckyNum), 10) || null
 
         return {

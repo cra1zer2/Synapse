@@ -131,18 +131,18 @@ export function ScheduleWidget({
                         <button
                             key={day.dayName}
                             onClick={() => onSelectDay(day.dayName)}
-                            className={`relative h-14 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-0.5 transition-all ${isSelected
+                            className={`h-14 rounded-2xl text-xs font-bold flex flex-col items-center justify-center transition-all ${isSelected
                                     ? 'bg-[#1c1c1e] text-white shadow-xs'
                                     : 'bg-white text-[#8e8e93] border border-[#e5e5ea]'
                                 }`}
                         >
-                            {dotColor && (
-                                <span className={`absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full ${dotColor}`} />
-                            )}
-                            <span>{day.dayName.slice(0, 3)}</span>
-                            <span className="text-[10px] opacity-75">
+                            <span className="text-[11px] font-bold leading-none">{day.dayName.slice(0, 3)}</span>
+                            <span className="text-xs font-black leading-none mt-1">
                                 {day.date ? day.date.split('.')[0] : ''}
                             </span>
+                            <div className="h-1.5 flex items-center justify-center mt-1">
+                                {dotColor && <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />}
+                            </div>
                         </button>
                     )
                 })}

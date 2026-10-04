@@ -13,7 +13,6 @@ import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
 import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
 import { StudentProfile } from '@/models/account.model'
 import { getDictionary, AppLanguage } from '@/config/dictionary.config'
-import { requestPushPermission, getNotificationPermissionStatus } from '@/services/notification.service'
 
 import { ScheduleWidget } from './widgets/schedule-widget'
 import { GradesWidget } from './widgets/grades-widget'
@@ -51,6 +50,10 @@ export default function Home() {
   const [password, setPassword] = useState('')
   const [lang, setLang] = useState<AppLanguage>('pl')
 
+  const [authStep, setAuthStep] = useState<'input' | 'verifying' | 'preview'>('input')
+  const [verifiedCandidate, setVerifiedCandidate] = useState<StudentProfile | null>(null)
+  const [authError, setAuthError] = useState<string | null>(null)
+
   const [isUpdating, setIsUpdating] = useState(false)
   const [isLoadingWeek, setIsLoadingWeek] = useState(false)
   const [hasNewUpdate, setHasNewUpdate] = useState(false)
@@ -74,7 +77,6 @@ export default function Home() {
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<SubjectAttendance | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [showExcuseMatrix, setShowExcuseMatrix] = useState(false)
-  const [showPushBanner, setShowPushBanner] = useState(false)
 
   const weekCacheRef = useRef<Record<string, SmartTimetableResult>>({})
   const activeRequestCounter = useRef(0)
@@ -208,11 +210,6 @@ export default function Home() {
       executeSync(savedUser, savedPass, savedLang, currentWeekPivot, isAlreadyInCache)
     }
 
-    const perm = getNotificationPermissionStatus()
-    if (perm === 'default') {
-      setShowPushBanner(true)
-    }
-
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       const tabParam = params.get('tab') as MainSection
@@ -280,20 +277,36 @@ export default function Home() {
     }
   }
 
-  const handleSaveCredentials = (e: React.FormEvent) => {
+  const handleStartVerification = async (e: React.FormEvent) => {
     e.preventDefault()
+    setAuthError(null)
+    setAuthStep('verifying')
+
+    const res = await getStudentProfileAction(username, password)
+    if (res.success && res.data) {
+      setVerifiedCandidate(res.data)
+      setAuthStep('preview')
+    } else {
+      setAuthError(res.error || t.loginError)
+      setAuthStep('input')
+    }
+  }
+
+  const handleConfirmLogin = () => {
+    if (!verifiedCandidate) return
     localStorage.setItem('synapse_user', username)
     localStorage.setItem('synapse_pass', password)
     localStorage.setItem('synapse_lang', lang)
+    setProfile(verifiedCandidate)
     setIsConfigured(true)
-    setShowSettings(false)
+    setAuthStep('input')
     executeSync(username, password, lang, currentWeekPivot, false)
   }
 
   const handleSelectLanguage = (newLang: AppLanguage) => {
     setLang(newLang)
     localStorage.setItem('synapse_lang', newLang)
-    if (username && password) {
+    if (isConfigured && username && password) {
       executeSync(username, password, newLang, currentWeekPivot, true)
     }
   }
@@ -312,11 +325,8 @@ export default function Home() {
     setAttendanceData(null)
     setIsConfigured(false)
     setShowSettings(false)
-  }
-
-  const handleActivatePush = async () => {
-    await requestPushPermission()
-    setShowPushBanner(false)
+    setAuthStep('input')
+    setVerifiedCandidate(null)
   }
 
   const handleSubmitMultipleJustifications = async (payload: { dateIso: string; lessons: number[]; message: string }): Promise<boolean> => {
@@ -340,6 +350,116 @@ export default function Home() {
   }
 
   if (!mounted) return null
+
+  if (!isConfigured) {
+    return (
+      <main className="w-full min-h-screen pb-16 pt-safe px-4 max-w-sm mx-auto flex flex-col justify-center gap-6 box-border">
+        <header className="flex items-center justify-between">
+          <h1 className="text-2xl font-black tracking-tight text-[#1c1c1e]">Synapse</h1>
+          <div className="flex bg-[#e5e5ea] p-0.5 rounded-xl">
+            {(['pl', 'en', 'ru'] as AppLanguage[]).map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => handleSelectLanguage(code)}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg uppercase transition-all ${lang === code ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+                  }`}
+              >
+                {code}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        <section className="bg-white rounded-3xl p-6 shadow-sm border border-[#e5e5ea] flex flex-col gap-5">
+          {authStep === 'input' && (
+            <>
+              <div>
+                <h2 className="text-lg font-black text-[#1c1c1e]">{t.welcomeTitle}</h2>
+                <p className="text-xs text-[#8e8e93] mt-0.5">{t.loginSubtitle}</p>
+              </div>
+
+              {authError && (
+                <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold p-3 rounded-2xl">
+                  {authError}
+                </div>
+              )}
+
+              <form onSubmit={handleStartVerification} className="flex flex-col gap-3">
+                <input
+                  type="text"
+                  placeholder={t.loginPlaceholder}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-xs font-medium rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#007aff]"
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder={t.passwordPlaceholder}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-xs font-medium rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#007aff]"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="w-full bg-[#007aff] text-white text-xs font-bold py-3.5 rounded-2xl active:opacity-80 transition-all shadow-xs"
+                >
+                  {t.verifyButton}
+                </button>
+              </form>
+            </>
+          )}
+
+          {authStep === 'verifying' && (
+            <div className="py-12 flex flex-col items-center justify-center gap-3">
+              <div className="w-7 h-7 border-2 border-[#007aff] border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs font-bold text-[#8e8e93]">{t.verifyingAccount}</p>
+            </div>
+          )}
+
+          {authStep === 'preview' && verifiedCandidate && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-xs font-bold text-emerald-700">{t.accountVerified}</span>
+              </div>
+
+              <div className="bg-[#f2f2f7] p-4 rounded-2xl flex flex-col gap-1">
+                <h3 className="text-sm font-black text-[#1c1c1e]">{verifiedCandidate.fullName}</h3>
+                <p className="text-xs font-medium text-[#8e8e93]">
+                  {verifiedCandidate.className} • {verifiedCandidate.schoolName}
+                </p>
+                {verifiedCandidate.luckyNumber !== null && (
+                  <p className="text-xs font-bold text-[#007aff] mt-1">
+                    {t.luckyNumber}: {verifiedCandidate.luckyNumber}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={handleConfirmLogin}
+                  className="w-full bg-[#007aff] text-white text-xs font-bold py-3.5 rounded-2xl active:opacity-80 transition-all shadow-xs"
+                >
+                  {t.confirmAndEnter}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthStep('input')}
+                  className="w-full bg-[#f2f2f7] text-[#8e8e93] text-xs font-bold py-2.5 rounded-2xl active:opacity-80 transition-all"
+                >
+                  {t.changeData}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      </main>
+    )
+  }
 
   return (
     <main className="w-full min-h-screen pb-20 pt-safe px-4 max-w-xl mx-auto flex flex-col gap-4 box-border">
@@ -365,29 +485,6 @@ export default function Home() {
         </button>
       </header>
 
-      {showPushBanner && (
-        <div className="bg-white p-4 rounded-3xl border border-[#e5e5ea] shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-black text-[#1c1c1e]">Włącz powiadomienia</p>
-            <p className="text-[11px] text-[#8e8e93] mt-0.5">Alerty o ocenach i zastępstwach</p>
-          </div>
-          <div className="flex gap-1.5">
-            <button
-              onClick={() => setShowPushBanner(false)}
-              className="text-xs font-bold text-[#8e8e93] px-2.5 py-1.5"
-            >
-              Później
-            </button>
-            <button
-              onClick={handleActivatePush}
-              className="text-xs font-bold bg-[#007aff] text-white px-3 py-1.5 rounded-xl shadow-xs"
-            >
-              Włącz
-            </button>
-          </div>
-        </div>
-      )}
-
       {hasNewUpdate && (
         <div
           onClick={applyPendingUpdates}
@@ -410,39 +507,6 @@ export default function Home() {
             {t.updateNow}
           </button>
         </div>
-      )}
-
-      {!isConfigured && (
-        <section className="bg-white rounded-3xl p-6 shadow-xs border border-[#e5e5ea] flex flex-col gap-4 text-center">
-          <div>
-            <h2 className="text-lg font-black text-[#1c1c1e]">Synapse Gateway</h2>
-            <p className="text-xs text-[#8e8e93] mt-1">Configure account once. Data will be saved locally.</p>
-          </div>
-          <form onSubmit={handleSaveCredentials} className="flex flex-col gap-2.5">
-            <input
-              type="text"
-              placeholder="Login / ID"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full bg-[#007aff] text-white text-xs font-bold py-3 rounded-xl active:opacity-80 transition-all shadow-xs"
-            >
-              {t.saveCreds}
-            </button>
-          </form>
-        </section>
       )}
 
       <nav className="bg-[#e5e5ea] p-1 rounded-2xl grid grid-cols-4 gap-1.5 shadow-inner h-11 box-border">
@@ -577,8 +641,8 @@ export default function Home() {
                     <div className="flex items-center justify-between">
                       <span className="font-bold">{item.date}</span>
                       <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${item.isUnexcused
-                        ? 'bg-rose-100 text-rose-700 border-rose-200'
-                        : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                          ? 'bg-rose-100 text-rose-700 border-rose-200'
+                          : 'bg-emerald-100 text-emerald-700 border-emerald-200'
                         }`}>
                         {item.type.toUpperCase()}
                       </span>
@@ -626,7 +690,7 @@ export default function Home() {
         setUsername={setUsername}
         password={password}
         setPassword={setPassword}
-        onSaveCredentials={handleSaveCredentials}
+        onSaveCredentials={handleConfirmLogin}
         onLogout={handleLogout}
         allAbsentTeachers={timetableData?.allAbsentTeachers || []}
         t={t}

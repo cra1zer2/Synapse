@@ -61,6 +61,16 @@ export interface AppDictionary {
     messagesAnnouncements: string
     noMessages: string
     moduleUnderDevelopment: string
+    welcomeTitle: string
+    loginSubtitle: string
+    loginPlaceholder: string
+    passwordPlaceholder: string
+    verifyButton: string
+    verifyingAccount: string
+    accountVerified: string
+    confirmAndEnter: string
+    loginError: string
+    changeData: string
 }
 
 export function getDictionary(lang: AppLanguage): AppDictionary {
@@ -125,7 +135,17 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             messagesInbox: 'Inbox',
             messagesAnnouncements: 'Announcements',
             noMessages: 'No messages yet',
-            moduleUnderDevelopment: 'Full message viewer connects in the next step'
+            moduleUnderDevelopment: 'Full message viewer connects in the next step',
+            welcomeTitle: 'Welcome to Synapse',
+            loginSubtitle: 'Sign in with your Librus Synergia account',
+            loginPlaceholder: 'Login / ID',
+            passwordPlaceholder: 'Password',
+            verifyButton: 'Verify & Connect',
+            verifyingAccount: 'Verifying account with Librus...',
+            accountVerified: 'Identity Verified',
+            confirmAndEnter: 'Confirm & Enter',
+            loginError: 'Invalid login or password. Please try again.',
+            changeData: 'Change credentials'
         }
     }
 
@@ -190,7 +210,17 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             messagesInbox: 'Входящие',
             messagesAnnouncements: 'Объявления',
             noMessages: 'Сообщений пока нет',
-            moduleUnderDevelopment: 'Модуль писем и объявлений подключается следующим шагом'
+            moduleUnderDevelopment: 'Модуль писем и объявлений подключается следующим шагом',
+            welcomeTitle: 'Добро пожаловать в Synapse',
+            loginSubtitle: 'Войдите с учетной записью Librus Synergia',
+            loginPlaceholder: 'Логин / ID',
+            passwordPlaceholder: 'Пароль',
+            verifyButton: 'Проверить и войти',
+            verifyingAccount: 'Проверка данных в Librus...',
+            accountVerified: 'Личность подтверждена',
+            confirmAndEnter: 'Подтвердить и продолжить',
+            loginError: 'Неверный логин или пароль. Проверьте данные.',
+            changeData: 'Изменить данные'
         }
     }
 
@@ -254,6 +284,16 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         messagesInbox: 'Odebrane',
         messagesAnnouncements: 'Ogłoszenia',
         noMessages: 'Brak wiadomości',
-        moduleUnderDevelopment: 'Pełny moduł wiadomości podłączany w kolejnym kroku'
+        moduleUnderDevelopment: 'Pełny moduł wiadomości podłączany w kolejnym kroku',
+        welcomeTitle: 'Witaj w Synapse',
+        loginSubtitle: 'Zaloguj się kontem Librus Synergia',
+        loginPlaceholder: 'Login / ID',
+        passwordPlaceholder: 'Hasło',
+        verifyButton: 'Weryfikuj i połącz',
+        verifyingAccount: 'Weryfikacja konta w Librus...',
+        accountVerified: 'Tożsamość potwierdzona',
+        confirmAndEnter: 'Potwierdź i wejdź',
+        loginError: 'Nieprawidłowy login lub hasło. Spróbuj ponownie.',
+        changeData: 'Zmień dane'
     }
 }

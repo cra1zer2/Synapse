@@ -5,21 +5,23 @@ import {
   getSmartTimetableAction,
   getStudentGradesAction,
   getAttendanceAction,
+  getStudentProfileAction,
   createJustificationAction
 } from './actions'
 import { SmartTimetableResult, DaySchedule } from '@/models/timetable.model'
 import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
 import { AttendanceResult, SubjectAttendance, AbsenceDetail } from '@/models/attendance.model'
-import { getDictionary } from '@/config/dictionary.config'
+import { StudentProfile } from '@/models/account.model'
+import { getDictionary, AppLanguage } from '@/config/dictionary.config'
 
-import { ScheduleWidget } from './schedule-widget'
-import { GradesWidget } from './grades-widget'
-import { AttendanceWidget } from './attendance-widget'
-import { TeachersWidget } from './teachers-widget'
-import { JustificationModal } from './justification-modal'
-import { GradeModal } from './grade-modal'
+import { ScheduleWidget } from './widgets/schedule-widget'
+import { GradesWidget } from './widgets/grades-widget'
+import { AttendanceWidget } from './widgets/attendance-widget'
+import { JustificationModal } from './widgets/justification-modal'
+import { GradeModal } from './widgets/grade-modal'
+import { SettingsSheet } from './widgets/settings-sheet'
 
-type MainSection = 'schedule' | 'grades' | 'attendance' | 'teachers'
+type MainSection = 'schedule' | 'grades' | 'attendance' | 'messages'
 
 function getInitialWeekPivot(): string {
   const now = new Date()
@@ -46,15 +48,16 @@ export default function Home() {
   const [isConfigured, setIsConfigured] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [translate, setTranslate] = useState(false)
+  const [lang, setLang] = useState<AppLanguage>('pl')
+
   const [isUpdating, setIsUpdating] = useState(false)
   const [isLoadingWeek, setIsLoadingWeek] = useState(false)
   const [hasNewUpdate, setHasNewUpdate] = useState(false)
   const [activeSection, setActiveSection] = useState<MainSection>('schedule')
 
   const [currentWeekPivot, setCurrentWeekPivot] = useState(getInitialWeekPivot)
-  const [weekCache, setWeekCache] = useState<Record<string, SmartTimetableResult>>({})
 
+  const [profile, setProfile] = useState<StudentProfile | null>(null)
   const [timetableData, setTimetableData] = useState<SmartTimetableResult | null>(null)
   const [gradesData, setGradesData] = useState<GradesResult | null>(null)
   const [attendanceData, setAttendanceData] = useState<AttendanceResult | null>(null)
@@ -69,15 +72,12 @@ export default function Home() {
   const [selectedWarningSubject, setSelectedWarningSubject] = useState<SubjectGrades | null>(null)
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<SubjectAttendance | null>(null)
   const [showSettings, setShowSettings] = useState(false)
-
-  const [teacherSearch, setTeacherSearch] = useState('')
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState(getInitialWeekPivot)
-  const [showAllDates, setShowAllDates] = useState(false)
   const [justifyingAbsence, setJustifyingAbsence] = useState<AbsenceDetail | null>(null)
 
+  const weekCacheRef = useRef<Record<string, SmartTimetableResult>>({})
   const activeRequestCounter = useRef(0)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const t = getDictionary(translate)
+  const t = getDictionary(lang)
 
   const resolveSmartDefaultDay = useCallback((schedule: DaySchedule[]): string => {
     if (!Array.isArray(schedule) || schedule.length === 0) {
@@ -114,7 +114,7 @@ export default function Home() {
     return 'Monday'
   }, [])
 
-  const executeSync = useCallback(async (u: string, p: string, tr: boolean, weekPivot: string, silentUpdate: boolean) => {
+  const executeSync = useCallback(async (u: string, p: string, currentAppLang: AppLanguage, weekPivot: string, silentUpdate: boolean) => {
     const requestId = ++activeRequestCounter.current
 
     if (!silentUpdate) {
@@ -123,30 +123,33 @@ export default function Home() {
     setIsUpdating(true)
 
     try {
-      const [tRes, gRes, aRes] = await Promise.all([
-        getSmartTimetableAction(u, p, tr, weekPivot),
-        getStudentGradesAction(u, p, tr),
-        getAttendanceAction(u, p, tr)
+      const shouldTranslate = currentAppLang === 'en'
+      const [tRes, gRes, aRes, pRes] = await Promise.all([
+        getSmartTimetableAction(u, p, shouldTranslate, weekPivot),
+        getStudentGradesAction(u, p, shouldTranslate),
+        getAttendanceAction(u, p, shouldTranslate),
+        getStudentProfileAction(u, p)
       ])
 
       if (requestId !== activeRequestCounter.current) {
         return
       }
 
+      if (pRes.success && pRes.data) {
+        setProfile(pRes.data)
+      }
+
       if (tRes.success && gRes.success && aRes.success && tRes.data && gRes.data && aRes.data) {
         const fetchedData = tRes.data
-
-        setWeekCache((prev) => ({
-          ...prev,
-          [weekPivot]: fetchedData
-        }))
+        const previousDataForThisWeek = weekCacheRef.current[weekPivot]
+        weekCacheRef.current[weekPivot] = fetchedData
+        localStorage.setItem('synapse_week_cache', JSON.stringify(weekCacheRef.current))
 
         setGradesData(gRes.data)
         setAttendanceData(aRes.data)
 
-        const oldWeekData = weekCache[weekPivot]
-        if (oldWeekData) {
-          const isIdentical = JSON.stringify(oldWeekData) === JSON.stringify(fetchedData)
+        if (previousDataForThisWeek) {
+          const isIdentical = JSON.stringify(previousDataForThisWeek) === JSON.stringify(fetchedData)
           if (!isIdentical) {
             setPendingSnapshot({ t: fetchedData, g: gRes.data, a: aRes.data })
             setHasNewUpdate(true)
@@ -169,19 +172,26 @@ export default function Home() {
         setIsUpdating(false)
       }
     }
-  }, [weekCache, resolveSmartDefaultDay])
+  }, [resolveSmartDefaultDay])
 
   useEffect(() => {
     setMounted(true)
 
     const savedUser = localStorage.getItem('synapse_user') || ''
     const savedPass = localStorage.getItem('synapse_pass') || ''
-    const savedLang = localStorage.getItem('synapse_lang') === 'en'
+    const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
 
     setUsername(savedUser)
     setPassword(savedPass)
-    setTranslate(savedLang)
+    setLang(savedLang)
     setIsConfigured(Boolean(savedUser && savedPass))
+
+    const storedWeekCache = localStorage.getItem('synapse_week_cache')
+    if (storedWeekCache) {
+      try {
+        weekCacheRef.current = JSON.parse(storedWeekCache)
+      } catch { }
+    }
 
     const cachedSnapshot = localStorage.getItem('synapse_cache')
     if (cachedSnapshot) {
@@ -189,7 +199,9 @@ export default function Home() {
         const parsed = JSON.parse(cachedSnapshot)
         if (parsed.t && Array.isArray(parsed.t.schedule)) {
           setTimetableData(parsed.t)
-          setWeekCache({ [parsed.t.weekStart]: parsed.t })
+          if (!weekCacheRef.current[parsed.t.weekStart]) {
+            weekCacheRef.current[parsed.t.weekStart] = parsed.t
+          }
           setSelectedDay(resolveSmartDefaultDay(parsed.t.schedule))
         }
         if (parsed.g) setGradesData(parsed.g)
@@ -198,16 +210,17 @@ export default function Home() {
     }
 
     if (savedUser && savedPass) {
-      executeSync(savedUser, savedPass, savedLang, currentWeekPivot, false)
+      const isAlreadyInCache = Boolean(weekCacheRef.current[currentWeekPivot])
+      executeSync(savedUser, savedPass, savedLang, currentWeekPivot, isAlreadyInCache)
     }
-  }, [currentWeekPivot, executeSync, resolveSmartDefaultDay])
+  }, [])
 
   const queueWeekChange = (targetPivot: string) => {
     setHasNewUpdate(false)
     setCurrentWeekPivot(targetPivot)
 
-    if (weekCache[targetPivot]) {
-      const cached = weekCache[targetPivot]
+    const cached = weekCacheRef.current[targetPivot]
+    if (cached) {
       setTimetableData(cached)
       setSelectedDay((prev) => {
         const hasPrev = cached.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
@@ -224,10 +237,10 @@ export default function Home() {
 
     debounceTimerRef.current = setTimeout(() => {
       if (username && password) {
-        const isSilent = Boolean(weekCache[targetPivot])
-        executeSync(username, password, translate, targetPivot, isSilent)
+        const isSilent = Boolean(weekCacheRef.current[targetPivot])
+        executeSync(username, password, lang, targetPivot, isSilent)
       }
-    }, 350)
+    }, 400)
   }
 
   const shiftWeek = (deltaDays: number) => {
@@ -241,17 +254,15 @@ export default function Home() {
 
   const handleManualRefresh = () => {
     if (username && password) {
-      executeSync(username, password, translate, currentWeekPivot, false)
+      executeSync(username, password, lang, currentWeekPivot, false)
     }
   }
 
   const applyPendingUpdates = () => {
     if (pendingSnapshot) {
       setTimetableData(pendingSnapshot.t)
-      setWeekCache((prev) => ({
-        ...prev,
-        [currentWeekPivot]: pendingSnapshot.t
-      }))
+      weekCacheRef.current[currentWeekPivot] = pendingSnapshot.t
+      localStorage.setItem('synapse_week_cache', JSON.stringify(weekCacheRef.current))
       setSelectedDay(resolveSmartDefaultDay(pendingSnapshot.t.schedule))
       setGradesData(pendingSnapshot.g)
       setAttendanceData(pendingSnapshot.a)
@@ -265,18 +276,34 @@ export default function Home() {
     e.preventDefault()
     localStorage.setItem('synapse_user', username)
     localStorage.setItem('synapse_pass', password)
-    localStorage.setItem('synapse_lang', translate ? 'en' : 'pl')
+    localStorage.setItem('synapse_lang', lang)
     setIsConfigured(true)
     setShowSettings(false)
-    executeSync(username, password, translate, currentWeekPivot, false)
+    executeSync(username, password, lang, currentWeekPivot, false)
   }
 
-  const handleToggleLanguage = (checked: boolean) => {
-    setTranslate(checked)
-    localStorage.setItem('synapse_lang', checked ? 'en' : 'pl')
+  const handleSelectLanguage = (newLang: AppLanguage) => {
+    setLang(newLang)
+    localStorage.setItem('synapse_lang', newLang)
     if (username && password) {
-      executeSync(username, password, checked, currentWeekPivot, true)
+      executeSync(username, password, newLang, currentWeekPivot, true)
     }
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('synapse_user')
+    localStorage.removeItem('synapse_pass')
+    localStorage.removeItem('synapse_cache')
+    localStorage.removeItem('synapse_week_cache')
+    weekCacheRef.current = {}
+    setUsername('')
+    setPassword('')
+    setProfile(null)
+    setTimetableData(null)
+    setGradesData(null)
+    setAttendanceData(null)
+    setIsConfigured(false)
+    setShowSettings(false)
   }
 
   const handleSubmitJustification = async (parentMsg: string): Promise<boolean> => {
@@ -295,7 +322,7 @@ export default function Home() {
       })
 
       if (res.success) {
-        executeSync(username, password, translate, currentWeekPivot, true)
+        executeSync(username, password, lang, currentWeekPivot, true)
         return true
       }
       return false
@@ -309,37 +336,27 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen pb-20 pt-safe px-4 max-w-xl mx-auto flex flex-col gap-4 box-border">
+    <main className="w-full min-h-screen pb-20 pt-safe px-4 max-w-xl mx-auto flex flex-col gap-4 box-border">
       <header className="pt-3 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-[#1c1c1e]">Synapse</h1>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} />
             <p className="text-[11px] font-medium text-[#8e8e93]">
-              {isUpdating ? 'Synchronizing...' : 'Synced offline-first'}
+              {isUpdating ? 'Synchronizing...' : t.syncedStatus}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5 cursor-pointer bg-white px-3 py-1.5 rounded-full shadow-xs border border-[#e5e5ea]">
-            <span className="text-xs font-bold text-[#1c1c1e]">EN</span>
-            <input
-              type="checkbox"
-              {...{ switch: '' }}
-              checked={translate}
-              onChange={(e) => handleToggleLanguage(e.target.checked)}
-              className="w-8 h-4 cursor-pointer"
-            />
-          </label>
-
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="w-8 h-8 rounded-full bg-white border border-[#e5e5ea] flex items-center justify-center text-[#1c1c1e] text-xs font-bold shadow-xs active:scale-95"
-          >
-            ⚙
-          </button>
-        </div>
+        <button
+          onClick={() => setShowSettings(true)}
+          className="w-9 h-9 rounded-2xl bg-white border border-[#e5e5ea] flex items-center justify-center text-[#1c1c1e] shadow-xs active:scale-95 transition-transform"
+        >
+          <svg className="w-4 h-4 text-[#1c1c1e]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
       </header>
 
       {hasNewUpdate && (
@@ -366,37 +383,7 @@ export default function Home() {
         </div>
       )}
 
-      {showSettings && (
-        <section className="bg-white rounded-3xl p-5 shadow-xs border border-[#e5e5ea] flex flex-col gap-3">
-          <h2 className="text-sm font-bold text-[#1c1c1e]">{t.settingsTitle}</h2>
-          <form onSubmit={handleSaveCredentials} className="flex flex-col gap-2.5">
-            <input
-              type="text"
-              placeholder="Login / ID"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full bg-[#1c1c1e] text-white text-xs font-bold py-3 rounded-xl active:opacity-80 transition-all shadow-xs"
-            >
-              {t.saveCreds}
-            </button>
-          </form>
-        </section>
-      )}
-
-      {!isConfigured && !showSettings && (
+      {!isConfigured && (
         <section className="bg-white rounded-3xl p-6 shadow-xs border border-[#e5e5ea] flex flex-col gap-4 text-center">
           <div>
             <h2 className="text-lg font-black text-[#1c1c1e]">Synapse Gateway</h2>
@@ -452,11 +439,11 @@ export default function Home() {
           {t.attendance}
         </button>
         <button
-          onClick={() => setActiveSection('teachers')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'teachers' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          onClick={() => setActiveSection('messages')}
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'messages' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
             }`}
         >
-          {t.teachers}
+          {t.messages}
         </button>
       </nav>
 
@@ -491,20 +478,21 @@ export default function Home() {
         />
       )}
 
-      {activeSection === 'teachers' && timetableData && (
-        <TeachersWidget
-          allAbsentTeachers={timetableData.allAbsentTeachers}
-          teacherSearch={teacherSearch}
-          onSearchChange={setTeacherSearch}
-          selectedCalendarDate={selectedCalendarDate}
-          onDateChange={(val) => {
-            setSelectedCalendarDate(val)
-            setShowAllDates(false)
-          }}
-          showAllDates={showAllDates}
-          onToggleShowAllDates={() => setShowAllDates(!showAllDates)}
-          t={t}
-        />
+      {activeSection === 'messages' && (
+        <section className="w-full flex flex-col gap-3 min-h-[540px]">
+          <div className="bg-white rounded-3xl p-5 border border-[#e5e5ea] shadow-xs flex flex-col gap-3 text-center items-center justify-center min-h-[360px]">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#007aff] flex items-center justify-center">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-[#1c1c1e]">{t.messages} & {t.messagesAnnouncements}</h3>
+              <p className="text-xs text-[#8e8e93] mt-1 max-w-xs">{t.moduleUnderDevelopment}</p>
+            </div>
+          </div>
+        </section>
       )}
 
       {selectedSubjectDetail && (
@@ -588,6 +576,22 @@ export default function Home() {
         selectedWarningSubject={selectedWarningSubject}
         onCloseGrade={() => setSelectedGrade(null)}
         onCloseWarning={() => setSelectedWarningSubject(null)}
+        t={t}
+      />
+
+      <SettingsSheet
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        profile={profile}
+        currentLang={lang}
+        onSelectLang={handleSelectLanguage}
+        username={username}
+        setUsername={setUsername}
+        password={password}
+        setPassword={setPassword}
+        onSaveCredentials={handleSaveCredentials}
+        onLogout={handleLogout}
+        allAbsentTeachers={timetableData?.allAbsentTeachers || []}
         t={t}
       />
     </main>

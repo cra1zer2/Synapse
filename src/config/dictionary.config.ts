@@ -1,7 +1,10 @@
+export type AppLanguage = 'pl' | 'en' | 'ru'
+
 export interface AppDictionary {
     schedule: string
     grades: string
     attendance: string
+    messages: string
     teachers: string
     attendanceRate: string
     dangerBadge: string
@@ -44,14 +47,29 @@ export interface AppDictionary {
     settingsTitle: string
     refresh: string
     loadingTimetable: string
+    syncedStatus: string
+    profileTitle: string
+    luckyNumber: string
+    appLanguage: string
+    teacherAbsencesTool: string
+    accountSwitcher: string
+    studentRole: string
+    parentRole: string
+    logout: string
+    done: string
+    messagesInbox: string
+    messagesAnnouncements: string
+    noMessages: string
+    moduleUnderDevelopment: string
 }
 
-export function getDictionary(translate: boolean): AppDictionary {
-    if (translate) {
+export function getDictionary(lang: AppLanguage): AppDictionary {
+    if (lang === 'en') {
         return {
-            schedule: 'Schedule',
+            schedule: 'Plan',
             grades: 'Grades',
             attendance: 'Attendance',
+            messages: 'Messages',
             teachers: 'Teachers',
             attendanceRate: 'Attendance Rate',
             dangerBadge: 'Critical Risk < 50%',
@@ -61,7 +79,7 @@ export function getDictionary(translate: boolean): AppDictionary {
             safeToMiss: 'Safe to miss',
             neededToRecover: 'Needed to recover',
             lessons: 'lessons',
-            excuseAction: 'Excuse Absences',
+            excuseAction: 'Excuse',
             searchTeacher: 'Search teacher...',
             allDates: 'All dates',
             today: 'Today',
@@ -91,9 +109,88 @@ export function getDictionary(translate: boolean): AppDictionary {
             teacherLabel: 'Teacher',
             dateLabel: 'Date',
             notSpecified: 'Not specified',
-            settingsTitle: 'Librus Credentials',
+            settingsTitle: 'Settings & Profile',
             refresh: 'Refresh',
-            loadingTimetable: 'Loading timetable...'
+            loadingTimetable: 'Loading timetable...',
+            syncedStatus: 'Synced',
+            profileTitle: 'Student Profile',
+            luckyNumber: 'Lucky number',
+            appLanguage: 'App Language',
+            teacherAbsencesTool: 'Teacher Absences Finder',
+            accountSwitcher: 'Account Switcher',
+            studentRole: 'Student',
+            parentRole: 'Parent',
+            logout: 'Sign Out',
+            done: 'Done',
+            messagesInbox: 'Inbox',
+            messagesAnnouncements: 'Announcements',
+            noMessages: 'No messages yet',
+            moduleUnderDevelopment: 'Full message viewer connects in the next step'
+        }
+    }
+
+    if (lang === 'ru') {
+        return {
+            schedule: 'План',
+            grades: 'Оценки',
+            attendance: 'Пропуски',
+            messages: 'Письма',
+            teachers: 'Учителя',
+            attendanceRate: 'Посещаемость',
+            dangerBadge: 'Угроза < 50%',
+            warningBadge: 'Низкая < 75%',
+            safeBadge: 'Норма',
+            missedOf: (m, tot) => `${m} из ${tot} пропущено`,
+            safeToMiss: 'Запас пропусков',
+            neededToRecover: 'Нужно до 50%',
+            lessons: 'уроков',
+            excuseAction: 'Оправдать',
+            searchTeacher: 'Поиск преподавателя...',
+            allDates: 'Все даты',
+            today: 'Сегодня',
+            myTeacher: 'Мой учитель',
+            saveCreds: 'Сохранить данные',
+            updateNow: 'Обновить',
+            newChanges: 'Есть обновления в Librus',
+            noAbsencesToday: 'В этот день отсутствующих учителей нет',
+            noLessonsDay: 'В этот день занятий нет',
+            vacationDay: 'Каникулы или выходной день',
+            subjectDetails: 'Детали посещаемости',
+            justificationSent: 'Оправдание успешно отправлено',
+            cancel: 'Отмена',
+            send: 'Отправить',
+            sending: 'Отправка...',
+            commentPlaceholder: 'Комментарий классному руководителю...',
+            close: 'Закрыть',
+            gotIt: 'Понятно',
+            minimalEffortToFix: 'Как исправить балл',
+            currentAverage: (avg) => `Текущий: ${avg ?? 'Нет'}`,
+            recommendedTargets: 'Что нужно получить для выхода на 2.0:',
+            youAreDone: 'You are done',
+            scoreTooDeep: 'Суммарный вес оценок слишком глубок для 2.0',
+            noGradesRecorded: 'Оценок пока нет',
+            noAbsencesRecorded: 'Пропусков не зафиксировано',
+            weight: 'Вес',
+            teacherLabel: 'Преподаватель',
+            dateLabel: 'Дата',
+            notSpecified: 'Не указано',
+            settingsTitle: 'Настройки и профиль',
+            refresh: 'Обновить',
+            loadingTimetable: 'Загрузка расписания...',
+            syncedStatus: 'Синхронизировано',
+            profileTitle: 'Профиль ученика',
+            luckyNumber: 'Счастливое число',
+            appLanguage: 'Язык интерфейса',
+            teacherAbsencesTool: 'Проверка отсутствия учителей',
+            accountSwitcher: 'Переключатель ролей',
+            studentRole: 'Ученик',
+            parentRole: 'Родитель',
+            logout: 'Выйти из аккаунта',
+            done: 'Готово',
+            messagesInbox: 'Входящие',
+            messagesAnnouncements: 'Объявления',
+            noMessages: 'Сообщений пока нет',
+            moduleUnderDevelopment: 'Модуль писем и объявлений подключается следующим шагом'
         }
     }
 
@@ -101,6 +198,7 @@ export function getDictionary(translate: boolean): AppDictionary {
         schedule: 'Plan',
         grades: 'Oceny',
         attendance: 'Frekwencja',
+        messages: 'Wiadomości',
         teachers: 'Nauczyciele',
         attendanceRate: 'Wskaźnik frekwencji',
         dangerBadge: 'Zagrożenie < 50%',
@@ -140,8 +238,22 @@ export function getDictionary(translate: boolean): AppDictionary {
         teacherLabel: 'Nauczyciel',
         dateLabel: 'Data',
         notSpecified: 'Nie podano',
-        settingsTitle: 'Dane logowania Librus',
+        settingsTitle: 'Ustawienia i profil',
         refresh: 'Odśwież',
-        loadingTimetable: 'Ładowanie planu lekcji...'
+        loadingTimetable: 'Ładowanie planu lekcji...',
+        syncedStatus: 'Zsynchronizowano',
+        profileTitle: 'Profil ucznia',
+        luckyNumber: 'Szczęśliwy numerek',
+        appLanguage: 'Język aplikacji',
+        teacherAbsencesTool: 'Nieobecności nauczycieli',
+        accountSwitcher: 'Przełącznik kont',
+        studentRole: 'Uczeń',
+        parentRole: 'Rodzic',
+        logout: 'Wyloguj się',
+        done: 'Gotowe',
+        messagesInbox: 'Odebrane',
+        messagesAnnouncements: 'Ogłoszenia',
+        noMessages: 'Brak wiadomości',
+        moduleUnderDevelopment: 'Pełny moduł wiadomości podłączany w kolejnym kroku'
     }
 }

@@ -17,7 +17,7 @@ export function GradesWidget({
     t
 }: GradesWidgetProps) {
     return (
-        <section className="flex flex-col gap-3 min-h-[520px]">
+        <section className="w-full flex flex-col gap-3 min-h-[540px]">
             <div className="bg-white rounded-3xl p-5 border border-[#e5e5ea] shadow-xs flex items-center justify-between">
                 <div>
                     <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-wider">Overall GPA</p>

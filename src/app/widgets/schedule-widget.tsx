@@ -43,7 +43,7 @@ export function ScheduleWidget({
     }
 
     return (
-        <section className="flex flex-col gap-3 min-h-[540px]">
+        <section className="w-full flex flex-col gap-3 min-h-[540px]">
             <div className="bg-white rounded-3xl p-3 border border-[#e5e5ea] shadow-xs flex items-center justify-between">
                 <button
                     onClick={() => onShiftWeek(-7)}
@@ -52,7 +52,7 @@ export function ScheduleWidget({
                     ‹
                 </button>
 
-                <div className="flex items-center gap-1.5 overflow-hidden px-1">
+                <div className="flex items-center gap-2 overflow-hidden px-1">
                     <span className="text-xs font-black text-[#1c1c1e] truncate">
                         {formatWeekRange(timetableData.weekStart, timetableData.weekEnd)}
                     </span>
@@ -79,17 +79,24 @@ export function ScheduleWidget({
                                 }
                             }
                         }}
-                        className="w-7 h-7 rounded-xl bg-[#f2f2f7] text-[#1c1c1e] flex items-center justify-center text-xs active:scale-90 transition-transform shrink-0"
+                        className="w-8 h-8 rounded-xl bg-[#f2f2f7] text-[#1c1c1e] flex items-center justify-center active:scale-90 transition-transform shrink-0"
                     >
-                        📅
+                        <svg className="w-3.5 h-3.5 text-[#1c1c1e]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="3" ry="3" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
                     </button>
 
                     <button
                         onClick={onManualRefresh}
                         disabled={isLoadingWeek}
-                        className="w-7 h-7 rounded-xl bg-[#f2f2f7] text-[#1c1c1e] flex items-center justify-center text-xs active:scale-90 transition-transform disabled:opacity-40 shrink-0"
+                        className="w-8 h-8 rounded-xl bg-[#f2f2f7] text-[#1c1c1e] flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40 shrink-0"
                     >
-                        ↻
+                        <svg className={`w-3.5 h-3.5 text-[#1c1c1e] ${isLoadingWeek ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                        </svg>
                     </button>
                 </div>
 

@@ -10,9 +10,10 @@ import {
 } from './actions'
 import { SmartTimetableResult, DaySchedule } from '@/models/timetable.model'
 import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
-import { AttendanceResult, SubjectAttendance, AbsenceDetail } from '@/models/attendance.model'
+import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
 import { StudentProfile } from '@/models/account.model'
 import { getDictionary, AppLanguage } from '@/config/dictionary.config'
+import { requestPushPermission, getNotificationPermissionStatus } from '@/services/notification.service'
 
 import { ScheduleWidget } from './widgets/schedule-widget'
 import { GradesWidget } from './widgets/grades-widget'
@@ -72,7 +73,8 @@ export default function Home() {
   const [selectedWarningSubject, setSelectedWarningSubject] = useState<SubjectGrades | null>(null)
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<SubjectAttendance | null>(null)
   const [showSettings, setShowSettings] = useState(false)
-  const [justifyingAbsence, setJustifyingAbsence] = useState<AbsenceDetail | null>(null)
+  const [showExcuseMatrix, setShowExcuseMatrix] = useState(false)
+  const [showPushBanner, setShowPushBanner] = useState(false)
 
   const weekCacheRef = useRef<Record<string, SmartTimetableResult>>({})
   const activeRequestCounter = useRef(0)
@@ -80,9 +82,7 @@ export default function Home() {
   const t = getDictionary(lang)
 
   const resolveSmartDefaultDay = useCallback((schedule: DaySchedule[]): string => {
-    if (!Array.isArray(schedule) || schedule.length === 0) {
-      return 'Monday'
-    }
+    if (!Array.isArray(schedule) || schedule.length === 0) return 'Monday'
 
     const dayMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     const todayName = dayMap[new Date().getDay()]
@@ -117,9 +117,7 @@ export default function Home() {
   const executeSync = useCallback(async (u: string, p: string, currentAppLang: AppLanguage, weekPivot: string, silentUpdate: boolean) => {
     const requestId = ++activeRequestCounter.current
 
-    if (!silentUpdate) {
-      setIsLoadingWeek(true)
-    }
+    if (!silentUpdate) setIsLoadingWeek(true)
     setIsUpdating(true)
 
     try {
@@ -131,13 +129,9 @@ export default function Home() {
         getStudentProfileAction(u, p)
       ])
 
-      if (requestId !== activeRequestCounter.current) {
-        return
-      }
+      if (requestId !== activeRequestCounter.current) return
 
-      if (pRes.success && pRes.data) {
-        setProfile(pRes.data)
-      }
+      if (pRes.success && pRes.data) setProfile(pRes.data)
 
       if (tRes.success && gRes.success && aRes.success && tRes.data && gRes.data && aRes.data) {
         const fetchedData = tRes.data
@@ -213,6 +207,11 @@ export default function Home() {
       const isAlreadyInCache = Boolean(weekCacheRef.current[currentWeekPivot])
       executeSync(savedUser, savedPass, savedLang, currentWeekPivot, isAlreadyInCache)
     }
+
+    const perm = getNotificationPermissionStatus()
+    if (perm === 'default') {
+      setShowPushBanner(true)
+    }
   }, [])
 
   const queueWeekChange = (targetPivot: string) => {
@@ -231,9 +230,7 @@ export default function Home() {
       setIsLoadingWeek(true)
     }
 
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-    }
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
 
     debounceTimerRef.current = setTimeout(() => {
       if (username && password) {
@@ -306,18 +303,18 @@ export default function Home() {
     setShowSettings(false)
   }
 
-  const handleSubmitJustification = async (parentMsg: string): Promise<boolean> => {
-    if (!justifyingAbsence) return false
-    try {
-      const isoDate = justifyingAbsence.date.includes('.')
-        ? justifyingAbsence.date.split('.').reverse().join('-')
-        : justifyingAbsence.date
+  const handleActivatePush = async () => {
+    await requestPushPermission()
+    setShowPushBanner(false)
+  }
 
+  const handleSubmitMultipleJustifications = async (payload: { dateIso: string; lessons: number[]; message: string }): Promise<boolean> => {
+    try {
       const res = await createJustificationAction(username, password, {
-        dateFrom: isoDate,
-        dateTo: isoDate,
-        lessons: [justifyingAbsence.lessonNumber],
-        messageFromParent: parentMsg,
+        dateFrom: payload.dateIso,
+        dateTo: payload.dateIso,
+        lessons: payload.lessons,
+        messageFromParent: payload.message,
         sendNotify: false
       })
 
@@ -331,9 +328,7 @@ export default function Home() {
     }
   }
 
-  if (!mounted) {
-    return null
-  }
+  if (!mounted) return null
 
   return (
     <main className="w-full min-h-screen pb-20 pt-safe px-4 max-w-xl mx-auto flex flex-col gap-4 box-border">
@@ -358,6 +353,29 @@ export default function Home() {
           </svg>
         </button>
       </header>
+
+      {showPushBanner && (
+        <div className="bg-white p-4 rounded-3xl border border-[#e5e5ea] shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-black text-[#1c1c1e]">Włącz powiadomienia</p>
+            <p className="text-[11px] text-[#8e8e93] mt-0.5">Otrzymuj alerty o ocenach, dzwonkach i zastępstwach</p>
+          </div>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => setShowPushBanner(false)}
+              className="text-xs font-bold text-[#8e8e93] px-2.5 py-1.5"
+            >
+              Później
+            </button>
+            <button
+              onClick={handleActivatePush}
+              className="text-xs font-bold bg-[#007aff] text-white px-3 py-1.5 rounded-xl shadow-xs"
+            >
+              Włącz
+            </button>
+          </div>
+        </div>
+      )}
 
       {hasNewUpdate && (
         <div
@@ -471,11 +489,30 @@ export default function Home() {
       )}
 
       {activeSection === 'attendance' && attendanceData && (
-        <AttendanceWidget
-          attendanceData={attendanceData}
-          onSelectSubject={setSelectedSubjectDetail}
-          t={t}
-        />
+        <div className="flex flex-col gap-3">
+          {attendanceData.unexcusedAbsences.length > 0 && (
+            <div className="bg-rose-50 border border-rose-200 rounded-3xl p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-black text-rose-800">Nieusprawiedliwione godziny</p>
+                <p className="text-[11px] text-rose-600 mt-0.5">
+                  Łącznie: {attendanceData.unexcusedAbsences.length} lekcji
+                </p>
+              </div>
+              <button
+                onClick={() => setShowExcuseMatrix(true)}
+                className="text-xs font-bold bg-rose-600 text-white px-3.5 py-2 rounded-2xl shadow-xs active:scale-95 transition-transform"
+              >
+                Usprawiedliw NB
+              </button>
+            </div>
+          )}
+
+          <AttendanceWidget
+            attendanceData={attendanceData}
+            onSelectSubject={setSelectedSubjectDetail}
+            t={t}
+          />
+        </div>
       )}
 
       {activeSection === 'messages' && (
@@ -540,18 +577,6 @@ export default function Home() {
                       <span>Lekcja {item.lessonNumber} {item.time ? `(${item.time})` : ''}</span>
                       <span>{item.typeName}</span>
                     </div>
-
-                    {item.isUnexcused && (
-                      <button
-                        onClick={() => {
-                          setSelectedSubjectDetail(null)
-                          setJustifyingAbsence(item)
-                        }}
-                        className="mt-1 w-full bg-[#007aff] text-white text-xs font-bold py-2 rounded-xl active:opacity-80 transition-all shadow-xs"
-                      >
-                        {t.excuseAction}
-                      </button>
-                    )}
                   </div>
                 ))
               ) : (
@@ -562,11 +587,12 @@ export default function Home() {
         </div>
       )}
 
-      {justifyingAbsence && (
+      {showExcuseMatrix && attendanceData && (
         <JustificationModal
-          absence={justifyingAbsence}
-          onClose={() => setJustifyingAbsence(null)}
-          onSubmit={handleSubmitJustification}
+          attendanceData={attendanceData}
+          timetableData={timetableData}
+          onClose={() => setShowExcuseMatrix(false)}
+          onSubmitMultiple={handleSubmitMultipleJustifications}
           t={t}
         />
       )}

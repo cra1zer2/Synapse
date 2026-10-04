@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { StudentProfile } from '@/models/account.model'
 import { AbsentTeacherItem } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { TeachersWidget } from './teachers-widget'
+import { requestPushPermission, getNotificationPermissionStatus } from '@/services/notification.service'
 
 interface SettingsSheetProps {
     isOpen: boolean
@@ -44,6 +45,18 @@ export function SettingsSheet({
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     })
     const [showAllDates, setShowAllDates] = useState(false)
+    const [pushStatus, setPushStatus] = useState<string>('default')
+
+    useEffect(() => {
+        if (isOpen) {
+            setPushStatus(getNotificationPermissionStatus())
+        }
+    }, [isOpen])
+
+    const handleTogglePush = async () => {
+        const res = await requestPushPermission()
+        setPushStatus(res)
+    }
 
     if (!isOpen) return null
 
@@ -87,6 +100,29 @@ export function SettingsSheet({
                     </div>
                 )}
 
+                <div className="bg-[#f2f2f7] rounded-3xl p-4 flex items-center justify-between">
+                    <div>
+                        <h3 className="text-xs font-extrabold text-[#1c1c1e]">Powiadomienia Web Push</h3>
+                        <p className="text-[11px] text-[#8e8e93] mt-0.5">
+                            {pushStatus === 'granted'
+                                ? 'Aktywne • Dzwonki i nowe oceny'
+                                : pushStatus === 'denied'
+                                    ? 'Zablokowane w przeglądarce'
+                                    : 'Wymaga aktywacji'}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleTogglePush}
+                        className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${pushStatus === 'granted'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-[#007aff] text-white shadow-xs'
+                            }`}
+                    >
+                        {pushStatus === 'granted' ? 'Włączone' : 'Włącz'}
+                    </button>
+                </div>
+
                 <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-[#8e8e93] uppercase tracking-wider">{t.appLanguage}</label>
                     <div className="grid grid-cols-3 gap-2">
@@ -94,17 +130,17 @@ export function SettingsSheet({
                             { id: 'pl' as AppLanguage, label: 'Polski', code: 'PL' },
                             { id: 'en' as AppLanguage, label: 'English', code: 'EN' },
                             { id: 'ru' as AppLanguage, label: 'Русский', code: 'RU' }
-                        ].map((lang) => (
+                        ].map((l) => (
                             <button
-                                key={lang.id}
-                                onClick={() => onSelectLang(lang.id)}
-                                className={`py-2.5 px-3 rounded-2xl text-xs font-bold flex flex-col items-center gap-0.5 border transition-all ${currentLang === lang.id
+                                key={l.id}
+                                onClick={() => onSelectLang(l.id)}
+                                className={`py-2.5 px-3 rounded-2xl text-xs font-bold flex flex-col items-center gap-0.5 border transition-all ${currentLang === l.id
                                         ? 'bg-[#1c1c1e] text-white border-[#1c1c1e] shadow-xs'
                                         : 'bg-[#f2f2f7] text-[#1c1c1e] border-transparent hover:bg-[#e5e5ea]'
                                     }`}
                             >
-                                <span>{lang.label}</span>
-                                <span className="text-[10px] opacity-70">{lang.code}</span>
+                                <span>{l.label}</span>
+                                <span className="text-[10px] opacity-70">{l.code}</span>
                             </button>
                         ))}
                     </div>

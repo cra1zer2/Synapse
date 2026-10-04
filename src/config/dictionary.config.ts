@@ -1,4 +1,5 @@
 export type AppLanguage = 'pl' | 'en' | 'ru'
+export type AppTheme = 'system' | 'light' | 'dark'
 
 export interface AppDictionary {
     schedule: string
@@ -51,6 +52,10 @@ export interface AppDictionary {
     profileTitle: string
     luckyNumber: string
     appLanguage: string
+    appTheme: string
+    themeSystem: string
+    themeLight: string
+    themeDark: string
     teacherAbsencesTool: string
     accountSwitcher: string
     studentRole: string
@@ -60,7 +65,11 @@ export interface AppDictionary {
     messagesInbox: string
     messagesAnnouncements: string
     noMessages: string
-    moduleUnderDevelopment: string
+    composeMessage: string
+    recipientPlaceholder: string
+    subjectPlaceholder: string
+    messagePlaceholder: string
+    searchRecipient: string
     welcomeTitle: string
     loginSubtitle: string
     loginPlaceholder: string
@@ -126,6 +135,10 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             profileTitle: 'Student Profile',
             luckyNumber: 'Lucky number',
             appLanguage: 'App Language',
+            appTheme: 'Theme',
+            themeSystem: 'System',
+            themeLight: 'Light',
+            themeDark: 'Dark',
             teacherAbsencesTool: 'Teacher Absences Finder',
             accountSwitcher: 'Account Switcher',
             studentRole: 'Student',
@@ -135,7 +148,11 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             messagesInbox: 'Inbox',
             messagesAnnouncements: 'Announcements',
             noMessages: 'No messages yet',
-            moduleUnderDevelopment: 'Full message viewer connects in the next step',
+            composeMessage: 'New Message',
+            recipientPlaceholder: 'Select recipient',
+            subjectPlaceholder: 'Subject',
+            messagePlaceholder: 'Write your message...',
+            searchRecipient: 'Search staff...',
             welcomeTitle: 'Welcome to Synapse',
             loginSubtitle: 'Sign in with your Librus Synergia account',
             loginPlaceholder: 'Login / ID',
@@ -201,6 +218,10 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             profileTitle: 'Профиль ученика',
             luckyNumber: 'Счастливое число',
             appLanguage: 'Язык интерфейса',
+            appTheme: 'Оформление',
+            themeSystem: 'Системная',
+            themeLight: 'Светлая',
+            themeDark: 'Тёмная',
             teacherAbsencesTool: 'Проверка отсутствия учителей',
             accountSwitcher: 'Переключатель ролей',
             studentRole: 'Ученик',
@@ -210,7 +231,11 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             messagesInbox: 'Входящие',
             messagesAnnouncements: 'Объявления',
             noMessages: 'Сообщений пока нет',
-            moduleUnderDevelopment: 'Модуль писем и объявлений подключается следующим шагом',
+            composeMessage: 'Новое письмо',
+            recipientPlaceholder: 'Выберите получателя',
+            subjectPlaceholder: 'Тема сообщения',
+            messagePlaceholder: 'Текст сообщения...',
+            searchRecipient: 'Поиск сотрудника...',
             welcomeTitle: 'Добро пожаловать в Synapse',
             loginSubtitle: 'Войдите с учетной записью Librus Synergia',
             loginPlaceholder: 'Логин / ID',
@@ -275,6 +300,10 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         profileTitle: 'Profil ucznia',
         luckyNumber: 'Szczęśliwy numerek',
         appLanguage: 'Język aplikacji',
+        appTheme: 'Motyw',
+        themeSystem: 'Systemowy',
+        themeLight: 'Jasny',
+        themeDark: 'Ciemny',
         teacherAbsencesTool: 'Nieobecności nauczycieli',
         accountSwitcher: 'Przełącznik kont',
         studentRole: 'Uczeń',
@@ -284,7 +313,11 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         messagesInbox: 'Odebrane',
         messagesAnnouncements: 'Ogłoszenia',
         noMessages: 'Brak wiadomości',
-        moduleUnderDevelopment: 'Pełny moduł wiadomości podłączany w kolejnym kroku',
+        composeMessage: 'Nowa wiadomość',
+        recipientPlaceholder: 'Wybierz odbiorcę',
+        subjectPlaceholder: 'Temat',
+        messagePlaceholder: 'Treść wiadomości...',
+        searchRecipient: 'Szukaj pracownika...',
         welcomeTitle: 'Witaj w Synapse',
         loginSubtitle: 'Zaloguj się kontem Librus Synergia',
         loginPlaceholder: 'Login / ID',

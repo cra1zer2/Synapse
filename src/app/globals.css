@@ -2,14 +2,33 @@
 
 :root {
   --font-apple: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-  --bg-ios: #f2f2f7;
-  --card-ios: #ffffff;
-  --separator-ios: #e5e5ea;
+  --bg-canvas: #f2f2f7;
+  --bg-card: #ffffff;
+  --bg-element: #e5e5ea;
+  --bg-input: #f2f2f7;
+  --text-primary: #1c1c1e;
+  --text-secondary: #8e8e93;
+  --border-subtle: #e5e5ea;
+}
+
+.dark {
+  --bg-canvas: #1c1c1e;
+  --bg-card: #2c2c2e;
+  --bg-element: #3a3a3c;
+  --bg-input: #3a3a3c;
+  --text-primary: #f2f2f7;
+  --text-secondary: #98989d;
+  --border-subtle: #38383a;
+}
+
+html {
+  scrollbar-gutter: stable;
 }
 
 html,
 body {
-  background-color: var(--bg-ios);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
   font-family: var(--font-apple);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -17,6 +36,8 @@ body {
   padding: 0;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 input[type="checkbox"][switch] {

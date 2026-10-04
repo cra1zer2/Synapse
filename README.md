@@ -1,36 +1,18 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Synapse
 
-## Getting Started
+Synapse is an independent, high-performance web client for the Polish Librus Synergia electronic gradebook, designed with native Apple iOS aesthetics.
 
-First, run the development server:
+### Why Synapse?
+Official school portals are often cluttered with advertisements, slow response times, and paywalled basic utilities like grade averages, notifications, and multi-account access. Synapse solves this by providing:
+- **Zero-noise glanceable interface**: Prioritizes cancellations, substitutions, and upcoming lessons over unused modules.
+- **Smart Timetable**: Merges consecutive block periods, tracks real-time bell countdowns, and highlights school holidays.
+- **Schedule-Sensitive Tracking**: Polls attendance and grades strictly at bell rings and before the first lesson.
+- **Direct e-Usprawiedliwienia**: Matrix justification flow with single-tap excuse submission through Gateway 2.0.
+- **No Paywalls, Complete Privacy**: Client-side encryption, local-first caching, and zero tracking.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Tech Stack
+- Next.js (App Router)
+- React 19
+- TypeScript 5
+- Tailwind CSS
+- Vercel Edge Architecture

@@ -6,17 +6,22 @@ import {
   getStudentGradesAction,
   getAttendanceAction,
   getStudentProfileAction,
+  getMessagesAndAnnouncementsAction,
+  readMessageAction,
+  sendMessageAction,
   createJustificationAction
 } from './actions'
 import { SmartTimetableResult, DaySchedule } from '@/models/timetable.model'
 import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
 import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
+import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { StudentProfile } from '@/models/account.model'
-import { getDictionary, AppLanguage } from '@/config/dictionary.config'
+import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 
 import { ScheduleWidget } from './widgets/schedule-widget'
 import { GradesWidget } from './widgets/grades-widget'
 import { AttendanceWidget } from './widgets/attendance-widget'
+import { MessagesWidget } from './widgets/messages-widget'
 import { JustificationModal } from './widgets/justification-modal'
 import { GradeModal } from './widgets/grade-modal'
 import { SettingsSheet } from './widgets/settings-sheet'
@@ -49,6 +54,7 @@ export default function Home() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [lang, setLang] = useState<AppLanguage>('pl')
+  const [theme, setTheme] = useState<AppTheme>('system')
 
   const [authStep, setAuthStep] = useState<'input' | 'verifying' | 'preview'>('input')
   const [verifiedCandidate, setVerifiedCandidate] = useState<StudentProfile | null>(null)
@@ -65,6 +71,10 @@ export default function Home() {
   const [timetableData, setTimetableData] = useState<SmartTimetableResult | null>(null)
   const [gradesData, setGradesData] = useState<GradesResult | null>(null)
   const [attendanceData, setAttendanceData] = useState<AttendanceResult | null>(null)
+  const [messages, setMessages] = useState<MessageItem[]>([])
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([])
+  const [receivers, setReceivers] = useState<ReceiverItem[]>([])
+
   const [pendingSnapshot, setPendingSnapshot] = useState<{
     t: SmartTimetableResult
     g: GradesResult
@@ -82,6 +92,21 @@ export default function Home() {
   const activeRequestCounter = useRef(0)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const t = getDictionary(lang)
+
+  const applyTheme = (targetTheme: AppTheme) => {
+    const root = document.documentElement
+    if (targetTheme === 'dark') {
+      root.classList.add('dark')
+    } else if (targetTheme === 'light') {
+      root.classList.remove('dark')
+    } else {
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        root.classList.add('dark')
+      } else {
+        root.classList.remove('dark')
+      }
+    }
+  }
 
   const resolveSmartDefaultDay = useCallback((schedule: DaySchedule[]): string => {
     if (!Array.isArray(schedule) || schedule.length === 0) return 'Monday'
@@ -124,16 +149,22 @@ export default function Home() {
 
     try {
       const shouldTranslate = currentAppLang === 'en'
-      const [tRes, gRes, aRes, pRes] = await Promise.all([
+      const [tRes, gRes, aRes, pRes, mRes] = await Promise.all([
         getSmartTimetableAction(u, p, shouldTranslate, weekPivot),
         getStudentGradesAction(u, p, shouldTranslate),
         getAttendanceAction(u, p, shouldTranslate),
-        getStudentProfileAction(u, p)
+        getStudentProfileAction(u, p),
+        getMessagesAndAnnouncementsAction(u, p)
       ])
 
       if (requestId !== activeRequestCounter.current) return
 
       if (pRes.success && pRes.data) setProfile(pRes.data)
+      if (mRes.success) {
+        setMessages(mRes.messages)
+        setAnnouncements(mRes.announcements)
+        setReceivers(mRes.receivers)
+      }
 
       if (tRes.success && gRes.success && aRes.success && tRes.data && gRes.data && aRes.data) {
         const fetchedData = tRes.data
@@ -176,10 +207,13 @@ export default function Home() {
     const savedUser = localStorage.getItem('synapse_user') || ''
     const savedPass = localStorage.getItem('synapse_pass') || ''
     const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
+    const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
 
     setUsername(savedUser)
     setPassword(savedPass)
     setLang(savedLang)
+    setTheme(savedTheme)
+    applyTheme(savedTheme)
     setIsConfigured(Boolean(savedUser && savedPass))
 
     const storedWeekCache = localStorage.getItem('synapse_week_cache')
@@ -311,6 +345,12 @@ export default function Home() {
     }
   }
 
+  const handleSelectTheme = (newTheme: AppTheme) => {
+    setTheme(newTheme)
+    localStorage.setItem('synapse_theme', newTheme)
+    applyTheme(newTheme)
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('synapse_user')
     localStorage.removeItem('synapse_pass')
@@ -323,10 +363,27 @@ export default function Home() {
     setTimetableData(null)
     setGradesData(null)
     setAttendanceData(null)
+    setMessages([])
+    setAnnouncements([])
+    setReceivers([])
     setIsConfigured(false)
     setShowSettings(false)
     setAuthStep('input')
     setVerifiedCandidate(null)
+  }
+
+  const handleOpenMessage = async (msgId: number | string): Promise<string> => {
+    const res = await readMessageAction(username, password, Number(msgId))
+    return res.content || ''
+  }
+
+  const handleSendMessage = async (receiverId: number, title: string, body: string): Promise<boolean> => {
+    const res = await sendMessageAction(username, password, receiverId, title, body)
+    if (res.success) {
+      executeSync(username, password, lang, currentWeekPivot, true)
+      return true
+    }
+    return false
   }
 
   const handleSubmitMultipleJustifications = async (payload: { dateIso: string; lessons: number[]; message: string }): Promise<boolean> => {
@@ -355,14 +412,14 @@ export default function Home() {
     return (
       <main className="w-full min-h-screen pb-16 pt-safe px-4 max-w-sm mx-auto flex flex-col justify-center gap-6 box-border">
         <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-black tracking-tight text-[#1c1c1e]">Synapse</h1>
-          <div className="flex bg-[#e5e5ea] p-0.5 rounded-xl">
+          <h1 className="text-2xl font-black tracking-tight text-[var(--text-primary)]">Synapse</h1>
+          <div className="flex bg-[var(--bg-element)] p-0.5 rounded-xl">
             {(['pl', 'en', 'ru'] as AppLanguage[]).map((code) => (
               <button
                 key={code}
                 type="button"
                 onClick={() => handleSelectLanguage(code)}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg uppercase transition-all ${lang === code ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg uppercase transition-all ${lang === code ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-secondary)]'
                   }`}
               >
                 {code}
@@ -371,16 +428,16 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="bg-white rounded-3xl p-6 shadow-sm border border-[#e5e5ea] flex flex-col gap-5">
+        <section className="bg-[var(--bg-card)] rounded-3xl p-6 shadow-sm border border-[var(--border-subtle)] flex flex-col gap-5">
           {authStep === 'input' && (
             <>
               <div>
-                <h2 className="text-lg font-black text-[#1c1c1e]">{t.welcomeTitle}</h2>
-                <p className="text-xs text-[#8e8e93] mt-0.5">{t.loginSubtitle}</p>
+                <h2 className="text-lg font-black text-[var(--text-primary)]">{t.welcomeTitle}</h2>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t.loginSubtitle}</p>
               </div>
 
               {authError && (
-                <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold p-3 rounded-2xl">
+                <div className="bg-rose-500/10 border border-rose-500/20 text-rose-600 text-xs font-semibold p-3 rounded-2xl">
                   {authError}
                 </div>
               )}
@@ -391,7 +448,7 @@ export default function Home() {
                   placeholder={t.loginPlaceholder}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-xs font-medium rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#007aff]"
+                  className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] text-xs font-medium rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#007aff]"
                   required
                 />
                 <input
@@ -399,7 +456,7 @@ export default function Home() {
                   placeholder={t.passwordPlaceholder}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-xs font-medium rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#007aff]"
+                  className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] text-xs font-medium rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#007aff]"
                   required
                 />
                 <button
@@ -415,7 +472,7 @@ export default function Home() {
           {authStep === 'verifying' && (
             <div className="py-12 flex flex-col items-center justify-center gap-3">
               <div className="w-7 h-7 border-2 border-[#007aff] border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs font-bold text-[#8e8e93]">{t.verifyingAccount}</p>
+              <p className="text-xs font-bold text-[var(--text-secondary)]">{t.verifyingAccount}</p>
             </div>
           )}
 
@@ -423,12 +480,12 @@ export default function Home() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-xs font-bold text-emerald-700">{t.accountVerified}</span>
+                <span className="text-xs font-bold text-emerald-600">{t.accountVerified}</span>
               </div>
 
-              <div className="bg-[#f2f2f7] p-4 rounded-2xl flex flex-col gap-1">
-                <h3 className="text-sm font-black text-[#1c1c1e]">{verifiedCandidate.fullName}</h3>
-                <p className="text-xs font-medium text-[#8e8e93]">
+              <div className="bg-[var(--bg-element)] p-4 rounded-2xl flex flex-col gap-1">
+                <h3 className="text-sm font-black text-[var(--text-primary)]">{verifiedCandidate.fullName}</h3>
+                <p className="text-xs font-medium text-[var(--text-secondary)]">
                   {verifiedCandidate.className} • {verifiedCandidate.schoolName}
                 </p>
                 {verifiedCandidate.luckyNumber !== null && (
@@ -449,7 +506,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setAuthStep('input')}
-                  className="w-full bg-[#f2f2f7] text-[#8e8e93] text-xs font-bold py-2.5 rounded-2xl active:opacity-80 transition-all"
+                  className="w-full bg-[var(--bg-element)] text-[var(--text-secondary)] text-xs font-bold py-2.5 rounded-2xl active:opacity-80 transition-all"
                 >
                   {t.changeData}
                 </button>
@@ -465,10 +522,10 @@ export default function Home() {
     <main className="w-full min-h-screen pb-20 pt-safe px-4 max-w-xl mx-auto flex flex-col gap-4 box-border">
       <header className="pt-3 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-[#1c1c1e]">Synapse</h1>
+          <h1 className="text-2xl font-black tracking-tight text-[var(--text-primary)]">Synapse</h1>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} />
-            <p className="text-[11px] font-medium text-[#8e8e93]">
+            <p className="text-[11px] font-medium text-[var(--text-secondary)]">
               {isUpdating ? 'Synchronizing...' : t.syncedStatus}
             </p>
           </div>
@@ -476,9 +533,9 @@ export default function Home() {
 
         <button
           onClick={() => setShowSettings(true)}
-          className="w-9 h-9 rounded-2xl bg-white border border-[#e5e5ea] flex items-center justify-center text-[#1c1c1e] shadow-xs active:scale-95 transition-transform"
+          className="w-9 h-9 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-primary)] shadow-xs active:scale-95 transition-transform"
         >
-          <svg className="w-4 h-4 text-[#1c1c1e]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-4 h-4 text-[var(--text-primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
@@ -509,31 +566,31 @@ export default function Home() {
         </div>
       )}
 
-      <nav className="bg-[#e5e5ea] p-1 rounded-2xl grid grid-cols-4 gap-1.5 shadow-inner h-11 box-border">
+      <nav className="bg-[var(--bg-element)] p-1 rounded-2xl grid grid-cols-4 gap-1.5 shadow-inner h-11 box-border">
         <button
           onClick={() => setActiveSection('schedule')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'schedule' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'schedule' ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-secondary)]'
             }`}
         >
           {t.schedule}
         </button>
         <button
           onClick={() => setActiveSection('grades')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'grades' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'grades' ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-secondary)]'
             }`}
         >
           {t.grades}
         </button>
         <button
           onClick={() => setActiveSection('attendance')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'attendance' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'attendance' ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-secondary)]'
             }`}
         >
           {t.attendance}
         </button>
         <button
           onClick={() => setActiveSection('messages')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'messages' ? 'bg-white text-[#1c1c1e] shadow-xs' : 'text-[#8e8e93]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'messages' ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-secondary)]'
             }`}
         >
           {t.messages}
@@ -566,10 +623,10 @@ export default function Home() {
       {activeSection === 'attendance' && attendanceData && (
         <div className="flex flex-col gap-3">
           {attendanceData.unexcusedAbsences.length > 0 && (
-            <div className="bg-rose-50 border border-rose-200 rounded-3xl p-4 flex items-center justify-between">
+            <div className="bg-rose-500/10 border border-rose-500/20 rounded-3xl p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-black text-rose-800">Nieusprawiedliwione godziny</p>
-                <p className="text-[11px] text-rose-600 mt-0.5">
+                <p className="text-xs font-black text-rose-600">Nieusprawiedliwione godziny</p>
+                <p className="text-[11px] text-rose-600/80 mt-0.5">
                   Łącznie: {attendanceData.unexcusedAbsences.length} lekcji
                 </p>
               </div>
@@ -591,41 +648,35 @@ export default function Home() {
       )}
 
       {activeSection === 'messages' && (
-        <section className="w-full flex flex-col gap-3 min-h-[540px]">
-          <div className="bg-white rounded-3xl p-5 border border-[#e5e5ea] shadow-xs flex flex-col gap-3 text-center items-center justify-center min-h-[360px]">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#007aff] flex items-center justify-center">
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                <polyline points="22,6 12,13 2,6" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-base font-extrabold text-[#1c1c1e]">{t.messages} & {t.messagesAnnouncements}</h3>
-              <p className="text-xs text-[#8e8e93] mt-1 max-w-xs">{t.moduleUnderDevelopment}</p>
-            </div>
-          </div>
-        </section>
+        <MessagesWidget
+          messages={messages}
+          announcements={announcements}
+          receivers={receivers}
+          onOpenMessage={handleOpenMessage}
+          onSendMessage={handleSendMessage}
+          t={t}
+        />
       )}
 
       {selectedSubjectDetail && (
         <div
           onClick={() => setSelectedSubjectDetail(null)}
-          className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-4 z-50 animate-in fade-in"
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-4 z-50 animate-in fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl p-5 w-full max-w-sm border border-[#e5e5ea] shadow-xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto"
+            className="bg-[var(--bg-card)] rounded-3xl p-5 w-full max-w-sm border border-[var(--border-subtle)] shadow-xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-extrabold text-[#1c1c1e]">{selectedSubjectDetail.subject}</h3>
-                <p className="text-xs text-[#8e8e93] mt-0.5">
+                <h3 className="text-base font-extrabold text-[var(--text-primary)]">{selectedSubjectDetail.subject}</h3>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                   {selectedSubjectDetail.percentage}% attendance ({selectedSubjectDetail.absentLessons} missed)
                 </p>
               </div>
               <button
                 onClick={() => setSelectedSubjectDetail(null)}
-                className="w-7 h-7 rounded-full bg-[#f2f2f7] text-[#8e8e93] text-xs font-bold flex items-center justify-center"
+                className="w-7 h-7 rounded-full bg-[var(--bg-element)] text-[var(--text-secondary)] text-xs font-bold flex items-center justify-center"
               >
                 ✕
               </button>
@@ -636,26 +687,26 @@ export default function Home() {
                 selectedSubjectDetail.absences.map((item, idx) => (
                   <div
                     key={idx}
-                    className="bg-[#f2f2f7] p-3 rounded-2xl flex flex-col gap-1.5 text-xs text-[#1c1c1e]"
+                    className="bg-[var(--bg-element)] p-3 rounded-2xl flex flex-col gap-1.5 text-xs text-[var(--text-primary)]"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold">{item.date}</span>
                       <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${item.isUnexcused
-                          ? 'bg-rose-100 text-rose-700 border-rose-200'
-                          : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                          ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                          : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                         }`}>
                         {item.type.toUpperCase()}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[#8e8e93]">
+                    <div className="flex items-center justify-between text-[var(--text-secondary)]">
                       <span>Lekcja {item.lessonNumber} {item.time ? `(${item.time})` : ''}</span>
                       <span>{item.typeName}</span>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center text-xs text-[#8e8e93] py-4">{t.noAbsencesRecorded}</div>
+                <div className="text-center text-xs text-[var(--text-secondary)] py-4">{t.noAbsencesRecorded}</div>
               )}
             </div>
           </div>
@@ -686,6 +737,8 @@ export default function Home() {
         profile={profile}
         currentLang={lang}
         onSelectLang={handleSelectLanguage}
+        currentTheme={theme}
+        onSelectTheme={handleSelectTheme}
         username={username}
         setUsername={setUsername}
         password={password}

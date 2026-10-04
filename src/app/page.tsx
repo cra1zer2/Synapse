@@ -212,6 +212,17 @@ export default function Home() {
     if (perm === 'default') {
       setShowPushBanner(true)
     }
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tabParam = params.get('tab') as MainSection
+      const dayParam = params.get('day')
+      const excuseParam = params.get('excuse')
+
+      if (tabParam) setActiveSection(tabParam)
+      if (dayParam) setSelectedDay(dayParam)
+      if (excuseParam === '1') setShowExcuseMatrix(true)
+    }
   }, [])
 
   const queueWeekChange = (targetPivot: string) => {
@@ -358,7 +369,7 @@ export default function Home() {
         <div className="bg-white p-4 rounded-3xl border border-[#e5e5ea] shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-black text-[#1c1c1e]">Włącz powiadomienia</p>
-            <p className="text-[11px] text-[#8e8e93] mt-0.5">Otrzymuj alerty o ocenach, dzwonkach i zastępstwach</p>
+            <p className="text-[11px] text-[#8e8e93] mt-0.5">Alerty o ocenach i zastępstwach</p>
           </div>
           <div className="flex gap-1.5">
             <button
@@ -566,8 +577,8 @@ export default function Home() {
                     <div className="flex items-center justify-between">
                       <span className="font-bold">{item.date}</span>
                       <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${item.isUnexcused
-                          ? 'bg-rose-100 text-rose-700 border-rose-200'
-                          : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                        ? 'bg-rose-100 text-rose-700 border-rose-200'
+                        : 'bg-emerald-100 text-emerald-700 border-emerald-200'
                         }`}>
                         {item.type.toUpperCase()}
                       </span>

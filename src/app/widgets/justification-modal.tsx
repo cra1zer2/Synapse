@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AttendanceResult } from '@/models/attendance.model'
 import { SmartTimetableResult } from '@/models/timetable.model'
-import { DayMatrixGroup, DayMatrixLesson } from '@/models/notification.model'
+import { DayMatrixGroup } from '@/models/notification.model'
 import { AppDictionary } from '@/config/dictionary.config'
 
 interface JustificationModalProps {
@@ -16,7 +16,6 @@ interface JustificationModalProps {
 
 export function JustificationModal({
     attendanceData,
-    timetableData,
     onClose,
     onSubmitMultiple,
     t
@@ -108,7 +107,9 @@ export function JustificationModal({
         let allSucceeded = true
 
         for (const group of matrix) {
-            const selectedLessonNumbers = group.lessons.filter((l) => l.isSelected && l.isSelectable).map((l) => l.lessonNumber)
+            const selectedLessonNumbers = group.lessons
+                .filter((l) => l.isSelected && l.isSelectable)
+                .map((l) => l.lessonNumber)
 
             if (selectedLessonNumbers.length > 0) {
                 const ok = await onSubmitMultiple({
@@ -146,7 +147,7 @@ export function JustificationModal({
                 <div className="flex items-center justify-between border-b border-[#e5e5ea] pb-3">
                     <div>
                         <h3 className="text-base font-black text-[#1c1c1e]">e-Usprawiedliwienia</h3>
-                        <p className="text-xs text-[#8e8e93] mt-0.5">Wybierz lekcje z nieobecnością nieusprawiedliwioną</p>
+                        <p className="text-xs text-[#8e8e93] mt-0.5">Wybierz godziny nieobecności</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -171,9 +172,9 @@ export function JustificationModal({
                                             <button
                                                 type="button"
                                                 onClick={() => selectAllNbInDay(group.date)}
-                                                className="text-[10px] font-bold text-[#007aff] bg-white px-2.5 py-1 rounded-xl shadow-xs"
+                                                className="text-[10px] font-bold text-[#007aff] bg-white px-2.5 py-1 rounded-xl shadow-xs active:scale-95 transition-transform"
                                             >
-                                                Zaznacz wszystkie NB
+                                                Zaznacz NB
                                             </button>
                                         </div>
 
@@ -186,10 +187,10 @@ export function JustificationModal({
                                                         key={lesson.lessonNumber}
                                                         onClick={() => !isLocked && toggleLesson(group.date, lesson.lessonNumber)}
                                                         className={`p-2.5 rounded-2xl flex items-center justify-between border transition-all ${isLocked
-                                                                ? 'bg-white/60 border-transparent opacity-60 cursor-not-allowed'
-                                                                : lesson.isSelected
-                                                                    ? 'bg-white border-[#007aff] shadow-xs cursor-pointer'
-                                                                    : 'bg-white border-transparent cursor-pointer'
+                                                            ? 'bg-white/60 border-transparent opacity-60 cursor-not-allowed'
+                                                            : lesson.isSelected
+                                                                ? 'bg-white border-[#007aff] shadow-xs cursor-pointer'
+                                                                : 'bg-white border-transparent cursor-pointer'
                                                             }`}
                                                     >
                                                         <div className="flex items-center gap-2.5">
@@ -210,11 +211,11 @@ export function JustificationModal({
 
                                                         <span
                                                             className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${isLocked
-                                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                                : 'bg-rose-50 text-rose-700 border-rose-200'
                                                                 }`}
                                                         >
-                                                            {isLocked ? '🔒 Usprawiedliwione' : 'NB Do usprawiedliwienia'}
+                                                            {isLocked ? '🔒 Usprawiedliwione' : 'NB'}
                                                         </span>
                                                     </div>
                                                 )

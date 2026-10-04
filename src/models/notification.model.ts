@@ -16,11 +16,13 @@ export interface PushNotificationPayload {
     }
 }
 
+export type DayMatrixLessonStatus = 'nb' | 'u' | 'sl' | 'sp' | 'zw' | 'present' | 'cancelled'
+
 export interface DayMatrixLesson {
     lessonNumber: number
     time: string
     subject: string
-    status: 'nb' | 'u' | 'present' | 'cancelled'
+    status: DayMatrixLessonStatus
     statusLabel: string
     isSelectable: boolean
     isSelected: boolean

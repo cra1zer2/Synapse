@@ -1,5 +1,6 @@
 import { SmartTimetableResult } from '@/models/timetable.model'
-import { ScheduleBellTime } from '@/models/notification.model'
+import { PushNotificationPayload } from '@/models/notification.model'
+import { AppLanguage } from '@/config/dictionary.config'
 
 export function calculateScheduleSensitiveTimings(timetable: SmartTimetableResult, currentDate: Date = new Date()): {
     firstLessonCheckTime: Date | null
@@ -45,6 +46,112 @@ export function calculateScheduleSensitiveTimings(timetable: SmartTimetableResul
     })
 
     return { firstLessonCheckTime, bellCheckTimes }
+}
+
+export function createGradeNotification(
+    grade: string,
+    subject: string,
+    weight: number,
+    teacher: string,
+    lang: AppLanguage
+): PushNotificationPayload {
+    const titles: Record<AppLanguage, string> = {
+        pl: `${grade} • ${subject}`,
+        en: `${grade} • ${subject}`,
+        ru: `${grade} • ${subject}`
+    }
+
+    const bodies: Record<AppLanguage, string> = {
+        pl: `Waga ${weight} • ${teacher || 'Nauczyciel'}`,
+        en: `Weight ${weight} • ${teacher || 'Teacher'}`,
+        ru: `Вес ${weight} • ${teacher || 'Учитель'}`
+    }
+
+    return {
+        title: titles[lang],
+        body: bodies[lang],
+        tag: `grade-${subject}-${Date.now()}`,
+        data: {
+            url: '/?tab=grades',
+            type: 'grade'
+        }
+    }
+}
+
+export function createAbsenceNotification(
+    subject: string,
+    lessonNumber: number,
+    time: string,
+    dateIso: string,
+    lang: AppLanguage
+): PushNotificationPayload {
+    const titles: Record<AppLanguage, string> = {
+        pl: `NB • ${subject}`,
+        en: `NB • ${subject}`,
+        ru: `NB • ${subject}`
+    }
+
+    const bodies: Record<AppLanguage, string> = {
+        pl: `Lekcja ${lessonNumber} (${time})`,
+        en: `Lesson ${lessonNumber} (${time})`,
+        ru: `Урок ${lessonNumber} (${time})`
+    }
+
+    return {
+        title: titles[lang],
+        body: bodies[lang],
+        tag: `absence-${dateIso}-${lessonNumber}`,
+        data: {
+            url: `/?tab=attendance&excuse=1&date=${dateIso}`,
+            type: 'absence'
+        }
+    }
+}
+
+export function createTimetableChangeNotification(
+    type: 'cancelled' | 'substitution' | 'shortened',
+    subject: string,
+    lessonNumber: number,
+    dayName: string,
+    detail: string,
+    lang: AppLanguage
+): PushNotificationPayload {
+    const typeLabels: Record<'cancelled' | 'substitution' | 'shortened', Record<AppLanguage, string>> = {
+        cancelled: {
+            pl: 'Odwołane',
+            en: 'Cancelled',
+            ru: 'Отменено'
+        },
+        substitution: {
+            pl: 'Zastępstwo',
+            en: 'Substitution',
+            ru: 'Замена'
+        },
+        shortened: {
+            pl: 'Skrócona',
+            en: 'Shortened',
+            ru: 'Сокращен'
+        }
+    }
+
+    const lessonPrefix: Record<AppLanguage, string> = {
+        pl: 'Lekcja',
+        en: 'Lesson',
+        ru: 'Урок'
+    }
+
+    const title = `${typeLabels[type][lang]} • ${subject}`
+    const body = `${lessonPrefix[lang]} ${lessonNumber} • ${detail}`
+
+    return {
+        title,
+        body,
+        tag: `timetable-${dayName}-${lessonNumber}-${Date.now()}`,
+        data: {
+            url: `/?tab=schedule&day=${dayName}`,
+            type: 'substitution'
+        }
+    }
 }
 
 export async function requestPushPermission(): Promise<'granted' | 'denied' | 'default'> {

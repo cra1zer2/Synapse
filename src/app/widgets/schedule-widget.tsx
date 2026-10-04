@@ -42,6 +42,20 @@ export function ScheduleWidget({
         return `${startIso} — ${endIso}`
     }
 
+    const getDayIndicatorColor = (day: DaySchedule) => {
+        const hasCancelled = day.lessons.some((l) => l.isCancelled)
+        const hasHoliday = day.events && day.events.some((e) => e.category === 'holiday')
+        if (hasCancelled || hasHoliday) return 'bg-rose-500'
+
+        const hasSubstitution = day.lessons.some((l) => l.isSubstitution)
+        if (hasSubstitution) return 'bg-purple-500'
+
+        const hasShortened = day.lessons.some((l) => l.isShortened)
+        if (hasShortened) return 'bg-orange-500'
+
+        return null
+    }
+
     return (
         <section className="w-full flex flex-col gap-3 min-h-[540px]">
             <div className="bg-white rounded-3xl p-3 border border-[#e5e5ea] shadow-xs flex items-center justify-between">
@@ -109,21 +123,29 @@ export function ScheduleWidget({
             </div>
 
             <div className="grid grid-cols-5 gap-1.5">
-                {timetableData.schedule.map((day) => (
-                    <button
-                        key={day.dayName}
-                        onClick={() => onSelectDay(day.dayName)}
-                        className={`h-14 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-0.5 transition-all ${selectedDay === day.dayName
-                                ? 'bg-[#1c1c1e] text-white shadow-xs'
-                                : 'bg-white text-[#8e8e93] border border-[#e5e5ea]'
-                            }`}
-                    >
-                        <span>{day.dayName.slice(0, 3)}</span>
-                        <span className="text-[10px] opacity-75">
-                            {day.date ? day.date.split('.')[0] : ''}
-                        </span>
-                    </button>
-                ))}
+                {timetableData.schedule.map((day) => {
+                    const dotColor = getDayIndicatorColor(day)
+                    const isSelected = selectedDay === day.dayName
+
+                    return (
+                        <button
+                            key={day.dayName}
+                            onClick={() => onSelectDay(day.dayName)}
+                            className={`relative h-14 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-0.5 transition-all ${isSelected
+                                    ? 'bg-[#1c1c1e] text-white shadow-xs'
+                                    : 'bg-white text-[#8e8e93] border border-[#e5e5ea]'
+                                }`}
+                        >
+                            {dotColor && (
+                                <span className={`absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                            )}
+                            <span>{day.dayName.slice(0, 3)}</span>
+                            <span className="text-[10px] opacity-75">
+                                {day.date ? day.date.split('.')[0] : ''}
+                            </span>
+                        </button>
+                    )
+                })}
             </div>
 
             {isLoadingWeek ? (

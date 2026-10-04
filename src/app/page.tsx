@@ -13,15 +13,17 @@ import {
 } from './actions'
 import { SmartTimetableResult, DaySchedule } from '@/models/timetable.model'
 import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
-import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
+import { AttendanceResult, SubjectAttendance, AbsenceDetail } from '@/models/attendance.model'
 import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { StudentProfile } from '@/models/account.model'
 import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 
+import { AuthView } from './widgets/auth-view'
 import { ScheduleWidget } from './widgets/schedule-widget'
 import { GradesWidget } from './widgets/grades-widget'
 import { AttendanceWidget } from './widgets/attendance-widget'
 import { MessagesWidget } from './widgets/messages-widget'
+import { AttendanceDetailModal } from './widgets/attendance-detail-modal'
 import { JustificationModal } from './widgets/justification-modal'
 import { GradeModal } from './widgets/grade-modal'
 import { SettingsSheet } from './widgets/settings-sheet'
@@ -33,14 +35,9 @@ function getInitialWeekPivot(): string {
   const day = now.getDay()
   const target = new Date(now)
 
-  if (day === 6) {
-    target.setDate(now.getDate() + 2)
-  } else if (day === 0) {
-    target.setDate(now.getDate() + 1)
-  } else {
-    const diff = 1 - day
-    target.setDate(now.getDate() + diff)
-  }
+  if (day === 6) target.setDate(now.getDate() + 2)
+  else if (day === 0) target.setDate(now.getDate() + 1)
+  else target.setDate(now.getDate() + (1 - day))
 
   const y = target.getFullYear()
   const m = String(target.getMonth() + 1).padStart(2, '0')
@@ -66,7 +63,6 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState<MainSection>('schedule')
 
   const [currentWeekPivot, setCurrentWeekPivot] = useState(getInitialWeekPivot)
-
   const [profile, setProfile] = useState<StudentProfile | null>(null)
   const [timetableData, setTimetableData] = useState<SmartTimetableResult | null>(null)
   const [gradesData, setGradesData] = useState<GradesResult | null>(null)
@@ -100,11 +96,8 @@ export default function Home() {
     } else if (targetTheme === 'light') {
       root.classList.remove('dark')
     } else {
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        root.classList.add('dark')
-      } else {
-        root.classList.remove('dark')
-      }
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.classList.add('dark')
+      else root.classList.remove('dark')
     }
   }
 
@@ -121,7 +114,6 @@ export default function Home() {
 
     const weekdaysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
     const todayIdx = weekdaysOrder.indexOf(todayName)
-
     if (todayIdx !== -1) {
       for (let i = todayIdx + 1; i < weekdaysOrder.length; i++) {
         const nextDay = schedule.find((d) => d.dayName === weekdaysOrder[i])
@@ -133,73 +125,73 @@ export default function Home() {
 
     for (const day of weekdaysOrder) {
       const match = schedule.find((d) => d.dayName === day)
-      if (match && Array.isArray(match.lessons) && match.lessons.length > 0) {
-        return day
-      }
+      if (match && Array.isArray(match.lessons) && match.lessons.length > 0) return day
     }
 
     return 'Monday'
   }, [])
 
-  const executeSync = useCallback(async (u: string, p: string, currentAppLang: AppLanguage, weekPivot: string, silentUpdate: boolean) => {
-    const requestId = ++activeRequestCounter.current
+  const executeSync = useCallback(
+    async (u: string, p: string, currentAppLang: AppLanguage, weekPivot: string, silentUpdate: boolean) => {
+      const requestId = ++activeRequestCounter.current
+      if (!silentUpdate) setIsLoadingWeek(true)
+      setIsUpdating(true)
 
-    if (!silentUpdate) setIsLoadingWeek(true)
-    setIsUpdating(true)
+      try {
+        const shouldTranslate = currentAppLang === 'en'
+        const [tRes, gRes, aRes, pRes, mRes] = await Promise.all([
+          getSmartTimetableAction(u, p, shouldTranslate, weekPivot),
+          getStudentGradesAction(u, p, shouldTranslate),
+          getAttendanceAction(u, p, shouldTranslate),
+          getStudentProfileAction(u, p),
+          getMessagesAndAnnouncementsAction(u, p)
+        ])
 
-    try {
-      const shouldTranslate = currentAppLang === 'en'
-      const [tRes, gRes, aRes, pRes, mRes] = await Promise.all([
-        getSmartTimetableAction(u, p, shouldTranslate, weekPivot),
-        getStudentGradesAction(u, p, shouldTranslate),
-        getAttendanceAction(u, p, shouldTranslate),
-        getStudentProfileAction(u, p),
-        getMessagesAndAnnouncementsAction(u, p)
-      ])
+        if (requestId !== activeRequestCounter.current) return
 
-      if (requestId !== activeRequestCounter.current) return
+        if (pRes.success && pRes.data) setProfile(pRes.data)
+        if (mRes.success) {
+          setMessages(mRes.messages)
+          setAnnouncements(mRes.announcements)
+          setReceivers(mRes.receivers)
+        }
 
-      if (pRes.success && pRes.data) setProfile(pRes.data)
-      if (mRes.success) {
-        setMessages(mRes.messages)
-        setAnnouncements(mRes.announcements)
-        setReceivers(mRes.receivers)
-      }
+        if (tRes.success && gRes.success && aRes.success && tRes.data && gRes.data && aRes.data) {
+          const fetchedData = tRes.data
+          const previousDataForThisWeek = weekCacheRef.current[weekPivot]
+          weekCacheRef.current[weekPivot] = fetchedData
+          localStorage.setItem('synapse_week_cache', JSON.stringify(weekCacheRef.current))
 
-      if (tRes.success && gRes.success && aRes.success && tRes.data && gRes.data && aRes.data) {
-        const fetchedData = tRes.data
-        const previousDataForThisWeek = weekCacheRef.current[weekPivot]
-        weekCacheRef.current[weekPivot] = fetchedData
-        localStorage.setItem('synapse_week_cache', JSON.stringify(weekCacheRef.current))
+          setGradesData(gRes.data)
+          setAttendanceData(aRes.data)
 
-        setGradesData(gRes.data)
-        setAttendanceData(aRes.data)
+          if (previousDataForThisWeek) {
+            const isIdentical = JSON.stringify(previousDataForThisWeek) === JSON.stringify(fetchedData)
+            if (!isIdentical) {
+              setPendingSnapshot({ t: fetchedData, g: gRes.data, a: aRes.data })
+              setHasNewUpdate(true)
+            }
+          } else {
+            setTimetableData(fetchedData)
+            setSelectedDay((prev) => {
+              const hasPrev = fetchedData.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
+              return hasPrev ? prev : resolveSmartDefaultDay(fetchedData.schedule)
+            })
 
-        if (previousDataForThisWeek) {
-          const isIdentical = JSON.stringify(previousDataForThisWeek) === JSON.stringify(fetchedData)
-          if (!isIdentical) {
-            setPendingSnapshot({ t: fetchedData, g: gRes.data, a: aRes.data })
-            setHasNewUpdate(true)
+            const newSnapshot = { t: fetchedData, g: gRes.data, a: aRes.data }
+            localStorage.setItem('synapse_cache', JSON.stringify(newSnapshot))
           }
-        } else {
-          setTimetableData(fetchedData)
-          setSelectedDay((prev) => {
-            const hasPrev = fetchedData.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
-            return hasPrev ? prev : resolveSmartDefaultDay(fetchedData.schedule)
-          })
-
-          const newSnapshot = { t: fetchedData, g: gRes.data, a: aRes.data }
-          localStorage.setItem('synapse_cache', JSON.stringify(newSnapshot))
+        }
+      } catch {
+      } finally {
+        if (requestId === activeRequestCounter.current) {
+          setIsLoadingWeek(false)
+          setIsUpdating(false)
         }
       }
-    } catch {
-    } finally {
-      if (requestId === activeRequestCounter.current) {
-        setIsLoadingWeek(false)
-        setIsUpdating(false)
-      }
-    }
-  }, [resolveSmartDefaultDay])
+    },
+    [resolveSmartDefaultDay]
+  )
 
   useEffect(() => {
     setMounted(true)
@@ -292,9 +284,7 @@ export default function Home() {
   }
 
   const handleManualRefresh = () => {
-    if (username && password) {
-      executeSync(username, password, lang, currentWeekPivot, false)
-    }
+    if (username && password) executeSync(username, password, lang, currentWeekPivot, false)
   }
 
   const applyPendingUpdates = () => {
@@ -386,7 +376,11 @@ export default function Home() {
     return false
   }
 
-  const handleSubmitMultipleJustifications = async (payload: { dateIso: string; lessons: number[]; message: string }): Promise<boolean> => {
+  const handleSubmitMultipleJustifications = async (payload: {
+    dateIso: string
+    lessons: number[]
+    message: string
+  }): Promise<boolean> => {
     try {
       const res = await createJustificationAction(username, password, {
         dateFrom: payload.dateIso,
@@ -410,111 +404,21 @@ export default function Home() {
 
   if (!isConfigured) {
     return (
-      <main className="w-full min-h-screen pb-16 pt-safe px-4 max-w-sm mx-auto flex flex-col justify-center gap-6 box-border">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-black tracking-tight text-[var(--text-primary)]">Synapse</h1>
-          <div className="flex bg-[var(--bg-element)] p-0.5 rounded-xl">
-            {(['pl', 'en', 'ru'] as AppLanguage[]).map((code) => (
-              <button
-                key={code}
-                type="button"
-                onClick={() => handleSelectLanguage(code)}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg uppercase transition-all ${lang === code ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-secondary)]'
-                  }`}
-              >
-                {code}
-              </button>
-            ))}
-          </div>
-        </header>
-
-        <section className="bg-[var(--bg-card)] rounded-3xl p-6 shadow-sm border border-[var(--border-subtle)] flex flex-col gap-5">
-          {authStep === 'input' && (
-            <>
-              <div>
-                <h2 className="text-lg font-black text-[var(--text-primary)]">{t.welcomeTitle}</h2>
-                <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t.loginSubtitle}</p>
-              </div>
-
-              {authError && (
-                <div className="bg-rose-500/10 border border-rose-500/20 text-rose-600 text-xs font-semibold p-3 rounded-2xl">
-                  {authError}
-                </div>
-              )}
-
-              <form onSubmit={handleStartVerification} className="flex flex-col gap-3">
-                <input
-                  type="text"
-                  placeholder={t.loginPlaceholder}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] text-xs font-medium rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#007aff]"
-                  required
-                />
-                <input
-                  type="password"
-                  placeholder={t.passwordPlaceholder}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] text-xs font-medium rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#007aff]"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-[#007aff] text-white text-xs font-bold py-3.5 rounded-2xl active:opacity-80 transition-all shadow-xs"
-                >
-                  {t.verifyButton}
-                </button>
-              </form>
-            </>
-          )}
-
-          {authStep === 'verifying' && (
-            <div className="py-12 flex flex-col items-center justify-center gap-3">
-              <div className="w-7 h-7 border-2 border-[#007aff] border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs font-bold text-[var(--text-secondary)]">{t.verifyingAccount}</p>
-            </div>
-          )}
-
-          {authStep === 'preview' && verifiedCandidate && (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-xs font-bold text-emerald-600">{t.accountVerified}</span>
-              </div>
-
-              <div className="bg-[var(--bg-element)] p-4 rounded-2xl flex flex-col gap-1">
-                <h3 className="text-sm font-black text-[var(--text-primary)]">{verifiedCandidate.fullName}</h3>
-                <p className="text-xs font-medium text-[var(--text-secondary)]">
-                  {verifiedCandidate.className} • {verifiedCandidate.schoolName}
-                </p>
-                {verifiedCandidate.luckyNumber !== null && (
-                  <p className="text-xs font-bold text-[#007aff] mt-1">
-                    {t.luckyNumber}: {verifiedCandidate.luckyNumber}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={handleConfirmLogin}
-                  className="w-full bg-[#007aff] text-white text-xs font-bold py-3.5 rounded-2xl active:opacity-80 transition-all shadow-xs"
-                >
-                  {t.confirmAndEnter}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAuthStep('input')}
-                  className="w-full bg-[var(--bg-element)] text-[var(--text-secondary)] text-xs font-bold py-2.5 rounded-2xl active:opacity-80 transition-all"
-                >
-                  {t.changeData}
-                </button>
-              </div>
-            </div>
-          )}
-        </section>
-      </main>
+      <AuthView
+        authStep={authStep}
+        username={username}
+        setUsername={setUsername}
+        password={password}
+        setPassword={setPassword}
+        authError={authError}
+        verifiedCandidate={verifiedCandidate}
+        onStartVerification={handleStartVerification}
+        onConfirmLogin={handleConfirmLogin}
+        onBackToInput={() => setAuthStep('input')}
+        lang={lang}
+        onSelectLanguage={handleSelectLanguage}
+        t={t}
+      />
     )
   }
 
@@ -569,28 +473,36 @@ export default function Home() {
       <nav className="bg-[var(--bg-element)] p-1 rounded-2xl grid grid-cols-4 gap-1.5 shadow-inner h-11 box-border">
         <button
           onClick={() => setActiveSection('schedule')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'schedule' ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-secondary)]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'schedule'
+              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs dark:bg-[#3a3a3c] dark:text-white dark:border dark:border-white/10'
+              : 'text-[var(--text-secondary)]'
             }`}
         >
           {t.schedule}
         </button>
         <button
           onClick={() => setActiveSection('grades')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'grades' ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-secondary)]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'grades'
+              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs dark:bg-[#3a3a3c] dark:text-white dark:border dark:border-white/10'
+              : 'text-[var(--text-secondary)]'
             }`}
         >
           {t.grades}
         </button>
         <button
           onClick={() => setActiveSection('attendance')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'attendance' ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-secondary)]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'attendance'
+              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs dark:bg-[#3a3a3c] dark:text-white dark:border dark:border-white/10'
+              : 'text-[var(--text-secondary)]'
             }`}
         >
           {t.attendance}
         </button>
         <button
           onClick={() => setActiveSection('messages')}
-          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'messages' ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-secondary)]'
+          className={`h-full text-xs font-extrabold rounded-xl transition-all text-center flex items-center justify-center ${activeSection === 'messages'
+              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs dark:bg-[#3a3a3c] dark:text-white dark:border dark:border-white/10'
+              : 'text-[var(--text-secondary)]'
             }`}
         >
           {t.messages}
@@ -625,8 +537,8 @@ export default function Home() {
           {attendanceData.unexcusedAbsences.length > 0 && (
             <div className="bg-rose-500/10 border border-rose-500/20 rounded-3xl p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-black text-rose-600">Nieusprawiedliwione godziny</p>
-                <p className="text-[11px] text-rose-600/80 mt-0.5">
+                <p className="text-xs font-black text-rose-500">Nieusprawiedliwione godziny</p>
+                <p className="text-[11px] text-rose-500/80 mt-0.5">
                   Łącznie: {attendanceData.unexcusedAbsences.length} lekcji
                 </p>
               </div>
@@ -659,58 +571,12 @@ export default function Home() {
       )}
 
       {selectedSubjectDetail && (
-        <div
-          onClick={() => setSelectedSubjectDetail(null)}
-          className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-4 z-50 animate-in fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[var(--bg-card)] rounded-3xl p-5 w-full max-w-sm border border-[var(--border-subtle)] shadow-xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-extrabold text-[var(--text-primary)]">{selectedSubjectDetail.subject}</h3>
-                <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                  {selectedSubjectDetail.percentage}% attendance ({selectedSubjectDetail.absentLessons} missed)
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedSubjectDetail(null)}
-                className="w-7 h-7 rounded-full bg-[var(--bg-element)] text-[var(--text-secondary)] text-xs font-bold flex items-center justify-center"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              {selectedSubjectDetail.absences && selectedSubjectDetail.absences.length > 0 ? (
-                selectedSubjectDetail.absences.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-[var(--bg-element)] p-3 rounded-2xl flex flex-col gap-1.5 text-xs text-[var(--text-primary)]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold">{item.date}</span>
-                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${item.isUnexcused
-                          ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                          : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                        }`}>
-                        {item.type.toUpperCase()}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                      <span>Lekcja {item.lessonNumber} {item.time ? `(${item.time})` : ''}</span>
-                      <span>{item.typeName}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center text-xs text-[var(--text-secondary)] py-4">{t.noAbsencesRecorded}</div>
-              )}
-            </div>
-          </div>
-        </div>
+        <AttendanceDetailModal
+          subjectDetail={selectedSubjectDetail}
+          onClose={() => setSelectedSubjectDetail(null)}
+          onSelectAbsenceForExcuse={(item) => setShowExcuseMatrix(true)}
+          t={t}
+        />
       )}
 
       {showExcuseMatrix && attendanceData && (

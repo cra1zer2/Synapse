@@ -12,13 +12,13 @@
 }
 
 .dark {
-  --bg-canvas: #1c1c1e;
-  --bg-card: #2c2c2e;
-  --bg-element: #3a3a3c;
-  --bg-input: #3a3a3c;
+  --bg-canvas: #121214;
+  --bg-card: #1c1c1e;
+  --bg-element: #2c2c2e;
+  --bg-input: #2c2c2e;
   --text-primary: #f2f2f7;
-  --text-secondary: #98989d;
-  --border-subtle: #38383a;
+  --text-secondary: #a1a1a6;
+  --border-subtle: rgba(255, 255, 255, 0.08);
 }
 
 html {

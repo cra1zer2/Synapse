@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { AppDictionary } from '@/config/dictionary.config'
+import { cleanSenderName } from '@/utils/text.util'
 
 interface MessagesWidgetProps {
     messages: MessageItem[]
@@ -82,7 +83,7 @@ export function MessagesWidget({
                         <button
                             onClick={() => setActiveTab('inbox')}
                             className={`flex-1 py-1.5 text-xs font-extrabold rounded-xl transition-all ${activeTab === 'inbox'
-                                    ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs'
+                                    ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs dark:bg-[#3a3a3c] dark:text-white'
                                     : 'text-[var(--text-secondary)]'
                                 }`}
                         >
@@ -91,7 +92,7 @@ export function MessagesWidget({
                         <button
                             onClick={() => setActiveTab('announcements')}
                             className={`flex-1 py-1.5 text-xs font-extrabold rounded-xl transition-all ${activeTab === 'announcements'
-                                    ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs'
+                                    ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs dark:bg-[#3a3a3c] dark:text-white'
                                     : 'text-[var(--text-secondary)]'
                                 }`}
                         >
@@ -128,15 +129,13 @@ export function MessagesWidget({
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-black text-[var(--text-primary)] truncate max-w-[200px]">
-                                        {msg.sender}
+                                        {cleanSenderName(msg.sender)}
                                     </span>
                                     <span className="text-[10px] text-[var(--text-secondary)] bg-[var(--bg-input)] px-2 py-0.5 rounded-lg">
                                         {msg.date}
                                     </span>
                                 </div>
-                                <h4 className="text-xs font-bold text-[var(--text-primary)] line-clamp-1">
-                                    {msg.subject}
-                                </h4>
+                                <h4 className="text-xs font-bold text-[var(--text-primary)] line-clamp-1">{msg.subject}</h4>
                             </article>
                         ))
                     ) : (
@@ -148,11 +147,18 @@ export function MessagesWidget({
                     filteredAnnouncements.map((item) => (
                         <article
                             key={item.id}
-                            onClick={() => setActiveReader({ title: item.title, sender: item.author, date: item.date, content: item.content })}
+                            onClick={() =>
+                                setActiveReader({
+                                    title: item.title,
+                                    sender: cleanSenderName(item.author),
+                                    date: item.date,
+                                    content: item.content
+                                })
+                            }
                             className="bg-[var(--bg-card)] rounded-3xl p-4 border border-[var(--border-subtle)] shadow-xs flex flex-col gap-2 cursor-pointer active:scale-[0.99] transition-transform"
                         >
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-black text-[#007aff]">{item.author}</span>
+                                <span className="text-xs font-black text-[#007aff]">{cleanSenderName(item.author)}</span>
                                 <span className="text-[10px] text-[var(--text-secondary)]">{item.date}</span>
                             </div>
                             <h4 className="text-xs font-extrabold text-[var(--text-primary)]">{item.title}</h4>
@@ -171,21 +177,25 @@ export function MessagesWidget({
             {activeReader && (
                 <div
                     onClick={() => setActiveReader(null)}
-                    className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in"
                 >
                     <div
                         onClick={(e) => e.stopPropagation()}
                         className="bg-[var(--bg-card)] rounded-3xl p-5 w-full max-w-lg border border-[var(--border-subtle)] shadow-2xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto"
                     >
-                        <div className="flex items-start justify-between border-b border-[var(--border-subtle)] pb-3">
-                            <div>
-                                <span className="text-[10px] font-bold text-[#007aff] uppercase tracking-wider">{activeReader.sender}</span>
-                                <h3 className="text-sm font-black text-[var(--text-primary)] mt-0.5">{activeReader.title}</h3>
-                                <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">{activeReader.date}</p>
+                        <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] pb-3">
+                            <div className="flex-1 min-w-0 pr-2">
+                                <span className="text-[11px] font-bold text-[#007aff] uppercase tracking-wider block truncate">
+                                    {cleanSenderName(activeReader.sender)}
+                                </span>
+                                <h3 className="text-sm font-black text-[var(--text-primary)] mt-0.5 leading-snug break-words">
+                                    {activeReader.title}
+                                </h3>
+                                <p className="text-[10px] text-[var(--text-secondary)] mt-1">{activeReader.date}</p>
                             </div>
                             <button
                                 onClick={() => setActiveReader(null)}
-                                className="w-7 h-7 rounded-full bg-[var(--bg-element)] text-[var(--text-secondary)] text-xs font-bold flex items-center justify-center"
+                                className="w-8 h-8 rounded-full bg-[var(--bg-element)] text-[var(--text-secondary)] text-xs font-bold flex items-center justify-center shrink-0 active:scale-95"
                             >
                                 ✕
                             </button>
@@ -207,7 +217,7 @@ export function MessagesWidget({
             {showCompose && (
                 <div
                     onClick={() => setShowCompose(false)}
-                    className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in"
                 >
                     <div
                         onClick={(e) => e.stopPropagation()}
@@ -217,14 +227,14 @@ export function MessagesWidget({
                             <h3 className="text-sm font-black text-[var(--text-primary)]">{t.composeMessage}</h3>
                             <button
                                 onClick={() => setShowCompose(false)}
-                                className="w-7 h-7 rounded-full bg-[var(--bg-element)] text-[var(--text-secondary)] text-xs font-bold flex items-center justify-center"
+                                className="w-8 h-8 rounded-full bg-[var(--bg-element)] text-[var(--text-secondary)] text-xs font-bold flex items-center justify-center shrink-0 active:scale-95"
                             >
                                 ✕
                             </button>
                         </div>
 
                         {sendSuccess ? (
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 p-4 rounded-2xl text-center text-xs font-bold">
+                            <div className="bg-emerald-500/15 border border-emerald-500/20 text-emerald-500 p-4 rounded-2xl text-center text-xs font-bold">
                                 ✓ Wysłano wiadomość
                             </div>
                         ) : (
@@ -248,7 +258,7 @@ export function MessagesWidget({
                                     placeholder={t.subjectPlaceholder}
                                     value={composeTitle}
                                     onChange={(e) => setComposeTitle(e.target.value)}
-                                    className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] text-xs rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
+                                    className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] text-xs rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-[#007aff]"
                                     required
                                 />
 

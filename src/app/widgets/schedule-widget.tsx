@@ -133,7 +133,7 @@ export function ScheduleWidget({
                                 key={day.dayName}
                                 onClick={() => onSelectDay(day.dayName)}
                                 className={`py-2 rounded-2xl text-xs font-bold flex flex-col items-center justify-center transition-all ${isSelected
-                                        ? 'bg-[var(--text-primary)] text-[var(--bg-card)] shadow-xs'
+                                        ? 'bg-[var(--text-primary)] text-[var(--bg-card)] shadow-xs dark:bg-[#3a3a3c] dark:text-white dark:border dark:border-white/10'
                                         : 'bg-[var(--bg-element)] text-[var(--text-secondary)] hover:opacity-90'
                                     }`}
                             >
@@ -163,10 +163,10 @@ export function ScheduleWidget({
                                 <div
                                     key={idx}
                                     className={`p-3.5 rounded-2xl border text-xs font-bold flex items-center gap-2 ${ev.category === 'holiday'
-                                            ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                                            ? 'bg-rose-500/15 text-rose-500 border-rose-500/20'
                                             : ev.category === 'exam'
-                                                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                                                : 'bg-blue-500/10 text-blue-600 border-blue-500/20'
+                                                ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/20'
+                                                : 'bg-blue-500/15 text-blue-500 border-blue-500/20'
                                         }`}
                                 >
                                     <span className="w-2 h-2 rounded-full bg-current shrink-0" />
@@ -189,7 +189,7 @@ export function ScheduleWidget({
                                                 {lesson.time}
                                             </span>
                                             {lesson.lessonCount && lesson.lessonCount > 1 && (
-                                                <span className="text-[10px] font-bold text-[#007aff] bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+                                                <span className="text-[10px] font-bold text-[#007aff] bg-blue-500/15 px-2 py-0.5 rounded-full border border-blue-500/20">
                                                     {lesson.lessonCount}x
                                                 </span>
                                             )}
@@ -197,22 +197,22 @@ export function ScheduleWidget({
 
                                         <div className="flex items-center gap-1.5 flex-wrap justify-end">
                                             {lesson.isShortened && (
-                                                <span className="text-[10px] font-bold text-orange-600 bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20">
+                                                <span className="text-[10px] font-bold text-orange-500 bg-orange-500/15 px-2 py-0.5 rounded-full border border-orange-500/20">
                                                     {lesson.durationMinutes} min
                                                 </span>
                                             )}
                                             {lesson.isCancelled && (
-                                                <span className="text-[10px] font-bold text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
+                                                <span className="text-[10px] font-bold text-rose-500 bg-rose-500/15 px-2 py-0.5 rounded-full border border-rose-500/20">
                                                     Cancelled
                                                 </span>
                                             )}
                                             {lesson.isSubstitution && (
-                                                <span className="text-[10px] font-bold text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
+                                                <span className="text-[10px] font-bold text-purple-500 bg-purple-500/15 px-2 py-0.5 rounded-full border border-purple-500/20">
                                                     Substitution
                                                 </span>
                                             )}
                                             {lesson.teacherAbsent && (
-                                                <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                                                <span className="text-[10px] font-bold text-amber-500 bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/20">
                                                     Teacher Absent
                                                 </span>
                                             )}
@@ -224,7 +224,7 @@ export function ScheduleWidget({
                                             {lesson.subject}
                                         </h2>
                                         {lesson.room && (
-                                            <span className="text-xs font-bold text-[#007aff] bg-blue-500/10 px-2.5 py-1 rounded-lg shrink-0">
+                                            <span className="text-xs font-bold text-[#007aff] bg-blue-500/15 border border-blue-500/20 px-2.5 py-1 rounded-lg shrink-0">
                                                 {lesson.room}
                                             </span>
                                         )}

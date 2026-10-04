@@ -18,14 +18,14 @@ export function GradesWidget({
 }: GradesWidgetProps) {
     return (
         <section className="w-full flex flex-col gap-3 min-h-[540px]">
-            <div className="bg-white rounded-3xl p-5 border border-[#e5e5ea] shadow-xs flex items-center justify-between">
+            <div className="bg-[var(--bg-card)] rounded-3xl p-5 border border-[var(--border-subtle)] shadow-xs flex items-center justify-between">
                 <div>
-                    <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-wider">Overall GPA</p>
-                    <h2 className="text-3xl font-black text-[#1c1c1e] mt-0.5">
+                    <p className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Overall GPA</p>
+                    <h2 className="text-3xl font-black text-[var(--text-primary)] mt-0.5">
                         {gradesData.overallAverage ?? 'N/A'}
                     </h2>
                 </div>
-                <span className="text-xs font-bold text-[#007aff] bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100">
+                <span className="text-xs font-bold text-[#007aff] bg-blue-500/15 border border-blue-500/20 px-3 py-1.5 rounded-xl">
                     {gradesData.subjects.length} Subjects
                 </span>
             </div>
@@ -34,15 +34,15 @@ export function GradesWidget({
                 {gradesData.subjects.map((sub) => (
                     <article
                         key={sub.subject}
-                        className="bg-white rounded-3xl p-4 border border-[#e5e5ea] shadow-xs flex flex-col gap-2.5"
+                        className="bg-[var(--bg-card)] rounded-3xl p-4 border border-[var(--border-subtle)] shadow-xs flex flex-col gap-2.5"
                     >
                         <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5">
-                                <h3 className="text-sm font-bold text-[#1c1c1e]">{sub.subject}</h3>
+                                <h3 className="text-sm font-bold text-[var(--text-primary)]">{sub.subject}</h3>
                                 {sub.warning && (
                                     <button
                                         onClick={() => onSelectWarning(sub)}
-                                        className="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200 animate-pulse"
+                                        className="text-[10px] font-bold bg-rose-500/15 text-rose-500 px-2 py-0.5 rounded-full border border-rose-500/20 animate-pulse"
                                     >
                                         Risk &lt; 2.0
                                     </button>
@@ -50,7 +50,7 @@ export function GradesWidget({
                             </div>
 
                             {sub.finalAverage !== null && (
-                                <span className="text-xs font-black text-[#1c1c1e] bg-[#f2f2f7] px-2.5 py-1 rounded-lg">
+                                <span className="text-xs font-black text-[var(--text-primary)] bg-[var(--bg-element)] px-2.5 py-1 rounded-lg">
                                     {sub.finalAverage}
                                 </span>
                             )}
@@ -61,13 +61,13 @@ export function GradesWidget({
                                 <button
                                     key={`${item.grade}-${item.date}-${idx}`}
                                     onClick={() => onSelectGrade(item)}
-                                    className="w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center border transition-transform active:scale-95 bg-[#f2f2f7] text-[#1c1c1e] border-gray-200"
+                                    className="w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center border transition-transform active:scale-95 bg-[var(--bg-element)] text-[var(--text-primary)] border-[var(--border-subtle)]"
                                 >
                                     {item.grade}
                                 </button>
                             ))}
                             {sub.semester1.length === 0 && sub.semester2.length === 0 && (
-                                <span className="text-xs text-[#8e8e93]">{t.noGradesRecorded}</span>
+                                <span className="text-xs text-[var(--text-secondary)]">{t.noGradesRecorded}</span>
                             )}
                         </div>
                     </article>

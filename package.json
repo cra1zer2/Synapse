@@ -7,12 +7,12 @@
   },
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
-    "build": "npm install --legacy-peer-deps --force && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "librus-api": "^1.0.0",
+    "librus-api": "github:Mati365/librus-api",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

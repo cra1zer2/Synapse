@@ -96,7 +96,7 @@ export function ScheduleWidget({
     }
 
     return (
-        <section className="w-full flex flex-col gap-4 min-h-[500px]">
+        <section className="w-full flex flex-col gap-3 min-h-[500px]">
             <div className="bg-[var(--ios-card)] rounded-2xl shadow-[var(--ios-shadow)] border border-[var(--ios-border)] backdrop-blur-[20px] overflow-hidden">
                 <div className="px-4 py-2.5 flex items-center justify-between border-b border-[var(--ios-separator)]">
                     <button
@@ -233,78 +233,74 @@ export function ScheduleWidget({
                                 const breakRemaining = nextLesson ? getBreakRemainingMinutes(nextLesson.time) : 0
 
                                 return (
-                                    <div key={`${lesson.number}-${lesson.subject}-${lesson.time}`} className="flex flex-col gap-1.5">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="w-3 flex items-center justify-center shrink-0">
-                                                {liveState === 'active' && (
-                                                    <div className="w-2 h-2 rounded-full bg-[var(--ios-blue)] shadow-[0_0_10px_rgba(10,132,255,0.6)] animate-pulse" />
-                                                )}
-                                            </div>
-
-                                            <article
-                                                className={`flex-1 bg-[var(--ios-card)] backdrop-blur-[20px] rounded-2xl p-3.5 border border-[var(--ios-border)] shadow-[var(--ios-shadow)] flex flex-col gap-1.5 transition-opacity ${liveState === 'passed' ? 'opacity-60' : 'opacity-100'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center justify-between">
+                                    <div key={`${lesson.number}-${lesson.subject}-${lesson.time}`} className="flex flex-col">
+                                        <article
+                                            className={`w-full bg-[var(--ios-card)] backdrop-blur-[20px] rounded-2xl p-3.5 border border-[var(--ios-border)] shadow-[var(--ios-shadow)] flex flex-col gap-1.5 transition-all ${liveState === 'active'
+                                                    ? 'border-l-4 border-l-[#007aff] dark:border-l-[#0a84ff]'
+                                                    : liveState === 'passed'
+                                                        ? 'opacity-60'
+                                                        : 'opacity-100'
+                                                }`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    {liveState === 'active' && (
+                                                        <span className="w-2 h-2 rounded-full bg-[#007aff] dark:bg-[#0a84ff] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
+                                                    )}
                                                     <span className="text-xs font-semibold text-[var(--ios-secondary)] tracking-tight">
                                                         {lesson.time}
                                                     </span>
-
-                                                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                                                        {lesson.isShortened && (
-                                                            <span className="text-[10px] font-bold text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full">
-                                                                {lesson.durationMinutes} min
-                                                            </span>
-                                                        )}
-                                                        {lesson.isCancelled && (
-                                                            <span className="text-[10px] font-bold text-[#ff3b30] bg-[#ff3b30]/10 px-2 py-0.5 rounded-full">
-                                                                Odwołane
-                                                            </span>
-                                                        )}
-                                                        {lesson.isSubstitution && (
-                                                            <span className="text-[10px] font-bold text-[#af52de] bg-[#af52de]/10 px-2 py-0.5 rounded-full">
-                                                                Zastępstwo
-                                                            </span>
-                                                        )}
-                                                        {lesson.room && (
-                                                            <span className="text-xs font-semibold bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2 py-0.5 rounded-[6px]">
-                                                                {lesson.room}
-                                                            </span>
-                                                        )}
-                                                    </div>
                                                 </div>
 
-                                                <h3 className="text-sm font-semibold text-[var(--ios-label)] leading-snug">
-                                                    {lesson.subject}
-                                                </h3>
-
-                                                <p className="text-xs font-medium text-[var(--ios-secondary)]">
-                                                    {lesson.teacher || t.notSpecified}
-                                                </p>
-
-                                                {liveState === 'active' && breakMinutes > 0 && (
-                                                    <div className="pt-1 mt-0.5 border-t border-[var(--ios-separator)] flex items-center justify-between text-[11px] text-[var(--ios-secondary)]">
-                                                        <span className="flex items-center gap-1.5">
-                                                            <svg className="w-3.5 h-3.5 text-[var(--ios-blue)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                <circle cx="12" cy="12" r="10" />
-                                                                <polyline points="12 6 12 12 16 14" />
-                                                            </svg>
-                                                            <span>{t.breakUpcomingLabel(breakMinutes)}</span>
+                                                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                                    {lesson.isShortened && (
+                                                        <span className="text-[10px] font-bold text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full">
+                                                            {lesson.durationMinutes} min
                                                         </span>
-                                                    </div>
-                                                )}
-                                            </article>
-                                        </div>
+                                                    )}
+                                                    {lesson.isCancelled && (
+                                                        <span className="text-[10px] font-bold text-[#ff3b30] bg-[#ff3b30]/10 px-2 py-0.5 rounded-full">
+                                                            Odwołane
+                                                        </span>
+                                                    )}
+                                                    {lesson.isSubstitution && (
+                                                        <span className="text-[10px] font-bold text-[#af52de] bg-[#af52de]/10 px-2 py-0.5 rounded-full">
+                                                            Zastępstwo
+                                                        </span>
+                                                    )}
+                                                    {lesson.room && (
+                                                        <span className="text-xs font-semibold bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2 py-0.5 rounded-[6px]">
+                                                            {lesson.room}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
 
-                                        {breakActive && breakRemaining > 0 && (
-                                            <div className="pl-6 py-1 flex items-center justify-center">
-                                                <div className="bg-[var(--ios-card)] backdrop-blur-[20px] border border-[var(--ios-border)] shadow-[var(--ios-shadow)] px-3 py-1 rounded-full flex items-center gap-2 text-xs font-semibold text-[var(--ios-blue)] animate-pulse">
+                                            <h3 className="text-sm font-semibold text-[var(--ios-label)] leading-snug">
+                                                {lesson.subject}
+                                            </h3>
+
+                                            <p className="text-xs font-medium text-[var(--ios-secondary)]">
+                                                {lesson.teacher || t.notSpecified}
+                                            </p>
+                                        </article>
+
+                                        {breakMinutes > 0 && (
+                                            <div className="py-2.5 flex items-center gap-3 px-2">
+                                                <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
+                                                <div className={`flex items-center gap-1.5 text-[11px] font-semibold shrink-0 ${breakActive ? 'text-[var(--ios-blue)] animate-pulse' : 'text-[var(--ios-secondary)]'
+                                                    }`}>
                                                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                         <circle cx="12" cy="12" r="10" />
                                                         <polyline points="12 6 12 12 16 14" />
                                                     </svg>
-                                                    <span>{t.breakCountdownLabel(breakRemaining)}</span>
+                                                    <span>
+                                                        {breakActive && breakRemaining > 0
+                                                            ? t.breakCountdownLabel(breakRemaining)
+                                                            : `${breakMinutes} min`}
+                                                    </span>
                                                 </div>
+                                                <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
                                             </div>
                                         )}
                                     </div>

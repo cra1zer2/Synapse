@@ -208,7 +208,13 @@ export default function Home() {
     setLang(savedLang)
     setTheme(savedTheme)
     applyTheme(savedTheme)
-    setIsConfigured(Boolean(savedUser && savedPass))
+
+    const hasAccount = Boolean(savedUser && savedPass)
+    setIsConfigured(hasAccount)
+
+    if (!hasAccount) {
+      return
+    }
 
     const storedWeekCache = localStorage.getItem('synapse_week_cache')
     if (storedWeekCache) {
@@ -233,10 +239,8 @@ export default function Home() {
       } catch { }
     }
 
-    if (savedUser && savedPass) {
-      const isAlreadyInCache = Boolean(weekCacheRef.current[currentWeekPivot])
-      executeSync(savedUser, savedPass, savedLang, currentWeekPivot, isAlreadyInCache)
-    }
+    const isAlreadyInCache = Boolean(weekCacheRef.current[currentWeekPivot])
+    executeSync(savedUser, savedPass, savedLang, currentWeekPivot, isAlreadyInCache)
 
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)

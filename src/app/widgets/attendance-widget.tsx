@@ -60,10 +60,10 @@ export function AttendanceWidget({
 
                     <span
                         className={`text-xs font-bold px-2.5 py-1 rounded-full ${isDanger
-                                ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
-                                : isWarning
-                                    ? 'bg-[#ff9500]/10 text-[#ff9500]'
-                                    : 'bg-[#34c759]/10 text-[#34c759]'
+                            ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
+                            : isWarning
+                                ? 'bg-[#ff9500]/10 text-[#ff9500]'
+                                : 'bg-[#34c759]/10 text-[#34c759]'
                             }`}
                     >
                         {isDanger ? t.dangerBadge : isWarning ? t.warningBadge : t.safeBadge}
@@ -119,10 +119,10 @@ export function AttendanceWidget({
                                 <div className="flex items-center gap-2 shrink-0">
                                     <span
                                         className={`text-xs font-bold px-2 py-0.5 rounded-md ${subDanger
-                                                ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
-                                                : subWarning
-                                                    ? 'bg-[#ff9500]/10 text-[#ff9500]'
-                                                    : 'text-[var(--ios-secondary)]'
+                                            ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
+                                            : subWarning
+                                                ? 'bg-[#ff9500]/10 text-[#ff9500]'
+                                                : 'text-[var(--ios-secondary)]'
                                             }`}
                                     >
                                         {sub.percentage}%

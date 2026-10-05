@@ -13,7 +13,7 @@ import {
 } from './actions'
 import { SmartTimetableResult, DaySchedule } from '@/models/timetable.model'
 import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
-import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
+import { AttendanceResult, SubjectAttendance, AbsenceDetail } from '@/models/attendance.model'
 import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
@@ -207,25 +207,52 @@ export default function Home() {
     let loadedAccounts: SavedAccount[] = []
     if (savedAccountsJson) {
       try {
-        loadedAccounts = JSON.parse(savedAccountsJson)
-        setSavedAccounts(loadedAccounts)
+        const parsed = JSON.parse(savedAccountsJson)
+        if (Array.isArray(parsed)) {
+          loadedAccounts = parsed
+        }
       } catch { }
     }
 
-    const activeAcc = loadedAccounts.find((a) => a.isActive) || loadedAccounts[0]
-
-    const savedUser = activeAcc ? activeAcc.username : localStorage.getItem('synapse_user') || ''
-    const savedPass = activeAcc ? activeAcc.password : localStorage.getItem('synapse_pass') || ''
+    const savedUser = localStorage.getItem('synapse_user') || ''
+    const savedPass = localStorage.getItem('synapse_pass') || ''
     const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
     const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
 
-    setUsername(savedUser)
-    setPassword(savedPass)
+    if (loadedAccounts.length === 0 && savedUser && savedPass) {
+      const isStudent = savedUser.trim().toLowerCase().endsWith('u')
+      const initialAccount: SavedAccount = {
+        id: savedUser,
+        username: savedUser,
+        password: savedPass,
+        role: isStudent ? 'student' : 'parent',
+        profile: {
+          fullName: savedUser,
+          className: '4 Tsa Technikum',
+          schoolName: 'TEB Edukacja',
+          luckyNumber: null,
+          role: isStudent ? 'student' : 'parent'
+        },
+        isActive: true
+      }
+      loadedAccounts = [initialAccount]
+      localStorage.setItem('synapse_accounts', JSON.stringify([initialAccount]))
+    }
+
+    setSavedAccounts(loadedAccounts)
+
+    const activeAcc = loadedAccounts.find((a) => a.isActive) || loadedAccounts[0]
+
+    const effectiveUser = activeAcc ? activeAcc.username : savedUser
+    const effectivePass = activeAcc ? activeAcc.password : savedPass
+
+    setUsername(effectiveUser)
+    setPassword(effectivePass)
     setLang(savedLang)
     setTheme(savedTheme)
     applyTheme(savedTheme)
 
-    const hasAccount = Boolean(savedUser && savedPass)
+    const hasAccount = Boolean(effectiveUser && effectivePass)
     setIsConfigured(hasAccount)
 
     if (!hasAccount) {
@@ -256,7 +283,18 @@ export default function Home() {
     }
 
     const isAlreadyInCache = Boolean(weekCacheRef.current[currentWeekPivot])
-    executeSync(savedUser, savedPass, savedLang, currentWeekPivot, isAlreadyInCache)
+    executeSync(effectiveUser, effectivePass, savedLang, currentWeekPivot, isAlreadyInCache)
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tabParam = params.get('tab') as MainSection
+      const dayParam = params.get('day')
+      const excuseParam = params.get('excuse')
+
+      if (tabParam) setActiveSection(tabParam)
+      if (dayParam) setSelectedDay(dayParam)
+      if (excuseParam === '1') setShowExcuseMatrix(true)
+    }
   }, [])
 
   const queueWeekChange = (targetPivot: string) => {
@@ -507,7 +545,7 @@ export default function Home() {
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </button>
       </header>

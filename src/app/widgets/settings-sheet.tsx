@@ -9,7 +9,7 @@ interface SettingsSheetProps {
     isOpen: boolean
     onClose: () => void
     profile: StudentProfile | null
-    savedAccounts: SavedAccount[]
+    savedAccounts?: SavedAccount[]
     onSwitchAccount: (account: SavedAccount) => void
     onAddAccount: (e: React.FormEvent) => void
     newUsername: string
@@ -29,7 +29,7 @@ export function SettingsSheet({
     isOpen,
     onClose,
     profile,
-    savedAccounts,
+    savedAccounts = [],
     onSwitchAccount,
     onAddAccount,
     newUsername,
@@ -50,12 +50,12 @@ export function SettingsSheet({
     useEffect(() => {
         if (isOpen) {
             setPushStatus(getNotificationPermissionStatus())
-            document.body.classList.add('overflow-hidden')
+            document.body.style.overflow = 'hidden'
         } else {
-            document.body.classList.remove('overflow-hidden')
+            document.body.style.overflow = ''
         }
         return () => {
-            document.body.classList.remove('overflow-hidden')
+            document.body.style.overflow = ''
         }
     }, [isOpen])
 
@@ -65,6 +65,8 @@ export function SettingsSheet({
     }
 
     if (!isOpen) return null
+
+    const accountsList = Array.isArray(savedAccounts) ? savedAccounts : []
 
     return (
         <div
@@ -88,36 +90,48 @@ export function SettingsSheet({
                 <div className="flex flex-col gap-1">
                     <span className="text-[10px] uppercase font-bold text-[var(--ios-secondary)] px-1">{t.accountSwitcher}</span>
                     <div className="bg-[var(--ios-card-solid)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
-                        {savedAccounts.map((acc) => (
-                            <div
-                                key={acc.id}
-                                onClick={() => onSwitchAccount(acc)}
-                                className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ${acc.role === 'student' ? 'bg-[#007aff]' : 'bg-[#af52de]'
-                                        }`}>
-                                        {acc.role === 'student' ? 'U' : 'R'}
+                        {accountsList.length > 0 ? (
+                            accountsList.map((acc) => (
+                                <div
+                                    key={acc.id}
+                                    onClick={() => onSwitchAccount(acc)}
+                                    className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ${acc.role === 'student' ? 'bg-[#007aff]' : 'bg-[#af52de]'
+                                            }`}>
+                                            {acc.role === 'student' ? 'U' : 'R'}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xs font-bold text-[var(--ios-label)]">{acc.profile?.fullName || acc.username}</h3>
+                                            <p className="text-[11px] text-[var(--ios-secondary)]">
+                                                {acc.role === 'student' ? t.studentRole : t.parentRole} • {acc.username}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-xs font-bold text-[var(--ios-label)]">{acc.profile.fullName}</h3>
-                                        <p className="text-[11px] text-[var(--ios-secondary)]">
-                                            {acc.role === 'student' ? t.studentRole : t.parentRole} • {acc.username}
-                                        </p>
-                                    </div>
-                                </div>
 
-                                {acc.isActive ? (
-                                    <span className="text-xs font-bold text-[#34c759] bg-[#34c759]/15 px-2 py-0.5 rounded-full">
-                                        Aktywne
-                                    </span>
-                                ) : (
-                                    <span className="text-xs font-medium text-[var(--ios-blue)]">
-                                        Przełącz ›
-                                    </span>
-                                )}
+                                    {acc.isActive ? (
+                                        <span className="text-xs font-bold text-[#34c759] bg-[#34c759]/15 px-2 py-0.5 rounded-full">
+                                            Aktywne
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs font-medium text-[var(--ios-blue)]">
+                                            Przełącz ›
+                                        </span>
+                                    )}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="p-3.5 flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#007aff] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                                    U
+                                </div>
+                                <div>
+                                    <h3 className="text-xs font-bold text-[var(--ios-label)]">{profile?.fullName || 'Uczeń'}</h3>
+                                    <p className="text-[11px] text-[var(--ios-secondary)]">{profile?.className || '4 Tsa Technikum'}</p>
+                                </div>
                             </div>
-                        ))}
+                        )}
 
                         <button
                             type="button"

@@ -27,6 +27,7 @@ import { AttendanceDetailModal } from './widgets/attendance-detail-modal'
 import { JustificationModal } from './widgets/justification-modal'
 import { GradeModal } from './widgets/grade-modal'
 import { SettingsSheet } from './widgets/settings-sheet'
+import { TerminarzModal } from './widgets/terminarz-modal'
 
 type MainSection = 'schedule' | 'grades' | 'attendance' | 'messages'
 
@@ -83,6 +84,7 @@ export default function Home() {
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<SubjectAttendance | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [showExcuseMatrix, setShowExcuseMatrix] = useState(false)
+  const [showTerminarz, setShowTerminarz] = useState(false)
 
   const weekCacheRef = useRef<Record<string, SmartTimetableResult>>({})
   const activeRequestCounter = useRef(0)
@@ -467,6 +469,7 @@ export default function Home() {
           onShiftWeek={shiftWeek}
           onSelectDate={queueWeekChange}
           onManualRefresh={handleManualRefresh}
+          onOpenTerminarz={() => setShowTerminarz(true)}
           isLoadingWeek={isLoadingWeek}
           t={t}
         />
@@ -521,7 +524,8 @@ export default function Home() {
               label: 'Oceny',
               icon: (
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+                  <text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="800" fill="currentColor" stroke="none">5</text>
                 </svg>
               )
             },
@@ -601,9 +605,17 @@ export default function Home() {
         setPassword={setPassword}
         onSaveCredentials={handleConfirmLogin}
         onLogout={handleLogout}
-        allAbsentTeachers={timetableData?.allAbsentTeachers || []}
         t={t}
       />
+
+      {timetableData && (
+        <TerminarzModal
+          isOpen={showTerminarz}
+          onClose={() => setShowTerminarz(false)}
+          timetableData={timetableData}
+          t={t}
+        />
+      )}
     </main>
   )
 }

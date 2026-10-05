@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { SmartTimetableResult, DaySchedule } from '@/models/timetable.model'
+import { SmartTimetableResult, DaySchedule, LessonItem } from '@/models/timetable.model'
 import { AppDictionary } from '@/config/dictionary.config'
 
 interface ScheduleWidgetProps {
@@ -12,6 +12,7 @@ interface ScheduleWidgetProps {
     onShiftWeek: (deltaDays: number) => void
     onSelectDate: (dateIso: string) => void
     onManualRefresh: () => void
+    onOpenTerminarz: () => void
     isLoadingWeek: boolean
     t: AppDictionary
 }
@@ -24,6 +25,7 @@ export function ScheduleWidget({
     onShiftWeek,
     onSelectDate,
     onManualRefresh,
+    onOpenTerminarz,
     isLoadingWeek,
     t
 }: ScheduleWidgetProps) {
@@ -54,6 +56,20 @@ export function ScheduleWidget({
         if (hasShortened) return 'bg-[#ff9500]'
 
         return null
+    }
+
+    const calculateBreakMinutes = (currentEndTime: string, nextStartTime: string): number => {
+        const m1 = currentEndTime.match(/(\d{1,2}):(\d{2})/)
+        const m2 = nextStartTime.match(/(\d{1,2}):(\d{2})/)
+        if (!m1 || !m2) return 0
+
+        const t1 = parseInt(m1[1], 10) * 60 + parseInt(m1[2], 10)
+        const t2 = parseInt(m2[1], 10) * 60 + parseInt(m2[2], 10)
+        return Math.max(0, t2 - t1)
+    }
+
+    const isLessonActiveOrNext = (index: number, lessons: LessonItem[]): boolean => {
+        return index === 0
     }
 
     return (
@@ -112,6 +128,13 @@ export function ScheduleWidget({
                             <svg className={`w-3.5 h-3.5 ${isLoadingWeek ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
                             </svg>
+                        </button>
+
+                        <button
+                            onClick={onOpenTerminarz}
+                            className="text-[10px] font-bold text-[var(--ios-blue)] bg-[var(--ios-blue)]/10 px-2 py-0.5 rounded-md ml-1 active:scale-95 transition-transform"
+                        >
+                            Terminarz
                         </button>
                     </div>
 
@@ -176,65 +199,82 @@ export function ScheduleWidget({
                         </div>
                     )}
 
-                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)]/20 overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]/20">
+                    <div className="flex flex-col gap-1.5">
                         {currentDaySchedule && currentDaySchedule.lessons && currentDaySchedule.lessons.length > 0 ? (
-                            currentDaySchedule.lessons.map((lesson) => (
-                                <article
-                                    key={`${lesson.number}-${lesson.subject}-${lesson.time}`}
-                                    className="p-3.5 flex flex-col gap-1.5"
-                                >
-                                    <div className="flex items-center justify-between">
+                            currentDaySchedule.lessons.map((lesson, idx) => {
+                                const nextLesson = currentDaySchedule.lessons[idx + 1]
+                                const breakMins = nextLesson ? calculateBreakMinutes(lesson.time, nextLesson.time) : 0
+                                const isTarget = isLessonActiveOrNext(idx, currentDaySchedule.lessons)
+
+                                return (
+                                    <div key={`${lesson.number}-${lesson.subject}-${lesson.time}`} className="flex flex-col">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs font-semibold text-[var(--ios-secondary)] tracking-tight">
-                                                {lesson.time}
-                                            </span>
-                                            {lesson.lessonCount && lesson.lessonCount > 1 && (
-                                                <span className="text-[10px] font-bold text-[var(--ios-blue)] bg-[var(--ios-blue)]/10 px-2 py-0.5 rounded-full">
-                                                    {lesson.lessonCount}x
-                                                </span>
-                                            )}
+                                            <div className="w-4 flex items-center justify-center shrink-0">
+                                                {isTarget && (
+                                                    <div className="w-2.5 h-2.5 rounded-full bg-[var(--ios-blue)] animate-pulse" />
+                                                )}
+                                            </div>
+
+                                            <article className="flex-1 bg-[var(--ios-card)] rounded-2xl p-3.5 border border-[var(--ios-separator)]/20 shadow-xs flex flex-col gap-1.5">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-semibold text-[var(--ios-secondary)] tracking-tight">
+                                                            {lesson.time}
+                                                        </span>
+                                                        {lesson.lessonCount && lesson.lessonCount > 1 && (
+                                                            <span className="text-[10px] font-bold text-[var(--ios-blue)] bg-[var(--ios-blue)]/10 px-2 py-0.5 rounded-full">
+                                                                {lesson.lessonCount}x
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                                        {lesson.isShortened && (
+                                                            <span className="text-[10px] font-bold text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full">
+                                                                {lesson.durationMinutes} min
+                                                            </span>
+                                                        )}
+                                                        {lesson.isCancelled && (
+                                                            <span className="text-[10px] font-bold text-[#ff3b30] bg-[#ff3b30]/10 px-2 py-0.5 rounded-full">
+                                                                Odwołane
+                                                            </span>
+                                                        )}
+                                                        {lesson.isSubstitution && (
+                                                            <span className="text-[10px] font-bold text-[#af52de] bg-[#af52de]/10 px-2 py-0.5 rounded-full">
+                                                                Zastępstwo
+                                                            </span>
+                                                        )}
+                                                        {lesson.room && (
+                                                            <span className="text-xs font-bold text-[var(--ios-blue)] bg-[var(--ios-blue)]/10 px-2 py-0.5 rounded-md">
+                                                                {lesson.room}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <h3 className="text-sm font-semibold text-[var(--ios-label)] leading-snug">
+                                                    {lesson.subject}
+                                                </h3>
+
+                                                <p className="text-xs font-medium text-[var(--ios-secondary)]">
+                                                    {lesson.teacher || 'Brak danych'}
+                                                </p>
+                                            </article>
                                         </div>
 
-                                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                                            {lesson.isShortened && (
-                                                <span className="text-[10px] font-bold text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full">
-                                                    {lesson.durationMinutes} min
+                                        {breakMins > 0 && (
+                                            <div className="py-1 pl-6 flex items-center gap-2">
+                                                <span className="text-[10px] font-semibold text-[var(--ios-secondary)] opacity-70">
+                                                    Перемена {breakMins} мин
                                                 </span>
-                                            )}
-                                            {lesson.isCancelled && (
-                                                <span className="text-[10px] font-bold text-[#ff3b30] bg-[#ff3b30]/10 px-2 py-0.5 rounded-full">
-                                                    Odwołane
-                                                </span>
-                                            )}
-                                            {lesson.isSubstitution && (
-                                                <span className="text-[10px] font-bold text-[#af52de] bg-[#af52de]/10 px-2 py-0.5 rounded-full">
-                                                    Zastępstwo
-                                                </span>
-                                            )}
-                                            {lesson.teacherAbsent && (
-                                                <span className="text-[10px] font-bold text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full">
-                                                    Nieobecny
-                                                </span>
-                                            )}
-                                            {lesson.room && (
-                                                <span className="text-xs font-bold text-[var(--ios-blue)] bg-[var(--ios-blue)]/10 px-2 py-0.5 rounded-md">
-                                                    {lesson.room}
-                                                </span>
-                                            )}
-                                        </div>
+                                                <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/20" />
+                                            </div>
+                                        )}
                                     </div>
-
-                                    <h3 className="text-sm font-semibold text-[var(--ios-label)] leading-snug">
-                                        {lesson.subject}
-                                    </h3>
-
-                                    <p className="text-xs font-medium text-[var(--ios-secondary)]">
-                                        {lesson.teacher || 'Brak danych'}
-                                    </p>
-                                </article>
-                            ))
+                                )
+                            })
                         ) : (
-                            <div className="p-10 text-center text-xs font-medium text-[var(--ios-secondary)]">
+                            <div className="bg-[var(--ios-card)] rounded-2xl p-10 border border-[var(--ios-separator)]/20 text-center text-xs font-medium text-[var(--ios-secondary)]">
                                 {t.noLessonsDay}
                             </div>
                         )}

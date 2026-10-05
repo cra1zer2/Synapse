@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { StudentProfile } from '@/models/account.model'
-import { AbsentTeacherItem } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
-import { TeachersWidget } from './teachers-widget'
 import { requestPushPermission, getNotificationPermissionStatus } from '@/services/notification.service'
 
 interface SettingsSheetProps {
@@ -21,7 +19,6 @@ interface SettingsSheetProps {
     setPassword: (p: string) => void
     onSaveCredentials: (e: React.FormEvent) => void
     onLogout: () => void
-    allAbsentTeachers: AbsentTeacherItem[]
     t: AppDictionary
 }
 
@@ -39,22 +36,20 @@ export function SettingsSheet({
     setPassword,
     onSaveCredentials,
     onLogout,
-    allAbsentTeachers,
     t
 }: SettingsSheetProps) {
-    const [showTeachersTool, setShowTeachersTool] = useState(false)
     const [showCredentialsForm, setShowCredentialsForm] = useState(false)
-    const [teacherSearch, setTeacherSearch] = useState('')
-    const [selectedDate, setSelectedDate] = useState(() => {
-        const d = new Date()
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    })
-    const [showAllDates, setShowAllDates] = useState(false)
     const [pushStatus, setPushStatus] = useState<string>('default')
 
     useEffect(() => {
         if (isOpen) {
             setPushStatus(getNotificationPermissionStatus())
+            document.body.classList.add('overflow-hidden')
+        } else {
+            document.body.classList.remove('overflow-hidden')
+        }
+        return () => {
+            document.body.classList.remove('overflow-hidden')
         }
     }, [isOpen])
 
@@ -68,7 +63,7 @@ export function SettingsSheet({
     return (
         <div
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in"
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in"
         >
             <div
                 onClick={(e) => e.stopPropagation()}
@@ -84,30 +79,21 @@ export function SettingsSheet({
                     </button>
                 </div>
 
-                <div className="bg-[var(--ios-card)] rounded-xl p-3 border border-[var(--ios-separator)]/20 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[var(--ios-blue)] text-white flex items-center justify-center font-bold text-sm">
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                <circle cx="12" cy="7" r="4" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 className="text-xs font-bold text-[var(--ios-label)]">
-                                {profile?.fullName && profile.fullName !== 'Konto Librus' ? profile.fullName : username}
-                            </h3>
-                            <p className="text-[11px] text-[var(--ios-secondary)]">
-                                {profile?.className || 'Klasa Technikum'} • {profile?.schoolName || 'TEB Edukacja'}
-                            </p>
-                        </div>
+                <div className="bg-[var(--ios-card)] rounded-xl p-3 border border-[var(--ios-separator)]/20 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[var(--ios-blue)] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
                     </div>
-
-                    {profile?.luckyNumber !== null && (
-                        <div className="text-center px-2 py-1 bg-[var(--ios-bg)] rounded-lg">
-                            <span className="text-[9px] uppercase font-bold text-[var(--ios-secondary)] block">Numerek</span>
-                            <span className="text-sm font-extrabold text-[var(--ios-blue)]">{profile?.luckyNumber}</span>
-                        </div>
-                    )}
+                    <div className="min-w-0">
+                        <h3 className="text-xs font-bold text-[var(--ios-label)] truncate">
+                            {profile?.fullName && profile.fullName !== 'Konto Librus' ? profile.fullName : username}
+                        </h3>
+                        <p className="text-[11px] text-[var(--ios-secondary)] truncate">
+                            {profile?.className || 'Klasa Technikum'} • {profile?.schoolName || 'TEB Edukacja'}
+                        </p>
+                    </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -160,51 +146,22 @@ export function SettingsSheet({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase font-bold text-[var(--ios-secondary)] px-1">Powiadomienia i narzędzia</span>
-                    <div className="bg-[var(--ios-card)] rounded-xl border border-[var(--ios-separator)]/20 divide-y divide-[var(--ios-separator)]/20">
-                        <div className="p-3 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-medium text-[var(--ios-label)]">Web Push</p>
-                                <p className="text-[10px] text-[var(--ios-secondary)]">Dzwonki, oceny, zastępstwa</p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={handleTogglePush}
-                                className={`text-xs font-bold px-2.5 py-1 rounded-full ${pushStatus === 'granted'
-                                        ? 'bg-[#34c759]/15 text-[#34c759]'
-                                        : 'bg-[var(--ios-blue)] text-white'
-                                    }`}
-                            >
-                                {pushStatus === 'granted' ? 'Włączone' : 'Włącz'}
-                            </button>
+                    <span className="text-[10px] uppercase font-bold text-[var(--ios-secondary)] px-1">Powiadomienia</span>
+                    <div className="bg-[var(--ios-card)] rounded-xl border border-[var(--ios-separator)]/20 p-3 flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-medium text-[var(--ios-label)]">Web Push</p>
+                            <p className="text-[10px] text-[var(--ios-secondary)]">Dzwonki, oceny, zastępstwa</p>
                         </div>
-
-                        <div className="p-3">
-                            <button
-                                onClick={() => setShowTeachersTool(!showTeachersTool)}
-                                className="w-full flex items-center justify-between text-left"
-                            >
-                                <span className="text-xs font-medium text-[var(--ios-label)]">Nieobecności nauczycieli</span>
-                                <span className="text-xs text-[var(--ios-secondary)]">
-                                    {showTeachersTool ? '▲' : '›'}
-                                </span>
-                            </button>
-
-                            {showTeachersTool && (
-                                <div className="pt-2 mt-2 border-t border-[var(--ios-separator)]/20">
-                                    <TeachersWidget
-                                        allAbsentTeachers={allAbsentTeachers}
-                                        teacherSearch={teacherSearch}
-                                        onSearchChange={setTeacherSearch}
-                                        selectedCalendarDate={selectedDate}
-                                        onDateChange={setSelectedDate}
-                                        showAllDates={showAllDates}
-                                        onToggleShowAllDates={() => setShowAllDates(!showAllDates)}
-                                        t={t}
-                                    />
-                                </div>
-                            )}
-                        </div>
+                        <button
+                            type="button"
+                            onClick={handleTogglePush}
+                            className={`text-xs font-bold px-2.5 py-1 rounded-full ${pushStatus === 'granted'
+                                    ? 'bg-[#34c759]/15 text-[#34c759]'
+                                    : 'bg-[var(--ios-blue)] text-white'
+                                }`}
+                        >
+                            {pushStatus === 'granted' ? 'Włączone' : 'Włącz'}
+                        </button>
                     </div>
                 </div>
 

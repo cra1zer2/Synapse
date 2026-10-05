@@ -36,54 +36,37 @@ export function AttendanceWidget({
                         <div>
                             <p className="text-xs font-bold text-[#ff3b30]">Nieusprawiedliwione</p>
                             <p className="text-[11px] text-[#ff3b30]/80">
-                                {attendanceData.unexcusedAbsences.length} lekcji wymaga usprawiedliwienia
+                                {attendanceData.unexcusedAbsences.length} lekcji do usprawiedliwienia
                             </p>
                         </div>
                     </div>
                     <button
                         onClick={onOpenExcuseModal}
-                        className="text-xs font-bold bg-[#ff3b30] text-white px-3 py-1.5 rounded-full shadow-xs active:scale-95 transition-transform"
+                        className="text-xs font-bold bg-[#ff3b30] text-white px-3.5 py-1.5 rounded-full shadow-xs active:scale-95 transition-transform"
                     >
                         Usprawiedliw
                     </button>
                 </div>
             )}
 
-            <div className="bg-[var(--ios-card)] rounded-2xl p-4 shadow-xs border border-[var(--ios-separator)]/20 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-xs font-semibold text-[var(--ios-secondary)]">{t.attendanceRate}</p>
-                        <h2 className={`text-4xl font-extrabold tracking-tight mt-0.5 ${statusColor}`}>
-                            {attendanceData.overallPercentage}%
-                        </h2>
-                    </div>
+            <div className="bg-[var(--ios-card)] rounded-2xl p-4 shadow-xs border border-[var(--ios-separator)]/20 flex items-center justify-between">
+                <div>
+                    <p className="text-xs font-semibold text-[var(--ios-secondary)]">{t.attendanceRate}</p>
+                    <h2 className={`text-4xl font-extrabold tracking-tight mt-0.5 ${statusColor}`}>
+                        {attendanceData.overallPercentage}%
+                    </h2>
+                </div>
 
-                    <span
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full ${isDanger
+                <span
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full ${isDanger
                             ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
                             : isWarning
                                 ? 'bg-[#ff9500]/10 text-[#ff9500]'
                                 : 'bg-[#34c759]/10 text-[#34c759]'
-                            }`}
-                    >
-                        {isDanger ? t.dangerBadge : isWarning ? t.warningBadge : t.safeBadge}
-                    </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--ios-separator)]/20">
-                    <div className="bg-[var(--ios-bg)] p-2.5 rounded-xl">
-                        <span className="text-[10px] font-medium text-[var(--ios-secondary)]">{t.safeToMiss}</span>
-                        <p className="text-sm font-bold text-[var(--ios-label)] mt-0.5">
-                            {attendanceData.safeAbsencesRemaining} {t.lessons}
-                        </p>
-                    </div>
-                    <div className="bg-[var(--ios-bg)] p-2.5 rounded-xl">
-                        <span className="text-[10px] font-medium text-[var(--ios-secondary)]">{t.neededToRecover}</span>
-                        <p className="text-sm font-bold text-[var(--ios-label)] mt-0.5">
-                            {attendanceData.lessonsToRecover} {t.lessons}
-                        </p>
-                    </div>
-                </div>
+                        }`}
+                >
+                    {isDanger ? t.dangerBadge : isWarning ? t.warningBadge : t.safeBadge}
+                </span>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -119,10 +102,10 @@ export function AttendanceWidget({
                                 <div className="flex items-center gap-2 shrink-0">
                                     <span
                                         className={`text-xs font-bold px-2 py-0.5 rounded-md ${subDanger
-                                            ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
-                                            : subWarning
-                                                ? 'bg-[#ff9500]/10 text-[#ff9500]'
-                                                : 'text-[var(--ios-secondary)]'
+                                                ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
+                                                : subWarning
+                                                    ? 'bg-[#ff9500]/10 text-[#ff9500]'
+                                                    : 'text-[var(--ios-secondary)]'
                                             }`}
                                     >
                                         {sub.percentage}%

@@ -11,7 +11,7 @@ export interface PushNotificationPayload {
     tag: string
     data: {
         url: string
-        type: 'absence' | 'grade' | 'substitution' | 'general'
+        type: 'absence' | 'grade' | 'substitution' | 'calendar' | 'message' | 'general'
         targetId?: string | number
     }
 }
@@ -34,4 +34,13 @@ export interface DayMatrixGroup {
     dayName: string
     lessons: DayMatrixLesson[]
     hasUnexcused: boolean
+}
+
+export interface NotificationPreferences {
+    enabled: boolean
+    grades: boolean
+    timetableChanges: boolean
+    absences: boolean
+    messages: boolean
+    calendarEvents: boolean
 }

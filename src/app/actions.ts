@@ -7,10 +7,8 @@ import { fetchSmartTimetable } from '@/services/timetable.service'
 import { fetchStudentGrades } from '@/services/grade.service'
 import { fetchAttendanceMetrics } from '@/services/attendance.service'
 import {
-    fetchInboxMessages,
-    fetchAnnouncements,
+    fetchMessagesBundle,
     fetchMessageContent,
-    fetchReceiversList,
     sendMessageToUser
 } from '@/services/message.service'
 import { JustificationPayload } from '@/models/justification.model'
@@ -117,28 +115,7 @@ export async function getMessagesAndAnnouncementsAction(
     username: string,
     pass: string
 ): Promise<MessagesActionResult> {
-    try {
-        const [messagesRes, announcementsRes, receiversRes] = await Promise.all([
-            fetchInboxMessages(username, pass),
-            fetchAnnouncements(username, pass),
-            fetchReceiversList(username, pass)
-        ])
-
-        return {
-            success: true,
-            messages: messagesRes.data || [],
-            announcements: announcementsRes.data || [],
-            receivers: receiversRes.data || []
-        }
-    } catch (error) {
-        return {
-            success: false,
-            messages: [],
-            announcements: [],
-            receivers: [],
-            error: String(error)
-        }
-    }
+    return fetchMessagesBundle(username, pass)
 }
 
 export async function readMessageAction(username: string, pass: string, messageId: number) {

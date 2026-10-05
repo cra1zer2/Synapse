@@ -1,16 +1,23 @@
 import Librus from 'librus-api'
-import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
+import { MessageItem, AnnouncementItem, ReceiverItem, MessagesActionResult } from '@/models/message.model'
 import { safeUnwrapResponse } from '@/utils/serializer.util'
 
-export async function fetchInboxMessages(username: string, pass: string): Promise<{ success: boolean; data?: MessageItem[]; error?: string }> {
+export async function fetchMessagesBundle(username: string, pass: string): Promise<MessagesActionResult> {
     try {
         const client = new Librus()
         await client.authorize(username, pass)
 
-        const raw = await client.inbox.listInbox(5)
-        const list = Array.isArray(raw) ? raw : []
+        const [rawInbox, rawAnnouncements, rawReceivers] = await Promise.all([
+            client.inbox.listInbox(5).catch(() => []),
+            client.inbox.listAnnouncements().catch(() => []),
+            client.inbox.listReceivers().catch(() => [])
+        ])
 
-        const messages: MessageItem[] = list.map((item: any, idx: number) => ({
+        const inboxList = Array.isArray(rawInbox) ? rawInbox : []
+        const announcementsList = Array.isArray(rawAnnouncements) ? rawAnnouncements : []
+        const receiversList = Array.isArray(rawReceivers) ? rawReceivers : []
+
+        const messages: MessageItem[] = inboxList.map((item: any, idx: number) => ({
             id: item.id || idx,
             sender: item.user || item.sender || 'Nauczyciel',
             subject: item.title || item.subject || 'Wiadomość',
@@ -19,21 +26,7 @@ export async function fetchInboxMessages(username: string, pass: string): Promis
             hasAttachments: Boolean(item.files && item.files.length > 0)
         }))
 
-        return { success: true, data: messages }
-    } catch (error) {
-        return { success: false, error: String(error) }
-    }
-}
-
-export async function fetchAnnouncements(username: string, pass: string): Promise<{ success: boolean; data?: AnnouncementItem[]; error?: string }> {
-    try {
-        const client = new Librus()
-        await client.authorize(username, pass)
-
-        const raw = await client.inbox.listAnnouncements()
-        const list = Array.isArray(raw) ? raw : []
-
-        const announcements: AnnouncementItem[] = list.map((item: any, idx: number) => ({
+        const announcements: AnnouncementItem[] = announcementsList.map((item: any, idx: number) => ({
             id: item.id || idx,
             author: item.user || item.author || 'Dyrekcja',
             title: item.title || 'Ogłoszenie',
@@ -41,9 +34,26 @@ export async function fetchAnnouncements(username: string, pass: string): Promis
             content: item.content || ''
         }))
 
-        return { success: true, data: announcements }
+        const receivers: ReceiverItem[] = receiversList.map((item: any) => ({
+            id: item.id,
+            name: item.name || item.user || 'Pracownik',
+            group: item.group || 'Nauczyciele'
+        }))
+
+        return {
+            success: true,
+            messages,
+            announcements,
+            receivers
+        }
     } catch (error) {
-        return { success: false, error: String(error) }
+        return {
+            success: false,
+            messages: [],
+            announcements: [],
+            receivers: [],
+            error: String(error)
+        }
     }
 }
 
@@ -57,26 +67,6 @@ export async function fetchMessageContent(username: string, pass: string, messag
         const content = typeof unwrapped === 'string' ? unwrapped : unwrapped?.content || ''
 
         return { success: true, content }
-    } catch (error) {
-        return { success: false, error: String(error) }
-    }
-}
-
-export async function fetchReceiversList(username: string, pass: string): Promise<{ success: boolean; data?: ReceiverItem[]; error?: string }> {
-    try {
-        const client = new Librus()
-        await client.authorize(username, pass)
-
-        const raw = await client.inbox.listReceivers()
-        const list = Array.isArray(raw) ? raw : []
-
-        const receivers: ReceiverItem[] = list.map((item: any) => ({
-            id: item.id,
-            name: item.name || item.user || 'Pracownik',
-            group: item.group || 'Nauczyciele'
-        }))
-
-        return { success: true, data: receivers }
     } catch (error) {
         return { success: false, error: String(error) }
     }

@@ -76,6 +76,7 @@ export default function Home() {
   const [messages, setMessages] = useState<MessageItem[]>([])
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([])
   const [receivers, setReceivers] = useState<ReceiverItem[]>([])
+  const [hasLoadedMessages, setHasLoadedMessages] = useState(false)
 
   const [pendingSnapshot, setPendingSnapshot] = useState<{
     t: SmartTimetableResult
@@ -146,22 +147,16 @@ export default function Home() {
 
       try {
         const shouldTranslate = currentAppLang === 'en'
-        const [tRes, gRes, aRes, pRes, mRes] = await Promise.all([
+        const [tRes, gRes, aRes, pRes] = await Promise.all([
           getSmartTimetableAction(u, p, shouldTranslate, weekPivot),
           getStudentGradesAction(u, p, shouldTranslate),
           getAttendanceAction(u, p, shouldTranslate),
-          getStudentProfileAction(u, p),
-          getMessagesAndAnnouncementsAction(u, p)
+          getStudentProfileAction(u, p)
         ])
 
         if (requestId !== activeRequestCounter.current) return
 
         if (pRes.success && pRes.data) setProfile(pRes.data)
-        if (mRes.success) {
-          setMessages(mRes.messages)
-          setAnnouncements(mRes.announcements)
-          setReceivers(mRes.receivers)
-        }
 
         if (tRes.success && gRes.success && aRes.success && tRes.data && gRes.data && aRes.data) {
           const fetchedData = tRes.data
@@ -200,6 +195,23 @@ export default function Home() {
     [resolveSmartDefaultDay]
   )
 
+  const loadMessagesIfActive = useCallback(async () => {
+    if (!username || !password || hasLoadedMessages) return
+    const mRes = await getMessagesAndAnnouncementsAction(username, password)
+    if (mRes.success) {
+      setMessages(mRes.messages)
+      setAnnouncements(mRes.announcements)
+      setReceivers(mRes.receivers)
+      setHasLoadedMessages(true)
+    }
+  }, [username, password, hasLoadedMessages])
+
+  useEffect(() => {
+    if (activeSection === 'messages') {
+      loadMessagesIfActive()
+    }
+  }, [activeSection, loadMessagesIfActive])
+
   useEffect(() => {
     setMounted(true)
 
@@ -207,10 +219,7 @@ export default function Home() {
     let loadedAccounts: SavedAccount[] = []
     if (savedAccountsJson) {
       try {
-        const parsed = JSON.parse(savedAccountsJson)
-        if (Array.isArray(parsed)) {
-          loadedAccounts = parsed
-        }
+        loadedAccounts = JSON.parse(savedAccountsJson)
       } catch { }
     }
 
@@ -402,6 +411,7 @@ export default function Home() {
     setUsername(acc.username)
     setPassword(acc.password)
     setProfile(acc.profile)
+    setHasLoadedMessages(false)
     executeSync(acc.username, acc.password, lang, currentWeekPivot, false)
   }
 
@@ -459,6 +469,7 @@ export default function Home() {
     setMessages([])
     setAnnouncements([])
     setReceivers([])
+    setHasLoadedMessages(false)
     setIsConfigured(false)
     setShowSettings(false)
     setAuthStep('input')
@@ -541,11 +552,11 @@ export default function Home() {
 
         <button
           onClick={() => setShowSettings(true)}
-          className="p-1.5 rounded-full text-[var(--ios-secondary)] hover:text-[var(--ios-label)] transition-colors"
+          className="p-1.5 rounded-full text-[var(--ios-secondary)] hover:text-[var(--ios-label)] transition-colors active:scale-95"
         >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </button>
       </header>
@@ -553,7 +564,7 @@ export default function Home() {
       {hasNewUpdate && (
         <div
           onClick={applyPendingUpdates}
-          className="bg-[var(--ios-blue)] text-white p-3 rounded-2xl flex items-center justify-between cursor-pointer active:opacity-90"
+          className="bg-[var(--ios-blue)] text-white p-3 rounded-2xl flex items-center justify-between cursor-pointer active:opacity-90 shadow-sm"
         >
           <div className="flex items-center gap-2">
             <span className="text-sm">✨</span>
@@ -609,7 +620,7 @@ export default function Home() {
         />
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--ios-separator)]/20 bg-[var(--ios-card)] backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--ios-separator)]/20 bg-[var(--ios-card)]/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-md mx-auto grid grid-cols-4 h-12">
           {[
             {

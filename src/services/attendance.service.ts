@@ -32,26 +32,8 @@ export async function fetchAttendanceMetrics(
         ])
 
         const timetableData = rawTimetable?.table || {}
-        const subjectBaselineLessons: Record<string, number> = {}
-
-        for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) {
-            const slots = timetableData[day]
-            if (Array.isArray(slots)) {
-                for (const slot of slots) {
-                    if (slot && slot.subject) {
-                        const cleanSub = slot.subject.trim()
-                        subjectBaselineLessons[cleanSub] = (subjectBaselineLessons[cleanSub] || 0) + 1
-                    }
-                }
-            }
-        }
-
         const absencesList: AbsenceDetail[] = []
-        const subjectsMap: Record<string, { absent: number; excused: number; unexcused: number; items: AbsenceDetail[] }> = {}
-
-        for (const sub of Object.keys(subjectBaselineLessons)) {
-            subjectsMap[sub] = { absent: 0, excused: 0, unexcused: 0, items: [] }
-        }
+        const subjectsMap: Record<string, { realizedCount: number; absent: number; excused: number; unexcused: number; items: AbsenceDetail[] }> = {}
 
         const daysArray = rawAbsences && rawAbsences['0'] && Array.isArray(rawAbsences['0'])
             ? rawAbsences['0']
@@ -68,6 +50,18 @@ export async function fetchAttendanceMetrics(
             const formattedDate = formatDisplayDate(rawDateStr, currentYear, currentMonth)
             const mappedWeekday = mapDayStringToWeekDay(rawDateStr)
             const daySlots = mappedWeekday ? timetableData[mappedWeekday] : []
+
+            if (Array.isArray(daySlots)) {
+                daySlots.forEach((slot) => {
+                    if (slot && slot.subject) {
+                        const sub = slot.subject.trim()
+                        if (!subjectsMap[sub]) {
+                            subjectsMap[sub] = { realizedCount: 0, absent: 0, excused: 0, unexcused: 0, items: [] }
+                        }
+                        subjectsMap[sub].realizedCount++
+                    }
+                })
+            }
 
             dayEntry.table.forEach((slotData: any, lessonIdx: number) => {
                 if (!slotData || typeof slotData !== 'object') {
@@ -112,7 +106,7 @@ export async function fetchAttendanceMetrics(
                 absencesList.push(detail)
 
                 if (!subjectsMap[subjectName]) {
-                    subjectsMap[subjectName] = { absent: 0, excused: 0, unexcused: 0, items: [] }
+                    subjectsMap[subjectName] = { realizedCount: 1, absent: 0, excused: 0, unexcused: 0, items: [] }
                 }
 
                 if (symbol === 'nb' || symbol === 'u' || symbol === 'sl') {
@@ -133,12 +127,12 @@ export async function fetchAttendanceMetrics(
 
         const subjectsResult: SubjectAttendance[] = Object.keys(subjectsMap).map((subName) => {
             const data = subjectsMap[subName]
-            const scheduled = Math.max(subjectBaselineLessons[subName] || 0, data.absent)
-            grandTotalScheduled += scheduled
+            const totalLessons = Math.max(data.realizedCount, data.absent)
+            grandTotalScheduled += totalLessons
             grandTotalAbsent += data.absent
 
-            const present = Math.max(0, scheduled - data.absent)
-            const percentage = scheduled > 0 ? Math.round((present / scheduled) * 1000) / 10 : 100
+            const present = Math.max(0, totalLessons - data.absent)
+            const percentage = totalLessons > 0 ? Math.round((present / totalLessons) * 1000) / 10 : 100
 
             let status: 'danger' | 'warning' | 'safe' = 'safe'
             if (percentage < 50.0) {
@@ -149,7 +143,7 @@ export async function fetchAttendanceMetrics(
 
             return {
                 subject: subName,
-                totalLessons: scheduled,
+                totalLessons,
                 absentLessons: data.absent,
                 excusedCount: data.excused,
                 unexcusedCount: data.unexcused,

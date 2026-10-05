@@ -8,6 +8,7 @@ import {
 } from '@/models/timetable.model'
 import { translateBatch } from '@/services/translation.service'
 import { formatDisplayDate, extractTimeInterval } from '@/utils/date.util'
+import { parseLessonTimeRange } from '@/utils/time.util'
 
 function cleanTeacherName(rawTeacher: string): string {
     if (!rawTeacher) {
@@ -20,14 +21,12 @@ function cleanTeacherName(rawTeacher: string): string {
 }
 
 function calculateDuration(timeRange: string): { durationMinutes: number; isShortened: boolean } {
-    const match = timeRange.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/)
-    if (!match) {
+    const parsed = parseLessonTimeRange(timeRange)
+    if (!parsed.isValid) {
         return { durationMinutes: 45, isShortened: false }
     }
 
-    const startMinutes = parseInt(match[1], 10) * 60 + parseInt(match[2], 10)
-    const endMinutes = parseInt(match[3], 10) * 60 + parseInt(match[4], 10)
-    const duration = endMinutes - startMinutes
+    const duration = parsed.endMinutes - parsed.startMinutes
 
     return {
         durationMinutes: duration,
@@ -46,61 +45,6 @@ function flattenCalendarEvents(raw: any): any[] {
         return Object.values(raw).flatMap((val) => flattenCalendarEvents(val))
     }
     return []
-}
-
-function groupConsecutiveLessons(lessons: LessonItem[]): LessonItem[] {
-    if (lessons.length <= 1) {
-        return lessons
-    }
-
-    const grouped: LessonItem[] = []
-    let current = { ...lessons[0] }
-    let rooms: string[] = current.room ? [current.room] : []
-    let count = 1
-    let totalMinutes = current.durationMinutes
-
-    for (let i = 1; i < lessons.length; i++) {
-        const next = lessons[i]
-        const canGroup =
-            next.subject === current.subject &&
-            next.teacher === current.teacher &&
-            next.isCancelled === current.isCancelled &&
-            next.isSubstitution === current.isSubstitution &&
-            next.teacherAbsent === current.teacherAbsent
-
-        if (canGroup) {
-            count++
-            totalMinutes += next.durationMinutes
-            if (next.room && !rooms.includes(next.room)) {
-                rooms.push(next.room)
-            }
-
-            const currentStart = current.time.split('-')[0]?.trim() || ''
-            const nextEnd = next.time.split('-')[1]?.trim() || ''
-            if (currentStart && nextEnd) {
-                current.time = `${currentStart} - ${nextEnd}`
-            }
-            current.durationMinutes = totalMinutes
-            current.isShortened = totalMinutes !== count * 45
-            current.room = rooms.join(' / ')
-            current.lessonCount = count
-        } else {
-            current.lessonCount = count
-            current.room = rooms.join(' / ')
-            grouped.push(current)
-
-            current = { ...next }
-            rooms = current.room ? [current.room] : []
-            count = 1
-            totalMinutes = current.durationMinutes
-        }
-    }
-
-    current.lessonCount = count
-    current.room = rooms.join(' / ')
-    grouped.push(current)
-
-    return grouped
 }
 
 function getWeekDates(pivotDate: Date): { monday: Date; friday: Date; weekDates: Record<string, { dateStr: string; isoStr: string }> } {
@@ -300,7 +244,7 @@ export async function fetchSmartTimetable(
                 isoDate: isoStr,
                 isToday: isoStr === todayIso,
                 events: dayEvents,
-                lessons: groupConsecutiveLessons(lessons)
+                lessons
             })
         }
 

@@ -1,8 +1,14 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { SmartTimetableResult, DaySchedule, LessonItem } from '@/models/timetable.model'
 import { AppDictionary } from '@/config/dictionary.config'
+import {
+    parseLessonTimeRange,
+    getCurrentTimeMinutes,
+    calculateBreakDuration,
+    getBreakRemainingMinutes
+} from '@/utils/time.util'
 
 interface ScheduleWidgetProps {
     timetableData: SmartTimetableResult
@@ -30,6 +36,14 @@ export function ScheduleWidget({
     t
 }: ScheduleWidgetProps) {
     const dateInputRef = useRef<HTMLInputElement>(null)
+    const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentMinutes(getCurrentTimeMinutes())
+        }, 15000)
+        return () => clearInterval(timer)
+    }, [])
 
     const currentDaySchedule: DaySchedule | undefined = timetableData.schedule.find(
         (d) => d.dayName === selectedDay
@@ -58,27 +72,36 @@ export function ScheduleWidget({
         return null
     }
 
-    const calculateBreakMinutes = (currentEndTime: string, nextStartTime: string): number => {
-        const m1 = currentEndTime.match(/(\d{1,2}):(\d{2})/)
-        const m2 = nextStartTime.match(/(\d{1,2}):(\d{2})/)
-        if (!m1 || !m2) return 0
+    const getLessonLiveState = (lesson: LessonItem, isToday: boolean): 'active' | 'passed' | 'upcoming' => {
+        if (!isToday) return 'upcoming'
+        const range = parseLessonTimeRange(lesson.time)
+        if (!range.isValid) return 'upcoming'
 
-        const t1 = parseInt(m1[1], 10) * 60 + parseInt(m1[2], 10)
-        const t2 = parseInt(m2[1], 10) * 60 + parseInt(m2[2], 10)
-        return Math.max(0, t2 - t1)
+        if (currentMinutes >= range.startMinutes && currentMinutes <= range.endMinutes) {
+            return 'active'
+        }
+        if (currentMinutes > range.endMinutes) {
+            return 'passed'
+        }
+        return 'upcoming'
     }
 
-    const isLessonActiveOrNext = (index: number, lessons: LessonItem[]): boolean => {
-        return index === 0
+    const isBreakActive = (prevLesson: LessonItem, nextLesson: LessonItem, isToday: boolean): boolean => {
+        if (!isToday) return false
+        const r1 = parseLessonTimeRange(prevLesson.time)
+        const r2 = parseLessonTimeRange(nextLesson.time)
+        if (!r1.isValid || !r2.isValid) return false
+
+        return currentMinutes > r1.endMinutes && currentMinutes < r2.startMinutes
     }
 
     return (
         <section className="w-full flex flex-col gap-4 min-h-[500px]">
-            <div className="bg-[var(--ios-card)] rounded-2xl shadow-xs border border-[var(--ios-separator)]/20 overflow-hidden">
-                <div className="px-4 py-2.5 flex items-center justify-between border-b border-[var(--ios-separator)]/30">
+            <div className="bg-[var(--ios-card)] rounded-2xl shadow-[var(--ios-shadow)] border border-[var(--ios-border)] backdrop-blur-[20px] overflow-hidden">
+                <div className="px-4 py-2.5 flex items-center justify-between border-b border-[var(--ios-separator)]">
                     <button
                         onClick={() => onShiftWeek(-7)}
-                        className="w-7 h-7 rounded-full bg-[var(--ios-element)]/60 text-[var(--ios-label)] flex items-center justify-center font-bold text-xs active:scale-95 transition-transform"
+                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-bold text-xs active:scale-95 transition-transform"
                     >
                         ‹
                     </button>
@@ -132,7 +155,7 @@ export function ScheduleWidget({
 
                         <button
                             onClick={onOpenTerminarz}
-                            className="text-[10px] font-bold text-[var(--ios-blue)] bg-[var(--ios-blue)]/10 px-2 py-0.5 rounded-md ml-1 active:scale-95 transition-transform"
+                            className="text-[10px] font-bold text-[var(--ios-blue)] bg-[var(--ios-room-bg)] px-2 py-0.5 rounded-md ml-1 active:scale-95 transition-transform"
                         >
                             Terminarz
                         </button>
@@ -140,7 +163,7 @@ export function ScheduleWidget({
 
                     <button
                         onClick={() => onShiftWeek(7)}
-                        className="w-7 h-7 rounded-full bg-[var(--ios-element)]/60 text-[var(--ios-label)] flex items-center justify-center font-bold text-xs active:scale-95 transition-transform"
+                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-bold text-xs active:scale-95 transition-transform"
                     >
                         ›
                     </button>
@@ -157,7 +180,7 @@ export function ScheduleWidget({
                                 onClick={() => onSelectDay(day.dayName)}
                                 className={`py-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center transition-all ${isSelected
                                         ? 'bg-[var(--ios-blue)] text-white shadow-xs'
-                                        : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]/40'
+                                        : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]'
                                     }`}
                             >
                                 <span className="text-[10px] uppercase font-bold opacity-80">{day.dayName.slice(0, 3)}</span>
@@ -174,7 +197,7 @@ export function ScheduleWidget({
             </div>
 
             {isLoadingWeek ? (
-                <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-separator)]/20 flex flex-col items-center justify-center gap-3">
+                <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-border)] backdrop-blur-[20px] flex flex-col items-center justify-center gap-3">
                     <div className="w-6 h-6 border-2 border-[var(--ios-blue)] border-t-transparent rounded-full animate-spin" />
                     <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.loadingTimetable}</p>
                 </div>
@@ -199,34 +222,33 @@ export function ScheduleWidget({
                         </div>
                     )}
 
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-2">
                         {currentDaySchedule && currentDaySchedule.lessons && currentDaySchedule.lessons.length > 0 ? (
                             currentDaySchedule.lessons.map((lesson, idx) => {
                                 const nextLesson = currentDaySchedule.lessons[idx + 1]
-                                const breakMins = nextLesson ? calculateBreakMinutes(lesson.time, nextLesson.time) : 0
-                                const isTarget = isLessonActiveOrNext(idx, currentDaySchedule.lessons)
+                                const isToday = Boolean(currentDaySchedule.isToday)
+                                const liveState = getLessonLiveState(lesson, isToday)
+                                const breakActive = nextLesson ? isBreakActive(lesson, nextLesson, isToday) : false
+                                const breakMinutes = nextLesson ? calculateBreakDuration(lesson.time, nextLesson.time) : 0
+                                const breakRemaining = nextLesson ? getBreakRemainingMinutes(nextLesson.time) : 0
 
                                 return (
-                                    <div key={`${lesson.number}-${lesson.subject}-${lesson.time}`} className="flex flex-col">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 flex items-center justify-center shrink-0">
-                                                {isTarget && (
-                                                    <div className="w-2.5 h-2.5 rounded-full bg-[var(--ios-blue)] animate-pulse" />
+                                    <div key={`${lesson.number}-${lesson.subject}-${lesson.time}`} className="flex flex-col gap-1.5">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-3 flex items-center justify-center shrink-0">
+                                                {liveState === 'active' && (
+                                                    <div className="w-2 h-2 rounded-full bg-[var(--ios-blue)] shadow-[0_0_10px_rgba(10,132,255,0.6)] animate-pulse" />
                                                 )}
                                             </div>
 
-                                            <article className="flex-1 bg-[var(--ios-card)] rounded-2xl p-3.5 border border-[var(--ios-separator)]/20 shadow-xs flex flex-col gap-1.5">
+                                            <article
+                                                className={`flex-1 bg-[var(--ios-card)] backdrop-blur-[20px] rounded-2xl p-3.5 border border-[var(--ios-border)] shadow-[var(--ios-shadow)] flex flex-col gap-1.5 transition-opacity ${liveState === 'passed' ? 'opacity-60' : 'opacity-100'
+                                                    }`}
+                                            >
                                                 <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-semibold text-[var(--ios-secondary)] tracking-tight">
-                                                            {lesson.time}
-                                                        </span>
-                                                        {lesson.lessonCount && lesson.lessonCount > 1 && (
-                                                            <span className="text-[10px] font-bold text-[var(--ios-blue)] bg-[var(--ios-blue)]/10 px-2 py-0.5 rounded-full">
-                                                                {lesson.lessonCount}x
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                    <span className="text-xs font-semibold text-[var(--ios-secondary)] tracking-tight">
+                                                        {lesson.time}
+                                                    </span>
 
                                                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
                                                         {lesson.isShortened && (
@@ -245,7 +267,7 @@ export function ScheduleWidget({
                                                             </span>
                                                         )}
                                                         {lesson.room && (
-                                                            <span className="text-xs font-bold text-[var(--ios-blue)] bg-[var(--ios-blue)]/10 px-2 py-0.5 rounded-md">
+                                                            <span className="text-xs font-semibold bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2 py-0.5 rounded-[6px]">
                                                                 {lesson.room}
                                                             </span>
                                                         )}
@@ -257,24 +279,39 @@ export function ScheduleWidget({
                                                 </h3>
 
                                                 <p className="text-xs font-medium text-[var(--ios-secondary)]">
-                                                    {lesson.teacher || 'Brak danych'}
+                                                    {lesson.teacher || t.notSpecified}
                                                 </p>
+
+                                                {liveState === 'active' && breakMinutes > 0 && (
+                                                    <div className="pt-1 mt-0.5 border-t border-[var(--ios-separator)] flex items-center justify-between text-[11px] text-[var(--ios-secondary)]">
+                                                        <span className="flex items-center gap-1.5">
+                                                            <svg className="w-3.5 h-3.5 text-[var(--ios-blue)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                <circle cx="12" cy="12" r="10" />
+                                                                <polyline points="12 6 12 12 16 14" />
+                                                            </svg>
+                                                            <span>{t.breakUpcomingLabel(breakMinutes)}</span>
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </article>
                                         </div>
 
-                                        {breakMins > 0 && (
-                                            <div className="py-1 pl-6 flex items-center gap-2">
-                                                <span className="text-[10px] font-semibold text-[var(--ios-secondary)] opacity-70">
-                                                    Перемена {breakMins} мин
-                                                </span>
-                                                <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/20" />
+                                        {breakActive && breakRemaining > 0 && (
+                                            <div className="pl-6 py-1 flex items-center justify-center">
+                                                <div className="bg-[var(--ios-card)] backdrop-blur-[20px] border border-[var(--ios-border)] shadow-[var(--ios-shadow)] px-3 py-1 rounded-full flex items-center gap-2 text-xs font-semibold text-[var(--ios-blue)] animate-pulse">
+                                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <circle cx="12" cy="12" r="10" />
+                                                        <polyline points="12 6 12 12 16 14" />
+                                                    </svg>
+                                                    <span>{t.breakCountdownLabel(breakRemaining)}</span>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
                                 )
                             })
                         ) : (
-                            <div className="bg-[var(--ios-card)] rounded-2xl p-10 border border-[var(--ios-separator)]/20 text-center text-xs font-medium text-[var(--ios-secondary)]">
+                            <div className="bg-[var(--ios-card)] backdrop-blur-[20px] rounded-2xl p-10 border border-[var(--ios-border)] text-center text-xs font-medium text-[var(--ios-secondary)]">
                                 {t.noLessonsDay}
                             </div>
                         )}

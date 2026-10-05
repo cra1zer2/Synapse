@@ -80,6 +80,9 @@ export interface AppDictionary {
     confirmAndEnter: string
     loginError: string
     changeData: string
+    breakLabel: string
+    breakCountdownLabel: (m: number) => string
+    breakUpcomingLabel: (m: number) => string
 }
 
 export function getDictionary(lang: AppLanguage): AppDictionary {
@@ -162,7 +165,10 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             accountVerified: 'Identity Verified',
             confirmAndEnter: 'Confirm & Enter',
             loginError: 'Invalid login or password. Please try again.',
-            changeData: 'Change credentials'
+            changeData: 'Change credentials',
+            breakLabel: 'Break',
+            breakCountdownLabel: (m: number) => `Break • ${m} min left`,
+            breakUpcomingLabel: (m: number) => `Next break • ${m} min`
         }
     }
 
@@ -245,7 +251,10 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             accountVerified: 'Личность подтверждена',
             confirmAndEnter: 'Подтвердить и продолжить',
             loginError: 'Неверный логин или пароль. Проверьте данные.',
-            changeData: 'Изменить данные'
+            changeData: 'Изменить данные',
+            breakLabel: 'Перемена',
+            breakCountdownLabel: (m: number) => `Перемена • осталось ${m} мин`,
+            breakUpcomingLabel: (m: number) => `След. перемена • ${m} мин`
         }
     }
 
@@ -327,6 +336,9 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         accountVerified: 'Tożsamość potwierdzona',
         confirmAndEnter: 'Potwierdź i wejdź',
         loginError: 'Nieprawidłowy login lub hasło. Spróbuj ponownie.',
-        changeData: 'Zmień dane'
+        changeData: 'Zmień dane',
+        breakLabel: 'Przerwa',
+        breakCountdownLabel: (m: number) => `Przerwa • pozostało ${m} min`,
+        breakUpcomingLabel: (m: number) => `Kolejna przerwa • ${m} min`
     }
 }

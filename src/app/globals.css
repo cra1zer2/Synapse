@@ -3,32 +3,34 @@
 :root {
   --font-apple: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
   --ios-bg: #f2f2f7;
-  --ios-card: #ffffff;
+  --ios-card: rgba(255, 255, 255, 0.75);
+  --ios-card-solid: #ffffff;
   --ios-element: #e5e5ea;
-  --ios-separator: rgba(60, 60, 67, 0.29);
+  --ios-input: rgba(118, 128, 128, 0.12);
+  --ios-separator: rgba(60, 60, 67, 0.2);
+  --ios-border: rgba(0, 0, 0, 0.08);
   --ios-label: #000000;
-  --ios-secondary: rgba(60, 60, 67, 0.6);
-  --ios-tertiary: rgba(60, 60, 67, 0.3);
+  --ios-secondary: #8e8e93;
   --ios-blue: #007aff;
-  --ios-red: #ff3b30;
-  --ios-green: #34c759;
-  --ios-orange: #ff9500;
-  --ios-purple: #af52de;
+  --ios-room-bg: rgba(0, 122, 255, 0.1);
+  --ios-room-text: #007aff;
+  --ios-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 
 .dark {
-  --ios-bg: #000000;
-  --ios-card: #1c1c1e;
+  --ios-bg: #1c1c1e;
+  --ios-card: rgba(44, 44, 46, 0.75);
+  --ios-card-solid: #2c2c2e;
   --ios-element: #2c2c2e;
-  --ios-separator: rgba(84, 84, 88, 0.65);
-  --ios-label: #ffffff;
-  --ios-secondary: rgba(235, 235, 245, 0.6);
-  --ios-tertiary: rgba(235, 235, 245, 0.3);
+  --ios-input: rgba(118, 118, 128, 0.24);
+  --ios-separator: rgba(255, 255, 255, 0.08);
+  --ios-border: rgba(255, 255, 255, 0.08);
+  --ios-label: #f2f2f7;
+  --ios-secondary: #8e8e93;
   --ios-blue: #0a84ff;
-  --ios-red: #ff453a;
-  --ios-green: #30d158;
-  --ios-orange: #ff9f0a;
-  --ios-purple: #bf5af2;
+  --ios-room-bg: rgba(10, 132, 255, 0.15);
+  --ios-room-text: #64d2ff;
+  --ios-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 html {
@@ -47,6 +49,7 @@ body {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 input[type="checkbox"][switch] {

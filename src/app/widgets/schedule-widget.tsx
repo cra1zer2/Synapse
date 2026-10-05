@@ -232,14 +232,13 @@ export function ScheduleWidget({
                                 const breakMinutes = nextLesson ? calculateBreakDuration(lesson.time, nextLesson.time) : 0
                                 const breakRemaining = nextLesson ? getBreakRemainingMinutes(nextLesson.time) : 0
 
+                                const shouldShowUpcomingBreak = liveState === 'active' && breakMinutes > 0
+                                const shouldShowCountdown = breakActive && breakRemaining > 0
+
                                 return (
                                     <div key={`${lesson.number}-${lesson.subject}-${lesson.time}`} className="flex flex-col">
                                         <article
-                                            className={`w-full bg-[var(--ios-card)] backdrop-blur-[20px] rounded-2xl p-3.5 border border-[var(--ios-border)] shadow-[var(--ios-shadow)] flex flex-col gap-1.5 transition-all ${liveState === 'active'
-                                                    ? 'border-l-4 border-l-[#007aff] dark:border-l-[#0a84ff]'
-                                                    : liveState === 'passed'
-                                                        ? 'opacity-60'
-                                                        : 'opacity-100'
+                                            className={`w-full bg-[var(--ios-card)] backdrop-blur-[20px] rounded-2xl p-3.5 border border-[var(--ios-border)] shadow-[var(--ios-shadow)] flex flex-col gap-1.5 transition-all ${liveState === 'passed' ? 'opacity-55' : 'opacity-100'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between">
@@ -285,17 +284,17 @@ export function ScheduleWidget({
                                             </p>
                                         </article>
 
-                                        {breakMinutes > 0 && (
+                                        {(shouldShowUpcomingBreak || shouldShowCountdown) && (
                                             <div className="py-2.5 flex items-center gap-3 px-2">
                                                 <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
-                                                <div className={`flex items-center gap-1.5 text-[11px] font-semibold shrink-0 ${breakActive ? 'text-[var(--ios-blue)] animate-pulse' : 'text-[var(--ios-secondary)]'
+                                                <div className={`flex items-center gap-1.5 text-[11px] font-semibold shrink-0 ${shouldShowCountdown ? 'text-[var(--ios-blue)] animate-pulse' : 'text-[var(--ios-secondary)]'
                                                     }`}>
                                                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                         <circle cx="12" cy="12" r="10" />
                                                         <polyline points="12 6 12 12 16 14" />
                                                     </svg>
                                                     <span>
-                                                        {breakActive && breakRemaining > 0
+                                                        {shouldShowCountdown
                                                             ? t.breakCountdownLabel(breakRemaining)
                                                             : `${breakMinutes} min`}
                                                     </span>

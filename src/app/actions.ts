@@ -101,9 +101,12 @@ export async function getStudentProfileAction(username: string, pass: string): P
         const schoolName = candidate.school || candidate.schoolName || candidate.szkola || 'TEB Edukacja'
         const lucky = typeof luckyNum === 'number' ? luckyNum : parseInt(String(luckyNum), 10) || null
 
+        const isStudent = username.trim().toLowerCase().endsWith('u')
+        const role: 'student' | 'parent' = isStudent ? 'student' : 'parent'
+
         return {
             success: true,
-            data: { fullName, className, schoolName, luckyNumber: lucky }
+            data: { fullName, className, schoolName, luckyNumber: lucky, role }
         }
     } catch (error) {
         return { success: false, error: String(error) }

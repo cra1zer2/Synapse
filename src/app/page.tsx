@@ -13,9 +13,9 @@ import {
 } from './actions'
 import { SmartTimetableResult, DaySchedule } from '@/models/timetable.model'
 import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
-import { AttendanceResult, SubjectAttendance, AbsenceDetail } from '@/models/attendance.model'
+import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
 import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
-import { StudentProfile } from '@/models/account.model'
+import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 
 import { AuthView } from './widgets/auth-view'
@@ -53,6 +53,11 @@ export default function Home() {
   const [password, setPassword] = useState('')
   const [lang, setLang] = useState<AppLanguage>('pl')
   const [theme, setTheme] = useState<AppTheme>('system')
+
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([])
+  const [newAccUser, setNewAccUser] = useState('')
+  const [newAccPass, setNewAccPass] = useState('')
+  const [isAddingAcc, setIsAddingAcc] = useState(false)
 
   const [authStep, setAuthStep] = useState<'input' | 'verifying' | 'preview'>('input')
   const [verifiedCandidate, setVerifiedCandidate] = useState<StudentProfile | null>(null)
@@ -198,8 +203,19 @@ export default function Home() {
   useEffect(() => {
     setMounted(true)
 
-    const savedUser = localStorage.getItem('synapse_user') || ''
-    const savedPass = localStorage.getItem('synapse_pass') || ''
+    const savedAccountsJson = localStorage.getItem('synapse_accounts')
+    let loadedAccounts: SavedAccount[] = []
+    if (savedAccountsJson) {
+      try {
+        loadedAccounts = JSON.parse(savedAccountsJson)
+        setSavedAccounts(loadedAccounts)
+      } catch { }
+    }
+
+    const activeAcc = loadedAccounts.find((a) => a.isActive) || loadedAccounts[0]
+
+    const savedUser = activeAcc ? activeAcc.username : localStorage.getItem('synapse_user') || ''
+    const savedPass = activeAcc ? activeAcc.password : localStorage.getItem('synapse_pass') || ''
     const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
     const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
 
@@ -241,17 +257,6 @@ export default function Home() {
 
     const isAlreadyInCache = Boolean(weekCacheRef.current[currentWeekPivot])
     executeSync(savedUser, savedPass, savedLang, currentWeekPivot, isAlreadyInCache)
-
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      const tabParam = params.get('tab') as MainSection
-      const dayParam = params.get('day')
-      const excuseParam = params.get('excuse')
-
-      if (tabParam) setActiveSection(tabParam)
-      if (dayParam) setSelectedDay(dayParam)
-      if (excuseParam === '1') setShowExcuseMatrix(true)
-    }
   }, [])
 
   const queueWeekChange = (targetPivot: string) => {
@@ -327,10 +332,62 @@ export default function Home() {
     localStorage.setItem('synapse_user', username)
     localStorage.setItem('synapse_pass', password)
     localStorage.setItem('synapse_lang', lang)
+
+    const newAcc: SavedAccount = {
+      id: username,
+      username,
+      password,
+      role: verifiedCandidate.role,
+      profile: verifiedCandidate,
+      isActive: true
+    }
+
+    const updated = [newAcc]
+    setSavedAccounts(updated)
+    localStorage.setItem('synapse_accounts', JSON.stringify(updated))
+
     setProfile(verifiedCandidate)
     setIsConfigured(true)
     setAuthStep('input')
     executeSync(username, password, lang, currentWeekPivot, false)
+  }
+
+  const handleSwitchAccount = (acc: SavedAccount) => {
+    const updated = savedAccounts.map((a) => ({
+      ...a,
+      isActive: a.id === acc.id
+    }))
+    setSavedAccounts(updated)
+    localStorage.setItem('synapse_accounts', JSON.stringify(updated))
+    localStorage.setItem('synapse_user', acc.username)
+    localStorage.setItem('synapse_pass', acc.password)
+    setUsername(acc.username)
+    setPassword(acc.password)
+    setProfile(acc.profile)
+    executeSync(acc.username, acc.password, lang, currentWeekPivot, false)
+  }
+
+  const handleAddSecondaryAccount = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsAddingAcc(true)
+    const res = await getStudentProfileAction(newAccUser, newAccPass)
+    setIsAddingAcc(false)
+
+    if (res.success && res.data) {
+      const newAcc: SavedAccount = {
+        id: newAccUser,
+        username: newAccUser,
+        password: newAccPass,
+        role: res.data.role,
+        profile: res.data,
+        isActive: false
+      }
+      const updated = [...savedAccounts, newAcc]
+      setSavedAccounts(updated)
+      localStorage.setItem('synapse_accounts', JSON.stringify(updated))
+      setNewAccUser('')
+      setNewAccPass('')
+    }
   }
 
   const handleSelectLanguage = (newLang: AppLanguage) => {
@@ -350,12 +407,14 @@ export default function Home() {
   const handleLogout = () => {
     localStorage.removeItem('synapse_user')
     localStorage.removeItem('synapse_pass')
+    localStorage.removeItem('synapse_accounts')
     localStorage.removeItem('synapse_cache')
     localStorage.removeItem('synapse_week_cache')
     weekCacheRef.current = {}
     setUsername('')
     setPassword('')
     setProfile(null)
+    setSavedAccounts([])
     setTimetableData(null)
     setGradesData(null)
     setAttendanceData(null)
@@ -388,7 +447,11 @@ export default function Home() {
     message: string
   }): Promise<boolean> => {
     try {
-      const res = await createJustificationAction(username, password, {
+      const parentAcc = savedAccounts.find((a) => a.role === 'parent')
+      const targetUser = parentAcc ? parentAcc.username : username
+      const targetPass = parentAcc ? parentAcc.password : password
+
+      const res = await createJustificationAction(targetUser, targetPass, {
         dateFrom: payload.dateIso,
         dateTo: payload.dateIso,
         lessons: payload.lessons,
@@ -508,7 +571,7 @@ export default function Home() {
         />
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--ios-separator)]/20 bg-[var(--ios-card)]/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--ios-separator)]/20 bg-[var(--ios-card)] backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-md mx-auto grid grid-cols-4 h-12">
           {[
             {
@@ -599,15 +662,18 @@ export default function Home() {
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
         profile={profile}
+        savedAccounts={savedAccounts}
+        onSwitchAccount={handleSwitchAccount}
+        onAddAccount={handleAddSecondaryAccount}
+        newUsername={newAccUser}
+        setNewUsername={setNewAccUser}
+        newPassword={newAccPass}
+        setNewPassword={setNewAccPass}
+        isAddingAccount={isAddingAcc}
         currentLang={lang}
         onSelectLang={handleSelectLanguage}
         currentTheme={theme}
         onSelectTheme={handleSelectTheme}
-        username={username}
-        setUsername={setUsername}
-        password={password}
-        setPassword={setPassword}
-        onSaveCredentials={handleConfirmLogin}
         onLogout={handleLogout}
         t={t}
       />

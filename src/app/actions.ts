@@ -11,6 +11,7 @@ import {
     fetchMessageContent,
     sendMessageToUser
 } from '@/services/message.service'
+import { runLibrusBenchmark } from '@/services/benchmark.service'
 import { JustificationPayload } from '@/models/justification.model'
 import { StudentProfile } from '@/models/account.model'
 import { MessagesActionResult } from '@/models/message.model'
@@ -28,6 +29,15 @@ export async function executeGatewayProbe(username: string, pass: string, target
     try {
         const result = await testGatewayRequest(username, pass, targetPath)
         return result
+    } catch (error) {
+        return { success: false, error: String(error) }
+    }
+}
+
+export async function executeLibrusBenchmarkAction(username: string, pass: string) {
+    try {
+        const report = await runLibrusBenchmark(username, pass)
+        return { success: true, data: report }
     } catch (error) {
         return { success: false, error: String(error) }
     }

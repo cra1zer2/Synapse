@@ -53,6 +53,10 @@ export interface AppDictionary {
     profileTitle: string
     luckyNumber: string
     appLanguage: string
+    appTheme: string
+    themeSystem: string
+    themeLight: string
+    themeDark: string
     teacherAbsencesTool: string
     accountSwitcher: string
     studentRole: string
@@ -141,6 +145,10 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             profileTitle: 'Student Profile',
             luckyNumber: 'Lucky number',
             appLanguage: 'Language',
+            appTheme: 'Theme',
+            themeSystem: 'Auto',
+            themeLight: 'Light',
+            themeDark: 'Dark',
             teacherAbsencesTool: 'Teacher Absences Finder',
             accountSwitcher: 'Account Switcher',
             studentRole: 'Student',
@@ -228,6 +236,10 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         profileTitle: 'Profil ucznia',
         luckyNumber: 'Szczęśliwy numerek',
         appLanguage: 'Język',
+        appTheme: 'Motyw',
+        themeSystem: 'Auto',
+        themeLight: 'Jasny',
+        themeDark: 'Ciemny',
         teacherAbsencesTool: 'Nieobecności nauczycieli',
         accountSwitcher: 'Przełącznik kont',
         studentRole: 'Uczeń',

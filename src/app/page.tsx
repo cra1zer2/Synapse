@@ -16,7 +16,7 @@ import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
 import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
 import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
-import { getDictionary, AppLanguage } from '@/config/dictionary.config'
+import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 
 import { AuthView } from './widgets/auth-view'
 import { ScheduleWidget } from './widgets/schedule-widget'
@@ -73,6 +73,7 @@ export default function Home() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [lang, setLang] = useState<AppLanguage>('pl')
+  const [theme, setTheme] = useState<AppTheme>('system')
 
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([])
   const [newAccUser, setNewAccUser] = useState('')
@@ -117,6 +118,36 @@ export default function Home() {
   const activeRequestCounter = useRef(0)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const t = getDictionary(lang)
+
+  const applyTheme = useCallback((targetTheme: AppTheme) => {
+    const root = document.documentElement
+    if (targetTheme === 'dark') {
+      root.classList.add('dark')
+    } else if (targetTheme === 'light') {
+      root.classList.remove('dark')
+    } else {
+      if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        root.classList.add('dark')
+      } else {
+        root.classList.remove('dark')
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (theme !== 'system') return
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = (e: MediaQueryListEvent) => {
+      const root = document.documentElement
+      if (e.matches) {
+        root.classList.add('dark')
+      } else {
+        root.classList.remove('dark')
+      }
+    }
+    mediaQuery.addEventListener('change', handler)
+    return () => mediaQuery.removeEventListener('change', handler)
+  }, [theme])
 
   const resolveSmartDefaultDay = useCallback((schedule: DaySchedule[]): string => {
     if (!Array.isArray(schedule) || schedule.length === 0) return 'Monday'
@@ -224,6 +255,7 @@ export default function Home() {
     const savedUser = localStorage.getItem('synapse_user') || ''
     const savedPass = localStorage.getItem('synapse_pass') || ''
     const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
+    const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
 
     if (loadedAccounts.length === 0 && savedUser && savedPass) {
       const isStudent = savedUser.trim().toLowerCase().endsWith('u')
@@ -254,6 +286,8 @@ export default function Home() {
     setUsername(effectiveUser)
     setPassword(effectivePass)
     setLang(savedLang === 'en' ? 'en' : 'pl')
+    setTheme(savedTheme)
+    applyTheme(savedTheme)
 
     const hasAccount = Boolean(effectiveUser && effectivePass)
     setIsConfigured(hasAccount)
@@ -297,7 +331,7 @@ export default function Home() {
       if (dayParam) setSelectedDay(dayParam)
       if (excuseParam === '1') setShowExcuseMatrix(true)
     }
-  }, [])
+  }, [applyTheme, resolveSmartDefaultDay, executeSync, currentWeekPivot])
 
   const queueWeekChange = (targetPivot: string) => {
     setHasNewUpdate(false)
@@ -441,12 +475,19 @@ export default function Home() {
     }
   }
 
+  const handleSelectTheme = (newTheme: AppTheme) => {
+    setTheme(newTheme)
+    localStorage.setItem('synapse_theme', newTheme)
+    applyTheme(newTheme)
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('synapse_user')
     localStorage.removeItem('synapse_pass')
     localStorage.removeItem('synapse_accounts')
     localStorage.removeItem('synapse_cache')
     localStorage.removeItem('synapse_week_cache')
+    localStorage.removeItem('synapse_theme')
     weekCacheRef.current = {}
     setUsername('')
     setPassword('')
@@ -719,8 +760,8 @@ export default function Home() {
         isAddingAccount={isAddingAcc}
         currentLang={lang}
         onSelectLang={handleSelectLanguage}
-        currentTheme="system"
-        onSelectTheme={() => { }}
+        currentTheme={theme}
+        onSelectTheme={handleSelectTheme}
         onLogout={handleLogout}
         t={t}
       />

@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { NotificationPreferences } from '@/models/notification.model'
-import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
+import { AppDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 import { requestPushPermission, getNotificationPermissionStatus } from '@/services/notification.service'
 
 interface SettingsSheetProps {
@@ -20,8 +20,8 @@ interface SettingsSheetProps {
     isAddingAccount: boolean
     currentLang: AppLanguage
     onSelectLang: (lang: AppLanguage) => void
-    currentTheme: any
-    onSelectTheme: any
+    currentTheme: AppTheme
+    onSelectTheme: (theme: AppTheme) => void
     onLogout: () => void
     t: AppDictionary
 }
@@ -64,6 +64,8 @@ export function SettingsSheet({
     isAddingAccount,
     currentLang,
     onSelectLang,
+    currentTheme,
+    onSelectTheme,
     onLogout,
     t
 }: SettingsSheetProps) {
@@ -269,6 +271,33 @@ export function SettingsSheet({
                 )}
 
                 <div className="flex flex-col gap-1.5">
+                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">{t.appTheme}</span>
+                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-xs">
+                        <div className="p-3.5 flex items-center justify-between">
+                            <span className="text-xs font-medium text-[var(--ios-label)]">{t.appTheme}</span>
+                            <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex gap-0.5">
+                                {[
+                                    { id: 'system' as AppTheme, label: t.themeSystem },
+                                    { id: 'light' as AppTheme, label: t.themeLight },
+                                    { id: 'dark' as AppTheme, label: t.themeDark }
+                                ].map((th) => (
+                                    <button
+                                        key={th.id}
+                                        onClick={() => onSelectTheme(th.id)}
+                                        className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${currentTheme === th.id
+                                                ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs'
+                                                : 'text-[var(--ios-secondary)]'
+                                            }`}
+                                    >
+                                        {th.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
                     <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">{t.appLanguage}</span>
                     <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div className="p-3.5 flex items-center justify-between">
@@ -282,7 +311,7 @@ export function SettingsSheet({
                                         key={l.id}
                                         onClick={() => onSelectLang(l.id)}
                                         className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${currentLang === l.id
-                                                ? 'bg-[var(--ios-card)] text-[var(--ios-label)] shadow-xs'
+                                                ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs'
                                                 : 'text-[var(--ios-secondary)]'
                                             }`}
                                     >

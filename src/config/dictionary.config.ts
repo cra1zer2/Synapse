@@ -84,6 +84,11 @@ export interface AppDictionary {
     breakLabel: string
     breakCountdownLabel: (m: number) => string
     breakUpcomingLabel: (m: number) => string
+    replyAction: string
+    searchMessagesPlaceholder: string
+    writeNewMessage: string
+    newMessageTitle: string
+    backToMessages: string
 }
 
 export function getDictionary(lang: AppLanguage): AppDictionary {
@@ -170,7 +175,12 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             changeData: 'Change credentials',
             breakLabel: 'Break',
             breakCountdownLabel: (m: number) => `Break • ${m} min left`,
-            breakUpcomingLabel: (m: number) => `Next break • ${m} min`
+            breakUpcomingLabel: (m: number) => `Next break • ${m} min`,
+            replyAction: 'Reply',
+            searchMessagesPlaceholder: 'Search messages...',
+            writeNewMessage: 'Compose',
+            newMessageTitle: 'New Message',
+            backToMessages: 'Messages'
         }
     }
 
@@ -257,7 +267,12 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             changeData: 'Изменить данные',
             breakLabel: 'Перемена',
             breakCountdownLabel: (m: number) => `Перемена • осталось ${m} мин`,
-            breakUpcomingLabel: (m: number) => `След. перемена • ${m} мин`
+            breakUpcomingLabel: (m: number) => `След. перемена • ${m} мин`,
+            replyAction: 'Ответить',
+            searchMessagesPlaceholder: 'Поиск в сообщениях...',
+            writeNewMessage: 'Написать',
+            newMessageTitle: 'Новое письмо',
+            backToMessages: 'Письма'
         }
     }
 
@@ -343,6 +358,11 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         changeData: 'Zmień dane',
         breakLabel: 'Przerwa',
         breakCountdownLabel: (m: number) => `Przerwa • pozostało ${m} min`,
-        breakUpcomingLabel: (m: number) => `Kolejna przerwa • ${m} min`
+        breakUpcomingLabel: (m: number) => `Kolejna przerwa • ${m} min`,
+        replyAction: 'Odpowiedz',
+        searchMessagesPlaceholder: 'Szukaj w wiadomościach...',
+        writeNewMessage: 'Napisz',
+        newMessageTitle: 'Nowa wiadomość',
+        backToMessages: 'Wiadomości'
     }
 }

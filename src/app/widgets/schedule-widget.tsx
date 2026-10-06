@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { SmartTimetableResult, DaySchedule, LessonItem } from '@/models/timetable.model'
 import { AppDictionary } from '@/config/dictionary.config'
 import {
@@ -50,7 +50,6 @@ export function ScheduleWidget({
     isLoadingWeek,
     t
 }: ScheduleWidgetProps) {
-    const dateInputRef = useRef<HTMLInputElement>(null)
     const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
 
     useEffect(() => {
@@ -129,37 +128,25 @@ export function ScheduleWidget({
                             {formatWeekRange(timetableData.weekStart, timetableData.weekEnd)}
                         </span>
 
-                        <input
-                            ref={dateInputRef}
-                            type="date"
-                            value={currentWeekPivot}
-                            onChange={(e) => {
-                                if (e.target.value) {
-                                    onSelectDate(e.target.value)
-                                }
-                            }}
-                            className="sr-only"
-                        />
-
-                        <button
-                            onClick={() => {
-                                if (dateInputRef.current) {
-                                    if (typeof dateInputRef.current.showPicker === 'function') {
-                                        dateInputRef.current.showPicker()
-                                    } else {
-                                        dateInputRef.current.click()
-                                    }
-                                }
-                            }}
-                            className="p-1 text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] transition-colors"
-                        >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <div className="relative flex items-center justify-center p-1 text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] transition-colors cursor-pointer">
+                            <svg className="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                                 <line x1="16" y1="2" x2="16" y2="6" />
                                 <line x1="8" y1="2" x2="8" y2="6" />
                                 <line x1="3" y1="10" x2="21" y2="10" />
                             </svg>
-                        </button>
+                            <input
+                                type="date"
+                                value={currentWeekPivot}
+                                onChange={(e) => {
+                                    if (e.target.value) {
+                                        onSelectDate(e.target.value)
+                                    }
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                aria-label="Select date"
+                            />
+                        </div>
 
                         <button
                             onClick={onManualRefresh}
@@ -200,8 +187,8 @@ export function ScheduleWidget({
                                 key={day.dayName}
                                 onClick={() => onSelectDay(day.dayName)}
                                 className={`py-2 rounded-xl text-xs font-medium flex flex-col items-center justify-center transition-all ${isSelected
-                                        ? 'bg-[var(--ios-blue)] text-white shadow-xs'
-                                        : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]'
+                                    ? 'bg-[var(--ios-blue)] text-white shadow-xs'
+                                    : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]'
                                     }`}
                             >
                                 <span className="text-[10px] uppercase font-semibold opacity-85">{day.dayName.slice(0, 3)}</span>
@@ -230,10 +217,10 @@ export function ScheduleWidget({
                                 <div
                                     key={idx}
                                     className={`p-3 rounded-2xl text-xs font-medium flex items-center gap-2.5 ${ev.category === 'holiday'
-                                            ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
-                                            : ev.category === 'exam'
-                                                ? 'bg-[#34c759]/10 text-[#34c759]'
-                                                : 'bg-[#007aff]/10 text-[#007aff]'
+                                        ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
+                                        : ev.category === 'exam'
+                                            ? 'bg-[#34c759]/10 text-[#34c759]'
+                                            : 'bg-[#007aff]/10 text-[#007aff]'
                                         }`}
                                 >
                                     <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />

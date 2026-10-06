@@ -257,11 +257,11 @@ export function ScheduleWidget({
                                         className="flex flex-col scroll-mt-24"
                                     >
                                         <article
-                                            className={`w-full bg-[var(--ios-card)] rounded-[20px] p-4 flex flex-col gap-1.5 transition-all ${liveState === 'passed' ? 'opacity-50' : 'opacity-100'
+                                            className={`w-full bg-[var(--ios-card)] rounded-[20px] p-3.5 flex items-start justify-between gap-3 transition-all ${liveState === 'passed' ? 'opacity-50' : 'opacity-100'
                                                 }`}
                                         >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
+                                            <div className="flex-1 min-w-0 flex flex-col gap-1">
+                                                <div className="flex items-center gap-1.5">
                                                     {liveState === 'active' && (
                                                         <span className="w-2 h-2 rounded-full bg-[#007aff] dark:bg-[#0a84ff] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
                                                     )}
@@ -270,37 +270,37 @@ export function ScheduleWidget({
                                                     </span>
                                                 </div>
 
-                                                <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                                                    {lesson.isShortened && (
-                                                        <span className="text-[10px] font-semibold text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full">
-                                                            {lesson.durationMinutes} min
-                                                        </span>
-                                                    )}
-                                                    {lesson.isCancelled && (
-                                                        <span className="text-[10px] font-semibold text-[#ff3b30] bg-[#ff3b30]/10 px-2 py-0.5 rounded-full">
-                                                            Odwołane
-                                                        </span>
-                                                    )}
-                                                    {lesson.isSubstitution && (
-                                                        <span className="text-[10px] font-semibold text-[#af52de] bg-[#af52de]/10 px-2 py-0.5 rounded-full">
-                                                            Zastępstwo
-                                                        </span>
-                                                    )}
-                                                    {lesson.room && (
-                                                        <span className="text-xs font-semibold bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2 py-0.5 rounded-md">
-                                                            {lesson.room}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                <h3 className="text-sm font-semibold text-[var(--ios-label)] leading-snug break-words">
+                                                    {lesson.subject}
+                                                </h3>
+
+                                                <p className="text-xs font-normal text-[var(--ios-secondary)]">
+                                                    {lesson.teacher || t.notSpecified}
+                                                </p>
                                             </div>
 
-                                            <h3 className="text-sm font-semibold text-[var(--ios-label)] leading-snug">
-                                                {lesson.subject}
-                                            </h3>
-
-                                            <p className="text-xs font-normal text-[var(--ios-secondary)]">
-                                                {lesson.teacher || t.notSpecified}
-                                            </p>
+                                            <div className="shrink-0 flex flex-col items-end gap-1.5 pt-0.5">
+                                                {lesson.room && (
+                                                    <span className="text-xs font-semibold bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2.5 py-1 rounded-[8px] whitespace-nowrap">
+                                                        {lesson.room}
+                                                    </span>
+                                                )}
+                                                {lesson.isShortened && (
+                                                    <span className="text-[10px] font-semibold text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                        {lesson.durationMinutes} min
+                                                    </span>
+                                                )}
+                                                {lesson.isCancelled && (
+                                                    <span className="text-[10px] font-semibold text-[#ff3b30] bg-[#ff3b30]/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                        Odwołane
+                                                    </span>
+                                                )}
+                                                {lesson.isSubstitution && (
+                                                    <span className="text-[10px] font-semibold text-[#af52de] bg-[#af52de]/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                        Zastępstwo
+                                                    </span>
+                                                )}
+                                            </div>
                                         </article>
 
                                         {(shouldShowUpcomingBreak || shouldShowCountdown) && (

@@ -101,9 +101,12 @@ export function ScheduleWidget({
                 <div className="px-4 py-2.5 flex items-center justify-between border-b border-[var(--ios-separator)]">
                     <button
                         onClick={() => onShiftWeek(-7)}
-                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-semibold text-xs active:scale-95 transition-transform"
+                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)]/65 hover:text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-all"
+                        aria-label="Previous week"
                     >
-                        ‹
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
                     </button>
 
                     <div className="flex items-center gap-2">
@@ -163,9 +166,12 @@ export function ScheduleWidget({
 
                     <button
                         onClick={() => onShiftWeek(7)}
-                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-semibold text-xs active:scale-95 transition-transform"
+                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)]/65 hover:text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-all"
+                        aria-label="Next week"
                     >
-                        ›
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="9 18 15 12 9 6" />
+                        </svg>
                     </button>
                 </div>
 

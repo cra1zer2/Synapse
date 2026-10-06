@@ -49,6 +49,7 @@ export interface AppDictionary {
     refresh: string
     loadingTimetable: string
     syncedStatus: string
+    updatingStatus: string
     profileTitle: string
     luckyNumber: string
     appLanguage: string
@@ -135,6 +136,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             refresh: 'Refresh',
             loadingTimetable: 'Loading timetable...',
             syncedStatus: 'Synced',
+            updatingStatus: 'Updating...',
             profileTitle: 'Student Profile',
             luckyNumber: 'Lucky number',
             appLanguage: 'App Language',
@@ -221,6 +223,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             refresh: 'Обновить',
             loadingTimetable: 'Загрузка расписания...',
             syncedStatus: 'Синхронизировано',
+            updatingStatus: 'Обновление...',
             profileTitle: 'Профиль ученика',
             luckyNumber: 'Счастливое число',
             appLanguage: 'Язык интерфейса',
@@ -306,6 +309,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         refresh: 'Odśwież',
         loadingTimetable: 'Ładowanie planu lekcji...',
         syncedStatus: 'Zsynchronizowano',
+        updatingStatus: 'Aktualizowanie...',
         profileTitle: 'Profil ucznia',
         luckyNumber: 'Szczęśliwy numerek',
         appLanguage: 'Język aplikacji',

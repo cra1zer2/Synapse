@@ -13,7 +13,7 @@ import {
 } from './actions'
 import { SmartTimetableResult, DaySchedule } from '@/models/timetable.model'
 import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
-import { AttendanceResult, SubjectAttendance, AbsenceDetail } from '@/models/attendance.model'
+import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
 import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
@@ -30,6 +30,12 @@ import { SettingsSheet } from './widgets/settings-sheet'
 import { TerminarzModal } from './widgets/terminarz-modal'
 
 type MainSection = 'schedule' | 'grades' | 'attendance' | 'messages'
+
+function getTodayDayName(): string {
+  const dayMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const name = dayMap[new Date().getDay()]
+  return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(name) ? name : 'Monday'
+}
 
 function getInitialWeekPivot(): string {
   const now = new Date()
@@ -84,7 +90,7 @@ export default function Home() {
     a: AttendanceResult
   } | null>(null)
 
-  const [selectedDay, setSelectedDay] = useState<string>('Monday')
+  const [selectedDay, setSelectedDay] = useState<string>(getTodayDayName)
   const [selectedGrade, setSelectedGrade] = useState<GradeItem | null>(null)
   const [selectedWarningSubject, setSelectedWarningSubject] = useState<SubjectGrades | null>(null)
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<SubjectAttendance | null>(null)
@@ -112,31 +118,16 @@ export default function Home() {
   const resolveSmartDefaultDay = useCallback((schedule: DaySchedule[]): string => {
     if (!Array.isArray(schedule) || schedule.length === 0) return 'Monday'
 
-    const dayMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    const todayName = dayMap[new Date().getDay()]
-
-    const todaySchedule = schedule.find((d) => d.dayName === todayName)
-    if (todaySchedule && Array.isArray(todaySchedule.lessons) && todaySchedule.lessons.length > 0) {
-      return todayName
-    }
+    const todayMatch = schedule.find((d) => d.isToday)
+    if (todayMatch) return todayMatch.dayName
 
     const weekdaysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-    const todayIdx = weekdaysOrder.indexOf(todayName)
-    if (todayIdx !== -1) {
-      for (let i = todayIdx + 1; i < weekdaysOrder.length; i++) {
-        const nextDay = schedule.find((d) => d.dayName === weekdaysOrder[i])
-        if (nextDay && Array.isArray(nextDay.lessons) && nextDay.lessons.length > 0) {
-          return weekdaysOrder[i]
-        }
-      }
-    }
-
     for (const day of weekdaysOrder) {
-      const match = schedule.find((d) => d.dayName === day)
-      if (match && Array.isArray(match.lessons) && match.lessons.length > 0) return day
+      const match = schedule.find((d) => d.dayName === day && d.lessons.length > 0)
+      if (match) return day
     }
 
-    return 'Monday'
+    return schedule[0]?.dayName || 'Monday'
   }, [])
 
   const executeSync = useCallback(
@@ -176,6 +167,8 @@ export default function Home() {
           } else {
             setTimetableData(fetchedData)
             setSelectedDay((prev) => {
+              const currentToday = fetchedData.schedule.find((d) => d.isToday)
+              if (currentToday) return currentToday.dayName
               const hasPrev = fetchedData.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
               return hasPrev ? prev : resolveSmartDefaultDay(fetchedData.schedule)
             })
@@ -251,7 +244,6 @@ export default function Home() {
     setSavedAccounts(loadedAccounts)
 
     const activeAcc = loadedAccounts.find((a) => a.isActive) || loadedAccounts[0]
-
     const effectiveUser = activeAcc ? activeAcc.username : savedUser
     const effectivePass = activeAcc ? activeAcc.password : savedPass
 
@@ -264,9 +256,7 @@ export default function Home() {
     const hasAccount = Boolean(effectiveUser && effectivePass)
     setIsConfigured(hasAccount)
 
-    if (!hasAccount) {
-      return
-    }
+    if (!hasAccount) return
 
     const storedWeekCache = localStorage.getItem('synapse_week_cache')
     if (storedWeekCache) {
@@ -284,7 +274,8 @@ export default function Home() {
           if (!weekCacheRef.current[parsed.t.weekStart]) {
             weekCacheRef.current[parsed.t.weekStart] = parsed.t
           }
-          setSelectedDay(resolveSmartDefaultDay(parsed.t.schedule))
+          const currentToday = parsed.t.schedule.find((d: DaySchedule) => d.isToday)
+          setSelectedDay(currentToday ? currentToday.dayName : resolveSmartDefaultDay(parsed.t.schedule))
         }
         if (parsed.g) setGradesData(parsed.g)
         if (parsed.a) setAttendanceData(parsed.a)
@@ -314,6 +305,8 @@ export default function Home() {
     if (cached) {
       setTimetableData(cached)
       setSelectedDay((prev) => {
+        const currentToday = cached.schedule.find((d) => d.isToday)
+        if (currentToday) return currentToday.dayName
         const hasPrev = cached.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
         return hasPrev ? prev : resolveSmartDefaultDay(cached.schedule)
       })
@@ -541,91 +534,96 @@ export default function Home() {
   }
 
   return (
-    <main className="w-full min-h-screen pb-24 pt-safe px-4 max-w-md mx-auto flex flex-col gap-3 box-border">
-      <header className="pt-2 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-extrabold tracking-tight text-[var(--ios-label)]">Synapse</h1>
-          <p className="text-[10px] text-[var(--ios-secondary)]">
-            {isUpdating ? 'Aktualizowanie...' : 'Zsynchronizowano'}
-          </p>
-        </div>
+    <div className="w-full min-h-screen bg-[var(--ios-bg)] flex flex-col">
+      <header className="sticky top-0 z-30 w-full pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] transition-colors">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--ios-label)]">Synapse</h1>
+            <p className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight">
+              {isUpdating ? t.updatingStatus : t.syncedStatus}
+            </p>
+          </div>
 
-        <button
-          onClick={() => setShowSettings(true)}
-          className="p-1.5 rounded-full text-[var(--ios-secondary)] hover:text-[var(--ios-label)] transition-colors active:scale-95"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </button>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-all"
+            aria-label="Settings"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+        </div>
       </header>
 
-      {hasNewUpdate && (
-        <div
-          onClick={applyPendingUpdates}
-          className="bg-[var(--ios-blue)] text-white p-3 rounded-2xl flex items-center justify-between cursor-pointer active:opacity-90 shadow-sm"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-sm">✨</span>
-            <p className="text-xs font-semibold">Wykryto zmiany w Librusie</p>
+      <main className="w-full flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] pt-3 px-4 max-w-md mx-auto flex flex-col gap-3 box-border">
+        {hasNewUpdate && (
+          <div
+            onClick={applyPendingUpdates}
+            className="bg-[var(--ios-blue)] text-white p-3 rounded-2xl flex items-center justify-between cursor-pointer active:opacity-90 shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm">✨</span>
+              <p className="text-xs font-semibold tracking-tight">{t.newChanges}</p>
+            </div>
+            <span className="text-xs font-semibold underline bg-white/20 px-2 py-0.5 rounded-lg">
+              {t.updateNow}
+            </span>
           </div>
-          <span className="text-xs font-bold underline bg-white/20 px-2 py-0.5 rounded-lg">
-            Zaktualizuj
-          </span>
-        </div>
-      )}
+        )}
 
-      {activeSection === 'schedule' && timetableData && (
-        <ScheduleWidget
-          timetableData={timetableData}
-          selectedDay={selectedDay}
-          onSelectDay={setSelectedDay}
-          currentWeekPivot={currentWeekPivot}
-          onShiftWeek={shiftWeek}
-          onSelectDate={queueWeekChange}
-          onManualRefresh={handleManualRefresh}
-          onOpenTerminarz={() => setShowTerminarz(true)}
-          isLoadingWeek={isLoadingWeek}
-          t={t}
-        />
-      )}
+        {activeSection === 'schedule' && timetableData && (
+          <ScheduleWidget
+            timetableData={timetableData}
+            selectedDay={selectedDay}
+            onSelectDay={setSelectedDay}
+            currentWeekPivot={currentWeekPivot}
+            onShiftWeek={shiftWeek}
+            onSelectDate={queueWeekChange}
+            onManualRefresh={handleManualRefresh}
+            onOpenTerminarz={() => setShowTerminarz(true)}
+            isLoadingWeek={isLoadingWeek}
+            t={t}
+          />
+        )}
 
-      {activeSection === 'grades' && gradesData && (
-        <GradesWidget
-          gradesData={gradesData}
-          onSelectGrade={setSelectedGrade}
-          onSelectWarning={setSelectedWarningSubject}
-          t={t}
-        />
-      )}
+        {activeSection === 'grades' && gradesData && (
+          <GradesWidget
+            gradesData={gradesData}
+            onSelectGrade={setSelectedGrade}
+            onSelectWarning={setSelectedWarningSubject}
+            t={t}
+          />
+        )}
 
-      {activeSection === 'attendance' && attendanceData && (
-        <AttendanceWidget
-          attendanceData={attendanceData}
-          onSelectSubject={setSelectedSubjectDetail}
-          onOpenExcuseModal={() => setShowExcuseMatrix(true)}
-          t={t}
-        />
-      )}
+        {activeSection === 'attendance' && attendanceData && (
+          <AttendanceWidget
+            attendanceData={attendanceData}
+            onSelectSubject={setSelectedSubjectDetail}
+            onOpenExcuseModal={() => setShowExcuseMatrix(true)}
+            t={t}
+          />
+        )}
 
-      {activeSection === 'messages' && (
-        <MessagesWidget
-          messages={messages}
-          announcements={announcements}
-          receivers={receivers}
-          onOpenMessage={handleOpenMessage}
-          onSendMessage={handleSendMessage}
-          t={t}
-        />
-      )}
+        {activeSection === 'messages' && (
+          <MessagesWidget
+            messages={messages}
+            announcements={announcements}
+            receivers={receivers}
+            onOpenMessage={handleOpenMessage}
+            onSendMessage={handleSendMessage}
+            t={t}
+          />
+        )}
+      </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--ios-separator)]/20 bg-[var(--ios-card)]/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--ios-separator)] bg-[var(--ios-card)] backdrop-blur-xl pb-[env(safe-area-inset-bottom,0px)]">
         <div className="max-w-md mx-auto grid grid-cols-4 h-12">
           {[
             {
               id: 'schedule' as MainSection,
-              label: 'Plan',
+              label: t.schedule,
               icon: (
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -637,17 +635,17 @@ export default function Home() {
             },
             {
               id: 'grades' as MainSection,
-              label: 'Oceny',
+              label: t.grades,
               icon: (
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
-                  <text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="800" fill="currentColor" stroke="none">5</text>
+                  <text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="currentColor" stroke="none">5</text>
                 </svg>
               )
             },
             {
               id: 'attendance' as MainSection,
-              label: 'Frekwencja',
+              label: t.attendance,
               icon: (
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
@@ -656,7 +654,7 @@ export default function Home() {
             },
             {
               id: 'messages' as MainSection,
-              label: 'Wiadomości',
+              label: t.messages,
               icon: (
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -735,6 +733,6 @@ export default function Home() {
           t={t}
         />
       )}
-    </main>
+    </div>
   )
 }

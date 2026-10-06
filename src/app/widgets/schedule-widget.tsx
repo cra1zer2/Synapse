@@ -97,11 +97,11 @@ export function ScheduleWidget({
 
     return (
         <section className="w-full flex flex-col gap-3 min-h-[500px]">
-            <div className="bg-[var(--ios-card)] rounded-2xl shadow-[var(--ios-shadow)] border border-[var(--ios-border)] backdrop-blur-[20px] overflow-hidden">
+            <div className="bg-[var(--ios-card)] rounded-2xl shadow-[var(--ios-shadow)] border border-[var(--ios-border)] backdrop-blur-xl overflow-hidden">
                 <div className="px-4 py-2.5 flex items-center justify-between border-b border-[var(--ios-separator)]">
                     <button
                         onClick={() => onShiftWeek(-7)}
-                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-bold text-xs active:scale-95 transition-transform"
+                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-semibold text-xs active:scale-95 transition-transform"
                     >
                         ‹
                     </button>
@@ -155,7 +155,7 @@ export function ScheduleWidget({
 
                         <button
                             onClick={onOpenTerminarz}
-                            className="text-[10px] font-bold text-[var(--ios-blue)] bg-[var(--ios-room-bg)] px-2 py-0.5 rounded-md ml-1 active:scale-95 transition-transform"
+                            className="text-[10px] font-semibold text-[var(--ios-blue)] bg-[var(--ios-room-bg)] px-2 py-0.5 rounded-md ml-1 active:scale-95 transition-transform"
                         >
                             Terminarz
                         </button>
@@ -163,7 +163,7 @@ export function ScheduleWidget({
 
                     <button
                         onClick={() => onShiftWeek(7)}
-                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-bold text-xs active:scale-95 transition-transform"
+                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-semibold text-xs active:scale-95 transition-transform"
                     >
                         ›
                     </button>
@@ -178,13 +178,13 @@ export function ScheduleWidget({
                             <button
                                 key={day.dayName}
                                 onClick={() => onSelectDay(day.dayName)}
-                                className={`py-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center transition-all ${isSelected
+                                className={`py-2 rounded-xl text-xs font-medium flex flex-col items-center justify-center transition-all ${isSelected
                                         ? 'bg-[var(--ios-blue)] text-white shadow-xs'
                                         : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]'
                                     }`}
                             >
-                                <span className="text-[10px] uppercase font-bold opacity-80">{day.dayName.slice(0, 3)}</span>
-                                <span className="relative text-sm font-bold mt-0.5">
+                                <span className="text-[10px] uppercase font-semibold opacity-85">{day.dayName.slice(0, 3)}</span>
+                                <span className="relative text-sm font-semibold mt-0.5">
                                     {day.date ? day.date.split('.')[0] : ''}
                                     {dotColor && (
                                         <span className={`absolute -top-0.5 -right-1.5 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : dotColor}`} />
@@ -197,7 +197,7 @@ export function ScheduleWidget({
             </div>
 
             {isLoadingWeek ? (
-                <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-border)] backdrop-blur-[20px] flex flex-col items-center justify-center gap-3">
+                <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-border)] backdrop-blur-xl flex flex-col items-center justify-center gap-3">
                     <div className="w-6 h-6 border-2 border-[var(--ios-blue)] border-t-transparent rounded-full animate-spin" />
                     <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.loadingTimetable}</p>
                 </div>
@@ -208,15 +208,15 @@ export function ScheduleWidget({
                             {currentDaySchedule.events.map((ev, idx) => (
                                 <div
                                     key={idx}
-                                    className={`p-3 rounded-2xl text-xs font-semibold flex items-center gap-2.5 ${ev.category === 'holiday'
+                                    className={`p-3 rounded-2xl text-xs font-medium flex items-center gap-2.5 ${ev.category === 'holiday'
                                             ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
                                             : ev.category === 'exam'
                                                 ? 'bg-[#34c759]/10 text-[#34c759]'
                                                 : 'bg-[#007aff]/10 text-[#007aff]'
                                         }`}
                                 >
-                                    <span className="w-2 h-2 rounded-full bg-current shrink-0" />
-                                    <p>{ev.title}</p>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
+                                    <p className="font-semibold">{ev.title}</p>
                                 </div>
                             ))}
                         </div>
@@ -238,7 +238,7 @@ export function ScheduleWidget({
                                 return (
                                     <div key={`${lesson.number}-${lesson.subject}-${lesson.time}`} className="flex flex-col">
                                         <article
-                                            className={`w-full bg-[var(--ios-card)] backdrop-blur-[20px] rounded-2xl p-3.5 border border-[var(--ios-border)] shadow-[var(--ios-shadow)] flex flex-col gap-1.5 transition-all ${liveState === 'passed' ? 'opacity-55' : 'opacity-100'
+                                            className={`w-full bg-[var(--ios-card)] backdrop-blur-xl rounded-2xl p-3.5 border border-[var(--ios-border)] shadow-[var(--ios-shadow)] flex flex-col gap-1.5 transition-all ${liveState === 'passed' ? 'opacity-55' : 'opacity-100'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between">
@@ -246,29 +246,29 @@ export function ScheduleWidget({
                                                     {liveState === 'active' && (
                                                         <span className="w-2 h-2 rounded-full bg-[#007aff] dark:bg-[#0a84ff] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
                                                     )}
-                                                    <span className="text-xs font-semibold text-[var(--ios-secondary)] tracking-tight">
+                                                    <span className="text-xs font-medium text-[var(--ios-secondary)] tracking-tight">
                                                         {lesson.time}
                                                     </span>
                                                 </div>
 
                                                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
                                                     {lesson.isShortened && (
-                                                        <span className="text-[10px] font-bold text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full">
+                                                        <span className="text-[10px] font-semibold text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full">
                                                             {lesson.durationMinutes} min
                                                         </span>
                                                     )}
                                                     {lesson.isCancelled && (
-                                                        <span className="text-[10px] font-bold text-[#ff3b30] bg-[#ff3b30]/10 px-2 py-0.5 rounded-full">
+                                                        <span className="text-[10px] font-semibold text-[#ff3b30] bg-[#ff3b30]/10 px-2 py-0.5 rounded-full">
                                                             Odwołane
                                                         </span>
                                                     )}
                                                     {lesson.isSubstitution && (
-                                                        <span className="text-[10px] font-bold text-[#af52de] bg-[#af52de]/10 px-2 py-0.5 rounded-full">
+                                                        <span className="text-[10px] font-semibold text-[#af52de] bg-[#af52de]/10 px-2 py-0.5 rounded-full">
                                                             Zastępstwo
                                                         </span>
                                                     )}
                                                     {lesson.room && (
-                                                        <span className="text-xs font-semibold bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2 py-0.5 rounded-[6px]">
+                                                        <span className="text-xs font-semibold bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2 py-0.5 rounded-md">
                                                             {lesson.room}
                                                         </span>
                                                     )}
@@ -279,7 +279,7 @@ export function ScheduleWidget({
                                                 {lesson.subject}
                                             </h3>
 
-                                            <p className="text-xs font-medium text-[var(--ios-secondary)]">
+                                            <p className="text-xs font-normal text-[var(--ios-secondary)]">
                                                 {lesson.teacher || t.notSpecified}
                                             </p>
                                         </article>
@@ -287,7 +287,7 @@ export function ScheduleWidget({
                                         {(shouldShowUpcomingBreak || shouldShowCountdown) && (
                                             <div className="py-2.5 flex items-center gap-3 px-2">
                                                 <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
-                                                <div className={`flex items-center gap-1.5 text-[11px] font-semibold shrink-0 ${shouldShowCountdown ? 'text-[var(--ios-blue)] animate-pulse' : 'text-[var(--ios-secondary)]'
+                                                <div className={`flex items-center gap-1.5 text-[11px] font-medium shrink-0 ${shouldShowCountdown ? 'text-[var(--ios-blue)] animate-pulse' : 'text-[var(--ios-secondary)]'
                                                     }`}>
                                                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                         <circle cx="12" cy="12" r="10" />
@@ -306,7 +306,7 @@ export function ScheduleWidget({
                                 )
                             })
                         ) : (
-                            <div className="bg-[var(--ios-card)] backdrop-blur-[20px] rounded-2xl p-10 border border-[var(--ios-border)] text-center text-xs font-medium text-[var(--ios-secondary)]">
+                            <div className="bg-[var(--ios-card)] backdrop-blur-xl rounded-2xl p-10 border border-[var(--ios-border)] text-center text-xs font-medium text-[var(--ios-secondary)]">
                                 {t.noLessonsDay}
                             </div>
                         )}

@@ -97,6 +97,7 @@ export default function Home() {
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([])
   const [receivers, setReceivers] = useState<ReceiverItem[]>([])
   const [hasLoadedMessages, setHasLoadedMessages] = useState(false)
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
 
   const [pendingSnapshot, setPendingSnapshot] = useState<{
     t: SmartTimetableResult
@@ -192,7 +193,9 @@ export default function Home() {
 
   const loadMessagesIfActive = useCallback(async () => {
     if (!username || !password || hasLoadedMessages) return
+    setIsLoadingMessages(true)
     const mRes = await getMessagesAndAnnouncementsAction(username, password)
+    setIsLoadingMessages(false)
     if (mRes.success) {
       setMessages(mRes.messages)
       setAnnouncements(mRes.announcements)
@@ -609,6 +612,7 @@ export default function Home() {
             receivers={receivers}
             onOpenMessage={handleOpenMessage}
             onSendMessage={handleSendMessage}
+            isLoading={isLoadingMessages}
             t={t}
           />
         )}

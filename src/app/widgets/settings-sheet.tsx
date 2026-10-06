@@ -26,6 +26,30 @@ interface SettingsSheetProps {
     t: AppDictionary
 }
 
+function IosSwitch({
+    checked,
+    onChange
+}: {
+    checked: boolean
+    onChange: () => void
+}) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            onClick={onChange}
+            className={`relative inline-flex h-[24px] w-[42px] shrink-0 cursor-pointer rounded-full p-[2px] transition-colors duration-200 ease-in-out ${checked ? 'bg-[#34c759]' : 'bg-[var(--ios-switch-off)]'
+                }`}
+        >
+            <span
+                className={`pointer-events-none inline-block h-[20px] w-[20px] transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition duration-200 ease-in-out ${checked ? 'translate-x-[18px]' : 'translate-x-0'
+                    }`}
+            />
+        </button>
+    )
+}
+
 export function SettingsSheet({
     isOpen,
     onClose,
@@ -77,6 +101,7 @@ export function SettingsSheet({
             timetableChanges: true,
             absences: true,
             messages: true,
+            announcements: true,
             calendarEvents: true
         }
     })
@@ -296,24 +321,22 @@ export function SettingsSheet({
                         </div>
 
                         {showNotificationChannels && (
-                            <div className="p-3.5 bg-[var(--ios-bg)]/40 flex flex-col gap-2.5 animate-in fade-in">
+                            <div className="p-3.5 bg-[var(--ios-bg)]/40 flex flex-col gap-3 animate-in fade-in">
                                 {[
                                     { key: 'grades' as const, label: 'Oceny (nowe i zmiany)' },
                                     { key: 'timetableChanges' as const, label: 'Zastępstwa i odwołania lekcji' },
                                     { key: 'absences' as const, label: 'Nieobecności (alerty o NB)' },
-                                    { key: 'messages' as const, label: 'Wiadomości i ogłoszenia' },
+                                    { key: 'messages' as const, label: 'Wiadomości prywatne' },
+                                    { key: 'announcements' as const, label: 'Ogłoszenia szkoły' },
                                     { key: 'calendarEvents' as const, label: 'Wydarzenia i sprawdziany (data)' }
                                 ].map((item) => (
-                                    <label key={item.key} className="flex items-center justify-between text-xs cursor-pointer py-1">
-                                        <span className="text-[var(--ios-label)] font-medium">{item.label}</span>
-                                        <input
-                                            type="checkbox"
-                                            {...{ switch: '' }}
+                                    <div key={item.key} className="flex items-center justify-between text-xs py-1">
+                                        <span className="text-[var(--ios-label)] font-medium pr-2">{item.label}</span>
+                                        <IosSwitch
                                             checked={Boolean(notificationPrefs[item.key])}
                                             onChange={() => handleToggleChannel(item.key)}
-                                            className="cursor-pointer"
                                         />
-                                    </label>
+                                    </div>
                                 ))}
                             </div>
                         )}

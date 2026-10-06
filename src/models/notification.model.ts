@@ -42,5 +42,6 @@ export interface NotificationPreferences {
     timetableChanges: boolean
     absences: boolean
     messages: boolean
+    announcements: boolean
     calendarEvents: boolean
 }

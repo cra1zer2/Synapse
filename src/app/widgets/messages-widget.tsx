@@ -11,6 +11,7 @@ interface MessagesWidgetProps {
     receivers: ReceiverItem[]
     onOpenMessage: (id: number | string) => Promise<string>
     onSendMessage: (receiverId: number, title: string, body: string) => Promise<boolean>
+    isLoading?: boolean
     t: AppDictionary
 }
 
@@ -35,6 +36,7 @@ export function MessagesWidget({
     receivers,
     onOpenMessage,
     onSendMessage,
+    isLoading = false,
     t
 }: MessagesWidgetProps) {
     const [activeTab, setActiveTab] = useState<'inbox' | 'announcements'>('inbox')
@@ -212,70 +214,77 @@ export function MessagesWidget({
                 />
             </div>
 
-            <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-[var(--ios-shadow)] divide-y divide-[var(--ios-separator)]">
-                {activeTab === 'inbox' ? (
-                    filteredMessages.length > 0 ? (
-                        filteredMessages.map((msg, index) => (
-                            <article
-                                key={msg.id}
-                                onClick={() => handleReadMessage(msg)}
-                                style={{ animationDelay: `${index * 35}ms` }}
-                                className="p-3.5 flex items-start gap-2.5 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-bottom-1 fill-mode-both duration-200"
-                            >
-                                {!msg.isRead ? (
-                                    <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] mt-1.5 shrink-0" />
-                                ) : (
-                                    <span className="w-2 h-2 rounded-full bg-transparent mt-1.5 shrink-0" />
-                                )}
+            {isLoading && messages.length === 0 && announcements.length === 0 ? (
+                <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-border)] backdrop-blur-xl flex flex-col items-center justify-center gap-3">
+                    <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
+                    <p className="text-xs font-medium text-[var(--ios-secondary)]">Wczytywanie...</p>
+                </div>
+            ) : (
+                <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-[var(--ios-shadow)] divide-y divide-[var(--ios-separator)]">
+                    {activeTab === 'inbox' ? (
+                        filteredMessages.length > 0 ? (
+                            filteredMessages.map((msg, index) => (
+                                <article
+                                    key={msg.id}
+                                    onClick={() => handleReadMessage(msg)}
+                                    style={{ animationDelay: `${index * 30}ms` }}
+                                    className="p-3.5 flex items-start gap-2.5 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-bottom-1 fill-mode-both duration-200"
+                                >
+                                    {!msg.isRead ? (
+                                        <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] mt-1.5 shrink-0" />
+                                    ) : (
+                                        <span className="w-2 h-2 rounded-full bg-transparent mt-1.5 shrink-0" />
+                                    )}
 
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-1">
-                                        <span className="text-xs font-semibold text-[var(--ios-label)] truncate">
-                                            {cleanSenderName(msg.sender)}
-                                        </span>
-                                        <span className="text-[10px] font-normal text-[var(--ios-secondary)] shrink-0">
-                                            {msg.date.split(' ')[0]}
-                                        </span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-1">
+                                            <span className="text-xs font-semibold text-[var(--ios-label)] truncate">
+                                                {cleanSenderName(msg.sender)}
+                                            </span>
+                                            <span className="text-[10px] font-normal text-[var(--ios-secondary)] shrink-0">
+                                                {msg.date.split(' ')[0]}
+                                            </span>
+                                        </div>
+                                        <h4 className="text-xs font-normal text-[var(--ios-secondary)] line-clamp-1 mt-0.5">
+                                            {msg.subject}
+                                        </h4>
                                     </div>
-                                    <h4 className="text-xs font-normal text-[var(--ios-secondary)] line-clamp-1 mt-0.5">
-                                        {msg.subject}
-                                    </h4>
+                                </article>
+                            ))
+                        ) : (
+                            <div className="p-8 text-center text-xs text-[var(--ios-secondary)]">{t.noMessages}</div>
+                        )
+                    ) : filteredAnnouncements.length > 0 ? (
+                        filteredAnnouncements.map((item, index) => (
+                            <article
+                                key={item.id}
+                                onClick={() =>
+                                    setActiveReader({
+                                        title: item.title,
+                                        sender: cleanSenderName(item.author),
+                                        date: item.date,
+                                        content: item.content,
+                                        originalItem: item
+                                    })
+                                }
+                                style={{ animationDelay: `${index * 30}ms` }}
+                                className="p-3.5 flex flex-col gap-1 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-bottom-1 fill-mode-both duration-200"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-semibold text-[var(--ios-blue)]">{cleanSenderName(item.author)}</span>
+                                    <span className="text-[10px] font-normal text-[var(--ios-secondary)]">{item.date}</span>
                                 </div>
+                                <h4 className="text-xs font-semibold text-[var(--ios-label)]">{item.title}</h4>
+                                <p className="text-xs font-normal text-[var(--ios-secondary)] line-clamp-2 leading-relaxed">
+                                    {item.content}
+                                </p>
                             </article>
                         ))
                     ) : (
                         <div className="p-8 text-center text-xs text-[var(--ios-secondary)]">{t.noMessages}</div>
-                    )
-                ) : filteredAnnouncements.length > 0 ? (
-                    filteredAnnouncements.map((item, index) => (
-                        <article
-                            key={item.id}
-                            onClick={() =>
-                                setActiveReader({
-                                    title: item.title,
-                                    sender: cleanSenderName(item.author),
-                                    date: item.date,
-                                    content: item.content,
-                                    originalItem: item
-                                })
-                            }
-                            style={{ animationDelay: `${index * 35}ms` }}
-                            className="p-3.5 flex flex-col gap-1 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-bottom-1 fill-mode-both duration-200"
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold text-[var(--ios-blue)]">{cleanSenderName(item.author)}</span>
-                                <span className="text-[10px] font-normal text-[var(--ios-secondary)]">{item.date}</span>
-                            </div>
-                            <h4 className="text-xs font-semibold text-[var(--ios-label)]">{item.title}</h4>
-                            <p className="text-xs font-normal text-[var(--ios-secondary)] line-clamp-2 leading-relaxed">
-                                {item.content}
-                            </p>
-                        </article>
-                    ))
-                ) : (
-                    <div className="p-8 text-center text-xs text-[var(--ios-secondary)]">{t.noMessages}</div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
 
             {activeReader && (
                 <div
@@ -288,7 +297,7 @@ export function MessagesWidget({
                     }}
                     className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250"
                 >
-                    <header className="sticky top-0 z-10 w-full pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
+                    <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                         <button
                             onClick={() => setActiveReader(null)}
                             className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-medium active:opacity-70 -ml-1 py-1 pr-2"
@@ -301,13 +310,17 @@ export function MessagesWidget({
 
                         <button
                             onClick={handleInitiateReply}
-                            className="text-xs font-semibold text-[var(--ios-blue)] active:opacity-70 py-1 px-2"
+                            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--ios-blue)] active:opacity-75 py-1 px-3 bg-[var(--ios-blue)]/12 rounded-full transition-all"
                         >
-                            {t.replyAction}
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="9 17 4 12 9 7" />
+                                <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+                            </svg>
+                            <span>{t.replyAction}</span>
                         </button>
                     </header>
 
-                    <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 max-w-lg mx-auto w-full">
+                    <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
                         <div className="bg-[var(--ios-card)] rounded-2xl p-4 border border-[var(--ios-border)] shadow-xs flex flex-col gap-2">
                             <div className="flex items-center justify-between gap-2 border-b border-[var(--ios-separator)] pb-2.5">
                                 <div className="min-w-0">
@@ -337,21 +350,6 @@ export function MessagesWidget({
                             )}
                         </div>
                     </div>
-
-                    <footer className="sticky bottom-0 w-full p-3 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-t border-[var(--ios-separator)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
-                        <div className="max-w-lg mx-auto flex gap-2">
-                            <button
-                                onClick={handleInitiateReply}
-                                className="w-full bg-[var(--ios-blue)] text-white text-xs font-semibold py-3 rounded-xl active:opacity-85 transition-all shadow-xs flex items-center justify-center gap-1.5"
-                            >
-                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="9 17 4 12 9 7" />
-                                    <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
-                                </svg>
-                                <span>{t.replyAction}</span>
-                            </button>
-                        </div>
-                    </footer>
                 </div>
             )}
 

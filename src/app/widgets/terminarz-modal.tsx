@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { SmartTimetableResult, AbsentTeacherItem } from '@/models/timetable.model'
+import { SmartTimetableResult } from '@/models/timetable.model'
 import { AppDictionary } from '@/config/dictionary.config'
 
 interface TerminarzModalProps {
@@ -130,7 +130,7 @@ export function TerminarzModal({
             case 'exam':
                 return 'bg-[#a30029] text-white'
             case 'meeting':
-                return 'bg-[#30d158] text-black font-bold'
+                return 'bg-[#30d158] text-black font-semibold'
             case 'holiday':
                 return 'bg-[#ff9500] text-white'
             default:
@@ -142,20 +142,20 @@ export function TerminarzModal({
 
     return (
         <div className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in">
-            <header className="px-4 pt-safe pt-3 pb-3 border-b border-[var(--ios-separator)]/20 bg-[var(--ios-card)]/80 backdrop-blur-xl flex items-center justify-between">
+            <header className="px-4 pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-3 border-b border-[var(--ios-separator)] bg-[var(--ios-card)] backdrop-blur-xl flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => shiftMonth(-1)}
-                        className="w-8 h-8 rounded-full bg-[var(--ios-element)]/60 text-[var(--ios-label)] flex items-center justify-center font-bold text-xs active:scale-95"
+                        className="w-8 h-8 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-semibold text-xs active:scale-95 transition-transform"
                     >
                         ‹
                     </button>
-                    <span className="text-sm font-extrabold text-[var(--ios-label)]">
+                    <span className="text-sm font-semibold text-[var(--ios-label)] tracking-tight">
                         {monthNames[selectedMonth]} {selectedYear}
                     </span>
                     <button
                         onClick={() => shiftMonth(1)}
-                        className="w-8 h-8 rounded-full bg-[var(--ios-element)]/60 text-[var(--ios-label)] flex items-center justify-center font-bold text-xs active:scale-95"
+                        className="w-8 h-8 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-semibold text-xs active:scale-95 transition-transform"
                     >
                         ›
                     </button>
@@ -163,33 +163,33 @@ export function TerminarzModal({
 
                 <button
                     onClick={onClose}
-                    className="text-xs font-bold text-[var(--ios-blue)] active:opacity-70 px-2 py-1"
+                    className="text-xs font-semibold text-[var(--ios-blue)] active:opacity-70 px-2 py-1"
                 >
                     {t.done}
                 </button>
             </header>
 
-            <div className="p-3 bg-[var(--ios-bg)] border-b border-[var(--ios-separator)]/20">
+            <div className="p-3 bg-[var(--ios-bg)] border-b border-[var(--ios-separator)]">
                 <input
                     type="text"
                     placeholder="Filtruj wydarzenia lub nauczycieli..."
                     value={teacherSearch}
                     onChange={(e) => setTeacherSearch(e.target.value)}
-                    className="w-full bg-[var(--ios-card)] text-xs text-[var(--ios-label)] rounded-xl px-3.5 py-2 outline-none border border-[var(--ios-separator)]/30"
+                    className="w-full bg-[var(--ios-card)] text-xs text-[var(--ios-label)] rounded-xl px-3.5 py-2 outline-none border border-[var(--ios-border)]"
                 />
             </div>
 
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
-                <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)]/20 overflow-hidden shadow-xs">
-                    <div className="grid grid-cols-7 border-b border-[var(--ios-separator)]/20 bg-[var(--ios-element)]/30 text-center py-2">
+                <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-xs">
+                    <div className="grid grid-cols-7 border-b border-[var(--ios-separator)] bg-[var(--ios-element)]/30 text-center py-2">
                         {['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'N'].map((d) => (
-                            <span key={d} className="text-[10px] font-bold text-[var(--ios-secondary)] uppercase">
+                            <span key={d} className="text-[10px] font-medium text-[var(--ios-secondary)] uppercase">
                                 {d}
                             </span>
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-7 divide-x divide-y divide-[var(--ios-separator)]/20">
+                    <div className="grid grid-cols-7 divide-x divide-y divide-[var(--ios-separator)]">
                         {paddingArray.map((i) => (
                             <div key={`pad-${i}`} className="min-h-[75px] bg-[var(--ios-bg)]/40 opacity-30" />
                         ))}
@@ -205,7 +205,7 @@ export function TerminarzModal({
                                     className={`min-h-[75px] p-1 flex flex-col gap-1 cursor-pointer transition-colors ${isSelected ? 'bg-[var(--ios-blue)]/10' : 'hover:bg-[var(--ios-element)]/20'
                                         }`}
                                 >
-                                    <span className={`text-[10px] font-black px-1 rounded-sm w-fit ${isSelected ? 'bg-[var(--ios-blue)] text-white' : 'text-[var(--ios-label)]'
+                                    <span className={`text-[10px] font-semibold px-1 rounded-sm w-fit ${isSelected ? 'bg-[var(--ios-blue)] text-white' : 'text-[var(--ios-label)]'
                                         }`}>
                                         {day}
                                     </span>
@@ -214,13 +214,13 @@ export function TerminarzModal({
                                         {dayEvents.slice(0, 3).map((ev) => (
                                             <div
                                                 key={ev.id}
-                                                className={`text-[8px] font-bold px-1 py-0.5 rounded-xs truncate leading-tight ${getCategoryColor(ev.category)}`}
+                                                className={`text-[8px] font-medium px-1 py-0.5 rounded-xs truncate leading-tight ${getCategoryColor(ev.category)}`}
                                             >
                                                 {ev.title}
                                             </div>
                                         ))}
                                         {dayEvents.length > 3 && (
-                                            <span className="text-[8px] font-bold text-[var(--ios-secondary)] px-1">
+                                            <span className="text-[8px] font-medium text-[var(--ios-secondary)] px-1">
                                                 +{dayEvents.length - 3} więcej
                                             </span>
                                         )}
@@ -232,8 +232,8 @@ export function TerminarzModal({
                 </div>
 
                 {selectedDay && (
-                    <div className="bg-[var(--ios-card)] rounded-2xl p-4 border border-[var(--ios-separator)]/20 shadow-xs flex flex-col gap-2">
-                        <h4 className="text-xs font-black text-[var(--ios-label)]">
+                    <div className="bg-[var(--ios-card)] rounded-2xl p-4 border border-[var(--ios-border)] shadow-xs flex flex-col gap-2">
+                        <h4 className="text-xs font-semibold text-[var(--ios-label)]">
                             Wydarzenia: {selectedDay} {monthNames[selectedMonth]} {selectedYear}
                         </h4>
 
@@ -245,19 +245,19 @@ export function TerminarzModal({
                                         className="p-2.5 rounded-xl bg-[var(--ios-bg)] flex items-start justify-between gap-2"
                                     >
                                         <div>
-                                            <p className="text-xs font-bold text-[var(--ios-label)] leading-snug">{ev.title}</p>
+                                            <p className="text-xs font-medium text-[var(--ios-label)] leading-snug">{ev.title}</p>
                                             {ev.time && (
-                                                <p className="text-[10px] text-[var(--ios-secondary)] mt-0.5">Godziny: {ev.time}</p>
+                                                <p className="text-[10px] font-normal text-[var(--ios-secondary)] mt-0.5">Godziny: {ev.time}</p>
                                             )}
                                         </div>
-                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${getCategoryColor(ev.category)}`}>
+                                        <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${getCategoryColor(ev.category)}`}>
                                             {ev.category.toUpperCase()}
                                         </span>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-xs text-[var(--ios-secondary)]">Brak zarejestrowanych wydarzeń w tym dniu</p>
+                            <p className="text-xs font-normal text-[var(--ios-secondary)]">Brak zarejestrowanych wydarzeń w tym dniu</p>
                         )}
                     </div>
                 )}

@@ -57,14 +57,12 @@ export function createGradeNotification(
 ): PushNotificationPayload {
     const titles: Record<AppLanguage, string> = {
         pl: `${grade} • ${subject}`,
-        en: `${grade} • ${subject}`,
-        ru: `${grade} • ${subject}`
+        en: `${grade} • ${subject}`
     }
 
     const bodies: Record<AppLanguage, string> = {
         pl: `Waga ${weight} • ${teacher || 'Nauczyciel'}`,
-        en: `Weight ${weight} • ${teacher || 'Teacher'}`,
-        ru: `Вес ${weight} • ${teacher || 'Учитель'}`
+        en: `Weight ${weight} • ${teacher || 'Teacher'}`
     }
 
     return {
@@ -87,14 +85,12 @@ export function createAbsenceNotification(
 ): PushNotificationPayload {
     const titles: Record<AppLanguage, string> = {
         pl: `NB • ${subject}`,
-        en: `NB • ${subject}`,
-        ru: `NB • ${subject}`
+        en: `NB • ${subject}`
     }
 
     const bodies: Record<AppLanguage, string> = {
         pl: `Lekcja ${lessonNumber} (${time})`,
-        en: `Lesson ${lessonNumber} (${time})`,
-        ru: `Урок ${lessonNumber} (${time})`
+        en: `Lesson ${lessonNumber} (${time})`
     }
 
     return {
@@ -119,25 +115,21 @@ export function createTimetableChangeNotification(
     const typeLabels: Record<'cancelled' | 'substitution' | 'shortened', Record<AppLanguage, string>> = {
         cancelled: {
             pl: 'Odwołane',
-            en: 'Cancelled',
-            ru: 'Отменено'
+            en: 'Cancelled'
         },
         substitution: {
             pl: 'Zastępstwo',
-            en: 'Substitution',
-            ru: 'Замена'
+            en: 'Substitution'
         },
         shortened: {
             pl: 'Skrócona',
-            en: 'Shortened',
-            ru: 'Сокращен'
+            en: 'Shortened'
         }
     }
 
     const lessonPrefix: Record<AppLanguage, string> = {
         pl: 'Lekcja',
-        en: 'Lesson',
-        ru: 'Урок'
+        en: 'Lesson'
     }
 
     const title = `${typeLabels[type][lang]} • ${subject}`

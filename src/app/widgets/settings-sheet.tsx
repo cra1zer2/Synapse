@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { NotificationPreferences } from '@/models/notification.model'
-import { AppDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
+import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { requestPushPermission, getNotificationPermissionStatus } from '@/services/notification.service'
 
 interface SettingsSheetProps {
@@ -20,8 +20,8 @@ interface SettingsSheetProps {
     isAddingAccount: boolean
     currentLang: AppLanguage
     onSelectLang: (lang: AppLanguage) => void
-    currentTheme: AppTheme
-    onSelectTheme: (theme: AppTheme) => void
+    currentTheme: any
+    onSelectTheme: any
     onLogout: () => void
     t: AppDictionary
 }
@@ -40,14 +40,16 @@ export function SettingsSheet({
     isAddingAccount,
     currentLang,
     onSelectLang,
-    currentTheme,
-    onSelectTheme,
     onLogout,
     t
 }: SettingsSheetProps) {
     const [showAddForm, setShowAddForm] = useState(false)
     const [showNotificationChannels, setShowNotificationChannels] = useState(false)
-    const [pushStatus, setPushStatus] = useState<string>('default')
+    const [pushStatus, setPushStatus] = useState<string>(() => getNotificationPermissionStatus())
+
+    const [dragOffset, setDragOffset] = useState(0)
+    const touchStartX = useRef(0)
+    const isSwiping = useRef(false)
 
     const accountsList = Array.isArray(savedAccounts) ? savedAccounts : []
     const activeAccount = accountsList.find((a) => a.isActive) || accountsList[0]
@@ -79,17 +81,31 @@ export function SettingsSheet({
         }
     })
 
-    useEffect(() => {
-        if (isOpen) {
-            setPushStatus(getNotificationPermissionStatus())
-            document.body.style.overflow = 'hidden'
-        } else {
-            document.body.style.overflow = ''
+    const handleTouchStart = (e: React.TouchEvent) => {
+        const clientX = e.touches[0].clientX
+        touchStartX.current = clientX
+        if (clientX < 60) {
+            isSwiping.current = true
         }
-        return () => {
-            document.body.style.overflow = ''
+    }
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isSwiping.current) return
+        const currentX = e.touches[0].clientX
+        const delta = currentX - touchStartX.current
+        if (delta > 0) {
+            setDragOffset(delta)
         }
-    }, [isOpen])
+    }
+
+    const handleTouchEnd = () => {
+        if (!isSwiping.current) return
+        isSwiping.current = false
+        if (dragOffset > 85) {
+            onClose()
+        }
+        setDragOffset(0)
+    }
 
     const handleTogglePushMaster = async (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -110,43 +126,52 @@ export function SettingsSheet({
 
     return (
         <div
-            onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{
+                transform: `translateX(${dragOffset}px)`,
+                transition: isSwiping.current ? 'none' : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
+            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250"
         >
-            <div
-                onClick={(e) => e.stopPropagation()}
-                className="bg-[var(--ios-bg)] rounded-3xl p-5 w-full max-w-lg shadow-2xl flex flex-col gap-4 max-h-[85vh] overflow-y-auto"
-            >
-                <div className="flex items-center justify-between">
-                    <h2 className="text-base font-bold text-[var(--ios-label)]">{t.settingsTitle}</h2>
-                    <button
-                        onClick={onClose}
-                        className="text-xs font-bold text-[var(--ios-blue)] active:opacity-70 px-2 py-1"
-                    >
-                        {t.done}
-                    </button>
-                </div>
+            <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
+                <button
+                    onClick={onClose}
+                    className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-medium active:opacity-70 -ml-1 py-1 pr-2"
+                >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                    <span>{t.done}</span>
+                </button>
 
-                <div className="bg-[var(--ios-card)] rounded-2xl p-4 border border-[var(--ios-separator)]/20 flex items-center gap-3.5 shadow-xs">
-                    <div className="w-11 h-11 rounded-full bg-[var(--ios-blue)] text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs">
+                <h2 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight">{t.settingsTitle}</h2>
+
+                <div className="w-8" />
+            </header>
+
+            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
+                <div className="bg-[var(--ios-card)] rounded-2xl p-4 border border-[var(--ios-border)] flex items-center gap-3.5 shadow-xs">
+                    <div className="w-11 h-11 rounded-full bg-[var(--ios-blue)] text-white flex items-center justify-center font-semibold text-base shrink-0 shadow-xs">
                         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                             <circle cx="12" cy="7" r="4" />
                         </svg>
                     </div>
                     <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-bold text-[var(--ios-label)] truncate">
+                        <h3 className="text-sm font-semibold text-[var(--ios-label)] truncate">
                             {displayName}
                         </h3>
-                        <p className="text-xs text-[var(--ios-secondary)] truncate mt-0.5">
+                        <p className="text-xs font-normal text-[var(--ios-secondary)] truncate mt-0.5">
                             {displaySubtitle}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-bold text-[var(--ios-secondary)] px-1">{t.accountSwitcher}</span>
-                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)]/20 overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]/20">
+                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">{t.accountSwitcher}</span>
+                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         {accountsList.map((acc) => (
                             <div
                                 key={acc.id}
@@ -154,20 +179,20 @@ export function SettingsSheet({
                                 className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ${acc.role === 'student' ? 'bg-[#007aff]' : 'bg-[#af52de]'
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0 ${acc.role === 'student' ? 'bg-[#007aff]' : 'bg-[#af52de]'
                                         }`}>
                                         {acc.role === 'student' ? 'U' : 'R'}
                                     </div>
                                     <div>
-                                        <h3 className="text-xs font-bold text-[var(--ios-label)]">{acc.profile?.fullName || acc.username}</h3>
-                                        <p className="text-[11px] text-[var(--ios-secondary)]">
+                                        <h3 className="text-xs font-semibold text-[var(--ios-label)]">{acc.profile?.fullName || acc.username}</h3>
+                                        <p className="text-[11px] font-normal text-[var(--ios-secondary)]">
                                             {acc.role === 'student' ? t.studentRole : t.parentRole} • {acc.username}
                                         </p>
                                     </div>
                                 </div>
 
                                 {acc.isActive ? (
-                                    <span className="text-xs font-bold text-[#34c759] bg-[#34c759]/15 px-2.5 py-0.5 rounded-full">
+                                    <span className="text-xs font-semibold text-[#34c759] bg-[#34c759]/15 px-2.5 py-0.5 rounded-full">
                                         Aktywne
                                     </span>
                                 ) : (
@@ -181,7 +206,7 @@ export function SettingsSheet({
                         <button
                             type="button"
                             onClick={() => setShowAddForm(!showAddForm)}
-                            className="w-full p-3.5 text-left text-xs font-bold text-[var(--ios-blue)] flex items-center justify-between hover:bg-[var(--ios-element)]/20 transition-colors"
+                            className="w-full p-3.5 text-left text-xs font-semibold text-[var(--ios-blue)] flex items-center justify-between hover:bg-[var(--ios-element)]/20 transition-colors"
                         >
                             <span>+ Dodaj kolejne konto</span>
                             <span>{showAddForm ? '▲' : '▼'}</span>
@@ -190,8 +215,8 @@ export function SettingsSheet({
                 </div>
 
                 {showAddForm && (
-                    <form onSubmit={onAddAccount} className="bg-[var(--ios-card)] rounded-2xl p-4 border border-[var(--ios-separator)]/20 shadow-xs flex flex-col gap-2.5">
-                        <span className="text-xs font-bold text-[var(--ios-label)]">Nowe konto</span>
+                    <form onSubmit={onAddAccount} className="bg-[var(--ios-card)] rounded-2xl p-4 border border-[var(--ios-border)] shadow-xs flex flex-col gap-2.5">
+                        <span className="text-xs font-semibold text-[var(--ios-label)]">Nowe konto</span>
                         <input
                             type="text"
                             placeholder="Login / ID"
@@ -211,7 +236,7 @@ export function SettingsSheet({
                         <button
                             type="submit"
                             disabled={isAddingAccount}
-                            className="w-full bg-[var(--ios-blue)] text-white text-xs font-bold py-2.5 rounded-xl disabled:opacity-50"
+                            className="w-full bg-[var(--ios-blue)] text-white text-xs font-semibold py-2.5 rounded-xl disabled:opacity-50"
                         >
                             {isAddingAccount ? 'Weryfikacja...' : 'Zapisz konto'}
                         </button>
@@ -219,37 +244,14 @@ export function SettingsSheet({
                 )}
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-bold text-[var(--ios-secondary)] px-1">{t.appTheme} & {t.appLanguage}</span>
-                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)]/20 overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]/20">
-                        <div className="p-3.5 flex items-center justify-between">
-                            <span className="text-xs font-medium text-[var(--ios-label)]">{t.appTheme}</span>
-                            <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-lg flex gap-0.5">
-                                {[
-                                    { id: 'system' as AppTheme, label: 'Auto' },
-                                    { id: 'light' as AppTheme, label: 'Jasny' },
-                                    { id: 'dark' as AppTheme, label: 'Ciemny' }
-                                ].map((th) => (
-                                    <button
-                                        key={th.id}
-                                        onClick={() => onSelectTheme(th.id)}
-                                        className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${currentTheme === th.id
-                                                ? 'bg-[var(--ios-card)] text-[var(--ios-label)] shadow-xs'
-                                                : 'text-[var(--ios-secondary)]'
-                                            }`}
-                                    >
-                                        {th.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
+                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">{t.appLanguage}</span>
+                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div className="p-3.5 flex items-center justify-between">
                             <span className="text-xs font-medium text-[var(--ios-label)]">{t.appLanguage}</span>
-                            <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-lg flex gap-0.5">
+                            <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex gap-0.5">
                                 {[
                                     { id: 'pl' as AppLanguage, label: 'PL' },
-                                    { id: 'en' as AppLanguage, label: 'EN' },
-                                    { id: 'ru' as AppLanguage, label: 'RU' }
+                                    { id: 'en' as AppLanguage, label: 'EN' }
                                 ].map((l) => (
                                     <button
                                         key={l.id}
@@ -268,8 +270,8 @@ export function SettingsSheet({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-bold text-[var(--ios-secondary)] px-1">Powiadomienia</span>
-                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)]/20 overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]/20">
+                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">Powiadomienia</span>
+                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div
                             onClick={() => setShowNotificationChannels(!showNotificationChannels)}
                             className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
@@ -279,11 +281,11 @@ export function SettingsSheet({
                                 <span className="text-xs text-[var(--ios-secondary)]">›</span>
                             </div>
 
-                            <div className="flex items-center gap-2.5 pl-2 border-l border-[var(--ios-separator)]/30">
+                            <div className="flex items-center gap-2.5 pl-2 border-l border-[var(--ios-separator)]">
                                 <button
                                     type="button"
                                     onClick={handleTogglePushMaster}
-                                    className={`text-[11px] font-bold px-3 py-1 rounded-full transition-all ${pushStatus === 'granted'
+                                    className={`text-[11px] font-semibold px-3 py-1 rounded-full transition-all ${pushStatus === 'granted'
                                             ? 'bg-[#34c759]/15 text-[#34c759]'
                                             : 'bg-[var(--ios-blue)] text-white shadow-xs'
                                         }`}
@@ -320,7 +322,7 @@ export function SettingsSheet({
 
                 <button
                     onClick={onLogout}
-                    className="w-full text-xs font-semibold text-[#ff3b30] bg-[var(--ios-card)] border border-[var(--ios-separator)]/20 py-3 rounded-2xl active:opacity-70 shadow-xs"
+                    className="w-full text-xs font-semibold text-[#ff3b30] bg-[var(--ios-card)] border border-[var(--ios-border)] py-3 rounded-2xl active:opacity-70 shadow-xs"
                 >
                     {t.logout}
                 </button>

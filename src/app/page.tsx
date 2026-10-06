@@ -16,7 +16,7 @@ import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
 import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
 import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
-import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
+import { getDictionary, AppLanguage } from '@/config/dictionary.config'
 
 import { AuthView } from './widgets/auth-view'
 import { ScheduleWidget } from './widgets/schedule-widget'
@@ -30,6 +30,21 @@ import { SettingsSheet } from './widgets/settings-sheet'
 import { TerminarzModal } from './widgets/terminarz-modal'
 
 type MainSection = 'schedule' | 'grades' | 'attendance' | 'messages'
+
+function IosSpinner({ className = 'w-3.5 h-3.5 text-[var(--ios-blue)]' }: { className?: string }) {
+  return (
+    <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none">
+      <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="1" />
+      <line x1="19.07" y1="4.93" x2="16.24" y2="7.76" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.875" />
+      <line x1="22" y1="12" x2="18" y2="12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.75" />
+      <line x1="19.07" y1="19.07" x2="16.24" y2="16.24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.625" />
+      <line x1="12" y1="22" x2="12" y2="18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.5" />
+      <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.375" />
+      <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.25" />
+      <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.125" />
+    </svg>
+  )
+}
 
 function getTodayDayName(): string {
   const dayMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -58,7 +73,6 @@ export default function Home() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [lang, setLang] = useState<AppLanguage>('pl')
-  const [theme, setTheme] = useState<AppTheme>('system')
 
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([])
   const [newAccUser, setNewAccUser] = useState('')
@@ -102,18 +116,6 @@ export default function Home() {
   const activeRequestCounter = useRef(0)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const t = getDictionary(lang)
-
-  const applyTheme = (targetTheme: AppTheme) => {
-    const root = document.documentElement
-    if (targetTheme === 'dark') {
-      root.classList.add('dark')
-    } else if (targetTheme === 'light') {
-      root.classList.remove('dark')
-    } else {
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.classList.add('dark')
-      else root.classList.remove('dark')
-    }
-  }
 
   const resolveSmartDefaultDay = useCallback((schedule: DaySchedule[]): string => {
     if (!Array.isArray(schedule) || schedule.length === 0) return 'Monday'
@@ -219,7 +221,6 @@ export default function Home() {
     const savedUser = localStorage.getItem('synapse_user') || ''
     const savedPass = localStorage.getItem('synapse_pass') || ''
     const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
-    const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
 
     if (loadedAccounts.length === 0 && savedUser && savedPass) {
       const isStudent = savedUser.trim().toLowerCase().endsWith('u')
@@ -249,9 +250,7 @@ export default function Home() {
 
     setUsername(effectiveUser)
     setPassword(effectivePass)
-    setLang(savedLang)
-    setTheme(savedTheme)
-    applyTheme(savedTheme)
+    setLang(savedLang === 'en' ? 'en' : 'pl')
 
     const hasAccount = Boolean(effectiveUser && effectivePass)
     setIsConfigured(hasAccount)
@@ -439,12 +438,6 @@ export default function Home() {
     }
   }
 
-  const handleSelectTheme = (newTheme: AppTheme) => {
-    setTheme(newTheme)
-    localStorage.setItem('synapse_theme', newTheme)
-    applyTheme(newTheme)
-  }
-
   const handleLogout = () => {
     localStorage.removeItem('synapse_user')
     localStorage.removeItem('synapse_pass')
@@ -535,13 +528,16 @@ export default function Home() {
 
   return (
     <div className="w-full min-h-screen bg-[var(--ios-bg)] flex flex-col">
-      <header className="sticky top-0 z-30 w-full pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] transition-colors">
+      <header className="sticky top-0 z-30 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] transition-colors">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-[var(--ios-label)]">Synapse</h1>
-            <p className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight">
-              {isUpdating ? t.updatingStatus : t.syncedStatus}
-            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {isUpdating && <IosSpinner className="w-3 h-3 text-[var(--ios-blue)]" />}
+              <p className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight">
+                {isUpdating ? t.updatingStatus : t.syncedStatus}
+              </p>
+            </div>
           </div>
 
           <button
@@ -719,8 +715,8 @@ export default function Home() {
         isAddingAccount={isAddingAcc}
         currentLang={lang}
         onSelectLang={handleSelectLanguage}
-        currentTheme={theme}
-        onSelectTheme={handleSelectTheme}
+        currentTheme="system"
+        onSelectTheme={() => { }}
         onLogout={handleLogout}
         t={t}
       />

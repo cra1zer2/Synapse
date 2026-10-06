@@ -1,5 +1,5 @@
-import Librus from 'librus-api'
 import { AbsenceDetail, SubjectAttendance, AttendanceResult } from '@/models/attendance.model'
+import { getAuthenticatedClient } from '@/services/librus.service'
 import { translateBatch } from '@/services/translation.service'
 import { formatDisplayDate } from '@/utils/date.util'
 
@@ -19,8 +19,7 @@ export async function fetchAttendanceMetrics(
     translate: boolean = false
 ): Promise<{ success: boolean; data?: AttendanceResult; error?: string }> {
     try {
-        const client = new Librus()
-        await client.authorize(username, pass)
+        const client = await getAuthenticatedClient(username, pass)
 
         const now = new Date()
         const currentYear = now.getFullYear()

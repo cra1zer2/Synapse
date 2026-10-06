@@ -1,5 +1,5 @@
-import Librus from 'librus-api'
 import { JustificationPayload, GatewayResponse } from '@/models/justification.model'
+import { getAuthenticatedClient } from '@/services/librus.service'
 import { extractCookieHeader } from '@/utils/cookie.util'
 import { safeUnwrapResponse } from '@/utils/serializer.util'
 
@@ -10,8 +10,7 @@ export async function fetchJustificationsHistory(
     dateTo: string
 ): Promise<GatewayResponse<any>> {
     try {
-        const client = new Librus()
-        await client.authorize(username, pass)
+        const client = await getAuthenticatedClient(username, pass)
         const cookieHeader = extractCookieHeader(client)
 
         const url = `https://synergia.librus.pl/gateway/api/2.0/Justifications?dateFrom=${dateFrom}&dateTo=${dateTo}`
@@ -57,8 +56,7 @@ export async function submitJustification(
     payload: JustificationPayload
 ): Promise<GatewayResponse<any>> {
     try {
-        const client = new Librus()
-        await client.authorize(username, pass)
+        const client = await getAuthenticatedClient(username, pass)
         const cookieHeader = extractCookieHeader(client)
 
         const url = 'https://synergia.librus.pl/gateway/api/2.0/Justifications'

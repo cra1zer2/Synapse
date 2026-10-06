@@ -1,15 +1,14 @@
-import Librus from 'librus-api'
 import { writeFile } from 'fs/promises'
 import path from 'path'
 import { BenchmarkItem, BenchmarkReport } from '@/models/benchmark.model'
+import { getAuthenticatedClient } from '@/services/librus.service'
 
 export async function runLibrusBenchmark(username: string, pass: string): Promise<BenchmarkReport> {
     const items: BenchmarkItem[] = []
     const overallStart = performance.now()
 
     const authStart = performance.now()
-    const client = new Librus()
-    await client.authorize(username, pass)
+    const client = await getAuthenticatedClient(username, pass)
     const authorizationDurationMs = Math.round(performance.now() - authStart)
 
     const measure = async (name: string, fn: () => Promise<any>) => {

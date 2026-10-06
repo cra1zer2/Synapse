@@ -1,5 +1,5 @@
-import Librus from 'librus-api'
 import { GradeItem, SubjectGrades, GradesResult, FixOption, SubjectWarning } from '@/models/grade.model'
+import { getAuthenticatedClient } from '@/services/librus.service'
 import { translateBatch } from '@/services/translation.service'
 
 function parseGradeValue(gradeStr: string): number | null {
@@ -138,8 +138,7 @@ export async function fetchStudentGrades(
     translate: boolean = false
 ): Promise<{ success: boolean; data?: GradesResult; error?: string }> {
     try {
-        const client = new Librus()
-        await client.authorize(username, pass)
+        const client = await getAuthenticatedClient(username, pass)
 
         const rawGrades = await client.info.getGrades()
         const subjectsMap: Record<string, SubjectGrades> = {}

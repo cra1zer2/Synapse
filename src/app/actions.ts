@@ -1,7 +1,6 @@
 'use server'
 
-import Librus from 'librus-api'
-import { runFullLibrusDiagnostics, testGatewayRequest } from '@/services/librus.service'
+import { runFullLibrusDiagnostics, testGatewayRequest, getAuthenticatedClient } from '@/services/librus.service'
 import { fetchJustificationsHistory, submitJustification } from '@/services/justification.service'
 import { fetchSmartTimetable } from '@/services/timetable.service'
 import { fetchStudentGrades } from '@/services/grade.service'
@@ -90,8 +89,7 @@ export async function getAttendanceAction(username: string, pass: string, transl
 
 export async function getStudentProfileAction(username: string, pass: string): Promise<{ success: boolean; data?: StudentProfile; error?: string }> {
     try {
-        const client = new Librus()
-        await client.authorize(username, pass)
+        const client = await getAuthenticatedClient(username, pass)
 
         const [accountInfo, luckyNum] = await Promise.all([
             client.info.getAccountInfo().catch(() => null),

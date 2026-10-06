@@ -1,4 +1,3 @@
-import Librus from 'librus-api'
 import {
     LessonItem,
     DaySchedule,
@@ -6,6 +5,7 @@ import {
     TimetableEvent,
     SmartTimetableResult
 } from '@/models/timetable.model'
+import { getAuthenticatedClient } from '@/services/librus.service'
 import { translateBatch } from '@/services/translation.service'
 import { formatDisplayDate, extractTimeInterval } from '@/utils/date.util'
 import { parseLessonTimeRange } from '@/utils/time.util'
@@ -83,8 +83,7 @@ export async function fetchSmartTimetable(
     targetDateIso?: string
 ): Promise<{ success: boolean; data?: SmartTimetableResult; error?: string }> {
     try {
-        const client = new Librus()
-        await client.authorize(username, pass)
+        const client = await getAuthenticatedClient(username, pass)
 
         const pivotDate = targetDateIso ? new Date(targetDateIso) : new Date()
         const { monday, friday, weekDates } = getWeekDates(pivotDate)

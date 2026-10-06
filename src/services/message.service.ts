@@ -1,11 +1,10 @@
-import Librus from 'librus-api'
 import { MessageItem, AnnouncementItem, ReceiverItem, MessagesActionResult } from '@/models/message.model'
+import { getAuthenticatedClient } from '@/services/librus.service'
 import { safeUnwrapResponse } from '@/utils/serializer.util'
 
 export async function fetchMessagesBundle(username: string, pass: string): Promise<MessagesActionResult> {
     try {
-        const client = new Librus()
-        await client.authorize(username, pass)
+        const client = await getAuthenticatedClient(username, pass)
 
         const [rawInbox, rawAnnouncements, rawReceivers] = await Promise.all([
             client.inbox.listInbox(5).catch(() => []),
@@ -59,8 +58,7 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
 
 export async function fetchMessageContent(username: string, pass: string, messageId: number): Promise<{ success: boolean; content?: string; error?: string }> {
     try {
-        const client = new Librus()
-        await client.authorize(username, pass)
+        const client = await getAuthenticatedClient(username, pass)
 
         const raw = await client.inbox.getMessage(5, messageId)
         const unwrapped = safeUnwrapResponse(raw)
@@ -80,8 +78,7 @@ export async function sendMessageToUser(
     body: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const client = new Librus()
-        await client.authorize(username, pass)
+        const client = await getAuthenticatedClient(username, pass)
 
         await client.inbox.sendMessage(receiverId, title, body)
         return { success: true }

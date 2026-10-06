@@ -3,32 +3,30 @@
 :root {
   --font-apple: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
   --ios-bg: #f2f2f7;
-  --ios-card: rgba(255, 255, 255, 0.85);
+  --ios-card: #ffffff;
   --ios-card-solid: #ffffff;
   --ios-element: #e5e5ea;
   --ios-input: rgba(118, 118, 128, 0.12);
   --ios-separator: rgba(60, 60, 67, 0.15);
-  --ios-border: rgba(0, 0, 0, 0.06);
   --ios-label: #000000;
   --ios-secondary: #8e8e93;
   --ios-tertiary: #c7c7cc;
   --ios-blue: #007aff;
   --ios-room-bg: rgba(0, 122, 255, 0.08);
   --ios-room-text: #007aff;
-  --ios-shadow: 0 2px 14px rgba(0, 0, 0, 0.04);
+  --ios-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   --ios-switch-off: #e5e5ea;
 }
 
 .dark {
   --ios-bg: #000000;
-  --ios-card: rgba(28, 28, 30, 0.85);
+  --ios-card: #1c1c1e;
   --ios-card-solid: #1c1c1e;
   --ios-element: #2c2c2e;
   --ios-input: rgba(118, 118, 128, 0.24);
-  --ios-separator: rgba(255, 255, 255, 0.1);
-  --ios-border: rgba(255, 255, 255, 0.1);
+  --ios-separator: rgba(255, 255, 255, 0.08);
   --ios-label: #ffffff;
-  --ios-secondary: #98989d;
+  --ios-secondary: #8e8e93;
   --ios-tertiary: #636366;
   --ios-blue: #0a84ff;
   --ios-room-bg: rgba(10, 132, 255, 0.15);

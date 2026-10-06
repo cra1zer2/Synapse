@@ -179,7 +179,7 @@ export function SettingsSheet({
             </header>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
-                <div className="bg-[var(--ios-card)] rounded-2xl p-4 border border-[var(--ios-border)] flex items-center gap-3.5 shadow-xs">
+                <div className="bg-[var(--ios-card)] rounded-[22px] p-4 flex items-center gap-3.5 shadow-xs">
                     <div className="w-11 h-11 rounded-full bg-[var(--ios-blue)] text-white flex items-center justify-center font-semibold text-base shrink-0 shadow-xs">
                         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -198,12 +198,12 @@ export function SettingsSheet({
 
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">{t.accountSwitcher}</span>
-                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                    <div className="bg-[var(--ios-card)] rounded-[22px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         {accountsList.map((acc) => (
                             <div
                                 key={acc.id}
                                 onClick={() => onSwitchAccount(acc)}
-                                className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
+                                className="p-4 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
                             >
                                 <div className="flex items-center gap-3">
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0 ${acc.role === 'student' ? 'bg-[#007aff]' : 'bg-[#af52de]'
@@ -233,7 +233,7 @@ export function SettingsSheet({
                         <button
                             type="button"
                             onClick={() => setShowAddForm(!showAddForm)}
-                            className="w-full p-3.5 text-left text-xs font-semibold text-[var(--ios-blue)] flex items-center justify-between hover:bg-[var(--ios-element)]/20 transition-colors"
+                            className="w-full p-4 text-left text-xs font-semibold text-[var(--ios-blue)] flex items-center justify-between hover:bg-[var(--ios-element)]/20 transition-colors"
                         >
                             <span>+ Dodaj kolejne konto</span>
                             <span>{showAddForm ? '▲' : '▼'}</span>
@@ -242,7 +242,7 @@ export function SettingsSheet({
                 </div>
 
                 {showAddForm && (
-                    <form onSubmit={onAddAccount} className="bg-[var(--ios-card)] rounded-2xl p-4 border border-[var(--ios-border)] shadow-xs flex flex-col gap-2.5">
+                    <form onSubmit={onAddAccount} className="bg-[var(--ios-card)] rounded-[22px] p-4 shadow-xs flex flex-col gap-2.5">
                         <span className="text-xs font-semibold text-[var(--ios-label)]">Nowe konto</span>
                         <input
                             type="text"
@@ -272,8 +272,8 @@ export function SettingsSheet({
 
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">{t.appTheme}</span>
-                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-xs">
-                        <div className="p-3.5 flex items-center justify-between">
+                    <div className="bg-[var(--ios-card)] rounded-[22px] overflow-hidden shadow-xs">
+                        <div className="p-4 flex items-center justify-between">
                             <span className="text-xs font-medium text-[var(--ios-label)]">{t.appTheme}</span>
                             <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex gap-0.5">
                                 {[
@@ -299,8 +299,8 @@ export function SettingsSheet({
 
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">{t.appLanguage}</span>
-                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
-                        <div className="p-3.5 flex items-center justify-between">
+                    <div className="bg-[var(--ios-card)] rounded-[22px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                        <div className="p-4 flex items-center justify-between">
                             <span className="text-xs font-medium text-[var(--ios-label)]">{t.appLanguage}</span>
                             <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex gap-0.5">
                                 {[
@@ -325,10 +325,10 @@ export function SettingsSheet({
 
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">Powiadomienia</span>
-                    <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                    <div className="bg-[var(--ios-card)] rounded-[22px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div
                             onClick={() => setShowNotificationChannels(!showNotificationChannels)}
-                            className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
+                            className="p-4 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
                         >
                             <div className="flex items-center gap-2">
                                 <span className="text-xs font-medium text-[var(--ios-label)]">Konfiguracja powiadomień</span>
@@ -350,7 +350,7 @@ export function SettingsSheet({
                         </div>
 
                         {showNotificationChannels && (
-                            <div className="p-3.5 bg-[var(--ios-bg)]/40 flex flex-col gap-3 animate-in fade-in">
+                            <div className="p-4 bg-[var(--ios-bg)]/40 flex flex-col gap-3 animate-in fade-in">
                                 {[
                                     { key: 'grades' as const, label: 'Oceny (nowe i zmiany)' },
                                     { key: 'timetableChanges' as const, label: 'Zastępstwa i odwołania lekcji' },
@@ -374,7 +374,7 @@ export function SettingsSheet({
 
                 <button
                     onClick={onLogout}
-                    className="w-full text-xs font-semibold text-[#ff3b30] bg-[var(--ios-card)] border border-[var(--ios-border)] py-3 rounded-2xl active:opacity-70 shadow-xs"
+                    className="w-full text-xs font-semibold text-[#ff3b30] bg-[var(--ios-card)] py-3.5 rounded-[22px] active:opacity-70 shadow-xs"
                 >
                     {t.logout}
                 </button>

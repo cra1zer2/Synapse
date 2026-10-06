@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { SmartTimetableResult, DaySchedule, LessonItem } from '@/models/timetable.model'
 import { AppDictionary } from '@/config/dictionary.config'
 import {
@@ -51,6 +51,7 @@ export function ScheduleWidget({
     t
 }: ScheduleWidgetProps) {
     const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
+    const activeLessonRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -58,6 +59,12 @@ export function ScheduleWidget({
         }, 15000)
         return () => clearInterval(timer)
     }, [])
+
+    useEffect(() => {
+        if (activeLessonRef.current) {
+            activeLessonRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+    }, [selectedDay])
 
     const currentDaySchedule: DaySchedule | undefined = timetableData.schedule.find(
         (d) => d.dayName === selectedDay
@@ -111,7 +118,7 @@ export function ScheduleWidget({
 
     return (
         <section className="w-full flex flex-col gap-3 min-h-[500px]">
-            <div className="bg-[var(--ios-card)] rounded-2xl shadow-[var(--ios-shadow)] border border-[var(--ios-border)] backdrop-blur-xl overflow-hidden">
+            <div className="bg-[var(--ios-card)] rounded-[22px] overflow-hidden shadow-xs">
                 <div className="px-4 py-2.5 flex items-center justify-between border-b border-[var(--ios-separator)]">
                     <button
                         onClick={() => onShiftWeek(-7)}
@@ -187,8 +194,8 @@ export function ScheduleWidget({
                                 key={day.dayName}
                                 onClick={() => onSelectDay(day.dayName)}
                                 className={`py-2 rounded-xl text-xs font-medium flex flex-col items-center justify-center transition-all ${isSelected
-                                    ? 'bg-[var(--ios-blue)] text-white shadow-xs'
-                                    : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]'
+                                        ? 'bg-[var(--ios-blue)] text-white shadow-xs'
+                                        : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]'
                                     }`}
                             >
                                 <span className="text-[10px] uppercase font-semibold opacity-85">{day.dayName.slice(0, 3)}</span>
@@ -205,7 +212,7 @@ export function ScheduleWidget({
             </div>
 
             {isLoadingWeek ? (
-                <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-border)] backdrop-blur-xl flex flex-col items-center justify-center gap-3">
+                <div className="bg-[var(--ios-card)] rounded-[22px] p-12 flex flex-col items-center justify-center gap-3">
                     <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
                     <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.loadingTimetable}</p>
                 </div>
@@ -217,10 +224,10 @@ export function ScheduleWidget({
                                 <div
                                     key={idx}
                                     className={`p-3 rounded-2xl text-xs font-medium flex items-center gap-2.5 ${ev.category === 'holiday'
-                                        ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
-                                        : ev.category === 'exam'
-                                            ? 'bg-[#34c759]/10 text-[#34c759]'
-                                            : 'bg-[#007aff]/10 text-[#007aff]'
+                                            ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
+                                            : ev.category === 'exam'
+                                                ? 'bg-[#34c759]/10 text-[#34c759]'
+                                                : 'bg-[#007aff]/10 text-[#007aff]'
                                         }`}
                                 >
                                     <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
@@ -230,7 +237,7 @@ export function ScheduleWidget({
                         </div>
                     )}
 
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2.5">
                         {currentDaySchedule && currentDaySchedule.lessons && currentDaySchedule.lessons.length > 0 ? (
                             currentDaySchedule.lessons.map((lesson, idx) => {
                                 const nextLesson = currentDaySchedule.lessons[idx + 1]
@@ -244,9 +251,13 @@ export function ScheduleWidget({
                                 const shouldShowCountdown = breakActive && breakRemaining > 0
 
                                 return (
-                                    <div key={`${lesson.number}-${lesson.subject}-${lesson.time}`} className="flex flex-col">
+                                    <div
+                                        key={`${lesson.number}-${lesson.subject}-${lesson.time}`}
+                                        ref={liveState === 'active' ? activeLessonRef : null}
+                                        className="flex flex-col scroll-mt-24"
+                                    >
                                         <article
-                                            className={`w-full bg-[var(--ios-card)] backdrop-blur-xl rounded-2xl p-3.5 border border-[var(--ios-border)] shadow-[var(--ios-shadow)] flex flex-col gap-1.5 transition-all ${liveState === 'passed' ? 'opacity-55' : 'opacity-100'
+                                            className={`w-full bg-[var(--ios-card)] rounded-[20px] p-4 flex flex-col gap-1.5 transition-all ${liveState === 'passed' ? 'opacity-50' : 'opacity-100'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between">
@@ -314,7 +325,7 @@ export function ScheduleWidget({
                                 )
                             })
                         ) : (
-                            <div className="bg-[var(--ios-card)] backdrop-blur-xl rounded-2xl p-10 border border-[var(--ios-border)] text-center text-xs font-medium text-[var(--ios-secondary)]">
+                            <div className="bg-[var(--ios-card)] rounded-[22px] p-10 text-center text-xs font-medium text-[var(--ios-secondary)]">
                                 {t.noLessonsDay}
                             </div>
                         )}

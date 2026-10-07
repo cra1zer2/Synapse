@@ -15,25 +15,43 @@ export function useBodyScrollLock(isLocked: boolean): void {
             document.body.style.width = '100%'
             document.body.style.overflow = 'hidden'
         } else {
-            const prevY = Math.abs(parseInt(document.body.style.top || '0', 10)) || scrollYRef.current
+            const prevY = scrollYRef.current || Math.abs(parseInt(document.body.style.top || '0', 10))
+            const originalScrollBehavior = document.documentElement.style.scrollBehavior
+
+            document.documentElement.style.scrollBehavior = 'auto'
             document.body.style.position = ''
             document.body.style.top = ''
             document.body.style.width = ''
             document.body.style.overflow = ''
-            if (prevY > 0) {
-                window.scrollTo(0, prevY)
-            }
+
+            window.scrollTo({
+                top: prevY,
+                left: 0,
+                behavior: 'instant'
+            })
+
+            document.documentElement.style.scrollBehavior = originalScrollBehavior
         }
 
         return () => {
-            const prevY = Math.abs(parseInt(document.body.style.top || '0', 10)) || scrollYRef.current
+            const prevY = scrollYRef.current || Math.abs(parseInt(document.body.style.top || '0', 10))
+            const originalScrollBehavior = document.documentElement.style.scrollBehavior
+
+            document.documentElement.style.scrollBehavior = 'auto'
             document.body.style.position = ''
             document.body.style.top = ''
             document.body.style.width = ''
             document.body.style.overflow = ''
+
             if (isLocked && prevY > 0) {
-                window.scrollTo(0, prevY)
+                window.scrollTo({
+                    top: prevY,
+                    left: 0,
+                    behavior: 'instant'
+                })
             }
+
+            document.documentElement.style.scrollBehavior = originalScrollBehavior
         }
     }, [isLocked])
 }

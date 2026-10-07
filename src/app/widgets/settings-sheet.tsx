@@ -25,6 +25,8 @@ interface SettingsSheetProps {
     onSelectTheme: (theme: AppTheme) => void
     textClamp: TextClampOption
     onSelectTextClamp: (clamp: TextClampOption) => void
+    ignoreGradeModifiers: boolean
+    onToggleIgnoreGradeModifiers: (val: boolean) => void
     onLogout: () => void
     t: AppDictionary
 }
@@ -89,11 +91,13 @@ export function SettingsSheet({
     onSelectTheme,
     textClamp,
     onSelectTextClamp,
+    ignoreGradeModifiers,
+    onToggleIgnoreGradeModifiers,
     onLogout,
     t
 }: SettingsSheetProps) {
     const [showAddForm, setShowAddForm] = useState(false)
-    const [showAccessibility, setShowAccessibility] = useState(false)
+    const [showAdvanced, setShowAdvanced] = useState(false)
     const [isDismissing, setIsDismissing] = useState(false)
     const [isSubDismissing, setIsSubDismissing] = useState(false)
     const [pushStatus, setPushStatus] = useState<string>(() => getNotificationPermissionStatus())
@@ -150,7 +154,7 @@ export function SettingsSheet({
         setTimeout(() => {
             setIsSubDismissing(false)
             setSubDragOffset(0)
-            setShowAccessibility(false)
+            setShowAdvanced(false)
         }, 320)
     }
 
@@ -437,11 +441,11 @@ export function SettingsSheet({
 
                     <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div
-                            onClick={() => setShowAccessibility(true)}
+                            onClick={() => setShowAdvanced(true)}
                             className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
                         >
                             <span className="text-xs font-medium text-[var(--ios-label)]">
-                                {t.accessibilityTitle}
+                                {t.advancedTitle}
                             </span>
 
                             <span className="text-xs text-[var(--ios-secondary)] font-medium">›</span>
@@ -461,7 +465,7 @@ export function SettingsSheet({
                 </div>
             </div>
 
-            {showAccessibility && (
+            {showAdvanced && (
                 <div
                     onTouchStart={handleSubTouchStart}
                     onTouchMove={handleSubTouchMove}
@@ -484,7 +488,7 @@ export function SettingsSheet({
                         </button>
 
                         <h2 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight">
-                            {t.accessibilityTitle}
+                            {t.advancedTitle}
                         </h2>
 
                         <div className="w-24" />
@@ -510,6 +514,30 @@ export function SettingsSheet({
                                     <IosSwitch
                                         checked={textClamp === '1'}
                                         onChange={() => onSelectTextClamp(textClamp === '1' ? 'full' : '1')}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                                {t.gradesCalcSectionTitle}
+                            </span>
+
+                            <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                                <div className="p-3.5 flex items-center justify-between gap-3">
+                                    <div className="min-w-0 pr-2">
+                                        <p className="text-xs font-medium text-[var(--ios-label)]">
+                                            {t.ignoreModifiersLabel}
+                                        </p>
+                                        <p className="text-[11px] text-[var(--ios-secondary)] mt-0.5 leading-snug">
+                                            {t.ignoreModifiersDescription}
+                                        </p>
+                                    </div>
+
+                                    <IosSwitch
+                                        checked={ignoreGradeModifiers}
+                                        onChange={() => onToggleIgnoreGradeModifiers(!ignoreGradeModifiers)}
                                     />
                                 </div>
                             </div>

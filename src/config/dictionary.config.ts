@@ -73,8 +73,12 @@ export interface AppDictionary {
     pushEnabled: string
     pushEnableAction: string
     accessibilityTitle: string
+    advancedTitle: string
     systemSection: string
     displaySectionTitle: string
+    gradesCalcSectionTitle: string
+    ignoreModifiersLabel: string
+    ignoreModifiersDescription: string
     onLabel: string
     offLabel: string
     textClampLabel: string
@@ -190,8 +194,12 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             pushEnabled: 'Enabled',
             pushEnableAction: 'Enable',
             accessibilityTitle: 'Accessibility',
+            advancedTitle: 'Advanced',
             systemSection: 'System',
             displaySectionTitle: 'Display & Layout',
+            gradesCalcSectionTitle: 'Grade Calculations',
+            ignoreModifiersLabel: 'Ignore pluses and minuses',
+            ignoreModifiersDescription: 'Calculate GPA from base grades (e.g. 4+ and 4- as 4)',
             onLabel: 'On',
             offLabel: 'Off',
             textClampLabel: 'Single-line subject names',
@@ -306,8 +314,12 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         pushEnabled: 'Włączone',
         pushEnableAction: 'Włącz',
         accessibilityTitle: 'Dostępność',
+        advancedTitle: 'Zaawansowane',
         systemSection: 'System',
         displaySectionTitle: 'Ekran i układ',
+        gradesCalcSectionTitle: 'Kalkulator ocen',
+        ignoreModifiersLabel: 'Ignoruj plusy i minusy',
+        ignoreModifiersDescription: 'Obliczaj średnią z bazowych ocen (np. 4+ i 4- jako 4)',
         onLabel: 'Wł.',
         offLabel: 'Wył.',
         textClampLabel: 'Skracanie nazw przedmiotów',
@@ -340,7 +352,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         breakCountdownLabel: (m: number) => `Przerwa • pozostało ${m} min`,
         breakUpcomingLabel: (m: number) => `Kolejna przerwa • ${m} min`,
         replyAction: 'Odpowiedz',
-        searchMessagesPlaceholder: 'Szukaj в wiadomościach...',
+        searchMessagesPlaceholder: 'Szukaj w wiadomościach...',
         writeNewMessage: 'Napisz',
         newMessageTitle: 'Nowa wiadomość',
         backToMessages: 'Wiadomości',

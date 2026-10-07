@@ -81,6 +81,7 @@ export default function Home() {
   const [lang, setLang] = useState<AppLanguage>('pl')
   const [theme, setTheme] = useState<AppTheme>('system')
   const [textClamp, setTextClamp] = useState<TextClampOption>('full')
+  const [ignoreGradeModifiers, setIgnoreGradeModifiers] = useState<boolean>(false)
   const [activeSection, setActiveSection] = useState<MainSection>('schedule')
   const [isCalendarPinned, setIsCalendarPinned] = useState(false)
 
@@ -138,9 +139,11 @@ export default function Home() {
     const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
     const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
     const savedClamp = (localStorage.getItem('synapse_text_clamp') as TextClampOption) || 'full'
+    const savedIgnore = localStorage.getItem('synapse_ignore_modifiers') === 'true'
     setLang(savedLang)
     setTheme(savedTheme)
     setTextClamp(savedClamp)
+    setIgnoreGradeModifiers(savedIgnore)
     applyTheme(savedTheme)
   }, [applyTheme])
 
@@ -190,6 +193,11 @@ export default function Home() {
   const handleSelectTextClamp = (clamp: TextClampOption) => {
     setTextClamp(clamp)
     localStorage.setItem('synapse_text_clamp', clamp)
+  }
+
+  const handleToggleIgnoreGradeModifiers = (val: boolean) => {
+    setIgnoreGradeModifiers(val)
+    localStorage.setItem('synapse_ignore_modifiers', String(val))
   }
 
   const handleSelectDay = (dayName: string) => {
@@ -387,6 +395,7 @@ export default function Home() {
         {activeSection === 'grades' && timetable.gradesData && (
           <GradesWidget
             gradesData={timetable.gradesData}
+            ignoreGradeModifiers={ignoreGradeModifiers}
             onSelectGrade={setSelectedGrade}
             onSelectWarning={setSelectedWarningSubject}
             t={t}
@@ -520,6 +529,8 @@ export default function Home() {
         onSelectTheme={handleSelectTheme}
         textClamp={textClamp}
         onSelectTextClamp={handleSelectTextClamp}
+        ignoreGradeModifiers={ignoreGradeModifiers}
+        onToggleIgnoreGradeModifiers={handleToggleIgnoreGradeModifiers}
         onLogout={account.handleLogout}
         t={t}
       />

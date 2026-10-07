@@ -1,22 +1,16 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import {
-  getSmartTimetableAction,
-  getStudentGradesAction,
-  getAttendanceAction,
-  getStudentProfileAction,
-  getMessagesAndAnnouncementsAction,
-  readMessageAction,
-  sendMessageAction,
-  createJustificationAction
-} from './actions'
-import { SmartTimetableResult, DaySchedule } from '@/models/timetable.model'
-import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
-import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
-import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
-import { StudentProfile, SavedAccount } from '@/models/account.model'
+import { useState, useEffect, useCallback } from 'react'
+import { createJustificationAction } from './actions'
+import { DaySchedule } from '@/models/timetable.model'
+import { GradeItem, SubjectGrades } from '@/models/grade.model'
+import { SubjectAttendance } from '@/models/attendance.model'
 import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
+
+import { useAccountSession } from '@/utils/account.hook'
+import { useTimetableSync } from '@/utils/timetable-sync.hook'
+import { useMessagesInbox, MainSection } from '@/utils/messages.hook'
+import { useBodyScrollLock } from '@/utils/scroll-lock.util'
 
 import { AuthView } from './widgets/auth-view'
 import { ScheduleWidget } from './widgets/schedule-widget'
@@ -29,7 +23,6 @@ import { GradeModal } from './widgets/grade-modal'
 import { SettingsSheet } from './widgets/settings-sheet'
 import { TerminarzModal } from './widgets/terminarz-modal'
 
-export type MainSection = 'schedule' | 'grades' | 'attendance' | 'messages'
 export type TextClampOption = 'full' | '1' | '2'
 
 function IosSpinner({ className = 'w-3.5 h-3.5 text-[var(--ios-blue)]' }: { className?: string }) {
@@ -45,27 +38,6 @@ function IosSpinner({ className = 'w-3.5 h-3.5 text-[var(--ios-blue)]' }: { clas
       <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.125" />
     </svg>
   )
-}
-
-function getTodayDayName(): string {
-  const dayMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  const name = dayMap[new Date().getDay()]
-  return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(name) ? name : 'Monday'
-}
-
-function getInitialWeekPivot(): string {
-  const now = new Date()
-  const day = now.getDay()
-  const target = new Date(now)
-
-  if (day === 6) target.setDate(now.getDate() + 2)
-  else if (day === 0) target.setDate(now.getDate() + 1)
-  else target.setDate(now.getDate() + (1 - day))
-
-  const y = target.getFullYear()
-  const m = String(target.getMonth() + 1).padStart(2, '0')
-  const d = String(target.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
 }
 
 function getDayIndicatorColor(day: DaySchedule): string | null {
@@ -106,46 +78,12 @@ function getDayAbbr(dayName: string, lang: AppLanguage): string {
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
-  const [isConfigured, setIsConfigured] = useState(false)
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
   const [lang, setLang] = useState<AppLanguage>('pl')
   const [theme, setTheme] = useState<AppTheme>('system')
   const [textClamp, setTextClamp] = useState<TextClampOption>('full')
-
-  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([])
-  const [newAccUser, setNewAccUser] = useState('')
-  const [newAccPass, setNewAccPass] = useState('')
-  const [isAddingAcc, setIsAddingAcc] = useState(false)
-
-  const [authStep, setAuthStep] = useState<'input' | 'verifying' | 'preview'>('input')
-  const [verifiedCandidate, setVerifiedCandidate] = useState<StudentProfile | null>(null)
-  const [authError, setAuthError] = useState<string | null>(null)
-
-  const [isUpdating, setIsUpdating] = useState(false)
-  const [isLoadingWeek, setIsLoadingWeek] = useState(false)
-  const [hasNewUpdate, setHasNewUpdate] = useState(false)
   const [activeSection, setActiveSection] = useState<MainSection>('schedule')
   const [isCalendarPinned, setIsCalendarPinned] = useState(false)
 
-  const [currentWeekPivot, setCurrentWeekPivot] = useState(getInitialWeekPivot)
-  const [profile, setProfile] = useState<StudentProfile | null>(null)
-  const [timetableData, setTimetableData] = useState<SmartTimetableResult | null>(null)
-  const [gradesData, setGradesData] = useState<GradesResult | null>(null)
-  const [attendanceData, setAttendanceData] = useState<AttendanceResult | null>(null)
-  const [messages, setMessages] = useState<MessageItem[]>([])
-  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([])
-  const [receivers, setReceivers] = useState<ReceiverItem[]>([])
-  const [hasLoadedMessages, setHasLoadedMessages] = useState(false)
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
-
-  const [pendingSnapshot, setPendingSnapshot] = useState<{
-    t: SmartTimetableResult
-    g: GradesResult
-    a: AttendanceResult
-  } | null>(null)
-
-  const [selectedDay, setSelectedDay] = useState<string>(getTodayDayName)
   const [selectedGrade, setSelectedGrade] = useState<GradeItem | null>(null)
   const [selectedWarningSubject, setSelectedWarningSubject] = useState<SubjectGrades | null>(null)
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<SubjectAttendance | null>(null)
@@ -153,14 +91,7 @@ export default function Home() {
   const [showExcuseMatrix, setShowExcuseMatrix] = useState(false)
   const [showTerminarz, setShowTerminarz] = useState(false)
 
-  const weekCacheRef = useRef<Record<string, SmartTimetableResult>>({})
-  const activeRequestCounter = useRef(0)
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const t = getDictionary(lang)
-
-  const currentDaySchedule = timetableData?.schedule.find((d) => d.dayName === selectedDay)
-  const currentDayLessonCount = currentDaySchedule?.lessons.length || 0
-  const canPinCalendar = currentDayLessonCount >= 5
 
   const applyTheme = useCallback((targetTheme: AppTheme) => {
     const root = document.documentElement
@@ -177,16 +108,49 @@ export default function Home() {
     }
   }, [])
 
+  const account = useAccountSession({ lang, t })
+
+  const timetable = useTimetableSync({
+    username: account.username,
+    password: account.password,
+    lang,
+    isConfigured: account.isConfigured
+  })
+
+  const messagesInbox = useMessagesInbox({
+    username: account.username,
+    password: account.password,
+    activeSection
+  })
+
+  const isAnyOverlayActive =
+    showSettings ||
+    showExcuseMatrix ||
+    showTerminarz ||
+    Boolean(selectedSubjectDetail) ||
+    Boolean(selectedGrade) ||
+    Boolean(selectedWarningSubject)
+
+  useBodyScrollLock(isAnyOverlayActive)
+
+  useEffect(() => {
+    setMounted(true)
+    const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
+    const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
+    const savedClamp = (localStorage.getItem('synapse_text_clamp') as TextClampOption) || 'full'
+    setLang(savedLang)
+    setTheme(savedTheme)
+    setTextClamp(savedClamp)
+    applyTheme(savedTheme)
+  }, [applyTheme])
+
   useEffect(() => {
     if (theme !== 'system') return
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     const handler = (e: MediaQueryListEvent) => {
       const root = document.documentElement
-      if (e.matches) {
-        root.classList.add('dark')
-      } else {
-        root.classList.remove('dark')
-      }
+      if (e.matches) root.classList.add('dark')
+      else root.classList.remove('dark')
     }
     mediaQuery.addEventListener('change', handler)
     return () => mediaQuery.removeEventListener('change', handler)
@@ -208,331 +172,11 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const resolveSmartDefaultDay = useCallback((schedule: DaySchedule[]): string => {
-    if (!Array.isArray(schedule) || schedule.length === 0) return 'Monday'
-
-    const todayMatch = schedule.find((d) => d.isToday)
-    if (todayMatch) return todayMatch.dayName
-
-    const weekdaysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-    for (const day of weekdaysOrder) {
-      const match = schedule.find((d) => d.dayName === day && d.lessons.length > 0)
-      if (match) return day
-    }
-
-    return schedule[0]?.dayName || 'Monday'
-  }, [])
-
-  const executeSync = useCallback(
-    async (u: string, p: string, currentAppLang: AppLanguage, weekPivot: string, silentUpdate: boolean) => {
-      const requestId = ++activeRequestCounter.current
-      if (!silentUpdate) setIsLoadingWeek(true)
-      setIsUpdating(true)
-
-      try {
-        const shouldTranslate = currentAppLang === 'en'
-        const [tRes, gRes, aRes, pRes] = await Promise.all([
-          getSmartTimetableAction(u, p, shouldTranslate, weekPivot),
-          getStudentGradesAction(u, p, shouldTranslate),
-          getAttendanceAction(u, p, shouldTranslate),
-          getStudentProfileAction(u, p)
-        ])
-
-        if (requestId !== activeRequestCounter.current) return
-
-        if (pRes.success && pRes.data) setProfile(pRes.data)
-
-        if (tRes.success && gRes.success && aRes.success && tRes.data && gRes.data && aRes.data) {
-          const fetchedData = tRes.data
-          const previousDataForThisWeek = weekCacheRef.current[weekPivot]
-          weekCacheRef.current[weekPivot] = fetchedData
-          localStorage.setItem('synapse_week_cache', JSON.stringify(weekCacheRef.current))
-
-          setGradesData(gRes.data)
-          setAttendanceData(aRes.data)
-
-          if (previousDataForThisWeek) {
-            const isIdentical = JSON.stringify(previousDataForThisWeek) === JSON.stringify(fetchedData)
-            if (!isIdentical) {
-              setPendingSnapshot({ t: fetchedData, g: gRes.data, a: aRes.data })
-              setHasNewUpdate(true)
-            }
-          } else {
-            setTimetableData(fetchedData)
-            setSelectedDay((prev) => {
-              const currentToday = fetchedData.schedule.find((d) => d.isToday)
-              if (currentToday) return currentToday.dayName
-              const hasPrev = fetchedData.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
-              return hasPrev ? prev : resolveSmartDefaultDay(fetchedData.schedule)
-            })
-
-            const newSnapshot = { t: fetchedData, g: gRes.data, a: aRes.data }
-            localStorage.setItem('synapse_cache', JSON.stringify(newSnapshot))
-          }
-        }
-      } catch {
-      } finally {
-        if (requestId === activeRequestCounter.current) {
-          setIsLoadingWeek(false)
-          setIsUpdating(false)
-        }
-      }
-    },
-    [resolveSmartDefaultDay]
-  )
-
-  const loadMessagesIfActive = useCallback(async () => {
-    if (!username || !password || hasLoadedMessages) return
-    setIsLoadingMessages(true)
-    const mRes = await getMessagesAndAnnouncementsAction(username, password)
-    setIsLoadingMessages(false)
-    if (mRes.success) {
-      setMessages(mRes.messages)
-      setAnnouncements(mRes.announcements)
-      setReceivers(mRes.receivers)
-      setHasLoadedMessages(true)
-    }
-  }, [username, password, hasLoadedMessages])
-
-  useEffect(() => {
-    if (activeSection === 'messages') {
-      loadMessagesIfActive()
-    }
-  }, [activeSection, loadMessagesIfActive])
-
-  useEffect(() => {
-    setMounted(true)
-
-    const savedAccountsJson = localStorage.getItem('synapse_accounts')
-    let loadedAccounts: SavedAccount[] = []
-    if (savedAccountsJson) {
-      try {
-        loadedAccounts = JSON.parse(savedAccountsJson)
-      } catch { }
-    }
-
-    const savedUser = localStorage.getItem('synapse_user') || ''
-    const savedPass = localStorage.getItem('synapse_pass') || ''
-    const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
-    const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
-    const savedClamp = (localStorage.getItem('synapse_text_clamp') as TextClampOption) || 'full'
-
-    if (loadedAccounts.length === 0 && savedUser && savedPass) {
-      const isStudent = savedUser.trim().toLowerCase().endsWith('u')
-      const initialAccount: SavedAccount = {
-        id: savedUser,
-        username: savedUser,
-        password: savedPass,
-        role: isStudent ? 'student' : 'parent',
-        profile: {
-          fullName: savedUser,
-          className: '4 Tsa Technikum',
-          schoolName: 'TEB Edukacja',
-          luckyNumber: null,
-          role: isStudent ? 'student' : 'parent'
-        },
-        isActive: true
-      }
-      loadedAccounts = [initialAccount]
-      localStorage.setItem('synapse_accounts', JSON.stringify([initialAccount]))
-    }
-
-    setSavedAccounts(loadedAccounts)
-
-    const activeAcc = loadedAccounts.find((a) => a.isActive) || loadedAccounts[0]
-    const effectiveUser = activeAcc ? activeAcc.username : savedUser
-    const effectivePass = activeAcc ? activeAcc.password : savedPass
-
-    setUsername(effectiveUser)
-    setPassword(effectivePass)
-    setLang(savedLang === 'en' ? 'en' : 'pl')
-    setTheme(savedTheme)
-    setTextClamp(savedClamp)
-    applyTheme(savedTheme)
-
-    const hasAccount = Boolean(effectiveUser && effectivePass)
-    setIsConfigured(hasAccount)
-
-    if (!hasAccount) return
-
-    const storedWeekCache = localStorage.getItem('synapse_week_cache')
-    if (storedWeekCache) {
-      try {
-        weekCacheRef.current = JSON.parse(storedWeekCache)
-      } catch { }
-    }
-
-    const cachedSnapshot = localStorage.getItem('synapse_cache')
-    if (cachedSnapshot) {
-      try {
-        const parsed = JSON.parse(cachedSnapshot)
-        if (parsed.t && Array.isArray(parsed.t.schedule)) {
-          setTimetableData(parsed.t)
-          if (!weekCacheRef.current[parsed.t.weekStart]) {
-            weekCacheRef.current[parsed.t.weekStart] = parsed.t
-          }
-          const currentToday = parsed.t.schedule.find((d: DaySchedule) => d.isToday)
-          setSelectedDay(currentToday ? currentToday.dayName : resolveSmartDefaultDay(parsed.t.schedule))
-        }
-        if (parsed.g) setGradesData(parsed.g)
-        if (parsed.a) setAttendanceData(parsed.a)
-      } catch { }
-    }
-
-    const isAlreadyInCache = Boolean(weekCacheRef.current[currentWeekPivot])
-    executeSync(effectiveUser, effectivePass, savedLang, currentWeekPivot, isAlreadyInCache)
-
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      const tabParam = params.get('tab') as MainSection
-      const dayParam = params.get('day')
-      const excuseParam = params.get('excuse')
-
-      if (tabParam) setActiveSection(tabParam)
-      if (dayParam) setSelectedDay(dayParam)
-      if (excuseParam === '1') setShowExcuseMatrix(true)
-    }
-  }, [applyTheme, resolveSmartDefaultDay, executeSync, currentWeekPivot])
-
-  const queueWeekChange = (targetPivot: string) => {
-    setHasNewUpdate(false)
-    setCurrentWeekPivot(targetPivot)
-
-    const cached = weekCacheRef.current[targetPivot]
-    if (cached) {
-      setTimetableData(cached)
-      setSelectedDay((prev) => {
-        const currentToday = cached.schedule.find((d) => d.isToday)
-        if (currentToday) return currentToday.dayName
-        const hasPrev = cached.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
-        return hasPrev ? prev : resolveSmartDefaultDay(cached.schedule)
-      })
-      setIsLoadingWeek(false)
-    } else {
-      setIsLoadingWeek(true)
-    }
-
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-
-    debounceTimerRef.current = setTimeout(() => {
-      if (username && password) {
-        const isSilent = Boolean(weekCacheRef.current[targetPivot])
-        executeSync(username, password, lang, targetPivot, isSilent)
-      }
-    }, 400)
-  }
-
-  const shiftWeek = (deltaDays: number) => {
-    const current = new Date(currentWeekPivot)
-    current.setDate(current.getDate() + deltaDays)
-    const y = current.getFullYear()
-    const m = String(current.getMonth() + 1).padStart(2, '0')
-    const d = String(current.getDate()).padStart(2, '0')
-    queueWeekChange(`${y}-${m}-${d}`)
-  }
-
-  const handleManualRefresh = () => {
-    if (username && password) executeSync(username, password, lang, currentWeekPivot, false)
-  }
-
-  const applyPendingUpdates = () => {
-    if (pendingSnapshot) {
-      setTimetableData(pendingSnapshot.t)
-      weekCacheRef.current[currentWeekPivot] = pendingSnapshot.t
-      localStorage.setItem('synapse_week_cache', JSON.stringify(weekCacheRef.current))
-      setSelectedDay(resolveSmartDefaultDay(pendingSnapshot.t.schedule))
-      setGradesData(pendingSnapshot.g)
-      setAttendanceData(pendingSnapshot.a)
-      localStorage.setItem('synapse_cache', JSON.stringify(pendingSnapshot))
-      setPendingSnapshot(null)
-      setHasNewUpdate(false)
-    }
-  }
-
-  const handleStartVerification = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setAuthError(null)
-    setAuthStep('verifying')
-
-    const res = await getStudentProfileAction(username, password)
-    if (res.success && res.data) {
-      setVerifiedCandidate(res.data)
-      setAuthStep('preview')
-    } else {
-      setAuthError(res.error || t.loginError)
-      setAuthStep('input')
-    }
-  }
-
-  const handleConfirmLogin = () => {
-    if (!verifiedCandidate) return
-    localStorage.setItem('synapse_user', username)
-    localStorage.setItem('synapse_pass', password)
-    localStorage.setItem('synapse_lang', lang)
-
-    const newAcc: SavedAccount = {
-      id: username,
-      username,
-      password,
-      role: verifiedCandidate.role,
-      profile: verifiedCandidate,
-      isActive: true
-    }
-
-    const updated = [newAcc]
-    setSavedAccounts(updated)
-    localStorage.setItem('synapse_accounts', JSON.stringify(updated))
-
-    setProfile(verifiedCandidate)
-    setIsConfigured(true)
-    setAuthStep('input')
-    executeSync(username, password, lang, currentWeekPivot, false)
-  }
-
-  const handleSwitchAccount = (acc: SavedAccount) => {
-    const updated = savedAccounts.map((a) => ({
-      ...a,
-      isActive: a.id === acc.id
-    }))
-    setSavedAccounts(updated)
-    localStorage.setItem('synapse_accounts', JSON.stringify(updated))
-    localStorage.setItem('synapse_user', acc.username)
-    localStorage.setItem('synapse_pass', acc.password)
-    setUsername(acc.username)
-    setPassword(acc.password)
-    setProfile(acc.profile)
-    setHasLoadedMessages(false)
-    executeSync(acc.username, acc.password, lang, currentWeekPivot, false)
-  }
-
-  const handleAddSecondaryAccount = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsAddingAcc(true)
-    const res = await getStudentProfileAction(newAccUser, newAccPass)
-    setIsAddingAcc(false)
-
-    if (res.success && res.data) {
-      const newAcc: SavedAccount = {
-        id: newAccUser,
-        username: newAccUser,
-        password: newAccPass,
-        role: res.data.role,
-        profile: res.data,
-        isActive: false
-      }
-      const updated = [...savedAccounts, newAcc]
-      setSavedAccounts(updated)
-      localStorage.setItem('synapse_accounts', JSON.stringify(updated))
-      setNewAccUser('')
-      setNewAccPass('')
-    }
-  }
-
   const handleSelectLanguage = (newLang: AppLanguage) => {
     setLang(newLang)
     localStorage.setItem('synapse_lang', newLang)
-    if (isConfigured && username && password) {
-      executeSync(username, password, newLang, currentWeekPivot, true)
+    if (account.isConfigured && account.username && account.password) {
+      timetable.executeSync(account.username, account.password, newLang, timetable.currentWeekPivot, true)
     }
   }
 
@@ -548,37 +192,11 @@ export default function Home() {
   }
 
   const handleSelectDay = (dayName: string) => {
-    setSelectedDay(dayName)
+    timetable.setSelectedDay(dayName)
     setIsCalendarPinned(false)
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem('synapse_user')
-    localStorage.removeItem('synapse_pass')
-    localStorage.removeItem('synapse_accounts')
-    localStorage.removeItem('synapse_cache')
-    localStorage.removeItem('synapse_week_cache')
-    localStorage.removeItem('synapse_theme')
-    localStorage.removeItem('synapse_text_clamp')
-    weekCacheRef.current = {}
-    setUsername('')
-    setPassword('')
-    setProfile(null)
-    setSavedAccounts([])
-    setTimetableData(null)
-    setGradesData(null)
-    setAttendanceData(null)
-    setMessages([])
-    setAnnouncements([])
-    setReceivers([])
-    setHasLoadedMessages(false)
-    setIsConfigured(false)
-    setShowSettings(false)
-    setAuthStep('input')
-    setVerifiedCandidate(null)
   }
 
   const handleTabChange = (targetTab: MainSection) => {
@@ -589,29 +207,15 @@ export default function Home() {
     }
   }
 
-  const handleOpenMessage = async (msgId: number | string): Promise<string> => {
-    const res = await readMessageAction(username, password, Number(msgId))
-    return res.content || ''
-  }
-
-  const handleSendMessage = async (receiverId: number, title: string, body: string): Promise<boolean> => {
-    const res = await sendMessageAction(username, password, receiverId, title, body)
-    if (res.success) {
-      executeSync(username, password, lang, currentWeekPivot, true)
-      return true
-    }
-    return false
-  }
-
-  const handleSubmitMultipleJustifications = async (payload: {
+  const handleSubmitJustifications = async (payload: {
     dateIso: string
     lessons: number[]
     message: string
   }): Promise<boolean> => {
     try {
-      const parentAcc = savedAccounts.find((a) => a.role === 'parent')
-      const targetUser = parentAcc ? parentAcc.username : username
-      const targetPass = parentAcc ? parentAcc.password : password
+      const parentAcc = account.savedAccounts.find((a) => a.role === 'parent')
+      const targetUser = parentAcc ? parentAcc.username : account.username
+      const targetPass = parentAcc ? parentAcc.password : account.password
 
       const res = await createJustificationAction(targetUser, targetPass, {
         dateFrom: payload.dateIso,
@@ -622,7 +226,7 @@ export default function Home() {
       })
 
       if (res.success) {
-        executeSync(username, password, lang, currentWeekPivot, true)
+        timetable.executeSync(account.username, account.password, lang, timetable.currentWeekPivot, true)
         return true
       }
       return false
@@ -633,19 +237,19 @@ export default function Home() {
 
   if (!mounted) return null
 
-  if (!isConfigured) {
+  if (!account.isConfigured) {
     return (
       <AuthView
-        authStep={authStep}
-        username={username}
-        setUsername={setUsername}
-        password={password}
-        setPassword={setPassword}
-        authError={authError}
-        verifiedCandidate={verifiedCandidate}
-        onStartVerification={handleStartVerification}
-        onConfirmLogin={handleConfirmLogin}
-        onBackToInput={() => setAuthStep('input')}
+        authStep={account.authStep}
+        username={account.username}
+        setUsername={account.setUsername}
+        password={account.password}
+        setPassword={account.setPassword}
+        authError={account.authError}
+        verifiedCandidate={account.verifiedCandidate}
+        onStartVerification={account.handleStartVerification}
+        onConfirmLogin={account.handleConfirmLogin}
+        onBackToInput={() => account.setAuthStep('input')}
         lang={lang}
         onSelectLanguage={handleSelectLanguage}
         t={t}
@@ -653,7 +257,10 @@ export default function Home() {
     )
   }
 
-  const shouldShowPinnedBar = isCalendarPinned && activeSection === 'schedule' && timetableData && canPinCalendar
+  const currentDaySchedule = timetable.timetableData?.schedule.find((d) => d.dayName === timetable.selectedDay)
+  const currentDayLessonCount = currentDaySchedule?.lessons.length || 0
+  const canPinCalendar = currentDayLessonCount >= 5
+  const shouldShowPinnedBar = isCalendarPinned && activeSection === 'schedule' && timetable.timetableData && canPinCalendar
 
   return (
     <div className="w-full min-h-screen bg-[var(--ios-bg)] flex flex-col">
@@ -663,9 +270,9 @@ export default function Home() {
             <div>
               <h1 className="text-xl font-semibold tracking-tight text-[var(--ios-label)]">Synapse</h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                {isUpdating && <IosSpinner className="w-3 h-3 text-[var(--ios-blue)]" />}
+                {timetable.isUpdating && <IosSpinner className="w-3 h-3 text-[var(--ios-blue)]" />}
                 <p className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight">
-                  {isUpdating ? t.updatingStatus : t.syncedStatus}
+                  {timetable.isUpdating ? t.updatingStatus : t.syncedStatus}
                 </p>
               </div>
             </div>
@@ -691,7 +298,7 @@ export default function Home() {
             <div className="overflow-hidden">
               <div className="flex items-center justify-between gap-1 border-t border-[var(--ios-separator)]/60 pt-1.5">
                 <button
-                  onClick={() => shiftWeek(-7)}
+                  onClick={() => timetable.shiftWeek(-7)}
                   className="w-7 h-7 flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-all shrink-0"
                   aria-label="Previous week"
                 >
@@ -701,9 +308,9 @@ export default function Home() {
                 </button>
 
                 <div className="flex items-center justify-between flex-1 px-1">
-                  {timetableData?.schedule.map((day) => {
+                  {timetable.timetableData?.schedule.map((day) => {
                     const dotColor = getDayIndicatorColor(day)
-                    const isSelected = selectedDay === day.dayName
+                    const isSelected = timetable.selectedDay === day.dayName
 
                     return (
                       <button
@@ -729,7 +336,7 @@ export default function Home() {
                 </div>
 
                 <button
-                  onClick={() => shiftWeek(7)}
+                  onClick={() => timetable.shiftWeek(7)}
                   className="w-7 h-7 flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-all shrink-0"
                   aria-label="Next week"
                 >
@@ -744,9 +351,9 @@ export default function Home() {
       </header>
 
       <main className="w-full flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] pt-3 px-4 max-w-md mx-auto flex flex-col gap-3 box-border">
-        {hasNewUpdate && (
+        {timetable.hasNewUpdate && (
           <div
-            onClick={applyPendingUpdates}
+            onClick={timetable.applyPendingUpdates}
             className="bg-[var(--ios-blue)] text-white p-3 rounded-2xl flex items-center justify-between cursor-pointer active:opacity-90 shadow-sm"
           >
             <div className="flex items-center gap-2">
@@ -759,35 +366,35 @@ export default function Home() {
           </div>
         )}
 
-        {activeSection === 'schedule' && timetableData && (
+        {activeSection === 'schedule' && timetable.timetableData && (
           <ScheduleWidget
-            timetableData={timetableData}
-            selectedDay={selectedDay}
+            timetableData={timetable.timetableData}
+            selectedDay={timetable.selectedDay}
             onSelectDay={handleSelectDay}
-            currentWeekPivot={currentWeekPivot}
-            onShiftWeek={shiftWeek}
-            onSelectDate={queueWeekChange}
-            onManualRefresh={handleManualRefresh}
+            currentWeekPivot={timetable.currentWeekPivot}
+            onShiftWeek={timetable.shiftWeek}
+            onSelectDate={timetable.queueWeekChange}
+            onManualRefresh={timetable.handleManualRefresh}
             onOpenTerminarz={() => setShowTerminarz(true)}
-            isLoadingWeek={isLoadingWeek}
+            isLoadingWeek={timetable.isLoadingWeek}
             textClamp={textClamp}
             lang={lang}
             t={t}
           />
         )}
 
-        {activeSection === 'grades' && gradesData && (
+        {activeSection === 'grades' && timetable.gradesData && (
           <GradesWidget
-            gradesData={gradesData}
+            gradesData={timetable.gradesData}
             onSelectGrade={setSelectedGrade}
             onSelectWarning={setSelectedWarningSubject}
             t={t}
           />
         )}
 
-        {activeSection === 'attendance' && attendanceData && (
+        {activeSection === 'attendance' && timetable.attendanceData && (
           <AttendanceWidget
-            attendanceData={attendanceData}
+            attendanceData={timetable.attendanceData}
             onSelectSubject={setSelectedSubjectDetail}
             onOpenExcuseModal={() => setShowExcuseMatrix(true)}
             t={t}
@@ -796,12 +403,12 @@ export default function Home() {
 
         {activeSection === 'messages' && (
           <MessagesWidget
-            messages={messages}
-            announcements={announcements}
-            receivers={receivers}
-            onOpenMessage={handleOpenMessage}
-            onSendMessage={handleSendMessage}
-            isLoading={isLoadingMessages}
+            messages={messagesInbox.messages}
+            announcements={messagesInbox.announcements}
+            receivers={messagesInbox.receivers}
+            onOpenMessage={messagesInbox.handleOpenMessage}
+            onSendMessage={messagesInbox.handleSendMessage}
+            isLoading={messagesInbox.isLoadingMessages}
             t={t}
           />
         )}
@@ -876,12 +483,12 @@ export default function Home() {
         />
       )}
 
-      {showExcuseMatrix && attendanceData && (
+      {showExcuseMatrix && timetable.attendanceData && (
         <JustificationModal
-          attendanceData={attendanceData}
-          timetableData={timetableData}
+          attendanceData={timetable.attendanceData}
+          timetableData={timetable.timetableData}
           onClose={() => setShowExcuseMatrix(false)}
-          onSubmitMultiple={handleSubmitMultipleJustifications}
+          onSubmitMultiple={handleSubmitJustifications}
           t={t}
         />
       )}
@@ -897,30 +504,30 @@ export default function Home() {
       <SettingsSheet
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
-        profile={profile}
-        savedAccounts={savedAccounts}
-        onSwitchAccount={handleSwitchAccount}
-        onAddAccount={handleAddSecondaryAccount}
-        newUsername={newAccUser}
-        setNewUsername={setNewAccUser}
-        newPassword={newAccPass}
-        setNewPassword={setNewAccPass}
-        isAddingAccount={isAddingAcc}
+        profile={account.profile}
+        savedAccounts={account.savedAccounts}
+        onSwitchAccount={account.handleSwitchAccount}
+        onAddAccount={account.handleAddSecondaryAccount}
+        newUsername={account.newAccUser}
+        setNewUsername={account.setNewAccUser}
+        newPassword={account.newAccPass}
+        setNewPassword={account.setNewAccPass}
+        isAddingAccount={account.isAddingAcc}
         currentLang={lang}
         onSelectLang={handleSelectLanguage}
         currentTheme={theme}
         onSelectTheme={handleSelectTheme}
         textClamp={textClamp}
         onSelectTextClamp={handleSelectTextClamp}
-        onLogout={handleLogout}
+        onLogout={account.handleLogout}
         t={t}
       />
 
-      {timetableData && (
+      {timetable.timetableData && (
         <TerminarzModal
           isOpen={showTerminarz}
           onClose={() => setShowTerminarz(false)}
-          timetableData={timetableData}
+          timetableData={timetable.timetableData}
           t={t}
         />
       )}

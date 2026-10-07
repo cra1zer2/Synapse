@@ -29,7 +29,8 @@ import { GradeModal } from './widgets/grade-modal'
 import { SettingsSheet } from './widgets/settings-sheet'
 import { TerminarzModal } from './widgets/terminarz-modal'
 
-type MainSection = 'schedule' | 'grades' | 'attendance' | 'messages'
+export type MainSection = 'schedule' | 'grades' | 'attendance' | 'messages'
+export type TextClampOption = 'full' | '1' | '2'
 
 function IosSpinner({ className = 'w-3.5 h-3.5 text-[var(--ios-blue)]' }: { className?: string }) {
   return (
@@ -110,6 +111,7 @@ export default function Home() {
   const [password, setPassword] = useState('')
   const [lang, setLang] = useState<AppLanguage>('pl')
   const [theme, setTheme] = useState<AppTheme>('system')
+  const [textClamp, setTextClamp] = useState<TextClampOption>('full')
 
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([])
   const [newAccUser, setNewAccUser] = useState('')
@@ -156,6 +158,10 @@ export default function Home() {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const t = getDictionary(lang)
 
+  const currentDaySchedule = timetableData?.schedule.find((d) => d.dayName === selectedDay)
+  const currentDayLessonCount = currentDaySchedule?.lessons.length || 0
+  const canPinCalendar = currentDayLessonCount >= 5
+
   const applyTheme = useCallback((targetTheme: AppTheme) => {
     const root = document.documentElement
     if (targetTheme === 'dark') {
@@ -190,7 +196,7 @@ export default function Home() {
     let isPinned = false
     const handleScroll = () => {
       const y = window.scrollY
-      if (!isPinned && y > 100) {
+      if (!isPinned && y > 105) {
         isPinned = true
         setIsCalendarPinned(true)
       } else if (isPinned && y <= 90) {
@@ -309,6 +315,7 @@ export default function Home() {
     const savedPass = localStorage.getItem('synapse_pass') || ''
     const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
     const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
+    const savedClamp = (localStorage.getItem('synapse_text_clamp') as TextClampOption) || 'full'
 
     if (loadedAccounts.length === 0 && savedUser && savedPass) {
       const isStudent = savedUser.trim().toLowerCase().endsWith('u')
@@ -340,6 +347,7 @@ export default function Home() {
     setPassword(effectivePass)
     setLang(savedLang === 'en' ? 'en' : 'pl')
     setTheme(savedTheme)
+    setTextClamp(savedClamp)
     applyTheme(savedTheme)
 
     const hasAccount = Boolean(effectiveUser && effectivePass)
@@ -534,6 +542,19 @@ export default function Home() {
     applyTheme(newTheme)
   }
 
+  const handleSelectTextClamp = (clamp: TextClampOption) => {
+    setTextClamp(clamp)
+    localStorage.setItem('synapse_text_clamp', clamp)
+  }
+
+  const handleSelectDay = (dayName: string) => {
+    setSelectedDay(dayName)
+    setIsCalendarPinned(false)
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('synapse_user')
     localStorage.removeItem('synapse_pass')
@@ -541,6 +562,7 @@ export default function Home() {
     localStorage.removeItem('synapse_cache')
     localStorage.removeItem('synapse_week_cache')
     localStorage.removeItem('synapse_theme')
+    localStorage.removeItem('synapse_text_clamp')
     weekCacheRef.current = {}
     setUsername('')
     setPassword('')
@@ -561,6 +583,7 @@ export default function Home() {
 
   const handleTabChange = (targetTab: MainSection) => {
     setActiveSection(targetTab)
+    setIsCalendarPinned(false)
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
@@ -630,9 +653,11 @@ export default function Home() {
     )
   }
 
+  const shouldShowPinnedBar = isCalendarPinned && activeSection === 'schedule' && timetableData && canPinCalendar
+
   return (
     <div className="w-full min-h-screen bg-[var(--ios-bg)] flex flex-col">
-      <header className="sticky top-0 z-30 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] px-4 bg-[var(--ios-bg)]/90 backdrop-blur-xl border-b border-[var(--ios-separator)] transition-all duration-200">
+      <header className="sticky top-0 z-30 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] px-4 bg-[var(--ios-bg)]/90 backdrop-blur-xl border-b border-[var(--ios-separator)] transition-all duration-300 ease-[var(--ease-out-cubic)]">
         <div className="max-w-md mx-auto flex flex-col pb-2">
           <div className="flex items-center justify-between pb-1">
             <div>
@@ -658,7 +683,7 @@ export default function Home() {
           </div>
 
           <div
-            className={`grid transition-all duration-250 ease-out ${isCalendarPinned && activeSection === 'schedule' && timetableData
+            className={`grid transition-all duration-300 ease-[var(--ease-out-cubic)] ${shouldShowPinnedBar
                 ? 'grid-rows-[1fr] opacity-100 pt-1.5'
                 : 'grid-rows-[0fr] opacity-0 pointer-events-none'
               }`}
@@ -683,7 +708,7 @@ export default function Home() {
                     return (
                       <button
                         key={day.dayName}
-                        onClick={() => setSelectedDay(day.dayName)}
+                        onClick={() => handleSelectDay(day.dayName)}
                         className={`py-1 flex-1 flex flex-col items-center justify-center transition-colors ${isSelected
                             ? 'text-[var(--ios-blue)]'
                             : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
@@ -738,13 +763,14 @@ export default function Home() {
           <ScheduleWidget
             timetableData={timetableData}
             selectedDay={selectedDay}
-            onSelectDay={setSelectedDay}
+            onSelectDay={handleSelectDay}
             currentWeekPivot={currentWeekPivot}
             onShiftWeek={shiftWeek}
             onSelectDate={queueWeekChange}
             onManualRefresh={handleManualRefresh}
             onOpenTerminarz={() => setShowTerminarz(true)}
             isLoadingWeek={isLoadingWeek}
+            textClamp={textClamp}
             lang={lang}
             t={t}
           />
@@ -884,6 +910,8 @@ export default function Home() {
         onSelectLang={handleSelectLanguage}
         currentTheme={theme}
         onSelectTheme={handleSelectTheme}
+        textClamp={textClamp}
+        onSelectTextClamp={handleSelectTextClamp}
         onLogout={handleLogout}
         t={t}
       />

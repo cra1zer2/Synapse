@@ -94,6 +94,8 @@ export function SettingsSheet({
 }: SettingsSheetProps) {
     const [showAddForm, setShowAddForm] = useState(false)
     const [showAccessibility, setShowAccessibility] = useState(false)
+    const [isDismissing, setIsDismissing] = useState(false)
+    const [isSubDismissing, setIsSubDismissing] = useState(false)
     const [pushStatus, setPushStatus] = useState<string>(() => getNotificationPermissionStatus())
 
     const [dragOffset, setDragOffset] = useState(0)
@@ -134,6 +136,24 @@ export function SettingsSheet({
         }
     })
 
+    const handleDismiss = () => {
+        setIsDismissing(true)
+        setTimeout(() => {
+            setIsDismissing(false)
+            setDragOffset(0)
+            onClose()
+        }, 250)
+    }
+
+    const handleSubDismiss = () => {
+        setIsSubDismissing(true)
+        setTimeout(() => {
+            setIsSubDismissing(false)
+            setSubDragOffset(0)
+            setShowAccessibility(false)
+        }, 250)
+    }
+
     const handleTouchStart = (e: React.TouchEvent) => {
         const clientX = e.touches[0].clientX
         touchStartX.current = clientX
@@ -155,9 +175,10 @@ export function SettingsSheet({
         if (!isSwiping.current) return
         isSwiping.current = false
         if (dragOffset > 85) {
-            onClose()
+            handleDismiss()
+        } else {
+            setDragOffset(0)
         }
-        setDragOffset(0)
     }
 
     const handleSubTouchStart = (e: React.TouchEvent) => {
@@ -181,9 +202,10 @@ export function SettingsSheet({
         if (!isSubSwiping.current) return
         isSubSwiping.current = false
         if (subDragOffset > 85) {
-            setShowAccessibility(false)
+            handleSubDismiss()
+        } else {
+            setSubDragOffset(0)
         }
-        setSubDragOffset(0)
     }
 
     const handleTogglePushMaster = async () => {
@@ -208,24 +230,27 @@ export function SettingsSheet({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             style={{
-                transform: `translateX(${dragOffset}px)`,
+                transform: isDismissing ? 'translateX(100%)' : `translateX(${dragOffset}px)`,
                 transition: isSwiping.current ? 'none' : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
             className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250"
         >
             <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
-                <div className="w-16" />
+                <button
+                    onClick={handleDismiss}
+                    className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-medium active:opacity-70 -ml-1 py-1 pr-2 w-20"
+                >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                    <span>{t.backAction}</span>
+                </button>
 
                 <h2 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight">
                     {t.settingsTitle}
                 </h2>
 
-                <button
-                    onClick={onClose}
-                    className="w-16 text-right text-sm font-semibold text-[var(--ios-blue)] active:opacity-70"
-                >
-                    {t.done}
-                </button>
+                <div className="w-20" />
             </header>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
@@ -442,15 +467,15 @@ export function SettingsSheet({
                     onTouchMove={handleSubTouchMove}
                     onTouchEnd={handleSubTouchEnd}
                     style={{
-                        transform: `translateX(${subDragOffset}px)`,
+                        transform: isSubDismissing ? 'translateX(100%)' : `translateX(${subDragOffset}px)`,
                         transition: isSubSwiping.current ? 'none' : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
                     }}
                     className="fixed inset-0 z-60 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250"
                 >
                     <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                         <button
-                            onClick={() => setShowAccessibility(false)}
-                            className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-medium active:opacity-70 -ml-1 py-1 pr-2"
+                            onClick={handleSubDismiss}
+                            className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-medium active:opacity-70 -ml-1 py-1 pr-2 w-24"
                         >
                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="15 18 9 12 15 6" />
@@ -462,12 +487,7 @@ export function SettingsSheet({
                             {t.accessibilityTitle}
                         </h2>
 
-                        <button
-                            onClick={() => setShowAccessibility(false)}
-                            className="text-xs font-semibold text-[var(--ios-blue)] active:opacity-70 py-1 pl-2"
-                        >
-                            {t.done}
-                        </button>
+                        <div className="w-24" />
                     </header>
 
                     <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">

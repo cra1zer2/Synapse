@@ -84,6 +84,7 @@ export interface AppDictionary {
     substitutionLabel: string
     logout: string
     done: string
+    backAction: string
     messagesInbox: string
     messagesAnnouncements: string
     noMessages: string
@@ -200,6 +201,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             substitutionLabel: 'Substitution',
             logout: 'Sign Out',
             done: 'Done',
+            backAction: 'Back',
             messagesInbox: 'Inbox',
             messagesAnnouncements: 'Announcements',
             noMessages: 'No messages yet',
@@ -315,6 +317,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         substitutionLabel: 'Zastępstwo',
         logout: 'Wyloguj się',
         done: 'Gotowe',
+        backAction: 'Wróć',
         messagesInbox: 'Odebrane',
         messagesAnnouncements: 'Ogłoszenia',
         noMessages: 'Brak wiadomości',
@@ -337,7 +340,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         breakCountdownLabel: (m: number) => `Przerwa • pozostało ${m} min`,
         breakUpcomingLabel: (m: number) => `Kolejna przerwa • ${m} min`,
         replyAction: 'Odpowiedz',
-        searchMessagesPlaceholder: 'Szukaj w wiadomościach...',
+        searchMessagesPlaceholder: 'Szukaj в wiadomościach...',
         writeNewMessage: 'Napisz',
         newMessageTitle: 'Nowa wiadomość',
         backToMessages: 'Wiadomości',

@@ -88,6 +88,7 @@ export function SettingsSheet({
     t
 }: SettingsSheetProps) {
     const [showAddForm, setShowAddForm] = useState(false)
+    const [showChannelsModal, setShowChannelsModal] = useState(false)
     const [pushStatus, setPushStatus] = useState<string>(() => getNotificationPermissionStatus())
 
     const [dragOffset, setDragOffset] = useState(0)
@@ -193,71 +194,100 @@ export function SettingsSheet({
             </header>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
-                <div className="bg-[var(--ios-card)] rounded-[18px] p-4 flex items-center gap-3.5 shadow-xs">
-                    <div className="w-12 h-12 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-semibold text-sm shrink-0">
-                        {heroAvatar}
-                    </div>
+                <div className="flex flex-col gap-1.5">
+                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                        <div className="p-4 flex items-center gap-3.5">
+                            <div className="w-12 h-12 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-semibold text-sm shrink-0">
+                                {heroAvatar}
+                            </div>
 
-                    <div className="min-w-0 flex-1">
-                        <h3 className="text-[15px] font-semibold text-[var(--ios-label)] truncate leading-tight">
-                            {heroTitle}
-                        </h3>
-                        <p className="text-xs font-normal text-[var(--ios-secondary)] truncate mt-0.5">
-                            {heroSubtitle}
-                        </p>
-                        <span className="text-[10px] font-medium text-[var(--ios-secondary)]/80 mt-0.5 block">
-                            Login: {activeUsername}
-                        </span>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-[15px] font-semibold text-[var(--ios-label)] truncate leading-tight">
+                                    {heroTitle}
+                                </h3>
+                                <p className="text-xs font-normal text-[var(--ios-secondary)] truncate mt-0.5">
+                                    {heroSubtitle}
+                                </p>
+                                <span className="text-[10px] font-medium text-[var(--ios-secondary)]/80 mt-0.5 block">
+                                    Login: {activeUsername}
+                                </span>
+                            </div>
+                        </div>
+
+                        {accountsList.map((acc) => {
+                            if (acc.id === activeAccount?.id && accountsList.length === 1) return null
+                            const isCurrent = acc.id === activeAccount?.id
+                            const accRole = acc.role === 'student' ? t.studentRole : t.parentRole
+                            const accTitle = resolveAccountTitle(acc.profile?.fullName, acc.username, acc.role)
+
+                            return (
+                                <div
+                                    key={acc.id}
+                                    onClick={() => !isCurrent && onSwitchAccount(acc)}
+                                    className={`p-3.5 flex items-center justify-between transition-colors ${isCurrent ? 'bg-[var(--ios-element)]/15' : 'cursor-pointer active:bg-[var(--ios-element)]/30'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <div className="w-6 h-6 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center text-[10px] font-semibold shrink-0">
+                                            {resolveAvatarLetter(acc.profile?.fullName, acc.username, acc.role)}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h4 className="text-xs font-medium text-[var(--ios-label)] truncate">
+                                                {accTitle}
+                                            </h4>
+                                            <p className="text-[10px] text-[var(--ios-secondary)] truncate">
+                                                {accRole} • {acc.username}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {isCurrent ? (
+                                        <span className="text-sm font-semibold text-[var(--ios-blue)] pr-1">✓</span>
+                                    ) : (
+                                        <span className="text-xs font-medium text-[var(--ios-blue)]">Przełącz</span>
+                                    )}
+                                </div>
+                            )
+                        })}
+
+                        <button
+                            type="button"
+                            onClick={() => setShowAddForm(!showAddForm)}
+                            className="w-full p-3.5 text-left text-xs font-medium text-[var(--ios-blue)] flex items-center justify-between active:bg-[var(--ios-element)]/30 transition-colors"
+                        >
+                            <span>+ Dodaj kolejne konto</span>
+                            <span className="text-xs text-[var(--ios-secondary)]">{showAddForm ? '▲' : '›'}</span>
+                        </button>
+
+                        {showAddForm && (
+                            <form onSubmit={onAddAccount} className="p-3.5 flex flex-col gap-2.5 bg-[var(--ios-bg)]/40">
+                                <input
+                                    type="text"
+                                    placeholder="Login / ID"
+                                    value={newUsername}
+                                    onChange={(e) => setNewUsername(e.target.value)}
+                                    className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-medium rounded-xl px-3.5 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
+                                    required
+                                />
+                                <input
+                                    type="password"
+                                    placeholder="Hasło"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-medium rounded-xl px-3.5 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
+                                    required
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isAddingAccount}
+                                    className="h-10 w-full bg-[var(--ios-blue)] text-white text-xs font-semibold rounded-xl disabled:opacity-50 active:opacity-85 shadow-xs transition-all"
+                                >
+                                    {isAddingAccount ? 'Weryfikacja...' : 'Zapisz konto'}
+                                </button>
+                            </form>
+                        )}
                     </div>
                 </div>
-
-                {accountsList.length > 1 && (
-                    <div className="flex flex-col gap-1.5">
-                        <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
-                            Konta
-                        </span>
-
-                        <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
-                            {accountsList.map((acc) => {
-                                const accRole = acc.role === 'student' ? t.studentRole : t.parentRole
-                                const accTitle = resolveAccountTitle(acc.profile?.fullName, acc.username, acc.role)
-
-                                return (
-                                    <div
-                                        key={acc.id}
-                                        onClick={() => onSwitchAccount(acc)}
-                                        className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center text-xs font-semibold shrink-0">
-                                                {resolveAvatarLetter(acc.profile?.fullName, acc.username, acc.role)}
-                                            </div>
-
-                                            <div className="min-w-0">
-                                                <h4 className="text-xs font-semibold text-[var(--ios-label)] truncate">
-                                                    {accTitle}
-                                                </h4>
-                                                <p className="text-[11px] font-normal text-[var(--ios-secondary)] truncate">
-                                                    {accRole} • {acc.username}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {acc.isActive ? (
-                                            <span className="text-sm font-semibold text-[var(--ios-blue)] pr-1">
-                                                ✓
-                                            </span>
-                                        ) : (
-                                            <span className="text-xs font-medium text-[var(--ios-blue)]">
-                                                Przełącz
-                                            </span>
-                                        )}
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
-                )}
 
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
@@ -315,99 +345,33 @@ export function SettingsSheet({
                         Powiadomienia
                     </span>
 
-                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
-                        <div className="p-3.5 flex items-center justify-between">
+                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs">
+                        <div
+                            onClick={() => {
+                                if (pushStatus !== 'granted') {
+                                    handleTogglePushMaster()
+                                }
+                                setShowChannelsModal(true)
+                            }}
+                            className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
+                        >
                             <div>
                                 <p className="text-xs font-medium text-[var(--ios-label)]">Powiadomienia Push</p>
                                 <p className="text-[11px] text-[var(--ios-secondary)]">Dzwonki, oceny, zastępstwa</p>
                             </div>
 
-                            {pushStatus === 'granted' ? (
-                                <IosSwitch
-                                    checked={notificationPrefs.enabled}
-                                    onChange={() => {
-                                        const updated = { ...notificationPrefs, enabled: !notificationPrefs.enabled }
-                                        setNotificationPrefs(updated)
-                                        localStorage.setItem('synapse_notification_prefs', JSON.stringify(updated))
-                                    }}
-                                />
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={handleTogglePushMaster}
-                                    className="text-xs font-semibold px-3 py-1 bg-[var(--ios-blue)] text-white rounded-full shadow-xs active:scale-95 transition-transform"
-                                >
-                                    Włącz
-                                </button>
-                            )}
+                            <div className="flex items-center gap-1.5 text-[var(--ios-secondary)]">
+                                <span className="text-xs font-medium">
+                                    {pushStatus === 'granted' && notificationPrefs.enabled ? 'Włączone' : 'Wyłączone'}
+                                </span>
+                                <span className="text-xs font-medium">›</span>
+                            </div>
                         </div>
-
-                        {pushStatus === 'granted' && notificationPrefs.enabled && (
-                            <>
-                                {[
-                                    { key: 'grades' as const, label: 'Nowe oceny' },
-                                    { key: 'timetableChanges' as const, label: 'Zastępstwa i odwołania' },
-                                    { key: 'absences' as const, label: 'Nieobecności (alerty NB)' },
-                                    { key: 'messages' as const, label: 'Wiadomości prywatne' },
-                                    { key: 'announcements' as const, label: 'Ogłoszenia szkoły' },
-                                    { key: 'calendarEvents' as const, label: 'Wydarzenia i sprawdziany' }
-                                ].map((item) => (
-                                    <div key={item.key} className="p-3.5 flex items-center justify-between text-xs">
-                                        <span className="text-[var(--ios-label)] font-normal">{item.label}</span>
-                                        <IosSwitch
-                                            checked={Boolean(notificationPrefs[item.key])}
-                                            onChange={() => handleToggleChannel(item.key)}
-                                        />
-                                    </div>
-                                ))}
-                            </>
-                        )}
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
-                        Zarządzanie kontem
-                    </span>
-
-                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
-                        <button
-                            type="button"
-                            onClick={() => setShowAddForm(!showAddForm)}
-                            className="w-full p-3.5 text-left text-xs font-semibold text-[var(--ios-blue)] flex items-center justify-between active:bg-[var(--ios-element)]/30 transition-colors"
-                        >
-                            <span>+ Dodaj kolejne konto</span>
-                            <span className="text-xs text-[var(--ios-secondary)]">{showAddForm ? '▲' : '›'}</span>
-                        </button>
-
-                        {showAddForm && (
-                            <form onSubmit={onAddAccount} className="p-3.5 flex flex-col gap-2.5 bg-[var(--ios-bg)]/40">
-                                <input
-                                    type="text"
-                                    placeholder="Login / ID"
-                                    value={newUsername}
-                                    onChange={(e) => setNewUsername(e.target.value)}
-                                    className="w-full bg-[var(--ios-card)] text-[var(--ios-label)] text-xs rounded-xl px-3 py-2.5 outline-none border border-[var(--ios-separator)]"
-                                    required
-                                />
-                                <input
-                                    type="password"
-                                    placeholder="Hasło"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    className="w-full bg-[var(--ios-card)] text-[var(--ios-label)] text-xs rounded-xl px-3 py-2.5 outline-none border border-[var(--ios-separator)]"
-                                    required
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={isAddingAccount}
-                                    className="w-full bg-[var(--ios-blue)] text-white text-xs font-semibold py-2.5 rounded-xl disabled:opacity-50 active:opacity-85 shadow-xs"
-                                >
-                                    {isAddingAccount ? 'Weryfikacja...' : 'Zapisz konto'}
-                                </button>
-                            </form>
-                        )}
-
+                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs">
                         <button
                             onClick={onLogout}
                             className="w-full text-center p-3.5 text-xs font-semibold text-[#ff3b30] active:bg-[var(--ios-element)]/30 transition-colors"
@@ -423,6 +387,53 @@ export function SettingsSheet({
                     </p>
                 </div>
             </div>
+
+            {showChannelsModal && (
+                <div
+                    onClick={() => setShowChannelsModal(false)}
+                    className="fixed inset-0 z-60 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-[var(--ios-card-solid)] rounded-[22px] w-full max-w-sm p-4.5 shadow-2xl flex flex-col gap-3 animate-in zoom-in-95 duration-200"
+                    >
+                        <div className="flex items-center justify-between pb-1">
+                            <h3 className="text-base font-semibold text-[var(--ios-label)] tracking-tight">
+                                Powiadomienia
+                            </h3>
+                            <button
+                                onClick={() => setShowChannelsModal(false)}
+                                className="text-sm font-semibold text-[var(--ios-blue)] active:opacity-70"
+                            >
+                                {t.done}
+                            </button>
+                        </div>
+
+                        <p className="text-[11px] font-normal text-[var(--ios-secondary)] leading-relaxed">
+                            Wybierz zdarzenia, dla których chcesz otrzymywać powiadomienia push.
+                        </p>
+
+                        <div className="bg-[var(--ios-bg)] rounded-[16px] overflow-hidden divide-y divide-[var(--ios-separator)] mt-1">
+                            {[
+                                { key: 'grades' as const, label: 'Nowe oceny' },
+                                { key: 'timetableChanges' as const, label: 'Zastępstwa i odwołania' },
+                                { key: 'absences' as const, label: 'Nieobecności (alerty NB)' },
+                                { key: 'messages' as const, label: 'Wiadomości prywatne' },
+                                { key: 'announcements' as const, label: 'Ogłoszenia szkoły' },
+                                { key: 'calendarEvents' as const, label: 'Wydarzenia i sprawdziany' }
+                            ].map((item) => (
+                                <div key={item.key} className="p-3 flex items-center justify-between text-xs">
+                                    <span className="text-[var(--ios-label)] font-medium pr-2">{item.label}</span>
+                                    <IosSwitch
+                                        checked={Boolean(notificationPrefs[item.key])}
+                                        onChange={() => handleToggleChannel(item.key)}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

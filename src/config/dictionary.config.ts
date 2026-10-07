@@ -73,11 +73,12 @@ export interface AppDictionary {
     pushEnabled: string
     pushEnableAction: string
     accessibilityTitle: string
+    systemSection: string
+    displaySectionTitle: string
+    onLabel: string
+    offLabel: string
     textClampLabel: string
-    textClampSubtitle: string
-    textClampFull: string
-    textClampTwo: string
-    textClampOne: string
+    textClampSingleLineDescription: string
     appVersionFooter: string
     cancelledLabel: string
     substitutionLabel: string
@@ -188,11 +189,12 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             pushEnabled: 'Enabled',
             pushEnableAction: 'Enable',
             accessibilityTitle: 'Accessibility',
-            textClampLabel: 'Subject text clamp',
-            textClampSubtitle: 'Limit long subject lines',
-            textClampFull: 'Full',
-            textClampTwo: '2 lines',
-            textClampOne: '1 line',
+            systemSection: 'System',
+            displaySectionTitle: 'Display & Layout',
+            onLabel: 'On',
+            offLabel: 'Off',
+            textClampLabel: 'Single-line subject names',
+            textClampSingleLineDescription: 'Truncate long lesson titles to a single line',
             appVersionFooter: 'Synapse • 4 Tsa Technical College',
             cancelledLabel: 'Cancelled',
             substitutionLabel: 'Substitution',
@@ -302,11 +304,12 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         pushEnabled: 'Włączone',
         pushEnableAction: 'Włącz',
         accessibilityTitle: 'Dostępność',
+        systemSection: 'System',
+        displaySectionTitle: 'Ekran i układ',
+        onLabel: 'Wł.',
+        offLabel: 'Wył.',
         textClampLabel: 'Skracanie nazw przedmiotów',
-        textClampSubtitle: 'Limit liczby wierszy tytułu',
-        textClampFull: 'Pełny',
-        textClampTwo: '2 linie',
-        textClampOne: '1 linia',
+        textClampSingleLineDescription: 'Ogranicza długie nazwy lekcji do jednej linii',
         appVersionFooter: 'Synapse • 4 Tsa Technikum',
         cancelledLabel: 'Odwołane',
         substitutionLabel: 'Zastępstwo',

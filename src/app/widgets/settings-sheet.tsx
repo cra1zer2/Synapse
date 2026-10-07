@@ -93,11 +93,16 @@ export function SettingsSheet({
     t
 }: SettingsSheetProps) {
     const [showAddForm, setShowAddForm] = useState(false)
+    const [showAccessibility, setShowAccessibility] = useState(false)
     const [pushStatus, setPushStatus] = useState<string>(() => getNotificationPermissionStatus())
 
     const [dragOffset, setDragOffset] = useState(0)
     const touchStartX = useRef(0)
     const isSwiping = useRef(false)
+
+    const [subDragOffset, setSubDragOffset] = useState(0)
+    const subTouchStartX = useRef(0)
+    const isSubSwiping = useRef(false)
 
     const accountsList = Array.isArray(savedAccounts) ? savedAccounts : []
     const activeAccount = accountsList.find((a) => a.isActive) || accountsList[0]
@@ -153,6 +158,32 @@ export function SettingsSheet({
             onClose()
         }
         setDragOffset(0)
+    }
+
+    const handleSubTouchStart = (e: React.TouchEvent) => {
+        const clientX = e.touches[0].clientX
+        subTouchStartX.current = clientX
+        if (clientX < 60) {
+            isSubSwiping.current = true
+        }
+    }
+
+    const handleSubTouchMove = (e: React.TouchEvent) => {
+        if (!isSubSwiping.current) return
+        const currentX = e.touches[0].clientX
+        const delta = currentX - subTouchStartX.current
+        if (delta > 0) {
+            setSubDragOffset(delta)
+        }
+    }
+
+    const handleSubTouchEnd = () => {
+        if (!isSubSwiping.current) return
+        isSubSwiping.current = false
+        if (subDragOffset > 85) {
+            setShowAccessibility(false)
+        }
+        setSubDragOffset(0)
     }
 
     const handleTogglePushMaster = async () => {
@@ -346,39 +377,6 @@ export function SettingsSheet({
 
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
-                        {t.accessibilityTitle}
-                    </span>
-
-                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
-                        <div className="p-3.5 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-medium text-[var(--ios-label)]">{t.textClampLabel}</p>
-                                <p className="text-[11px] text-[var(--ios-secondary)]">{t.textClampSubtitle}</p>
-                            </div>
-                            <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex gap-0.5">
-                                {[
-                                    { id: 'full' as TextClampOption, label: t.textClampFull },
-                                    { id: '2' as TextClampOption, label: t.textClampTwo },
-                                    { id: '1' as TextClampOption, label: t.textClampOne }
-                                ].map((opt) => (
-                                    <button
-                                        key={opt.id}
-                                        onClick={() => onSelectTextClamp(opt.id)}
-                                        className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${textClamp === opt.id
-                                            ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs'
-                                            : 'text-[var(--ios-secondary)]'
-                                            }`}
-                                    >
-                                        {opt.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
                         {t.notifications}
                     </span>
 
@@ -408,6 +406,30 @@ export function SettingsSheet({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
+                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                        {t.systemSection}
+                    </span>
+
+                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                        <div
+                            onClick={() => setShowAccessibility(true)}
+                            className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
+                        >
+                            <span className="text-xs font-medium text-[var(--ios-label)]">
+                                {t.accessibilityTitle}
+                            </span>
+
+                            <div className="flex items-center gap-1.5 text-[var(--ios-secondary)]">
+                                <span className="text-xs font-normal">
+                                    {textClamp === '1' ? t.onLabel : t.offLabel}
+                                </span>
+                                <span className="text-xs font-medium">›</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
                     <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs">
                         <button
                             onClick={onLogout}
@@ -424,6 +446,68 @@ export function SettingsSheet({
                     </p>
                 </div>
             </div>
+
+            {showAccessibility && (
+                <div
+                    onTouchStart={handleSubTouchStart}
+                    onTouchMove={handleSubTouchMove}
+                    onTouchEnd={handleSubTouchEnd}
+                    style={{
+                        transform: `translateX(${subDragOffset}px)`,
+                        transition: isSubSwiping.current ? 'none' : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+                    }}
+                    className="fixed inset-0 z-60 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250"
+                >
+                    <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
+                        <button
+                            onClick={() => setShowAccessibility(false)}
+                            className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-medium active:opacity-70 -ml-1 py-1 pr-2"
+                        >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="15 18 9 12 15 6" />
+                            </svg>
+                            <span>{t.settingsTitle}</span>
+                        </button>
+
+                        <h2 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight">
+                            {t.accessibilityTitle}
+                        </h2>
+
+                        <button
+                            onClick={() => setShowAccessibility(false)}
+                            className="text-xs font-semibold text-[var(--ios-blue)] active:opacity-70 py-1 pl-2"
+                        >
+                            {t.done}
+                        </button>
+                    </header>
+
+                    <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                                {t.displaySectionTitle}
+                            </span>
+
+                            <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                                <div className="p-3.5 flex items-center justify-between gap-3">
+                                    <div className="min-w-0 pr-2">
+                                        <p className="text-xs font-medium text-[var(--ios-label)]">
+                                            {t.textClampLabel}
+                                        </p>
+                                        <p className="text-[11px] text-[var(--ios-secondary)] mt-0.5 leading-snug">
+                                            {t.textClampSingleLineDescription}
+                                        </p>
+                                    </div>
+
+                                    <IosSwitch
+                                        checked={textClamp === '1'}
+                                        onChange={() => onSelectTextClamp(textClamp === '1' ? 'full' : '1')}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

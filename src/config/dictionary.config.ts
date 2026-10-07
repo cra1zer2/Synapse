@@ -61,6 +61,26 @@ export interface AppDictionary {
     accountSwitcher: string
     studentRole: string
     parentRole: string
+    studentRoleTitle: string
+    parentRoleTitle: string
+    switchAccount: string
+    addAccount: string
+    saveAccount: string
+    preferences: string
+    notifications: string
+    pushNotificationsTitle: string
+    pushSubtitle: string
+    pushEnabled: string
+    pushEnableAction: string
+    accessibilityTitle: string
+    textClampLabel: string
+    textClampSubtitle: string
+    textClampFull: string
+    textClampTwo: string
+    textClampOne: string
+    appVersionFooter: string
+    cancelledLabel: string
+    substitutionLabel: string
     logout: string
     done: string
     messagesInbox: string
@@ -89,12 +109,15 @@ export interface AppDictionary {
     writeNewMessage: string
     newMessageTitle: string
     backToMessages: string
+    loadingMessages: string
+    messageSent: string
+    emptyMessageContent: string
 }
 
 export function getDictionary(lang: AppLanguage): AppDictionary {
     if (lang === 'en') {
         return {
-            schedule: 'Plan',
+            schedule: 'Schedule',
             grades: 'Grades',
             attendance: 'Attendance',
             messages: 'Messages',
@@ -153,6 +176,26 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             accountSwitcher: 'Account Switcher',
             studentRole: 'Student',
             parentRole: 'Parent',
+            studentRoleTitle: 'Student Account',
+            parentRoleTitle: 'Parent Account',
+            switchAccount: 'Switch',
+            addAccount: 'Add another account',
+            saveAccount: 'Save account',
+            preferences: 'Preferences',
+            notifications: 'Notifications',
+            pushNotificationsTitle: 'Push Notifications',
+            pushSubtitle: 'Bells, grades, substitutions & messages',
+            pushEnabled: 'Enabled',
+            pushEnableAction: 'Enable',
+            accessibilityTitle: 'Accessibility',
+            textClampLabel: 'Subject text clamp',
+            textClampSubtitle: 'Limit long subject lines',
+            textClampFull: 'Full',
+            textClampTwo: '2 lines',
+            textClampOne: '1 line',
+            appVersionFooter: 'Synapse • 4 Tsa Technical College',
+            cancelledLabel: 'Cancelled',
+            substitutionLabel: 'Substitution',
             logout: 'Sign Out',
             done: 'Done',
             messagesInbox: 'Inbox',
@@ -180,7 +223,10 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             searchMessagesPlaceholder: 'Search messages...',
             writeNewMessage: 'Compose',
             newMessageTitle: 'New Message',
-            backToMessages: 'Messages'
+            backToMessages: 'Messages',
+            loadingMessages: 'Loading messages...',
+            messageSent: 'Message sent successfully',
+            emptyMessageContent: 'No message content available'
         }
     }
 
@@ -244,6 +290,26 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         accountSwitcher: 'Przełącznik kont',
         studentRole: 'Uczeń',
         parentRole: 'Rodzic',
+        studentRoleTitle: 'Konto ucznia',
+        parentRoleTitle: 'Konto rodzica',
+        switchAccount: 'Przełącz',
+        addAccount: 'Dodaj kolejne konto',
+        saveAccount: 'Zapisz konto',
+        preferences: 'Preferencje',
+        notifications: 'Powiadomienia',
+        pushNotificationsTitle: 'Powiadomienia Push',
+        pushSubtitle: 'Dzwonki, oceny, zastępstwa i wiadomości',
+        pushEnabled: 'Włączone',
+        pushEnableAction: 'Włącz',
+        accessibilityTitle: 'Dostępność',
+        textClampLabel: 'Skracanie nazw przedmiotów',
+        textClampSubtitle: 'Limit liczby wierszy tytułu',
+        textClampFull: 'Pełny',
+        textClampTwo: '2 linie',
+        textClampOne: '1 linia',
+        appVersionFooter: 'Synapse • 4 Tsa Technikum',
+        cancelledLabel: 'Odwołane',
+        substitutionLabel: 'Zastępstwo',
         logout: 'Wyloguj się',
         done: 'Gotowe',
         messagesInbox: 'Odebrane',
@@ -271,6 +337,9 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         searchMessagesPlaceholder: 'Szukaj w wiadomościach...',
         writeNewMessage: 'Napisz',
         newMessageTitle: 'Nowa wiadomość',
-        backToMessages: 'Wiadomości'
+        backToMessages: 'Wiadomości',
+        loadingMessages: 'Wczytywanie wiadomości...',
+        messageSent: 'Wysłano wiadomość',
+        emptyMessageContent: 'Brak treści wiadomości'
     }
 }

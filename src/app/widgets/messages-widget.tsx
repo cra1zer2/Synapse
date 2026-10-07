@@ -174,8 +174,8 @@ export function MessagesWidget({
                     <button
                         onClick={() => setActiveTab('inbox')}
                         className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'inbox'
-                                ? 'bg-[var(--ios-card)] text-[var(--ios-label)] shadow-xs'
-                                : 'text-[var(--ios-secondary)]'
+                            ? 'bg-[var(--ios-card)] text-[var(--ios-label)] shadow-xs'
+                            : 'text-[var(--ios-secondary)]'
                             }`}
                     >
                         {t.messagesInbox} ({messages.length})
@@ -183,8 +183,8 @@ export function MessagesWidget({
                     <button
                         onClick={() => setActiveTab('announcements')}
                         className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'announcements'
-                                ? 'bg-[var(--ios-card)] text-[var(--ios-label)] shadow-xs'
-                                : 'text-[var(--ios-secondary)]'
+                            ? 'bg-[var(--ios-card)] text-[var(--ios-label)] shadow-xs'
+                            : 'text-[var(--ios-secondary)]'
                             }`}
                     >
                         {t.messagesAnnouncements} ({announcements.length})
@@ -215,9 +215,9 @@ export function MessagesWidget({
             </div>
 
             {isLoading && messages.length === 0 && announcements.length === 0 ? (
-                <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-border)] backdrop-blur-xl flex flex-col items-center justify-center gap-3">
+                <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-separator)] backdrop-blur-xl flex flex-col items-center justify-center gap-3">
                     <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
-                    <p className="text-xs font-medium text-[var(--ios-secondary)]">Wczytywanie...</p>
+                    <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.loadingMessages}</p>
                 </div>
             ) : (
                 <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-[var(--ios-shadow)] divide-y divide-[var(--ios-separator)]">
@@ -345,7 +345,7 @@ export function MessagesWidget({
                                 </div>
                             ) : (
                                 <p className="text-xs font-normal text-[var(--ios-label)] leading-relaxed whitespace-pre-wrap select-text">
-                                    {activeReader.content || 'Brak treści wiadomości'}
+                                    {activeReader.content || t.emptyMessageContent}
                                 </p>
                             )}
                         </div>
@@ -375,7 +375,7 @@ export function MessagesWidget({
                         {sendSuccess ? (
                             <div className="bg-[#34c759]/15 text-[#34c759] p-4 rounded-xl text-center text-xs font-semibold flex items-center justify-center gap-2">
                                 <span>✓</span>
-                                <span>Wysłano wiadomość</span>
+                                <span>{t.messageSent}</span>
                             </div>
                         ) : (
                             <form onSubmit={handleSend} className="flex flex-col gap-2.5">

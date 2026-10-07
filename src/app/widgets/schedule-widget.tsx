@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, Fragment } from 'react'
 import { SmartTimetableResult, DaySchedule, LessonItem } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
+import { TextClampOption } from '@/app/page'
 import {
     parseLessonTimeRange,
     getCurrentTimeMinutes,
@@ -20,6 +21,7 @@ interface ScheduleWidgetProps {
     onManualRefresh: () => void
     onOpenTerminarz: () => void
     isLoadingWeek: boolean
+    textClamp?: TextClampOption
     lang?: AppLanguage
     t: AppDictionary
 }
@@ -85,6 +87,7 @@ export function ScheduleWidget({
     onManualRefresh,
     onOpenTerminarz,
     isLoadingWeek,
+    textClamp = 'full',
     lang = 'pl',
     t
 }: ScheduleWidgetProps) {
@@ -139,6 +142,8 @@ export function ScheduleWidget({
 
         return currentMinutes > r1.endMinutes && currentMinutes < r2.startMinutes
     }
+
+    const titleClampClass = textClamp === '1' ? 'line-clamp-1' : textClamp === '2' ? 'line-clamp-2' : ''
 
     return (
         <section className="w-full flex flex-col gap-2.5 min-h-[500px]">
@@ -292,7 +297,7 @@ export function ScheduleWidget({
                                                         </span>
                                                     </div>
 
-                                                    <h3 className="text-[15px] font-semibold text-[var(--ios-label)] leading-[1.25] break-words">
+                                                    <h3 className={`text-[15px] font-semibold text-[var(--ios-label)] leading-[1.25] break-words ${titleClampClass}`}>
                                                         {lesson.subject}
                                                     </h3>
 
@@ -314,12 +319,12 @@ export function ScheduleWidget({
                                                     )}
                                                     {lesson.isCancelled && (
                                                         <span className="text-[10px] font-semibold text-[#ff3b30] bg-[#ff3b30]/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                                            Odwołane
+                                                            {t.cancelledLabel}
                                                         </span>
                                                     )}
                                                     {lesson.isSubstitution && (
                                                         <span className="text-[10px] font-semibold text-[#af52de] bg-[#af52de]/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                                            Zastępstwo
+                                                            {t.substitutionLabel}
                                                         </span>
                                                     )}
                                                 </div>

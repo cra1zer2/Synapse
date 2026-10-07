@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { NotificationPreferences } from '@/models/notification.model'
 import { AppDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
+import { TextClampOption } from '@/app/page'
 import { requestPushPermission, getNotificationPermissionStatus } from '@/services/notification.service'
 
 interface SettingsSheetProps {
@@ -22,6 +23,8 @@ interface SettingsSheetProps {
     onSelectLang: (lang: AppLanguage) => void
     currentTheme: AppTheme
     onSelectTheme: (theme: AppTheme) => void
+    textClamp: TextClampOption
+    onSelectTextClamp: (clamp: TextClampOption) => void
     onLogout: () => void
     t: AppDictionary
 }
@@ -50,11 +53,11 @@ function IosSwitch({
     )
 }
 
-function resolveAccountTitle(fullName: string | undefined, username: string, role: 'student' | 'parent'): string {
+function resolveAccountTitle(fullName: string | undefined, username: string, role: 'student' | 'parent', t: AppDictionary): string {
     if (fullName && fullName !== 'Konto Librus' && !/^\d+$/.test(fullName)) {
         return fullName
     }
-    return role === 'parent' ? 'Konto rodzica' : 'Konto ucznia'
+    return role === 'parent' ? t.parentRoleTitle : t.studentRoleTitle
 }
 
 function resolveAvatarLetter(fullName: string | undefined, username: string, role: 'student' | 'parent'): string {
@@ -84,11 +87,12 @@ export function SettingsSheet({
     onSelectLang,
     currentTheme,
     onSelectTheme,
+    textClamp,
+    onSelectTextClamp,
     onLogout,
     t
 }: SettingsSheetProps) {
     const [showAddForm, setShowAddForm] = useState(false)
-    const [showChannelsModal, setShowChannelsModal] = useState(false)
     const [pushStatus, setPushStatus] = useState<string>(() => getNotificationPermissionStatus())
 
     const [dragOffset, setDragOffset] = useState(0)
@@ -101,7 +105,7 @@ export function SettingsSheet({
     const activeRole = activeAccount?.role || profile?.role || 'student'
     const activeRawName = profile?.fullName || activeAccount?.profile?.fullName || ''
     const activeUsername = activeAccount?.username || ''
-    const heroTitle = resolveAccountTitle(activeRawName, activeUsername, activeRole)
+    const heroTitle = resolveAccountTitle(activeRawName, activeUsername, activeRole, t)
     const heroAvatar = resolveAvatarLetter(activeRawName, activeUsername, activeRole)
     const heroSubtitle = `${activeAccount?.profile?.className || profile?.className || '4 Tsa Technikum'} • ${activeAccount?.profile?.schoolName || profile?.schoolName || 'TEB Edukacja'}`
 
@@ -152,17 +156,17 @@ export function SettingsSheet({
     }
 
     const handleTogglePushMaster = async () => {
-        const res = await requestPushPermission()
-        setPushStatus(res)
-        const updated = { ...notificationPrefs, enabled: res === 'granted' }
-        setNotificationPrefs(updated)
-        localStorage.setItem('synapse_notification_prefs', JSON.stringify(updated))
-    }
-
-    const handleToggleChannel = (key: keyof NotificationPreferences) => {
-        const updated = { ...notificationPrefs, [key]: !notificationPrefs[key] }
-        setNotificationPrefs(updated)
-        localStorage.setItem('synapse_notification_prefs', JSON.stringify(updated))
+        if (pushStatus !== 'granted') {
+            const res = await requestPushPermission()
+            setPushStatus(res)
+            const updated = { ...notificationPrefs, enabled: res === 'granted' }
+            setNotificationPrefs(updated)
+            localStorage.setItem('synapse_notification_prefs', JSON.stringify(updated))
+        } else {
+            const updated = { ...notificationPrefs, enabled: !notificationPrefs.enabled }
+            setNotificationPrefs(updated)
+            localStorage.setItem('synapse_notification_prefs', JSON.stringify(updated))
+        }
     }
 
     if (!isOpen) return null
@@ -218,7 +222,7 @@ export function SettingsSheet({
                             if (acc.id === activeAccount?.id && accountsList.length === 1) return null
                             const isCurrent = acc.id === activeAccount?.id
                             const accRole = acc.role === 'student' ? t.studentRole : t.parentRole
-                            const accTitle = resolveAccountTitle(acc.profile?.fullName, acc.username, acc.role)
+                            const accTitle = resolveAccountTitle(acc.profile?.fullName, acc.username, acc.role, t)
 
                             return (
                                 <div
@@ -244,7 +248,7 @@ export function SettingsSheet({
                                     {isCurrent ? (
                                         <span className="text-sm font-semibold text-[var(--ios-blue)] pr-1">✓</span>
                                     ) : (
-                                        <span className="text-xs font-medium text-[var(--ios-blue)]">Przełącz</span>
+                                        <span className="text-xs font-medium text-[var(--ios-blue)]">{t.switchAccount}</span>
                                     )}
                                 </div>
                             )
@@ -255,7 +259,7 @@ export function SettingsSheet({
                             onClick={() => setShowAddForm(!showAddForm)}
                             className="w-full p-3.5 text-left text-xs font-medium text-[var(--ios-blue)] flex items-center justify-between active:bg-[var(--ios-element)]/30 transition-colors"
                         >
-                            <span>+ Dodaj kolejne konto</span>
+                            <span>+ {t.addAccount}</span>
                             <span className="text-xs text-[var(--ios-secondary)]">{showAddForm ? '▲' : '›'}</span>
                         </button>
 
@@ -263,7 +267,7 @@ export function SettingsSheet({
                             <form onSubmit={onAddAccount} className="p-3.5 flex flex-col gap-2.5 bg-[var(--ios-bg)]/40">
                                 <input
                                     type="text"
-                                    placeholder="Login / ID"
+                                    placeholder={t.loginPlaceholder}
                                     value={newUsername}
                                     onChange={(e) => setNewUsername(e.target.value)}
                                     className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-medium rounded-xl px-3.5 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
@@ -271,7 +275,7 @@ export function SettingsSheet({
                                 />
                                 <input
                                     type="password"
-                                    placeholder="Hasło"
+                                    placeholder={t.passwordPlaceholder}
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
                                     className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-medium rounded-xl px-3.5 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
@@ -282,7 +286,7 @@ export function SettingsSheet({
                                     disabled={isAddingAccount}
                                     className="h-10 w-full bg-[var(--ios-blue)] text-white text-xs font-semibold rounded-xl disabled:opacity-50 active:opacity-85 shadow-xs transition-all"
                                 >
-                                    {isAddingAccount ? 'Weryfikacja...' : 'Zapisz konto'}
+                                    {isAddingAccount ? t.verifyingAccount : t.saveAccount}
                                 </button>
                             </form>
                         )}
@@ -291,7 +295,7 @@ export function SettingsSheet({
 
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
-                        Preferencje
+                        {t.preferences}
                     </span>
 
                     <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
@@ -342,30 +346,63 @@ export function SettingsSheet({
 
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
-                        Powiadomienia
+                        {t.accessibilityTitle}
                     </span>
 
-                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs">
-                        <div
-                            onClick={() => {
-                                if (pushStatus !== 'granted') {
-                                    handleTogglePushMaster()
-                                }
-                                setShowChannelsModal(true)
-                            }}
-                            className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
-                        >
+                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                        <div className="p-3.5 flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-medium text-[var(--ios-label)]">Powiadomienia Push</p>
-                                <p className="text-[11px] text-[var(--ios-secondary)]">Dzwonki, oceny, zastępstwa</p>
+                                <p className="text-xs font-medium text-[var(--ios-label)]">{t.textClampLabel}</p>
+                                <p className="text-[11px] text-[var(--ios-secondary)]">{t.textClampSubtitle}</p>
+                            </div>
+                            <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex gap-0.5">
+                                {[
+                                    { id: 'full' as TextClampOption, label: t.textClampFull },
+                                    { id: '2' as TextClampOption, label: t.textClampTwo },
+                                    { id: '1' as TextClampOption, label: t.textClampOne }
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() => onSelectTextClamp(opt.id)}
+                                        className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${textClamp === opt.id
+                                            ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs'
+                                            : 'text-[var(--ios-secondary)]'
+                                            }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                        {t.notifications}
+                    </span>
+
+                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                        <div className="p-3.5 flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-medium text-[var(--ios-label)]">{t.pushNotificationsTitle}</p>
+                                <p className="text-[11px] text-[var(--ios-secondary)]">{t.pushSubtitle}</p>
                             </div>
 
-                            <div className="flex items-center gap-1.5 text-[var(--ios-secondary)]">
-                                <span className="text-xs font-medium">
-                                    {pushStatus === 'granted' && notificationPrefs.enabled ? 'Włączone' : 'Wyłączone'}
-                                </span>
-                                <span className="text-xs font-medium">›</span>
-                            </div>
+                            {pushStatus === 'granted' ? (
+                                <IosSwitch
+                                    checked={notificationPrefs.enabled}
+                                    onChange={handleTogglePushMaster}
+                                />
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleTogglePushMaster}
+                                    className="text-xs font-semibold px-3 py-1 bg-[var(--ios-blue)] text-white rounded-full shadow-xs active:scale-95 transition-transform"
+                                >
+                                    {t.pushEnableAction}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -383,57 +420,10 @@ export function SettingsSheet({
 
                 <div className="text-center pt-2 pb-4">
                     <p className="text-[11px] font-normal text-[var(--ios-secondary)]/60">
-                        Synapse • 4 Tsa Technikum
+                        {t.appVersionFooter}
                     </p>
                 </div>
             </div>
-
-            {showChannelsModal && (
-                <div
-                    onClick={() => setShowChannelsModal(false)}
-                    className="fixed inset-0 z-60 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
-                >
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="bg-[var(--ios-card-solid)] rounded-[22px] w-full max-w-sm p-4.5 shadow-2xl flex flex-col gap-3 animate-in zoom-in-95 duration-200"
-                    >
-                        <div className="flex items-center justify-between pb-1">
-                            <h3 className="text-base font-semibold text-[var(--ios-label)] tracking-tight">
-                                Powiadomienia
-                            </h3>
-                            <button
-                                onClick={() => setShowChannelsModal(false)}
-                                className="text-sm font-semibold text-[var(--ios-blue)] active:opacity-70"
-                            >
-                                {t.done}
-                            </button>
-                        </div>
-
-                        <p className="text-[11px] font-normal text-[var(--ios-secondary)] leading-relaxed">
-                            Wybierz zdarzenia, dla których chcesz otrzymywać powiadomienia push.
-                        </p>
-
-                        <div className="bg-[var(--ios-bg)] rounded-[16px] overflow-hidden divide-y divide-[var(--ios-separator)] mt-1">
-                            {[
-                                { key: 'grades' as const, label: 'Nowe oceny' },
-                                { key: 'timetableChanges' as const, label: 'Zastępstwa i odwołania' },
-                                { key: 'absences' as const, label: 'Nieobecności (alerty NB)' },
-                                { key: 'messages' as const, label: 'Wiadomości prywatne' },
-                                { key: 'announcements' as const, label: 'Ogłoszenia szkoły' },
-                                { key: 'calendarEvents' as const, label: 'Wydarzenia i sprawdziany' }
-                            ].map((item) => (
-                                <div key={item.key} className="p-3 flex items-center justify-between text-xs">
-                                    <span className="text-[var(--ios-label)] font-medium pr-2">{item.label}</span>
-                                    <IosSwitch
-                                        checked={Boolean(notificationPrefs[item.key])}
-                                        onChange={() => handleToggleChannel(item.key)}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

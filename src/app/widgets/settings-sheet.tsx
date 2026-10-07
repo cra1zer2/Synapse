@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { NotificationPreferences } from '@/models/notification.model'
 import { AppDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
@@ -98,6 +98,7 @@ export function SettingsSheet({
 }: SettingsSheetProps) {
     const [showAddForm, setShowAddForm] = useState(false)
     const [showAdvanced, setShowAdvanced] = useState(false)
+    const [isEntered, setIsEntered] = useState(false)
     const [isDismissing, setIsDismissing] = useState(false)
     const [isSubDismissing, setIsSubDismissing] = useState(false)
     const [pushStatus, setPushStatus] = useState<string>(() => getNotificationPermissionStatus())
@@ -109,6 +110,15 @@ export function SettingsSheet({
     const [subDragOffset, setSubDragOffset] = useState(0)
     const subTouchStartX = useRef(0)
     const isSubSwiping = useRef(false)
+
+    useEffect(() => {
+        if (isOpen) {
+            const frame = requestAnimationFrame(() => setIsEntered(true))
+            return () => cancelAnimationFrame(frame)
+        } else {
+            setIsEntered(false)
+        }
+    }, [isOpen])
 
     const accountsList = Array.isArray(savedAccounts) ? savedAccounts : []
     const activeAccount = accountsList.find((a) => a.isActive) || accountsList[0]
@@ -144,6 +154,7 @@ export function SettingsSheet({
         setIsDismissing(true)
         setTimeout(() => {
             setIsDismissing(false)
+            setIsEntered(false)
             setDragOffset(0)
             onClose()
         }, 320)
@@ -196,7 +207,7 @@ export function SettingsSheet({
     const handleSubTouchMove = (e: React.TouchEvent) => {
         if (!isSubSwiping.current) return
         const currentX = e.touches[0].clientX
-        const delta = currentX - subTouchStartX.current
+        const delta = currentX - touchStartX.current
         if (delta > 0) {
             setSubDragOffset(delta)
         }
@@ -234,10 +245,14 @@ export function SettingsSheet({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             style={{
-                transform: isDismissing ? 'translateX(100%)' : `translateX(${dragOffset}px)`,
+                transform: isDismissing
+                    ? 'translateX(100%)'
+                    : !isEntered
+                        ? 'translateX(100%)'
+                        : `translateX(${dragOffset}px)`,
                 transition: isSwiping.current ? 'none' : 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
-            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-300"
+            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col"
         >
             <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                 <button

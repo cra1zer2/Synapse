@@ -62,6 +62,9 @@ export function MessagesWidget({
     const touchStartX = useRef(0)
     const isSwiping = useRef(false)
 
+    const contentTouchStartX = useRef(0)
+    const isContentSwiping = useRef(false)
+
     const filteredMessages = messages.filter(
         (m) =>
             searchQuery === '' ||
@@ -94,6 +97,23 @@ export function MessagesWidget({
             originalItem: msg
         })
         setIsLoadingContent(false)
+    }
+
+    const handleContentTouchStart = (e: React.TouchEvent) => {
+        contentTouchStartX.current = e.touches[0].clientX
+        isContentSwiping.current = true
+    }
+
+    const handleContentTouchEnd = (e: React.TouchEvent) => {
+        if (!isContentSwiping.current) return
+        isContentSwiping.current = false
+        const deltaX = e.changedTouches[0].clientX - contentTouchStartX.current
+
+        if (deltaX < -50 && activeTab === 'inbox') {
+            setActiveTab('announcements')
+        } else if (deltaX > 50 && activeTab === 'announcements') {
+            setActiveTab('inbox')
+        }
     }
 
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -170,21 +190,24 @@ export function MessagesWidget({
     return (
         <section className="w-full flex flex-col gap-3 min-h-[500px]">
             <div className="flex items-center justify-between gap-2">
-                <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex flex-1 max-w-xs">
+                <div className="relative bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex flex-1 max-w-xs overflow-hidden">
+                    <div
+                        className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-lg bg-[var(--ios-card)] shadow-xs transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                        style={{
+                            transform: activeTab === 'inbox' ? 'translateX(0)' : 'translateX(100%)'
+                        }}
+                    />
+
                     <button
                         onClick={() => setActiveTab('inbox')}
-                        className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'inbox'
-                            ? 'bg-[var(--ios-card)] text-[var(--ios-label)] shadow-xs'
-                            : 'text-[var(--ios-secondary)]'
+                        className={`relative z-10 flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-200 ${activeTab === 'inbox' ? 'text-[var(--ios-label)]' : 'text-[var(--ios-secondary)]'
                             }`}
                     >
                         {t.messagesInbox} ({messages.length})
                     </button>
                     <button
                         onClick={() => setActiveTab('announcements')}
-                        className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'announcements'
-                            ? 'bg-[var(--ios-card)] text-[var(--ios-label)] shadow-xs'
-                            : 'text-[var(--ios-secondary)]'
+                        className={`relative z-10 flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-200 ${activeTab === 'announcements' ? 'text-[var(--ios-label)]' : 'text-[var(--ios-secondary)]'
                             }`}
                     >
                         {t.messagesAnnouncements} ({announcements.length})
@@ -214,77 +237,103 @@ export function MessagesWidget({
                 />
             </div>
 
-            {isLoading && messages.length === 0 && announcements.length === 0 ? (
-                <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-separator)] backdrop-blur-xl flex flex-col items-center justify-center gap-3">
-                    <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
-                    <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.loadingMessages}</p>
-                </div>
-            ) : (
-                <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-[var(--ios-shadow)] divide-y divide-[var(--ios-separator)]">
-                    {activeTab === 'inbox' ? (
-                        filteredMessages.length > 0 ? (
-                            filteredMessages.map((msg, index) => (
-                                <article
-                                    key={msg.id}
-                                    onClick={() => handleReadMessage(msg)}
-                                    style={{ animationDelay: `${index * 30}ms` }}
-                                    className="p-3.5 flex items-start gap-2.5 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-bottom-1 fill-mode-both duration-200"
-                                >
-                                    {!msg.isRead ? (
-                                        <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] mt-1.5 shrink-0" />
-                                    ) : (
-                                        <span className="w-2 h-2 rounded-full bg-transparent mt-1.5 shrink-0" />
-                                    )}
-
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between gap-1">
-                                            <span className="text-xs font-semibold text-[var(--ios-label)] truncate">
-                                                {cleanSenderName(msg.sender)}
-                                            </span>
-                                            <span className="text-[10px] font-normal text-[var(--ios-secondary)] shrink-0">
-                                                {msg.date.split(' ')[0]}
-                                            </span>
-                                        </div>
-                                        <h4 className="text-xs font-normal text-[var(--ios-secondary)] line-clamp-1 mt-0.5">
-                                            {msg.subject}
-                                        </h4>
-                                    </div>
-                                </article>
-                            ))
+            <div
+                onTouchStart={handleContentTouchStart}
+                onTouchEnd={handleContentTouchEnd}
+                className="w-full overflow-hidden"
+            >
+                <div
+                    className="flex w-[200%] transition-transform duration-320 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                    style={{
+                        transform: activeTab === 'inbox' ? 'translateX(0%)' : 'translateX(-50%)'
+                    }}
+                >
+                    <div className="w-1/2 shrink-0 pr-1">
+                        {isLoading && messages.length === 0 ? (
+                            <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-separator)] flex flex-col items-center justify-center gap-3">
+                                <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
+                                <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.loadingMessages}</p>
+                            </div>
                         ) : (
-                            <div className="p-8 text-center text-xs text-[var(--ios-secondary)]">{t.noMessages}</div>
-                        )
-                    ) : filteredAnnouncements.length > 0 ? (
-                        filteredAnnouncements.map((item, index) => (
-                            <article
-                                key={item.id}
-                                onClick={() =>
-                                    setActiveReader({
-                                        title: item.title,
-                                        sender: cleanSenderName(item.author),
-                                        date: item.date,
-                                        content: item.content,
-                                        originalItem: item
-                                    })
-                                }
-                                style={{ animationDelay: `${index * 30}ms` }}
-                                className="p-3.5 flex flex-col gap-1 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-bottom-1 fill-mode-both duration-200"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs font-semibold text-[var(--ios-blue)]">{cleanSenderName(item.author)}</span>
-                                    <span className="text-[10px] font-normal text-[var(--ios-secondary)]">{item.date}</span>
-                                </div>
-                                <h4 className="text-xs font-semibold text-[var(--ios-label)]">{item.title}</h4>
-                                <p className="text-xs font-normal text-[var(--ios-secondary)] line-clamp-2 leading-relaxed">
-                                    {item.content}
-                                </p>
-                            </article>
-                        ))
-                    ) : (
-                        <div className="p-8 text-center text-xs text-[var(--ios-secondary)]">{t.noMessages}</div>
-                    )}
+                            <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-[var(--ios-shadow)] divide-y divide-[var(--ios-separator)] animate-in fade-in duration-300">
+                                {filteredMessages.length > 0 ? (
+                                    filteredMessages.map((msg, index) => (
+                                        <article
+                                            key={msg.id}
+                                            onClick={() => handleReadMessage(msg)}
+                                            style={{ animationDelay: `${index * 25}ms` }}
+                                            className="p-3.5 flex items-start gap-2.5 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-bottom-1 fill-mode-both duration-200"
+                                        >
+                                            {!msg.isRead ? (
+                                                <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] mt-1.5 shrink-0" />
+                                            ) : (
+                                                <span className="w-2 h-2 rounded-full bg-transparent mt-1.5 shrink-0" />
+                                            )}
+
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between gap-1">
+                                                    <span className="text-xs font-semibold text-[var(--ios-label)] truncate">
+                                                        {cleanSenderName(msg.sender)}
+                                                    </span>
+                                                    <span className="text-[10px] font-normal text-[var(--ios-secondary)] shrink-0">
+                                                        {msg.date.split(' ')[0]}
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-xs font-normal text-[var(--ios-secondary)] line-clamp-1 mt-0.5">
+                                                    {msg.subject}
+                                                </h4>
+                                            </div>
+                                        </article>
+                                    ))
+                                ) : (
+                                    <div className="p-8 text-center text-xs text-[var(--ios-secondary)]">{t.noMessages}</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="w-1/2 shrink-0 pl-1">
+                        {isLoading && announcements.length === 0 ? (
+                            <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-separator)] flex flex-col items-center justify-center gap-3">
+                                <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
+                                <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.loadingMessages}</p>
+                            </div>
+                        ) : (
+                            <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-[var(--ios-shadow)] divide-y divide-[var(--ios-separator)] animate-in fade-in duration-300">
+                                {filteredAnnouncements.length > 0 ? (
+                                    filteredAnnouncements.map((item, index) => (
+                                        <article
+                                            key={item.id}
+                                            onClick={() =>
+                                                setActiveReader({
+                                                    title: item.title,
+                                                    sender: cleanSenderName(item.author),
+                                                    date: item.date,
+                                                    content: item.content,
+                                                    originalItem: item
+                                                })
+                                            }
+                                            style={{ animationDelay: `${index * 25}ms` }}
+                                            className="p-3.5 flex flex-col gap-1 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-bottom-1 fill-mode-both duration-200"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-semibold text-[var(--ios-blue)]">{cleanSenderName(item.author)}</span>
+                                                <span className="text-[10px] font-normal text-[var(--ios-secondary)]">{item.date}</span>
+                                            </div>
+                                            <h4 className="text-xs font-semibold text-[var(--ios-label)]">{item.title}</h4>
+                                            <p className="text-xs font-normal text-[var(--ios-secondary)] line-clamp-2 leading-relaxed">
+                                                {item.content}
+                                            </p>
+                                        </article>
+                                    ))
+                                ) : (
+                                    <div className="p-8 text-center text-xs text-[var(--ios-secondary)]">{t.noMessages}</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
-            )}
+            </div>
 
             {activeReader && (
                 <div

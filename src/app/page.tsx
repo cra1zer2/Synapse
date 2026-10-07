@@ -25,6 +25,13 @@ import { TerminarzModal } from './widgets/terminarz-modal'
 
 export type TextClampOption = 'full' | '1' | '2'
 
+const SECTION_INDEX: Record<MainSection, number> = {
+  schedule: 0,
+  grades: 1,
+  attendance: 2,
+  messages: 3
+}
+
 function IosSpinner({ className = 'w-3.5 h-3.5 text-[var(--ios-blue)]' }: { className?: string }) {
   return (
     <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none">
@@ -83,6 +90,7 @@ export default function Home() {
   const [textClamp, setTextClamp] = useState<TextClampOption>('full')
   const [ignoreGradeModifiers, setIgnoreGradeModifiers] = useState<boolean>(false)
   const [activeSection, setActiveSection] = useState<MainSection>('schedule')
+  const [tabDirection, setTabDirection] = useState<'forward' | 'backward'>('forward')
   const [isCalendarPinned, setIsCalendarPinned] = useState(false)
 
   const [selectedGrade, setSelectedGrade] = useState<GradeItem | null>(null)
@@ -209,6 +217,9 @@ export default function Home() {
   }
 
   const handleTabChange = (targetTab: MainSection) => {
+    const currentIndex = SECTION_INDEX[activeSection]
+    const nextIndex = SECTION_INDEX[targetTab]
+    setTabDirection(nextIndex >= currentIndex ? 'forward' : 'backward')
     setActiveSection(targetTab)
     setIsCalendarPinned(false)
     if (typeof window !== 'undefined') {
@@ -359,7 +370,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="w-full flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] pt-3 px-4 max-w-md mx-auto flex flex-col gap-3 box-border">
+      <main className="w-full flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] pt-3 px-4 max-w-md mx-auto flex flex-col gap-3 box-border overflow-x-hidden">
         {timetable.hasNewUpdate && (
           <div
             onClick={timetable.applyPendingUpdates}
@@ -375,53 +386,59 @@ export default function Home() {
           </div>
         )}
 
-        {activeSection === 'schedule' && timetable.timetableData && (
-          <ScheduleWidget
-            timetableData={timetable.timetableData}
-            selectedDay={timetable.selectedDay}
-            onSelectDay={handleSelectDay}
-            currentWeekPivot={timetable.currentWeekPivot}
-            onShiftWeek={timetable.shiftWeek}
-            onSelectDate={timetable.queueWeekChange}
-            onManualRefresh={timetable.handleManualRefresh}
-            onOpenTerminarz={() => setShowTerminarz(true)}
-            isLoadingWeek={timetable.isLoadingWeek}
-            textClamp={textClamp}
-            lang={lang}
-            t={t}
-          />
-        )}
+        <div
+          key={activeSection}
+          className={`w-full flex-1 flex flex-col gap-3 animate-in fade-in duration-250 ${tabDirection === 'forward' ? 'slide-in-from-right-4' : 'slide-in-from-left-4'
+            }`}
+        >
+          {activeSection === 'schedule' && timetable.timetableData && (
+            <ScheduleWidget
+              timetableData={timetable.timetableData}
+              selectedDay={timetable.selectedDay}
+              onSelectDay={handleSelectDay}
+              currentWeekPivot={timetable.currentWeekPivot}
+              onShiftWeek={timetable.shiftWeek}
+              onSelectDate={timetable.queueWeekChange}
+              onManualRefresh={timetable.handleManualRefresh}
+              onOpenTerminarz={() => setShowTerminarz(true)}
+              isLoadingWeek={timetable.isLoadingWeek}
+              textClamp={textClamp}
+              lang={lang}
+              t={t}
+            />
+          )}
 
-        {activeSection === 'grades' && timetable.gradesData && (
-          <GradesWidget
-            gradesData={timetable.gradesData}
-            ignoreGradeModifiers={ignoreGradeModifiers}
-            onSelectGrade={setSelectedGrade}
-            onSelectWarning={setSelectedWarningSubject}
-            t={t}
-          />
-        )}
+          {activeSection === 'grades' && timetable.gradesData && (
+            <GradesWidget
+              gradesData={timetable.gradesData}
+              ignoreGradeModifiers={ignoreGradeModifiers}
+              onSelectGrade={setSelectedGrade}
+              onSelectWarning={setSelectedWarningSubject}
+              t={t}
+            />
+          )}
 
-        {activeSection === 'attendance' && timetable.attendanceData && (
-          <AttendanceWidget
-            attendanceData={timetable.attendanceData}
-            onSelectSubject={setSelectedSubjectDetail}
-            onOpenExcuseModal={() => setShowExcuseMatrix(true)}
-            t={t}
-          />
-        )}
+          {activeSection === 'attendance' && timetable.attendanceData && (
+            <AttendanceWidget
+              attendanceData={timetable.attendanceData}
+              onSelectSubject={setSelectedSubjectDetail}
+              onOpenExcuseModal={() => setShowExcuseMatrix(true)}
+              t={t}
+            />
+          )}
 
-        {activeSection === 'messages' && (
-          <MessagesWidget
-            messages={messagesInbox.messages}
-            announcements={messagesInbox.announcements}
-            receivers={messagesInbox.receivers}
-            onOpenMessage={messagesInbox.handleOpenMessage}
-            onSendMessage={messagesInbox.handleSendMessage}
-            isLoading={messagesInbox.isLoadingMessages}
-            t={t}
-          />
-        )}
+          {activeSection === 'messages' && (
+            <MessagesWidget
+              messages={messagesInbox.messages}
+              announcements={messagesInbox.announcements}
+              receivers={messagesInbox.receivers}
+              onOpenMessage={messagesInbox.handleOpenMessage}
+              onSendMessage={messagesInbox.handleSendMessage}
+              isLoading={messagesInbox.isLoadingMessages}
+              t={t}
+            />
+          )}
+        </div>
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--ios-separator)] bg-[var(--ios-card)] backdrop-blur-xl pb-[env(safe-area-inset-bottom,0px)]">

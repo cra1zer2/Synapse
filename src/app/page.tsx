@@ -190,10 +190,10 @@ export default function Home() {
     let isPinned = false
     const handleScroll = () => {
       const y = window.scrollY
-      if (!isPinned && y > 120) {
+      if (!isPinned && y > 100) {
         isPinned = true
         setIsCalendarPinned(true)
-      } else if (isPinned && y <= 15) {
+      } else if (isPinned && y <= 90) {
         isPinned = false
         setIsCalendarPinned(false)
       }
@@ -559,6 +559,13 @@ export default function Home() {
     setVerifiedCandidate(null)
   }
 
+  const handleTabChange = (targetTab: MainSection) => {
+    setActiveSection(targetTab)
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
+  }
+
   const handleOpenMessage = async (msgId: number | string): Promise<string> => {
     const res = await readMessageAction(username, password, Number(msgId))
     return res.content || ''
@@ -626,8 +633,8 @@ export default function Home() {
   return (
     <div className="w-full min-h-screen bg-[var(--ios-bg)] flex flex-col">
       <header className="sticky top-0 z-30 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] px-4 bg-[var(--ios-bg)]/90 backdrop-blur-xl border-b border-[var(--ios-separator)] transition-all duration-200">
-        <div className="max-w-md mx-auto flex flex-col gap-2 pb-2.5">
-          <div className="flex items-center justify-between">
+        <div className="max-w-md mx-auto flex flex-col pb-2">
+          <div className="flex items-center justify-between pb-1">
             <div>
               <h1 className="text-xl font-semibold tracking-tight text-[var(--ios-label)]">Synapse</h1>
               <div className="flex items-center gap-1.5 mt-0.5">
@@ -650,55 +657,64 @@ export default function Home() {
             </button>
           </div>
 
-          {isCalendarPinned && activeSection === 'schedule' && timetableData && (
-            <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-[var(--ios-separator)]/60 animate-in fade-in duration-200">
-              <button
-                onClick={() => shiftWeek(-7)}
-                className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)]/65 hover:text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-all shrink-0"
-                aria-label="Previous week"
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
+          <div
+            className={`grid transition-all duration-250 ease-out ${isCalendarPinned && activeSection === 'schedule' && timetableData
+                ? 'grid-rows-[1fr] opacity-100 pt-1.5'
+                : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+              }`}
+          >
+            <div className="overflow-hidden">
+              <div className="flex items-center justify-between gap-1 border-t border-[var(--ios-separator)]/60 pt-1.5">
+                <button
+                  onClick={() => shiftWeek(-7)}
+                  className="w-7 h-7 flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-all shrink-0"
+                  aria-label="Previous week"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
 
-              <div className="grid grid-cols-5 gap-1 flex-1">
-                {timetableData.schedule.map((day) => {
-                  const dotColor = getDayIndicatorColor(day)
-                  const isSelected = selectedDay === day.dayName
+                <div className="flex items-center justify-between flex-1 px-1">
+                  {timetableData?.schedule.map((day) => {
+                    const dotColor = getDayIndicatorColor(day)
+                    const isSelected = selectedDay === day.dayName
 
-                  return (
-                    <button
-                      key={day.dayName}
-                      onClick={() => setSelectedDay(day.dayName)}
-                      className={`py-1 rounded-[10px] text-xs font-medium flex items-center justify-center gap-1 transition-all ${isSelected
-                        ? 'bg-[var(--ios-blue)] text-white shadow-xs'
-                        : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]'
-                        }`}
-                    >
-                      <span className="text-[10px] uppercase font-semibold">{getDayAbbr(day.dayName, lang)}</span>
-                      <span className="relative text-[11px] font-semibold">
-                        {day.date ? day.date.split('.')[0] : ''}
-                        {dotColor && (
-                          <span className={`absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : dotColor}`} />
-                        )}
-                      </span>
-                    </button>
-                  )
-                })}
+                    return (
+                      <button
+                        key={day.dayName}
+                        onClick={() => setSelectedDay(day.dayName)}
+                        className={`py-1 flex-1 flex flex-col items-center justify-center transition-colors ${isSelected
+                            ? 'text-[var(--ios-blue)]'
+                            : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
+                          }`}
+                      >
+                        <span className={`text-[10px] uppercase tracking-tight ${isSelected ? 'font-semibold' : 'font-normal opacity-70'}`}>
+                          {getDayAbbr(day.dayName, lang)}
+                        </span>
+                        <span className={`relative text-[13px] tracking-tight mt-0.5 ${isSelected ? 'font-semibold' : 'font-medium opacity-80'}`}>
+                          {day.date ? day.date.split('.')[0] : ''}
+                          {dotColor && (
+                            <span className={`absolute -top-0.5 -right-1.5 w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                          )}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <button
+                  onClick={() => shiftWeek(7)}
+                  className="w-7 h-7 flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-all shrink-0"
+                  aria-label="Next week"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
               </div>
-
-              <button
-                onClick={() => shiftWeek(7)}
-                className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)]/65 hover:text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-all shrink-0"
-                aria-label="Next week"
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
             </div>
-          )}
+          </div>
         </div>
       </header>
 
@@ -813,7 +829,7 @@ export default function Home() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveSection(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`flex flex-col items-center justify-center transition-colors ${isActive ? 'text-[var(--ios-blue)]' : 'text-[var(--ios-secondary)]'
                   }`}
               >

@@ -10,6 +10,24 @@ interface AttendanceWidgetProps {
     t: AppDictionary
 }
 
+function formatMissedLabel(absent: number, total: number): string {
+    if (absent === 0) {
+        return `0 opuszczonych z ${total}`
+    }
+    if (absent === 1) {
+        return `1 opuszczona z ${total}`
+    }
+    const lastTwo = absent % 100
+    const last = absent % 10
+    if (lastTwo >= 12 && lastTwo <= 14) {
+        return `${absent} opuszczonych z ${total}`
+    }
+    if (last >= 2 && last <= 4) {
+        return `${absent} opuszczone z ${total}`
+    }
+    return `${absent} opuszczonych z ${total}`
+}
+
 export function AttendanceWidget({
     attendanceData,
     onSelectSubject,
@@ -25,31 +43,40 @@ export function AttendanceWidget({
             ? 'text-[#ff9500]'
             : 'text-[#34c759]'
 
+    const sortedSubjects = [...attendanceData.subjects].sort((a, b) => {
+        if (a.unexcusedCount > 0 && b.unexcusedCount === 0) return -1
+        if (b.unexcusedCount > 0 && a.unexcusedCount === 0) return 1
+        if (a.percentage !== b.percentage) return a.percentage - b.percentage
+        if (a.absentLessons > 0 && b.absentLessons === 0) return -1
+        if (b.absentLessons > 0 && a.absentLessons === 0) return 1
+        return a.subject.localeCompare(b.subject)
+    })
+
     return (
-        <section className="w-full flex flex-col gap-4 min-h-[500px]">
+        <section className="w-full flex flex-col gap-3 min-h-[500px]">
             {attendanceData.unexcusedAbsences.length > 0 && (
-                <div className="bg-[#ff3b30]/10 rounded-[22px] p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-[#ff3b30] text-white flex items-center justify-center font-semibold text-xs shrink-0">
+                <div className="bg-[#ff3b30]/10 rounded-[18px] p-3.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-[#ff3b30] text-white flex items-center justify-center font-semibold text-xs shrink-0">
                             !
                         </div>
-                        <div>
-                            <p className="text-xs font-semibold text-[#ff3b30]">Nieusprawiedliwione</p>
-                            <p className="text-[11px] font-normal text-[#ff3b30]/80">
-                                {attendanceData.unexcusedAbsences.length} lekcji do usprawiedliwienia
+                        <div className="min-w-0">
+                            <p className="text-xs font-semibold text-[#ff3b30] tracking-tight">Nieusprawiedliwione godziny</p>
+                            <p className="text-[11px] font-normal text-[#ff3b30]/80 truncate">
+                                {attendanceData.unexcusedAbsences.length} {attendanceData.unexcusedAbsences.length === 1 ? 'lekcja' : 'lekcji'} do usprawiedliwienia
                             </p>
                         </div>
                     </div>
                     <button
                         onClick={onOpenExcuseModal}
-                        className="text-xs font-semibold bg-[#ff3b30] text-white px-3.5 py-1.5 rounded-full shadow-xs active:scale-95 transition-transform"
+                        className="text-xs font-semibold bg-[#ff3b30] text-white px-3 py-1.5 rounded-full shadow-xs active:scale-95 transition-transform shrink-0"
                     >
-                        Usprawiedliw
+                        {t.excuseAction}
                     </button>
                 </div>
             )}
 
-            <div className="bg-[var(--ios-card)] rounded-[22px] p-4.5 shadow-xs flex items-center justify-between">
+            <div className="bg-[var(--ios-card)] rounded-[18px] p-4 shadow-xs flex items-center justify-between">
                 <div>
                     <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.attendanceRate}</p>
                     <h2 className={`text-3xl font-semibold tracking-tight mt-0.5 ${statusColor}`}>
@@ -58,11 +85,11 @@ export function AttendanceWidget({
                 </div>
 
                 <span
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-full ${isDanger
-                            ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
-                            : isWarning
-                                ? 'bg-[#ff9500]/10 text-[#ff9500]'
-                                : 'bg-[#34c759]/10 text-[#34c759]'
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isDanger
+                        ? 'bg-[#ff3b30]/15 text-[#ff3b30]'
+                        : isWarning
+                            ? 'bg-[#ff9500]/15 text-[#ff9500]'
+                            : 'bg-[#34c759]/15 text-[#34c759]'
                         }`}
                 >
                     {isDanger ? t.dangerBadge : isWarning ? t.warningBadge : t.safeBadge}
@@ -70,12 +97,12 @@ export function AttendanceWidget({
             </div>
 
             <div className="flex flex-col gap-1.5">
-                <p className="text-[11px] font-semibold text-[var(--ios-secondary)] uppercase tracking-wider px-1">
+                <span className="text-[11px] font-semibold text-[var(--ios-secondary)] uppercase tracking-wider px-1">
                     Przedmioty
-                </p>
+                </span>
 
-                <div className="bg-[var(--ios-card)] rounded-[22px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
-                    {attendanceData.subjects.map((sub) => {
+                <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                    {sortedSubjects.map((sub) => {
                         const subDanger = sub.status === 'danger'
                         const subWarning = sub.status === 'warning'
 
@@ -83,29 +110,31 @@ export function AttendanceWidget({
                             <article
                                 key={sub.subject}
                                 onClick={() => onSelectSubject(sub)}
-                                className="p-4 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
+                                className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
                             >
-                                <div className="pr-2 min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                        <h4 className="text-xs font-semibold text-[var(--ios-label)] truncate">{sub.subject}</h4>
+                                <div className="pr-2 min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <h4 className="text-xs font-semibold text-[var(--ios-label)] truncate leading-tight">
+                                            {sub.subject}
+                                        </h4>
                                         {sub.unexcusedCount > 0 && (
-                                            <span className="text-[9px] font-semibold bg-[#ff3b30]/10 text-[#ff3b30] px-1.5 py-0.5 rounded-full">
+                                            <span className="text-[9px] font-semibold bg-[#ff3b30]/15 text-[#ff3b30] px-1.5 py-0.5 rounded-full shrink-0">
                                                 {sub.unexcusedCount} nb
                                             </span>
                                         )}
                                     </div>
                                     <p className="text-[11px] font-normal text-[var(--ios-secondary)] mt-0.5">
-                                        {t.missedOf(sub.absentLessons, sub.totalLessons)}
+                                        {formatMissedLabel(sub.absentLessons, sub.totalLessons)}
                                     </p>
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
                                     <span
                                         className={`text-xs font-semibold px-2 py-0.5 rounded-md ${subDanger
-                                                ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
-                                                : subWarning
-                                                    ? 'bg-[#ff9500]/10 text-[#ff9500]'
-                                                    : 'text-[var(--ios-secondary)]'
+                                            ? 'bg-[#ff3b30]/15 text-[#ff3b30]'
+                                            : subWarning
+                                                ? 'bg-[#ff9500]/15 text-[#ff9500]'
+                                                : 'text-[var(--ios-label)]'
                                             }`}
                                     >
                                         {sub.percentage}%

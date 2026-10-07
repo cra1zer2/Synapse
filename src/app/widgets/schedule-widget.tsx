@@ -1,8 +1,8 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, Fragment } from 'react'
 import { SmartTimetableResult, DaySchedule, LessonItem } from '@/models/timetable.model'
-import { AppDictionary } from '@/config/dictionary.config'
+import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import {
     parseLessonTimeRange,
     getCurrentTimeMinutes,
@@ -20,6 +20,7 @@ interface ScheduleWidgetProps {
     onManualRefresh: () => void
     onOpenTerminarz: () => void
     isLoadingWeek: boolean
+    lang?: AppLanguage
     t: AppDictionary
 }
 
@@ -38,6 +39,42 @@ function IosSpinner({ className = 'w-5 h-5 text-[var(--ios-secondary)]' }: { cla
     )
 }
 
+function getDayIndicatorColor(day: DaySchedule): string | null {
+    const hasCancelled = day.lessons.some((l) => l.isCancelled)
+    const hasHoliday = day.events && day.events.some((e) => e.category === 'holiday')
+    if (hasCancelled || hasHoliday) return 'bg-[#ff3b30]'
+
+    const hasSubstitution = day.lessons.some((l) => l.isSubstitution)
+    if (hasSubstitution) return 'bg-[#af52de]'
+
+    const hasShortened = day.lessons.some((l) => l.isShortened)
+    if (hasShortened) return 'bg-[#ff9500]'
+
+    return null
+}
+
+function getDayAbbr(dayName: string, lang: AppLanguage = 'pl'): string {
+    const mapPl: Record<string, string> = {
+        Monday: 'Pn',
+        Tuesday: 'Wt',
+        Wednesday: 'Śr',
+        Thursday: 'Cz',
+        Friday: 'Pt',
+        Saturday: 'So',
+        Sunday: 'Nd'
+    }
+    const mapEn: Record<string, string> = {
+        Monday: 'Mo',
+        Tuesday: 'Tu',
+        Wednesday: 'We',
+        Thursday: 'Th',
+        Friday: 'Fr',
+        Saturday: 'Sa',
+        Sunday: 'Su'
+    }
+    return (lang === 'en' ? mapEn[dayName] : mapPl[dayName]) || dayName.slice(0, 2)
+}
+
 export function ScheduleWidget({
     timetableData,
     selectedDay,
@@ -48,6 +85,7 @@ export function ScheduleWidget({
     onManualRefresh,
     onOpenTerminarz,
     isLoadingWeek,
+    lang = 'pl',
     t
 }: ScheduleWidgetProps) {
     const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
@@ -77,20 +115,6 @@ export function ScheduleWidget({
             return `${sParts[2]}.${sParts[1]} — ${eParts[2]}.${eParts[1]}`
         }
         return `${startIso} — ${endIso}`
-    }
-
-    const getDayIndicatorColor = (day: DaySchedule) => {
-        const hasCancelled = day.lessons.some((l) => l.isCancelled)
-        const hasHoliday = day.events && day.events.some((e) => e.category === 'holiday')
-        if (hasCancelled || hasHoliday) return 'bg-[#ff3b30]'
-
-        const hasSubstitution = day.lessons.some((l) => l.isSubstitution)
-        if (hasSubstitution) return 'bg-[#af52de]'
-
-        const hasShortened = day.lessons.some((l) => l.isShortened)
-        if (hasShortened) return 'bg-[#ff9500]'
-
-        return null
     }
 
     const getLessonLiveState = (lesson: LessonItem, isToday: boolean): 'active' | 'passed' | 'upcoming' => {
@@ -198,7 +222,7 @@ export function ScheduleWidget({
                                     : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]'
                                     }`}
                             >
-                                <span className="text-[10px] uppercase font-semibold opacity-85">{day.dayName.slice(0, 3)}</span>
+                                <span className="text-[10px] uppercase font-semibold opacity-85">{getDayAbbr(day.dayName, lang)}</span>
                                 <span className="relative text-[13px] font-semibold mt-0.5">
                                     {day.date ? day.date.split('.')[0] : ''}
                                     {dotColor && (
@@ -249,65 +273,68 @@ export function ScheduleWidget({
 
                                 const shouldShowUpcomingBreak = liveState === 'active' && breakMinutes > 0
                                 const shouldShowCountdown = breakActive && breakRemaining > 0
+                                const hasBreakDivider = shouldShowUpcomingBreak || shouldShowCountdown
 
                                 return (
-                                    <div
-                                        key={`${lesson.number}-${lesson.subject}-${lesson.time}`}
-                                        ref={liveState === 'active' ? activeLessonRef : null}
-                                        className="flex flex-col"
-                                    >
-                                        <article
-                                            className={`w-full bg-[var(--ios-card)] rounded-[16px] px-4 py-2.5 flex items-start justify-between gap-2.5 transition-all ${liveState === 'passed' ? 'opacity-45' : 'opacity-100'
-                                                }`}
-                                        >
-                                            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                                                <div className="flex items-center gap-1.5">
-                                                    {liveState === 'active' && (
-                                                        <span className="w-2 h-2 rounded-full bg-[#007aff] dark:bg-[#0a84ff] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
-                                                    )}
-                                                    <span className="text-[11px] font-medium text-[var(--ios-secondary)] tracking-tight">
-                                                        {lesson.time}
-                                                    </span>
+                                    <Fragment key={`${lesson.number}-${lesson.subject}-${lesson.time}-${idx}`}>
+                                        <div ref={liveState === 'active' ? activeLessonRef : null} className="w-full">
+                                            <article
+                                                className={`w-full bg-[var(--ios-card)] rounded-[16px] px-4 py-2.5 flex items-start justify-between gap-2.5 transition-all ${liveState === 'passed' ? 'opacity-45' : 'opacity-100'
+                                                    }`}
+                                            >
+                                                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                                    <div className="flex items-center gap-1.5">
+                                                        {liveState === 'active' && (
+                                                            <span className="w-2 h-2 rounded-full bg-[#007aff] dark:bg-[#0a84ff] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
+                                                        )}
+                                                        <span className="text-[11px] font-medium text-[var(--ios-secondary)] tracking-tight">
+                                                            {lesson.time}
+                                                        </span>
+                                                    </div>
+
+                                                    <h3 className="text-[15px] font-semibold text-[var(--ios-label)] leading-[1.25] break-words">
+                                                        {lesson.subject}
+                                                    </h3>
+
+                                                    <p className="text-[12px] font-normal text-[var(--ios-secondary)]">
+                                                        {lesson.teacher || t.notSpecified}
+                                                    </p>
                                                 </div>
 
-                                                <h3 className="text-[15px] font-semibold text-[var(--ios-label)] leading-[1.25] break-words">
-                                                    {lesson.subject}
-                                                </h3>
+                                                <div className="shrink-0 flex flex-col items-end gap-1 pt-0.5">
+                                                    {lesson.room && (
+                                                        <span className="text-[11px] font-semibold bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2 py-0.5 rounded-[6px] whitespace-nowrap">
+                                                            {lesson.room}
+                                                        </span>
+                                                    )}
+                                                    {lesson.isShortened && (
+                                                        <span className="text-[10px] font-semibold text-[#ff9500] bg-[#ff9500]/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                                            {lesson.durationMinutes} min
+                                                        </span>
+                                                    )}
+                                                    {lesson.isCancelled && (
+                                                        <span className="text-[10px] font-semibold text-[#ff3b30] bg-[#ff3b30]/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                                            Odwołane
+                                                        </span>
+                                                    )}
+                                                    {lesson.isSubstitution && (
+                                                        <span className="text-[10px] font-semibold text-[#af52de] bg-[#af52de]/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                                            Zastępstwo
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </article>
+                                        </div>
 
-                                                <p className="text-[12px] font-normal text-[var(--ios-secondary)]">
-                                                    {lesson.teacher || t.notSpecified}
-                                                </p>
-                                            </div>
-
-                                            <div className="shrink-0 flex flex-col items-end gap-1 pt-0.5">
-                                                {lesson.room && (
-                                                    <span className="text-[11px] font-semibold bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2 py-0.5 rounded-[6px] whitespace-nowrap">
-                                                        {lesson.room}
-                                                    </span>
-                                                )}
-                                                {lesson.isShortened && (
-                                                    <span className="text-[10px] font-semibold text-[#ff9500] bg-[#ff9500]/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                                        {lesson.durationMinutes} min
-                                                    </span>
-                                                )}
-                                                {lesson.isCancelled && (
-                                                    <span className="text-[10px] font-semibold text-[#ff3b30] bg-[#ff3b30]/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                                        Odwołane
-                                                    </span>
-                                                )}
-                                                {lesson.isSubstitution && (
-                                                    <span className="text-[10px] font-semibold text-[#af52de] bg-[#af52de]/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                                        Zastępstwo
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </article>
-
-                                        {(shouldShowUpcomingBreak || shouldShowCountdown) && (
-                                            <div className="py-2 flex items-center gap-3 px-2">
-                                                <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
-                                                <div className={`flex items-center gap-1.5 text-[11px] font-medium shrink-0 ${shouldShowCountdown ? 'text-[var(--ios-blue)] animate-pulse' : 'text-[var(--ios-secondary)]'
-                                                    }`}>
+                                        {hasBreakDivider && (
+                                            <div className="w-full flex items-center gap-3 px-2 py-1">
+                                                <div className="h-[0.5px] flex-1 bg-black/15 dark:bg-white/18" />
+                                                <div
+                                                    className={`flex items-center gap-1.5 text-[11px] font-medium shrink-0 px-2 py-0.5 rounded-full ${shouldShowCountdown
+                                                        ? 'text-[var(--ios-blue)] bg-[var(--ios-room-bg)] animate-pulse'
+                                                        : 'text-[var(--ios-secondary)] bg-[var(--ios-element)]/60'
+                                                        }`}
+                                                >
                                                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                         <circle cx="12" cy="12" r="10" />
                                                         <polyline points="12 6 12 12 16 14" />
@@ -318,10 +345,10 @@ export function ScheduleWidget({
                                                             : `${breakMinutes} min`}
                                                     </span>
                                                 </div>
-                                                <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
+                                                <div className="h-[0.5px] flex-1 bg-black/15 dark:bg-white/18" />
                                             </div>
                                         )}
-                                    </div>
+                                    </Fragment>
                                 )
                             })
                         ) : (

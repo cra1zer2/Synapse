@@ -419,12 +419,7 @@ export function SettingsSheet({
                                 {t.accessibilityTitle}
                             </span>
 
-                            <div className="flex items-center gap-1.5 text-[var(--ios-secondary)]">
-                                <span className="text-xs font-normal">
-                                    {textClamp === '1' ? t.onLabel : t.offLabel}
-                                </span>
-                                <span className="text-xs font-medium">›</span>
-                            </div>
+                            <span className="text-xs text-[var(--ios-secondary)] font-medium">›</span>
                         </div>
                     </div>
                 </div>
@@ -438,12 +433,6 @@ export function SettingsSheet({
                             {t.logout}
                         </button>
                     </div>
-                </div>
-
-                <div className="text-center pt-2 pb-4">
-                    <p className="text-[11px] font-normal text-[var(--ios-secondary)]/60">
-                        {t.appVersionFooter}
-                    </p>
                 </div>
             </div>
 

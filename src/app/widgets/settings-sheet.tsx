@@ -142,7 +142,7 @@ export function SettingsSheet({
             setIsDismissing(false)
             setDragOffset(0)
             onClose()
-        }, 250)
+        }, 320)
     }
 
     const handleSubDismiss = () => {
@@ -151,7 +151,7 @@ export function SettingsSheet({
             setIsSubDismissing(false)
             setSubDragOffset(0)
             setShowAccessibility(false)
-        }, 250)
+        }, 320)
     }
 
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -231,9 +231,9 @@ export function SettingsSheet({
             onTouchEnd={handleTouchEnd}
             style={{
                 transform: isDismissing ? 'translateX(100%)' : `translateX(${dragOffset}px)`,
-                transition: isSwiping.current ? 'none' : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+                transition: isSwiping.current ? 'none' : 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
-            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250"
+            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-300"
         >
             <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                 <button
@@ -468,9 +468,9 @@ export function SettingsSheet({
                     onTouchEnd={handleSubTouchEnd}
                     style={{
                         transform: isSubDismissing ? 'translateX(100%)' : `translateX(${subDragOffset}px)`,
-                        transition: isSubSwiping.current ? 'none' : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+                        transition: isSubSwiping.current ? 'none' : 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)'
                     }}
-                    className="fixed inset-0 z-60 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250"
+                    className="fixed inset-0 z-60 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-300"
                 >
                     <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                         <button

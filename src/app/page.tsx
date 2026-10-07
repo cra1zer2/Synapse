@@ -157,8 +157,9 @@ export default function Home() {
   }, [theme])
 
   useEffect(() => {
-    let isPinned = false
+    let isPinned = isCalendarPinned
     const handleScroll = () => {
+      if (isAnyOverlayActive) return
       const y = window.scrollY
       if (!isPinned && y > 105) {
         isPinned = true
@@ -170,7 +171,7 @@ export default function Home() {
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [isAnyOverlayActive, isCalendarPinned])
 
   const handleSelectLanguage = (newLang: AppLanguage) => {
     setLang(newLang)

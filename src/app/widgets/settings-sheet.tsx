@@ -50,6 +50,24 @@ function IosSwitch({
     )
 }
 
+function resolveAccountTitle(fullName: string | undefined, username: string, role: 'student' | 'parent'): string {
+    if (fullName && fullName !== 'Konto Librus' && !/^\d+$/.test(fullName)) {
+        return fullName
+    }
+    return role === 'parent' ? 'Konto rodzica' : 'Konto ucznia'
+}
+
+function resolveAvatarLetter(fullName: string | undefined, username: string, role: 'student' | 'parent'): string {
+    if (fullName && fullName !== 'Konto Librus' && !/^\d+$/.test(fullName)) {
+        const parts = fullName.trim().split(/\s+/)
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[1][0]).toUpperCase()
+        }
+        return fullName.slice(0, 2).toUpperCase()
+    }
+    return role === 'parent' ? 'R' : 'U'
+}
+
 export function SettingsSheet({
     isOpen,
     onClose,
@@ -70,7 +88,6 @@ export function SettingsSheet({
     t
 }: SettingsSheetProps) {
     const [showAddForm, setShowAddForm] = useState(false)
-    const [showNotificationChannels, setShowNotificationChannels] = useState(false)
     const [pushStatus, setPushStatus] = useState<string>(() => getNotificationPermissionStatus())
 
     const [dragOffset, setDragOffset] = useState(0)
@@ -80,13 +97,12 @@ export function SettingsSheet({
     const accountsList = Array.isArray(savedAccounts) ? savedAccounts : []
     const activeAccount = accountsList.find((a) => a.isActive) || accountsList[0]
 
-    const displayName = profile?.fullName && profile.fullName !== 'Konto Librus'
-        ? profile.fullName
-        : activeAccount?.profile?.fullName && activeAccount.profile.fullName !== 'Konto Librus'
-            ? activeAccount.profile.fullName
-            : activeAccount?.username || 'Uczeń'
-
-    const displaySubtitle = `${activeAccount?.profile?.className || profile?.className || 'Klasa Technikum'} • ${activeAccount?.profile?.schoolName || profile?.schoolName || 'TEB Edukacja'}`
+    const activeRole = activeAccount?.role || profile?.role || 'student'
+    const activeRawName = profile?.fullName || activeAccount?.profile?.fullName || ''
+    const activeUsername = activeAccount?.username || ''
+    const heroTitle = resolveAccountTitle(activeRawName, activeUsername, activeRole)
+    const heroAvatar = resolveAvatarLetter(activeRawName, activeUsername, activeRole)
+    const heroSubtitle = `${activeAccount?.profile?.className || profile?.className || '4 Tsa Technikum'} • ${activeAccount?.profile?.schoolName || profile?.schoolName || 'TEB Edukacja'}`
 
     const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(() => {
         if (typeof window !== 'undefined') {
@@ -134,8 +150,7 @@ export function SettingsSheet({
         setDragOffset(0)
     }
 
-    const handleTogglePushMaster = async (e: React.MouseEvent) => {
-        e.stopPropagation()
+    const handleTogglePushMaster = async () => {
         const res = await requestPushPermission()
         setPushStatus(res)
         const updated = { ...notificationPrefs, enabled: res === 'granted' }
@@ -163,117 +178,94 @@ export function SettingsSheet({
             className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250"
         >
             <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
+                <div className="w-16" />
+
+                <h2 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight">
+                    {t.settingsTitle}
+                </h2>
+
                 <button
                     onClick={onClose}
-                    className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-medium active:opacity-70 -ml-1 py-1 pr-2"
+                    className="w-16 text-right text-sm font-semibold text-[var(--ios-blue)] active:opacity-70"
                 >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="15 18 9 12 15 6" />
-                    </svg>
-                    <span>{t.done}</span>
+                    {t.done}
                 </button>
-
-                <h2 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight">{t.settingsTitle}</h2>
-
-                <div className="w-8" />
             </header>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
-                <div className="bg-[var(--ios-card)] rounded-[22px] p-4 flex items-center gap-3.5 shadow-xs">
-                    <div className="w-11 h-11 rounded-full bg-[var(--ios-blue)] text-white flex items-center justify-center font-semibold text-base shrink-0 shadow-xs">
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                            <circle cx="12" cy="7" r="4" />
-                        </svg>
+                <div className="bg-[var(--ios-card)] rounded-[18px] p-4 flex items-center gap-3.5 shadow-xs">
+                    <div className="w-12 h-12 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-semibold text-sm shrink-0">
+                        {heroAvatar}
                     </div>
+
                     <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-semibold text-[var(--ios-label)] truncate">
-                            {displayName}
+                        <h3 className="text-[15px] font-semibold text-[var(--ios-label)] truncate leading-tight">
+                            {heroTitle}
                         </h3>
                         <p className="text-xs font-normal text-[var(--ios-secondary)] truncate mt-0.5">
-                            {displaySubtitle}
+                            {heroSubtitle}
                         </p>
+                        <span className="text-[10px] font-medium text-[var(--ios-secondary)]/80 mt-0.5 block">
+                            Login: {activeUsername}
+                        </span>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">{t.accountSwitcher}</span>
-                    <div className="bg-[var(--ios-card)] rounded-[22px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
-                        {accountsList.map((acc) => (
-                            <div
-                                key={acc.id}
-                                onClick={() => onSwitchAccount(acc)}
-                                className="p-4 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0 ${acc.role === 'student' ? 'bg-[#007aff]' : 'bg-[#af52de]'
-                                        }`}>
-                                        {acc.role === 'student' ? 'U' : 'R'}
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xs font-semibold text-[var(--ios-label)]">{acc.profile?.fullName || acc.username}</h3>
-                                        <p className="text-[11px] font-normal text-[var(--ios-secondary)]">
-                                            {acc.role === 'student' ? t.studentRole : t.parentRole} • {acc.username}
-                                        </p>
-                                    </div>
-                                </div>
+                {accountsList.length > 1 && (
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                            Konta
+                        </span>
 
-                                {acc.isActive ? (
-                                    <span className="text-xs font-semibold text-[#34c759] bg-[#34c759]/15 px-2.5 py-0.5 rounded-full">
-                                        Aktywne
-                                    </span>
-                                ) : (
-                                    <span className="text-xs font-medium text-[var(--ios-blue)]">
-                                        Przełącz ›
-                                    </span>
-                                )}
-                            </div>
-                        ))}
+                        <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                            {accountsList.map((acc) => {
+                                const accRole = acc.role === 'student' ? t.studentRole : t.parentRole
+                                const accTitle = resolveAccountTitle(acc.profile?.fullName, acc.username, acc.role)
 
-                        <button
-                            type="button"
-                            onClick={() => setShowAddForm(!showAddForm)}
-                            className="w-full p-4 text-left text-xs font-semibold text-[var(--ios-blue)] flex items-center justify-between hover:bg-[var(--ios-element)]/20 transition-colors"
-                        >
-                            <span>+ Dodaj kolejne konto</span>
-                            <span>{showAddForm ? '▲' : '▼'}</span>
-                        </button>
+                                return (
+                                    <div
+                                        key={acc.id}
+                                        onClick={() => onSwitchAccount(acc)}
+                                        className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center text-xs font-semibold shrink-0">
+                                                {resolveAvatarLetter(acc.profile?.fullName, acc.username, acc.role)}
+                                            </div>
+
+                                            <div className="min-w-0">
+                                                <h4 className="text-xs font-semibold text-[var(--ios-label)] truncate">
+                                                    {accTitle}
+                                                </h4>
+                                                <p className="text-[11px] font-normal text-[var(--ios-secondary)] truncate">
+                                                    {accRole} • {acc.username}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {acc.isActive ? (
+                                            <span className="text-sm font-semibold text-[var(--ios-blue)] pr-1">
+                                                ✓
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs font-medium text-[var(--ios-blue)]">
+                                                Przełącz
+                                            </span>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
                     </div>
-                </div>
-
-                {showAddForm && (
-                    <form onSubmit={onAddAccount} className="bg-[var(--ios-card)] rounded-[22px] p-4 shadow-xs flex flex-col gap-2.5">
-                        <span className="text-xs font-semibold text-[var(--ios-label)]">Nowe konto</span>
-                        <input
-                            type="text"
-                            placeholder="Login / ID"
-                            value={newUsername}
-                            onChange={(e) => setNewUsername(e.target.value)}
-                            className="w-full bg-[var(--ios-bg)] text-[var(--ios-label)] text-xs rounded-xl px-3.5 py-2.5 outline-none"
-                            required
-                        />
-                        <input
-                            type="password"
-                            placeholder="Hasło"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            className="w-full bg-[var(--ios-bg)] text-[var(--ios-label)] text-xs rounded-xl px-3.5 py-2.5 outline-none"
-                            required
-                        />
-                        <button
-                            type="submit"
-                            disabled={isAddingAccount}
-                            className="w-full bg-[var(--ios-blue)] text-white text-xs font-semibold py-2.5 rounded-xl disabled:opacity-50"
-                        >
-                            {isAddingAccount ? 'Weryfikacja...' : 'Zapisz konto'}
-                        </button>
-                    </form>
                 )}
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">{t.appTheme}</span>
-                    <div className="bg-[var(--ios-card)] rounded-[22px] overflow-hidden shadow-xs">
-                        <div className="p-4 flex items-center justify-between">
+                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                        Preferencje
+                    </span>
+
+                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                        <div className="p-3.5 flex items-center justify-between">
                             <span className="text-xs font-medium text-[var(--ios-label)]">{t.appTheme}</span>
                             <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex gap-0.5">
                                 {[
@@ -285,8 +277,8 @@ export function SettingsSheet({
                                         key={th.id}
                                         onClick={() => onSelectTheme(th.id)}
                                         className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${currentTheme === th.id
-                                                ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs'
-                                                : 'text-[var(--ios-secondary)]'
+                                            ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs'
+                                            : 'text-[var(--ios-secondary)]'
                                             }`}
                                     >
                                         {th.label}
@@ -294,13 +286,8 @@ export function SettingsSheet({
                                 ))}
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">{t.appLanguage}</span>
-                    <div className="bg-[var(--ios-card)] rounded-[22px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
-                        <div className="p-4 flex items-center justify-between">
+                        <div className="p-3.5 flex items-center justify-between">
                             <span className="text-xs font-medium text-[var(--ios-label)]">{t.appLanguage}</span>
                             <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex gap-0.5">
                                 {[
@@ -311,8 +298,8 @@ export function SettingsSheet({
                                         key={l.id}
                                         onClick={() => onSelectLang(l.id)}
                                         className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${currentLang === l.id
-                                                ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs'
-                                                : 'text-[var(--ios-secondary)]'
+                                            ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs'
+                                            : 'text-[var(--ios-secondary)]'
                                             }`}
                                     >
                                         {l.label}
@@ -324,60 +311,117 @@ export function SettingsSheet({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-1">Powiadomienia</span>
-                    <div className="bg-[var(--ios-card)] rounded-[22px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
-                        <div
-                            onClick={() => setShowNotificationChannels(!showNotificationChannels)}
-                            className="p-4 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
-                        >
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-[var(--ios-label)]">Konfiguracja powiadomień</span>
-                                <span className="text-xs text-[var(--ios-secondary)]">›</span>
+                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                        Powiadomienia
+                    </span>
+
+                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                        <div className="p-3.5 flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-medium text-[var(--ios-label)]">Powiadomienia Push</p>
+                                <p className="text-[11px] text-[var(--ios-secondary)]">Dzwonki, oceny, zastępstwa</p>
                             </div>
 
-                            <div className="flex items-center gap-2.5 pl-2 border-l border-[var(--ios-separator)]">
+                            {pushStatus === 'granted' ? (
+                                <IosSwitch
+                                    checked={notificationPrefs.enabled}
+                                    onChange={() => {
+                                        const updated = { ...notificationPrefs, enabled: !notificationPrefs.enabled }
+                                        setNotificationPrefs(updated)
+                                        localStorage.setItem('synapse_notification_prefs', JSON.stringify(updated))
+                                    }}
+                                />
+                            ) : (
                                 <button
                                     type="button"
                                     onClick={handleTogglePushMaster}
-                                    className={`text-[11px] font-semibold px-3 py-1 rounded-full transition-all ${pushStatus === 'granted'
-                                            ? 'bg-[#34c759]/15 text-[#34c759]'
-                                            : 'bg-[var(--ios-blue)] text-white shadow-xs'
-                                        }`}
+                                    className="text-xs font-semibold px-3 py-1 bg-[var(--ios-blue)] text-white rounded-full shadow-xs active:scale-95 transition-transform"
                                 >
-                                    {pushStatus === 'granted' ? 'Włączone' : 'Włącz'}
+                                    Włącz
                                 </button>
-                            </div>
+                            )}
                         </div>
 
-                        {showNotificationChannels && (
-                            <div className="p-4 bg-[var(--ios-bg)]/40 flex flex-col gap-3 animate-in fade-in">
+                        {pushStatus === 'granted' && notificationPrefs.enabled && (
+                            <>
                                 {[
-                                    { key: 'grades' as const, label: 'Oceny (nowe i zmiany)' },
-                                    { key: 'timetableChanges' as const, label: 'Zastępstwa i odwołania lekcji' },
-                                    { key: 'absences' as const, label: 'Nieobecności (alerty o NB)' },
+                                    { key: 'grades' as const, label: 'Nowe oceny' },
+                                    { key: 'timetableChanges' as const, label: 'Zastępstwa i odwołania' },
+                                    { key: 'absences' as const, label: 'Nieobecności (alerty NB)' },
                                     { key: 'messages' as const, label: 'Wiadomości prywatne' },
                                     { key: 'announcements' as const, label: 'Ogłoszenia szkoły' },
-                                    { key: 'calendarEvents' as const, label: 'Wydarzenia i sprawdziany (data)' }
+                                    { key: 'calendarEvents' as const, label: 'Wydarzenia i sprawdziany' }
                                 ].map((item) => (
-                                    <div key={item.key} className="flex items-center justify-between text-xs py-1">
-                                        <span className="text-[var(--ios-label)] font-medium pr-2">{item.label}</span>
+                                    <div key={item.key} className="p-3.5 flex items-center justify-between text-xs">
+                                        <span className="text-[var(--ios-label)] font-normal">{item.label}</span>
                                         <IosSwitch
                                             checked={Boolean(notificationPrefs[item.key])}
                                             onChange={() => handleToggleChannel(item.key)}
                                         />
                                     </div>
                                 ))}
-                            </div>
+                            </>
                         )}
                     </div>
                 </div>
 
-                <button
-                    onClick={onLogout}
-                    className="w-full text-xs font-semibold text-[#ff3b30] bg-[var(--ios-card)] py-3.5 rounded-[22px] active:opacity-70 shadow-xs"
-                >
-                    {t.logout}
-                </button>
+                <div className="flex flex-col gap-1.5">
+                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                        Zarządzanie kontem
+                    </span>
+
+                    <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                        <button
+                            type="button"
+                            onClick={() => setShowAddForm(!showAddForm)}
+                            className="w-full p-3.5 text-left text-xs font-semibold text-[var(--ios-blue)] flex items-center justify-between active:bg-[var(--ios-element)]/30 transition-colors"
+                        >
+                            <span>+ Dodaj kolejne konto</span>
+                            <span className="text-xs text-[var(--ios-secondary)]">{showAddForm ? '▲' : '›'}</span>
+                        </button>
+
+                        {showAddForm && (
+                            <form onSubmit={onAddAccount} className="p-3.5 flex flex-col gap-2.5 bg-[var(--ios-bg)]/40">
+                                <input
+                                    type="text"
+                                    placeholder="Login / ID"
+                                    value={newUsername}
+                                    onChange={(e) => setNewUsername(e.target.value)}
+                                    className="w-full bg-[var(--ios-card)] text-[var(--ios-label)] text-xs rounded-xl px-3 py-2.5 outline-none border border-[var(--ios-separator)]"
+                                    required
+                                />
+                                <input
+                                    type="password"
+                                    placeholder="Hasło"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="w-full bg-[var(--ios-card)] text-[var(--ios-label)] text-xs rounded-xl px-3 py-2.5 outline-none border border-[var(--ios-separator)]"
+                                    required
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isAddingAccount}
+                                    className="w-full bg-[var(--ios-blue)] text-white text-xs font-semibold py-2.5 rounded-xl disabled:opacity-50 active:opacity-85 shadow-xs"
+                                >
+                                    {isAddingAccount ? 'Weryfikacja...' : 'Zapisz konto'}
+                                </button>
+                            </form>
+                        )}
+
+                        <button
+                            onClick={onLogout}
+                            className="w-full text-center p-3.5 text-xs font-semibold text-[#ff3b30] active:bg-[var(--ios-element)]/30 transition-colors"
+                        >
+                            {t.logout}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="text-center pt-2 pb-4">
+                    <p className="text-[11px] font-normal text-[var(--ios-secondary)]/60">
+                        Synapse • 4 Tsa Technikum
+                    </p>
+                </div>
             </div>
         </div>
     )

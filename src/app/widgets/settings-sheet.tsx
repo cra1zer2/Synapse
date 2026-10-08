@@ -185,6 +185,7 @@ export function SettingsSheet({
     }
 
     const handleTouchStart = (e: React.TouchEvent) => {
+        if (showAdvanced) return
         const clientX = e.touches[0].clientX
         touchStartX.current = clientX
         if (clientX < 60) {
@@ -193,7 +194,7 @@ export function SettingsSheet({
     }
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        if (!isSwiping.current) return
+        if (showAdvanced || !isSwiping.current) return
         const currentX = e.touches[0].clientX
         const delta = currentX - touchStartX.current
         if (delta > 0) {
@@ -202,7 +203,7 @@ export function SettingsSheet({
     }
 
     const handleTouchEnd = () => {
-        if (!isSwiping.current) return
+        if (showAdvanced || !isSwiping.current) return
         isSwiping.current = false
         if (dragOffset > 85) {
             handleDismiss()
@@ -212,6 +213,7 @@ export function SettingsSheet({
     }
 
     const handleSubTouchStart = (e: React.TouchEvent) => {
+        e.stopPropagation()
         const clientX = e.touches[0].clientX
         subTouchStartX.current = clientX
         if (clientX < 60) {
@@ -220,6 +222,7 @@ export function SettingsSheet({
     }
 
     const handleSubTouchMove = (e: React.TouchEvent) => {
+        e.stopPropagation()
         if (!isSubSwiping.current) return
         const currentX = e.touches[0].clientX
         const delta = currentX - subTouchStartX.current
@@ -228,7 +231,8 @@ export function SettingsSheet({
         }
     }
 
-    const handleSubTouchEnd = () => {
+    const handleSubTouchEnd = (e: React.TouchEvent) => {
+        e.stopPropagation()
         if (!isSubSwiping.current) return
         isSubSwiping.current = false
         if (subDragOffset > 85) {

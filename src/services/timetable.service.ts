@@ -218,6 +218,9 @@ export async function fetchSmartTimetable(
                         }
                     }
 
+                    const rawTopic = (slot.topic || slot.theme || slot.subjectTopic || slot.description || '').trim()
+                    const topic = rawTopic.length > 0 ? rawTopic : undefined
+
                     lessons.push({
                         number: index,
                         subject: slot.subject || '',
@@ -230,7 +233,8 @@ export async function fetchSmartTimetable(
                         isSubstitution,
                         flag: slot.flag || null,
                         teacherAbsent: isAbsent || isCancelled,
-                        teacherAbsenceReason: isAbsent || isCancelled ? 'Nauczyciel nieobecny' : undefined
+                        teacherAbsenceReason: isAbsent || isCancelled ? 'Nauczyciel nieobecny' : undefined,
+                        topic
                     })
                 })
             }
@@ -260,6 +264,7 @@ export async function fetchSmartTimetable(
             schedule.forEach((day) => {
                 day.lessons.forEach((lesson) => {
                     if (lesson.subject) subjectsToTranslate.add(lesson.subject)
+                    if (lesson.topic) reasonsToTranslate.add(lesson.topic)
                 })
                 day.events.forEach((ev) => {
                     if (ev.title) reasonsToTranslate.add(ev.title)
@@ -278,6 +283,9 @@ export async function fetchSmartTimetable(
                 day.lessons.forEach((lesson) => {
                     if (translatedMap[lesson.subject]) {
                         lesson.subject = translatedMap[lesson.subject]
+                    }
+                    if (lesson.topic && translatedMap[lesson.topic]) {
+                        lesson.topic = translatedMap[lesson.topic]
                     }
                 })
                 day.events.forEach((ev) => {

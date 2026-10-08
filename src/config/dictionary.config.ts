@@ -140,6 +140,13 @@ export interface AppDictionary {
     gpaTitle: string
     partialGradesTitle: string
     terminarzButton: string
+    lessonDetails: string
+    lessonTopic: string
+    noTopicRecorded: string
+    roomLabel: string
+    durationLabel: string
+    statusLabel: string
+    normalLesson: string
 }
 
 export function getDictionary(lang: AppLanguage): AppDictionary {
@@ -282,7 +289,14 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             unexcusedShortBadge: (count: number) => `${count} unex`,
             gpaTitle: 'Grade Point Average (GPA)',
             partialGradesTitle: 'Individual Grades',
-            terminarzButton: 'Calendar'
+            terminarzButton: 'Calendar',
+            lessonDetails: 'Lesson Details',
+            lessonTopic: 'Lesson Topic',
+            noTopicRecorded: 'No topic recorded',
+            roomLabel: 'Classroom',
+            durationLabel: 'Duration',
+            statusLabel: 'Status',
+            normalLesson: 'Regular period'
         }
     }
 
@@ -432,6 +446,13 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         unexcusedShortBadge: (count: number) => `${count} nb`,
         gpaTitle: 'Średnia ocen (GPA)',
         partialGradesTitle: 'Oceny cząstkowe',
-        terminarzButton: 'Terminarz'
+        terminarzButton: 'Terminarz',
+        lessonDetails: 'Szczegóły lekcji',
+        lessonTopic: 'Temat lekcji',
+        noTopicRecorded: 'Brak wpisanego tematu',
+        roomLabel: 'Sala / Gabinet',
+        durationLabel: 'Czas trwania',
+        statusLabel: 'Status',
+        normalLesson: 'Lekcja planowa'
     }
 }

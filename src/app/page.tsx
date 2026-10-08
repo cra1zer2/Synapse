@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createJustificationAction } from './actions'
-import { DaySchedule } from '@/models/timetable.model'
+import { DaySchedule, LessonItem } from '@/models/timetable.model'
 import { GradeItem, SubjectGrades } from '@/models/grade.model'
 import { SubjectAttendance } from '@/models/attendance.model'
 import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
@@ -21,6 +21,7 @@ import { MessagesWidget } from './widgets/messages-widget'
 import { AttendanceDetailModal } from './widgets/attendance-detail-modal'
 import { JustificationModal } from './widgets/justification-modal'
 import { GradeModal } from './widgets/grade-modal'
+import { LessonDetailModal } from './widgets/lesson-detail-modal'
 import { SettingsSheet } from './widgets/settings-sheet'
 import { TerminarzModal } from './widgets/terminarz-modal'
 import { WhatsNewModal } from '@/app/widgets/whats-new-modal'
@@ -96,6 +97,7 @@ export default function Home() {
   const [isCalendarPinned, setIsCalendarPinned] = useState(false)
   const [showWhatsNew, setShowWhatsNew] = useState(false)
 
+  const [selectedLesson, setSelectedLesson] = useState<LessonItem | null>(null)
   const [selectedGrade, setSelectedGrade] = useState<GradeItem | null>(null)
   const [selectedWarningSubject, setSelectedWarningSubject] = useState<SubjectGrades | null>(null)
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<SubjectAttendance | null>(null)
@@ -140,6 +142,7 @@ export default function Home() {
     showExcuseMatrix ||
     showTerminarz ||
     showWhatsNew ||
+    Boolean(selectedLesson) ||
     Boolean(selectedSubjectDetail) ||
     Boolean(selectedGrade) ||
     Boolean(selectedWarningSubject)
@@ -293,6 +296,7 @@ export default function Home() {
   }
 
   const shouldShowPinnedBar = false
+  const currentDaySchedule = timetable.timetableData?.schedule.find((d) => d.dayName === timetable.selectedDay)
 
   return (
     <div className="w-full min-h-screen bg-[var(--ios-bg)] flex flex-col">
@@ -353,10 +357,10 @@ export default function Home() {
                           : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
                           }`}
                       >
-                        <span className={`text-[10px] uppercase tracking-tight ${isSelected ? 'font-semibold' : 'font-normal opacity-70'}`}>
+                        <span className={`text-[10px] uppercase tracking-tight ${isSelected ? 'font-medium' : 'font-normal opacity-70'}`}>
                           {getDayAbbr(day.dayName, lang)}
                         </span>
-                        <span className={`relative text-[13px] tracking-tight mt-0.5 ${isSelected ? 'font-semibold' : 'font-medium opacity-80'}`}>
+                        <span className={`relative text-[13px] tracking-tight mt-0.5 ${isSelected ? 'font-medium' : 'font-normal opacity-80'}`}>
                           {day.date ? day.date.split('.')[0] : ''}
                           {dotColor && (
                             <span className={`absolute -top-0.5 -right-1.5 w-1.5 h-1.5 rounded-full ${dotColor}`} />
@@ -390,9 +394,9 @@ export default function Home() {
           >
             <div className="flex items-center gap-2">
               <span className="text-sm">✨</span>
-              <p className="text-xs font-semibold tracking-tight">{t.newChanges}</p>
+              <p className="text-xs font-medium tracking-tight">{t.newChanges}</p>
             </div>
-            <span className="text-xs font-semibold underline bg-white/20 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-medium underline bg-white/20 px-2 py-0.5 rounded-lg">
               {t.updateNow}
             </span>
           </div>
@@ -408,6 +412,7 @@ export default function Home() {
               timetableData={timetable.timetableData}
               selectedDay={timetable.selectedDay}
               onSelectDay={handleSelectDay}
+              onSelectLesson={setSelectedLesson}
               currentWeekPivot={timetable.currentWeekPivot}
               onShiftWeek={timetable.shiftWeek}
               onSelectDate={timetable.queueWeekChange}
@@ -474,7 +479,7 @@ export default function Home() {
               icon: (
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
-                  <text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="currentColor" stroke="none">5</text>
+                  <text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="600" fill="currentColor" stroke="none">5</text>
                 </svg>
               )
             },
@@ -506,12 +511,21 @@ export default function Home() {
                   }`}
               >
                 {tab.icon}
-                <span className="text-[10px] font-medium tracking-tight mt-0.5">{tab.label}</span>
+                <span className="text-[10px] font-normal tracking-tight mt-0.5">{tab.label}</span>
               </button>
             )
           })}
         </div>
       </nav>
+
+      {selectedLesson && (
+        <LessonDetailModal
+          lesson={selectedLesson}
+          onClose={() => setSelectedLesson(null)}
+          isToday={Boolean(currentDaySchedule?.isToday)}
+          t={t}
+        />
+      )}
 
       {selectedSubjectDetail && (
         <AttendanceDetailModal

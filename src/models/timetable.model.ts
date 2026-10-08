@@ -12,6 +12,7 @@ export interface LessonItem {
     teacherAbsent: boolean
     teacherAbsenceReason?: string
     lessonCount?: number
+    topic?: string
 }
 
 export interface TimetableEvent {

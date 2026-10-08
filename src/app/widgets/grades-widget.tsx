@@ -117,7 +117,7 @@ export function GradesWidget({
         <section className="w-full flex flex-col gap-4 min-h-[500px]">
             <div className="bg-[var(--ios-card)] rounded-[18px] p-4 shadow-xs flex items-center justify-between">
                 <div>
-                    <p className="text-xs font-medium text-[var(--ios-secondary)]">Średnia ocen (GPA)</p>
+                    <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.gpaTitle}</p>
                     <h2 className="text-3xl font-semibold text-[var(--ios-label)] tracking-tight mt-0.5">
                         {displayOverallAverage}
                     </h2>
@@ -126,7 +126,7 @@ export function GradesWidget({
 
             <div className="flex flex-col gap-1.5">
                 <span className="text-[11px] font-semibold text-[var(--ios-secondary)] uppercase tracking-wider px-1">
-                    Oceny cząstkowe
+                    {t.partialGradesTitle}
                 </span>
 
                 <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">

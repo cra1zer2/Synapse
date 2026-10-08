@@ -2,59 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
-
-interface FeatureItem {
-    icon: string
-    title: string
-    description: string
-}
-
-const CHANGELOG: Record<'pl' | 'en', FeatureItem[]> = {
-    pl: [
-        {
-            icon: '🗓️',
-            title: 'Korekta kalendarza i bieżącego dnia',
-            description: 'Naprawiono synchronizację aktywnego dnia. Aplikacja otwiera dokładnie dzisiejszy dzień bez opóźnień pamięci podręcznej.'
-        },
-        {
-            icon: '💬',
-            title: 'Kaskadowy widok wiadomości',
-            description: 'Wiadomości opadają z miękką przezroczystością od góry bez skoków wysokości bloku.'
-        },
-        {
-            icon: '⏱️',
-            title: 'Wycentrowany indykator ładowania',
-            description: 'Nowy, symetryczny wskaźnik Apple Activity Indicator o precyzyjnym wyśrodkowaniu.'
-        },
-        {
-            icon: '📱',
-            title: 'Optymalizacja widoku ekranu',
-            description: 'Tymczasowo zawieszono przypinany pasek dla płynnego przewijania na dużych wyświetlaczach.'
-        }
-    ],
-    en: [
-        {
-            icon: '🗓️',
-            title: 'Live Current Day Synchronization',
-            description: 'Fixed schedule day tracking. Today is selected immediately with zero cached date drift.'
-        },
-        {
-            icon: '💬',
-            title: 'Cascading Message Feed',
-            description: 'Messages glide into view with gentle top-to-bottom opacity without layout jerks.'
-        },
-        {
-            icon: '⏱️',
-            title: 'Centered Activity Indicator',
-            description: 'Authentic Apple Activity Indicator with balanced alignment and fluid rotation.'
-        },
-        {
-            icon: '📱',
-            title: 'Display Layout Calibration',
-            description: 'Pinned navigation bar temporarily paused to maximize smooth scrolling on larger screens.'
-        }
-    ]
-}
+import { CURRENT_APP_VERSION, getSmartChangelog, ChangelogItem } from '@/config/version.config'
 
 interface WhatsNewModalProps {
     isOpen: boolean
@@ -71,16 +19,33 @@ export function WhatsNewModal({
 }: WhatsNewModalProps) {
     const [isEntered, setIsEntered] = useState(false)
     const [isDismissing, setIsDismissing] = useState(false)
+    const [showFullLog, setShowFullLog] = useState(false)
+    const [changelogData, setChangelogData] = useState<{
+        topHighlights: ChangelogItem[]
+        fullReleases: Array<{ version: string; releaseDate: string; items: ChangelogItem[] }>
+        hasMultipleVersions: boolean
+        totalNewItemsCount: number
+    }>({
+        topHighlights: [],
+        fullReleases: [],
+        hasMultipleVersions: false,
+        totalNewItemsCount: 0
+    })
 
     useEffect(() => {
         if (isOpen) {
+            const lastSeen = typeof window !== 'undefined' ? localStorage.getItem('synapse_seen_version') : null
+            const smart = getSmartChangelog(lastSeen, lang)
+            setChangelogData(smart)
+
             const frame = requestAnimationFrame(() => setIsEntered(true))
             return () => cancelAnimationFrame(frame)
         } else {
             setIsEntered(false)
             setIsDismissing(false)
+            setShowFullLog(false)
         }
-    }, [isOpen])
+    }, [isOpen, lang])
 
     const handleDismiss = () => {
         if (isDismissing) return
@@ -92,7 +57,9 @@ export function WhatsNewModal({
 
     if (!isOpen) return null
 
-    const features = CHANGELOG[lang] || CHANGELOG.pl
+    const toggleLabel = lang === 'en'
+        ? (showFullLog ? 'Show Highlights Only' : `Read All Release Notes (+${changelogData.totalNewItemsCount - changelogData.topHighlights.length} more)`)
+        : (showFullLog ? 'Pokaż tylko najważniejsze' : `Czytaj pełny dziennik zmian (+${changelogData.totalNewItemsCount - changelogData.topHighlights.length} więcej)`)
 
     return (
         <div
@@ -102,12 +69,12 @@ export function WhatsNewModal({
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                className={`bg-[var(--ios-card-solid)] rounded-[22px] w-full max-w-sm p-6 shadow-2xl flex flex-col gap-5 transition-all duration-260 ease-[cubic-bezier(0.16,1,0.3,1)] ${isEntered && !isDismissing
+                className={`bg-[var(--ios-card-solid)] rounded-[22px] w-full max-w-sm p-6 shadow-2xl flex flex-col gap-4 max-h-[85vh] overflow-y-auto transition-all duration-260 ease-[cubic-bezier(0.16,1,0.3,1)] ${isEntered && !isDismissing
                     ? 'opacity-100 scale-100 translate-y-0'
                     : 'opacity-0 scale-95 translate-y-4 sm:translate-y-2'
                     }`}
             >
-                <div className="flex flex-col items-center text-center gap-1.5 pt-1">
+                <div className="flex flex-col items-center text-center gap-1 pt-1">
                     <div className="w-12 h-12 rounded-2xl bg-[var(--ios-element)] flex items-center justify-center text-2xl shadow-xs mb-1">
                         ✨
                     </div>
@@ -115,32 +82,75 @@ export function WhatsNewModal({
                         {t.whatsNewTitle}
                     </h3>
                     <p className="text-xs font-normal text-[var(--ios-secondary)]">
-                        v3.0.1
+                        v{CURRENT_APP_VERSION}
                     </p>
                 </div>
 
-                <div className="flex flex-col gap-3.5 my-1">
-                    {features.map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-[var(--ios-room-bg)] text-[var(--ios-blue)] flex items-center justify-center text-base shrink-0 mt-0.5">
-                                {item.icon}
+                {!showFullLog ? (
+                    <div className="flex flex-col gap-3 my-1">
+                        {changelogData.topHighlights.map((item) => (
+                            <div key={item.id} className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-[var(--ios-room-bg)] text-[var(--ios-blue)] flex items-center justify-center text-base shrink-0 mt-0.5">
+                                    {item.icon}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="text-xs font-semibold text-[var(--ios-label)] leading-snug">
+                                        {item.title[lang]}
+                                    </h4>
+                                    <p className="text-[11px] font-normal text-[var(--ios-secondary)] leading-relaxed mt-0.5">
+                                        {item.description[lang]}
+                                    </p>
+                                </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                                <h4 className="text-xs font-semibold text-[var(--ios-label)] leading-snug">
-                                    {item.title}
-                                </h4>
-                                <p className="text-[11px] font-normal text-[var(--ios-secondary)] leading-relaxed mt-0.5">
-                                    {item.description}
-                                </p>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-4 my-1">
+                        {changelogData.fullReleases.map((release) => (
+                            <div key={release.version} className="flex flex-col gap-2">
+                                <div className="flex items-center justify-between border-b border-[var(--ios-separator)] pb-1 px-0.5">
+                                    <span className="text-xs font-semibold text-[var(--ios-blue)]">
+                                        v{release.version}
+                                    </span>
+                                    <span className="text-[10px] text-[var(--ios-secondary)] font-normal">
+                                        {release.releaseDate}
+                                    </span>
+                                </div>
+
+                                <div className="flex flex-col gap-2.5 pl-1">
+                                    {release.items.map((item) => (
+                                        <div key={item.id} className="flex items-start gap-2.5">
+                                            <span className="text-sm shrink-0 mt-0.5">{item.icon}</span>
+                                            <div className="min-w-0 flex-1">
+                                                <h5 className="text-xs font-medium text-[var(--ios-label)] leading-tight">
+                                                    {item.title[lang]}
+                                                </h5>
+                                                <p className="text-[10px] font-normal text-[var(--ios-secondary)] leading-normal mt-0.5">
+                                                    {item.description[lang]}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
+
+                {changelogData.totalNewItemsCount > changelogData.topHighlights.length && (
+                    <button
+                        type="button"
+                        onClick={() => setShowFullLog(!showFullLog)}
+                        className="text-[11px] font-semibold text-[var(--ios-blue)] text-center py-1 active:opacity-70 transition-opacity"
+                    >
+                        {toggleLabel}
+                    </button>
+                )}
 
                 <button
                     type="button"
                     onClick={handleDismiss}
-                    className="h-12 w-full bg-[var(--ios-blue)] text-white text-xs font-semibold rounded-xl active:scale-[0.98] active:opacity-85 shadow-xs transition-all mt-1 flex items-center justify-center cursor-pointer"
+                    className="h-11 w-full bg-[var(--ios-blue)] text-white text-xs font-semibold rounded-xl active:scale-[0.98] active:opacity-85 shadow-xs transition-all mt-1 flex items-center justify-center cursor-pointer shrink-0"
                 >
                     {t.whatsNewAction}
                 </button>

@@ -198,7 +198,7 @@ export function ScheduleWidget({
                             onClick={onOpenTerminarz}
                             className="text-[10px] font-semibold text-[var(--ios-blue)] bg-[var(--ios-room-bg)] px-2 py-0.5 rounded-[6px] ml-0.5 active:scale-95 transition-transform"
                         >
-                            Terminarz
+                            {t.terminarzButton}
                         </button>
                     </div>
 

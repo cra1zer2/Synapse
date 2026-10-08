@@ -28,6 +28,9 @@ export interface AppDictionary {
     vacationDay: string
     subjectDetails: string
     justificationSent: string
+    pendingJustification: string
+    onlyParentCanExcuse: string
+    allPendingNotice: string
     cancel: string
     send: string
     sending: string
@@ -178,6 +181,9 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             vacationDay: 'School holiday or break',
             subjectDetails: 'Attendance Details',
             justificationSent: 'Justification submitted successfully',
+            pendingJustification: 'Pending',
+            onlyParentCanExcuse: 'Only parent accounts can submit absence justifications.',
+            allPendingNotice: 'All recorded absences are currently pending teacher review.',
             cancel: 'Cancel',
             send: 'Submit',
             sending: 'Submitting...',
@@ -249,7 +255,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             done: 'Done',
             backAction: 'Back',
             whatsNewTitle: "What's New in Synapse",
-            whatsNewSubtitle: 'Version 3.0.2',
+            whatsNewSubtitle: 'Version 3.0.3',
             whatsNewAction: 'Continue',
             messagesInbox: 'Inbox',
             messagesAnnouncements: 'Announcements',
@@ -327,6 +333,9 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         vacationDay: 'Dzień wolny od zajęć dydaktycznych',
         subjectDetails: 'Szczegóły frekwencji',
         justificationSent: 'Usprawiedliwienie wysłane pomyślnie',
+        pendingJustification: 'Oczekuje',
+        onlyParentCanExcuse: 'Tylko z konta rodzica można przesyłać usprawiedliwienia nieobecności.',
+        allPendingNotice: 'Wszystkie nieobecności oczekują na decyzję wychowawcy.',
         cancel: 'Anuluj',
         send: 'Wyślij',
         sending: 'Wysyłanie...',
@@ -398,7 +407,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         done: 'Gotowe',
         backAction: 'Wróć',
         whatsNewTitle: 'Co nowego w Synapse',
-        whatsNewSubtitle: 'Wersja 3.0.2',
+        whatsNewSubtitle: 'Wersja 3.0.3',
         whatsNewAction: 'Kontynuuj',
         messagesInbox: 'Odebrane',
         messagesAnnouncements: 'Ogłoszenia',

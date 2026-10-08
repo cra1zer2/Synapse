@@ -17,6 +17,16 @@ export interface JustificationRecord {
     [key: string]: any
 }
 
+export interface PendingJustificationRecord {
+    id: string
+    dateIso: string
+    dateDisplay?: string
+    lessons: number[]
+    message: string
+    submittedAt: string
+    status: 'pending'
+}
+
 export interface GatewayResponse<T> {
     success: boolean
     data?: T

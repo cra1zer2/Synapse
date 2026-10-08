@@ -13,6 +13,7 @@ interface AttendanceWidgetProps {
 export function AttendanceWidget({
     attendanceData,
     onSelectSubject,
+    onOpenExcuseModal,
     t
 }: AttendanceWidgetProps) {
     const isDanger = attendanceData.overallStatus === 'danger'
@@ -35,7 +36,7 @@ export function AttendanceWidget({
 
     return (
         <section className="w-full flex flex-col gap-3.5 min-h-[500px]">
-            <div className="bg-[var(--ios-card)] rounded-[20px] p-4 shadow-xs border border-[var(--ios-separator)]/60 flex items-center justify-between">
+            <div className="bg-[var(--ios-card)] rounded-[20px] p-4 shadow-xs flex items-center justify-between">
                 <div>
                     <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.attendanceRate}</p>
                     <h2 className={`text-3xl font-semibold tracking-tight mt-0.5 ${statusColor}`}>
@@ -43,16 +44,28 @@ export function AttendanceWidget({
                     </h2>
                 </div>
 
-                <span
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isDanger
-                        ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
-                        : isWarning
-                            ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
-                            : 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
-                        }`}
-                >
-                    {isDanger ? t.dangerBadge : isWarning ? t.warningBadge : t.safeBadge}
-                </span>
+                <div className="flex flex-col items-end gap-2">
+                    <span
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isDanger
+                            ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
+                            : isWarning
+                                ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
+                                : 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
+                            }`}
+                    >
+                        {isDanger ? t.dangerBadge : isWarning ? t.warningBadge : t.safeBadge}
+                    </span>
+
+                    {attendanceData.unexcusedAbsences.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={onOpenExcuseModal}
+                            className="text-xs font-semibold text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] px-2.5 py-1 rounded-full active:opacity-75 transition-all"
+                        >
+                            {t.excuseAction} ({attendanceData.unexcusedAbsences.length})
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -60,7 +73,7 @@ export function AttendanceWidget({
                     {t.subjectsSection}
                 </span>
 
-                <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)] border border-[var(--ios-separator)]/60">
+                <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                     {sortedSubjects.map((sub) => {
                         const subDanger = sub.status === 'danger'
                         const subWarning = sub.status === 'warning'

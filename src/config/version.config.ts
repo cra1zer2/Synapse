@@ -1,4 +1,4 @@
-export const CURRENT_APP_VERSION = '3.0.2'
+export const CURRENT_APP_VERSION = '3.0.3'
 
 export interface ChangelogItem {
     id: string
@@ -29,6 +29,25 @@ export function compareSemver(v1: string, v2: string): number {
 }
 
 export const APP_CHANGELOG: VersionRelease[] = [
+    {
+        version: '3.0.3',
+        releaseDate: '08.10.2026',
+        items: [
+            {
+                id: '303-anti-spam',
+                icon: '🛡️',
+                weight: 10,
+                title: {
+                    pl: 'Rejestr e-Usprawiedliwień',
+                    en: 'e-Justification Anti-Spam'
+                },
+                description: {
+                    pl: 'Lokalna ochrona przed duplikatami i status Oczekuje dla wysłanych usprawiedliwień.',
+                    en: 'Anti-spam protection with Pending status indicator for submitted excuses.'
+                }
+            }
+        ]
+    },
     {
         version: '3.0.2',
         releaseDate: '08.10.2026',

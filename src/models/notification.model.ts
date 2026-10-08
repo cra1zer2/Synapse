@@ -16,7 +16,7 @@ export interface PushNotificationPayload {
     }
 }
 
-export type DayMatrixLessonStatus = 'nb' | 'u' | 'sl' | 'sp' | 'zw' | 'present' | 'cancelled'
+export type DayMatrixLessonStatus = 'nb' | 'u' | 'sl' | 'sp' | 'zw' | 'present' | 'cancelled' | 'pending'
 
 export interface DayMatrixLesson {
     lessonNumber: number
@@ -26,6 +26,7 @@ export interface DayMatrixLesson {
     statusLabel: string
     isSelectable: boolean
     isSelected: boolean
+    isPending?: boolean
 }
 
 export interface DayMatrixGroup {

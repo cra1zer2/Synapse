@@ -228,6 +228,11 @@ export default function Home() {
     setIsCalendarPinned(false)
   }
 
+  const canSubmitExcuse = Boolean(
+    account.profile?.role === 'parent' ||
+    account.savedAccounts.some((a) => a.role === 'parent')
+  )
+
   const handleSubmitJustifications = async (payload: {
     dateIso: string
     lessons: number[]
@@ -525,6 +530,7 @@ export default function Home() {
         <JustificationModal
           attendanceData={timetable.attendanceData}
           timetableData={timetable.timetableData}
+          canSubmitExcuse={canSubmitExcuse}
           onClose={() => setShowExcuseMatrix(false)}
           onSubmitMultiple={handleSubmitJustifications}
           t={t}

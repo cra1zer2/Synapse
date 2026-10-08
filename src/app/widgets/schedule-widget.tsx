@@ -95,7 +95,7 @@ export function ScheduleWidget({
 }: ScheduleWidgetProps) {
     const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
     const activeLessonRef = useRef<HTMLDivElement>(null)
-    const hasAutoScrolledRef = useRef(false)
+    const hasInitialAutoScrolledRef = useRef(false)
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -105,13 +105,13 @@ export function ScheduleWidget({
     }, [])
 
     useEffect(() => {
-        if (!hasAutoScrolledRef.current && activeLessonRef.current) {
-            hasAutoScrolledRef.current = true
+        if (!hasInitialAutoScrolledRef.current && activeLessonRef.current) {
+            hasInitialAutoScrolledRef.current = true
             const timer = setTimeout(() => {
                 if (activeLessonRef.current) {
                     activeLessonRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 }
-            }, 100)
+            }, 80)
             return () => clearTimeout(timer)
         }
     }, [selectedDay])

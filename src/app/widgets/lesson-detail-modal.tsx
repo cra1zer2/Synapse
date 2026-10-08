@@ -18,12 +18,18 @@ export function LessonDetailModal({
     isToday,
     t
 }: LessonDetailModalProps) {
-    const sheetRef = useRef<HTMLDivElement>(null)
+    const [isEntered, setIsEntered] = useState(false)
+    const [isDismissing, setIsDismissing] = useState(false)
+    const [dragOffsetY, setDragOffsetY] = useState(0)
+
     const touchStartY = useRef(0)
     const isDragging = useRef(false)
-    const currentDeltaY = useRef(0)
-
     const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
+
+    useEffect(() => {
+        const frame = requestAnimationFrame(() => setIsEntered(true))
+        return () => cancelAnimationFrame(frame)
+    }, [])
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -32,35 +38,35 @@ export function LessonDetailModal({
         return () => clearInterval(interval)
     }, [])
 
+    const handleDismiss = () => {
+        if (isDismissing) return
+        setIsDismissing(true)
+        setTimeout(() => {
+            onClose()
+        }, 300)
+    }
+
     const handleTouchStart = (e: React.TouchEvent) => {
         touchStartY.current = e.touches[0].clientY
         isDragging.current = true
-        currentDeltaY.current = 0
-        if (sheetRef.current) {
-            sheetRef.current.style.transition = 'none'
-        }
     }
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        if (!isDragging.current || !sheetRef.current) return
+        if (!isDragging.current) return
         const delta = e.touches[0].clientY - touchStartY.current
         if (delta > 0) {
-            currentDeltaY.current = delta
-            sheetRef.current.style.transform = `translateY(${delta}px)`
+            setDragOffsetY(delta)
         }
     }
 
     const handleTouchEnd = () => {
-        if (!isDragging.current || !sheetRef.current) return
+        if (!isDragging.current) return
         isDragging.current = false
-        sheetRef.current.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)'
-        if (currentDeltaY.current > 85) {
-            sheetRef.current.style.transform = 'translateY(100%)'
-            setTimeout(onClose, 320)
+        if (dragOffsetY > 80) {
+            handleDismiss()
         } else {
-            sheetRef.current.style.transform = 'translateY(0)'
+            setDragOffsetY(0)
         }
-        currentDeltaY.current = 0
     }
 
     const range = parseLessonTimeRange(lesson.time)
@@ -69,20 +75,31 @@ export function LessonDetailModal({
 
     return (
         <div
-            onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-250"
+            onClick={handleDismiss}
+            style={{
+                opacity: isEntered && !isDismissing ? 1 : 0,
+                transition: 'opacity 0.28s cubic-bezier(0.32, 0.72, 0, 1)'
+            }}
+            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[3px] flex items-end sm:items-center justify-center p-0 sm:p-4 will-change-[opacity]"
         >
             <div
-                ref={sheetRef}
                 onClick={(e) => e.stopPropagation()}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                className="bg-[var(--ios-card-solid)] rounded-t-[26px] sm:rounded-[26px] w-full max-w-sm p-5 shadow-[0_-12px_40px_rgba(0,0,0,0.4)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto will-change-transform animate-in slide-in-from-bottom-8 duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] border-t border-[var(--ios-separator)] sm:border-t-0"
+                style={{
+                    transform: isDismissing
+                        ? 'translateY(100%)'
+                        : !isEntered
+                            ? 'translateY(100%)'
+                            : `translateY(${dragOffsetY}px)`,
+                    transition: isDragging.current ? 'none' : 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)'
+                }}
+                className="bg-[var(--ios-card)] rounded-t-[22px] sm:rounded-[22px] w-full max-w-sm p-4.5 shadow-[0_-8px_30px_rgba(0,0,0,0.3)] flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto will-change-transform"
             >
-                <div className="w-9 h-1 rounded-full bg-[var(--ios-element)] mx-auto -mt-1 sm:hidden shrink-0 opacity-80" />
+                <div className="w-9 h-1 rounded-full bg-[var(--ios-element)] mx-auto mt-0.5 mb-1 sm:hidden shrink-0 opacity-70" />
 
-                <div className="flex flex-col gap-1 border-b border-[var(--ios-separator)] pb-3">
+                <div className="flex flex-col gap-0.5 pb-1">
                     <div className="flex items-center gap-1.5">
                         {isActive && (
                             <span className="w-2 h-2 rounded-full bg-[#007aff] dark:bg-[#0a84ff] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
@@ -92,12 +109,12 @@ export function LessonDetailModal({
                         </span>
                     </div>
 
-                    <h3 className="text-base font-medium text-[var(--ios-label)] leading-snug break-words">
+                    <h3 className="text-[17px] font-medium text-[var(--ios-label)] leading-snug break-words mt-0.5">
                         {lesson.subject}
                     </h3>
                 </div>
 
-                <div className="bg-[var(--ios-card)] rounded-[18px] p-3.5 flex flex-col gap-1 shadow-xs border border-[var(--ios-separator)]/40">
+                <div className="bg-[var(--ios-element)]/35 rounded-[16px] p-3 flex flex-col gap-1">
                     <span className="text-[10px] font-normal text-[var(--ios-secondary)] uppercase tracking-wider block">
                         {t.lessonTopic}
                     </span>
@@ -106,10 +123,10 @@ export function LessonDetailModal({
                     </p>
                 </div>
 
-                <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)] border border-[var(--ios-separator)]/40">
+                <div className="bg-[var(--ios-element)]/35 rounded-[16px] overflow-hidden divide-y divide-[var(--ios-separator)]">
                     <div className="p-3 flex items-center justify-between text-xs">
                         <span className="text-[var(--ios-secondary)] font-normal">{t.teacherLabel}</span>
-                        <span className="text-[var(--ios-label)] font-medium text-right truncate max-w-[200px]">
+                        <span className="text-[var(--ios-label)] font-normal text-right truncate max-w-[200px]">
                             {lesson.teacher || t.notSpecified}
                         </span>
                     </div>
@@ -117,7 +134,7 @@ export function LessonDetailModal({
                     {lesson.room && (
                         <div className="p-3 flex items-center justify-between text-xs">
                             <span className="text-[var(--ios-secondary)] font-normal">{t.roomLabel}</span>
-                            <span className="bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2 py-0.5 rounded-[6px] font-medium text-[11px]">
+                            <span className="bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2 py-0.5 rounded-[6px] font-normal text-[11px]">
                                 {lesson.room}
                             </span>
                         </div>
@@ -132,8 +149,9 @@ export function LessonDetailModal({
                 </div>
 
                 <button
-                    onClick={onClose}
-                    className="h-11 w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-medium rounded-xl active:opacity-75 transition-opacity mt-0.5 flex items-center justify-center cursor-pointer"
+                    type="button"
+                    onClick={handleDismiss}
+                    className="h-11 w-full bg-[var(--ios-element)]/70 text-[var(--ios-label)] text-xs font-normal rounded-xl active:opacity-75 transition-opacity mt-0.5 flex items-center justify-center cursor-pointer"
                 >
                     {t.close}
                 </button>

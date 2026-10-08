@@ -28,13 +28,6 @@ import { WhatsNewModal } from '@/app/widgets/whats-new-modal'
 
 export type TextClampOption = 'full' | '1' | '2'
 
-const SECTION_INDEX: Record<MainSection, number> = {
-  schedule: 0,
-  grades: 1,
-  attendance: 2,
-  messages: 3
-}
-
 function IosSpinner({ className = 'w-3.5 h-3.5 text-[var(--ios-blue)]' }: { className?: string }) {
   return (
     <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none">
@@ -93,7 +86,6 @@ export default function Home() {
   const [textClamp, setTextClamp] = useState<TextClampOption>('full')
   const [ignoreGradeModifiers, setIgnoreGradeModifiers] = useState<boolean>(false)
   const [activeSection, setActiveSection] = useState<MainSection>('schedule')
-  const [tabDirection, setTabDirection] = useState<'forward' | 'backward'>('forward')
   const [isCalendarPinned, setIsCalendarPinned] = useState(false)
   const [showWhatsNew, setShowWhatsNew] = useState(false)
 
@@ -229,20 +221,11 @@ export default function Home() {
   const handleSelectDay = (dayName: string) => {
     timetable.setSelectedDay(dayName)
     setIsCalendarPinned(false)
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
   }
 
   const handleTabChange = (targetTab: MainSection) => {
-    const currentIndex = SECTION_INDEX[activeSection]
-    const nextIndex = SECTION_INDEX[targetTab]
-    setTabDirection(nextIndex >= currentIndex ? 'forward' : 'backward')
     setActiveSection(targetTab)
     setIsCalendarPinned(false)
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'instant' })
-    }
   }
 
   const handleSubmitJustifications = async (payload: {
@@ -402,49 +385,51 @@ export default function Home() {
           </div>
         )}
 
-        <div
-          key={activeSection}
-          className={`w-full flex-1 flex flex-col gap-3 animate-in fade-in duration-250 ${tabDirection === 'forward' ? 'slide-in-from-right-4' : 'slide-in-from-left-4'
-            }`}
-        >
-          {activeSection === 'schedule' && timetable.timetableData && (
-            <ScheduleWidget
-              timetableData={timetable.timetableData}
-              selectedDay={timetable.selectedDay}
-              onSelectDay={handleSelectDay}
-              onSelectLesson={setSelectedLesson}
-              currentWeekPivot={timetable.currentWeekPivot}
-              onShiftWeek={timetable.shiftWeek}
-              onSelectDate={timetable.queueWeekChange}
-              onManualRefresh={timetable.handleManualRefresh}
-              onOpenTerminarz={() => setShowTerminarz(true)}
-              isLoadingWeek={timetable.isLoadingWeek}
-              textClamp={textClamp}
-              lang={lang}
-              t={t}
-            />
-          )}
+        <div className="w-full flex-1 flex flex-col gap-3">
+          <div className={activeSection === 'schedule' ? 'w-full flex flex-col gap-3' : 'hidden'}>
+            {timetable.timetableData && (
+              <ScheduleWidget
+                timetableData={timetable.timetableData}
+                selectedDay={timetable.selectedDay}
+                onSelectDay={handleSelectDay}
+                onSelectLesson={setSelectedLesson}
+                currentWeekPivot={timetable.currentWeekPivot}
+                onShiftWeek={timetable.shiftWeek}
+                onSelectDate={timetable.queueWeekChange}
+                onManualRefresh={timetable.handleManualRefresh}
+                onOpenTerminarz={() => setShowTerminarz(true)}
+                isLoadingWeek={timetable.isLoadingWeek}
+                textClamp={textClamp}
+                lang={lang}
+                t={t}
+              />
+            )}
+          </div>
 
-          {activeSection === 'grades' && timetable.gradesData && (
-            <GradesWidget
-              gradesData={timetable.gradesData}
-              ignoreGradeModifiers={ignoreGradeModifiers}
-              onSelectGrade={setSelectedGrade}
-              onSelectWarning={setSelectedWarningSubject}
-              t={t}
-            />
-          )}
+          <div className={activeSection === 'grades' ? 'w-full flex flex-col gap-3' : 'hidden'}>
+            {timetable.gradesData && (
+              <GradesWidget
+                gradesData={timetable.gradesData}
+                ignoreGradeModifiers={ignoreGradeModifiers}
+                onSelectGrade={setSelectedGrade}
+                onSelectWarning={setSelectedWarningSubject}
+                t={t}
+              />
+            )}
+          </div>
 
-          {activeSection === 'attendance' && timetable.attendanceData && (
-            <AttendanceWidget
-              attendanceData={timetable.attendanceData}
-              onSelectSubject={setSelectedSubjectDetail}
-              onOpenExcuseModal={() => setShowExcuseMatrix(true)}
-              t={t}
-            />
-          )}
+          <div className={activeSection === 'attendance' ? 'w-full flex flex-col gap-3' : 'hidden'}>
+            {timetable.attendanceData && (
+              <AttendanceWidget
+                attendanceData={timetable.attendanceData}
+                onSelectSubject={setSelectedSubjectDetail}
+                onOpenExcuseModal={() => setShowExcuseMatrix(true)}
+                t={t}
+              />
+            )}
+          </div>
 
-          {activeSection === 'messages' && (
+          <div className={activeSection === 'messages' ? 'w-full flex flex-col gap-3' : 'hidden'}>
             <MessagesWidget
               messages={messagesInbox.messages}
               announcements={messagesInbox.announcements}
@@ -454,7 +439,7 @@ export default function Home() {
               isLoading={messagesInbox.isLoadingMessages}
               t={t}
             />
-          )}
+          </div>
         </div>
       </main>
 

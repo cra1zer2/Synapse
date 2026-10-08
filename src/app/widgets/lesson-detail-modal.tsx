@@ -53,8 +53,8 @@ export function LessonDetailModal({
     const handleTouchEnd = () => {
         if (!isDragging.current || !sheetRef.current) return
         isDragging.current = false
-        sheetRef.current.style.transition = 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)'
-        if (currentDeltaY.current > 90) {
+        sheetRef.current.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)'
+        if (currentDeltaY.current > 85) {
             sheetRef.current.style.transform = 'translateY(100%)'
             setTimeout(onClose, 320)
         } else {
@@ -70,7 +70,7 @@ export function LessonDetailModal({
     return (
         <div
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-250"
         >
             <div
                 ref={sheetRef}
@@ -78,34 +78,26 @@ export function LessonDetailModal({
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                className="bg-[var(--ios-card-solid)] rounded-t-[22px] sm:rounded-[22px] w-full max-w-sm p-5 shadow-2xl flex flex-col gap-4 max-h-[85vh] overflow-y-auto will-change-transform animate-in slide-in-from-bottom-6 duration-280 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                className="bg-[var(--ios-card-solid)] rounded-t-[26px] sm:rounded-[26px] w-full max-w-sm p-5 shadow-[0_-12px_40px_rgba(0,0,0,0.4)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto will-change-transform animate-in slide-in-from-bottom-8 duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] border-t border-[var(--ios-separator)] sm:border-t-0"
             >
-                <div className="w-9 h-1 rounded-full bg-[var(--ios-element)] mx-auto -mt-1 sm:hidden shrink-0" />
+                <div className="w-9 h-1 rounded-full bg-[var(--ios-element)] mx-auto -mt-1 sm:hidden shrink-0 opacity-80" />
 
-                <div className="flex items-start justify-between gap-2 border-b border-[var(--ios-separator)] pb-3">
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                            {isActive && (
-                                <span className="w-2 h-2 rounded-full bg-[#007aff] dark:bg-[#0a84ff] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
-                            )}
-                            <span className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight">
-                                {t.lessonNumberLabel(lesson.number)} • {lesson.time}
-                            </span>
-                        </div>
-                        <h3 className="text-base font-medium text-[var(--ios-label)] leading-snug mt-0.5 break-words">
-                            {lesson.subject}
-                        </h3>
+                <div className="flex flex-col gap-1 border-b border-[var(--ios-separator)] pb-3">
+                    <div className="flex items-center gap-1.5">
+                        {isActive && (
+                            <span className="w-2 h-2 rounded-full bg-[#007aff] dark:bg-[#0a84ff] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
+                        )}
+                        <span className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight">
+                            {t.lessonNumberLabel(lesson.number)} • {lesson.time}
+                        </span>
                     </div>
 
-                    <button
-                        onClick={onClose}
-                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] text-xs font-normal flex items-center justify-center active:scale-95 transition-transform shrink-0"
-                    >
-                        ✕
-                    </button>
+                    <h3 className="text-base font-medium text-[var(--ios-label)] leading-snug break-words">
+                        {lesson.subject}
+                    </h3>
                 </div>
 
-                <div className="bg-[var(--ios-card)] rounded-[16px] p-3.5 flex flex-col gap-1.5 shadow-xs">
+                <div className="bg-[var(--ios-card)] rounded-[18px] p-3.5 flex flex-col gap-1 shadow-xs border border-[var(--ios-separator)]/40">
                     <span className="text-[10px] font-normal text-[var(--ios-secondary)] uppercase tracking-wider block">
                         {t.lessonTopic}
                     </span>
@@ -114,7 +106,7 @@ export function LessonDetailModal({
                     </p>
                 </div>
 
-                <div className="bg-[var(--ios-card)] rounded-[16px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)] border border-[var(--ios-separator)]/40">
                     <div className="p-3 flex items-center justify-between text-xs">
                         <span className="text-[var(--ios-secondary)] font-normal">{t.teacherLabel}</span>
                         <span className="text-[var(--ios-label)] font-medium text-right truncate max-w-[200px]">
@@ -137,34 +129,11 @@ export function LessonDetailModal({
                             {lesson.durationMinutes} min {isActive && minutesLeft !== null ? `(pozostało ${minutesLeft} min)` : ''}
                         </span>
                     </div>
-
-                    <div className="p-3 flex items-center justify-between text-xs">
-                        <span className="text-[var(--ios-secondary)] font-normal">{t.statusLabel}</span>
-                        <div>
-                            {lesson.isCancelled ? (
-                                <span className="text-[10px] font-medium text-[#ff3b30] bg-[#ff3b30]/10 px-2 py-0.5 rounded-full">
-                                    {t.cancelledLabel}
-                                </span>
-                            ) : lesson.isSubstitution ? (
-                                <span className="text-[10px] font-medium text-[#af52de] bg-[#af52de]/10 px-2 py-0.5 rounded-full">
-                                    {t.substitutionLabel}
-                                </span>
-                            ) : lesson.isShortened ? (
-                                <span className="text-[10px] font-medium text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full">
-                                    {lesson.durationMinutes} min
-                                </span>
-                            ) : (
-                                <span className="text-[10px] font-normal text-[var(--ios-secondary)]">
-                                    {t.normalLesson}
-                                </span>
-                            )}
-                        </div>
-                    </div>
                 </div>
 
                 <button
                     onClick={onClose}
-                    className="h-11 w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-medium rounded-xl active:opacity-75 transition-opacity mt-1 flex items-center justify-center cursor-pointer"
+                    className="h-11 w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-medium rounded-xl active:opacity-75 transition-opacity mt-0.5 flex items-center justify-center cursor-pointer"
                 >
                     {t.close}
                 </button>

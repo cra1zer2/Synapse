@@ -38,11 +38,13 @@ const SCHOOL_DICTIONARY: Record<string, string> = {
     'zajecia szkolne': 'School Classes',
     'programowanie aplikacji internetowych': 'Web App Programming',
     'programowanie aplikacji desktopowych i mobilnych': 'Desktop & Mobile Programming',
+    'programowanie i testowanie aplikacji mobilnych oraz zaawansowanych webowych': 'Mobile & Advanced Web App Development & Testing',
+    'programowanie i testowanie aplikacji': 'App Programming & Testing',
     'tworzenie stron i aplikacji internetowych': 'Web Development',
+    'projektowanie stron internetowych': 'Web Design',
     'bazy danych': 'Databases',
     'systemy baz danych': 'Database Systems',
     'administracja bazami danych': 'Database Administration',
-    'projektowanie stron internetowych': 'Web Design',
     'działalność gospodarcza w branży informatycznej': 'IT Business Economics',
     'dzialalnosc gospodarcza w branzy informatycznej': 'IT Business Economics',
     'język angielski zawodowy': 'Vocational English',
@@ -118,7 +120,11 @@ export async function translateTextToEnglish(text: string): Promise<string> {
 
     try {
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=pl&tl=en&dt=t&q=${encodeURIComponent(trimmed)}`
-        const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+            }
+        })
 
         if (!response.ok) {
             return trimmed

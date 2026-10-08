@@ -95,6 +95,7 @@ export function ScheduleWidget({
 }: ScheduleWidgetProps) {
     const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
     const activeLessonRef = useRef<HTMLDivElement>(null)
+    const hasAutoScrolledRef = useRef(false)
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -104,12 +105,15 @@ export function ScheduleWidget({
     }, [])
 
     useEffect(() => {
-        const timeout = setTimeout(() => {
-            if (activeLessonRef.current) {
-                activeLessonRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
-        }, 120)
-        return () => clearTimeout(timeout)
+        if (!hasAutoScrolledRef.current && activeLessonRef.current) {
+            hasAutoScrolledRef.current = true
+            const timer = setTimeout(() => {
+                if (activeLessonRef.current) {
+                    activeLessonRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+            }, 100)
+            return () => clearTimeout(timer)
+        }
     }, [selectedDay])
 
     const currentDaySchedule: DaySchedule | undefined = timetableData.schedule.find(
@@ -125,8 +129,20 @@ export function ScheduleWidget({
         return `${startIso} — ${endIso}`
     }
 
-    const getLessonLiveState = (lesson: LessonItem, isToday: boolean): 'active' | 'passed' | 'upcoming' => {
-        if (!isToday) return 'upcoming'
+    const todayIsoString = () => {
+        const now = new Date()
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    }
+
+    const realTodayIso = todayIsoString()
+
+    const getLessonLiveState = (lesson: LessonItem, dayIso: string, isToday: boolean): 'active' | 'passed' | 'upcoming' => {
+        if (dayIso < realTodayIso) {
+            return 'passed'
+        }
+        if (!isToday) {
+            return 'upcoming'
+        }
         const range = parseLessonTimeRange(lesson.time)
         if (!range.isValid) return 'upcoming'
 
@@ -276,7 +292,7 @@ export function ScheduleWidget({
                             currentDaySchedule.lessons.map((lesson, idx) => {
                                 const nextLesson = currentDaySchedule.lessons[idx + 1]
                                 const isToday = Boolean(currentDaySchedule.isToday)
-                                const liveState = getLessonLiveState(lesson, isToday)
+                                const liveState = getLessonLiveState(lesson, currentDaySchedule.isoDate, isToday)
                                 const breakActive = nextLesson ? isBreakActive(lesson, nextLesson, isToday) : false
                                 const breakMinutes = nextLesson ? calculateBreakDuration(lesson.time, nextLesson.time) : 0
                                 const breakRemaining = nextLesson ? getBreakRemainingMinutes(nextLesson.time) : 0

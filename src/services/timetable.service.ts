@@ -76,6 +76,51 @@ function getWeekDates(pivotDate: Date): { monday: Date; friday: Date; weekDates:
     return { monday, friday, weekDates }
 }
 
+async function fetchRealizedLessonTopics(client: any): Promise<Record<string, Record<string, string>>> {
+    const topicsMap: Record<string, Record<string, string>> = {}
+    try {
+        const caller = client._caller || client.caller
+        if (!caller) return topicsMap
+
+        const res = await caller.get('https://synergia.librus.pl/zrealizowane_lekcje').catch(() => null)
+        const html = typeof res === 'string' ? res : res?.body || res?.text || ''
+        if (!html) return topicsMap
+
+        const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
+        let rowMatch: RegExpExecArray | null
+
+        while ((rowMatch = rowRegex.exec(html)) !== null) {
+            const rowContent = rowMatch[1]
+            if (!rowContent.includes('<td')) continue
+
+            const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi
+            const cells: string[] = []
+            let tdMatch: RegExpExecArray | null
+
+            while ((tdMatch = tdRegex.exec(rowContent)) !== null) {
+                const cellText = tdMatch[1].replace(/<[^>]+>/g, '').trim()
+                cells.push(cellText)
+            }
+
+            if (cells.length >= 5) {
+                const rawDate = cells[0].replace(/[^\d.-]/g, '').trim()
+                const rawHour = cells[1].trim()
+                const rawSubject = cells[2].toLowerCase().trim()
+                const rawTopic = cells[4].trim()
+
+                if (rawTopic && rawTopic !== '-' && rawTopic.length > 1) {
+                    if (!topicsMap[rawDate]) {
+                        topicsMap[rawDate] = {}
+                    }
+                    topicsMap[rawDate][rawHour] = rawTopic
+                    topicsMap[rawDate][rawSubject] = rawTopic
+                }
+            }
+        }
+    } catch { }
+    return topicsMap
+}
+
 export async function fetchSmartTimetable(
     username: string,
     pass: string,
@@ -101,10 +146,13 @@ export async function fetchSmartTimetable(
         const currentYear = monday.getFullYear()
         const currentMonth = monday.getMonth() + 1
 
-        const [rawTimetable, rawCalendar] = await Promise.all([
+        const [rawTimetable, rawCalendar, realizedTopicsMap] = await Promise.all([
             client.calendar.getTimetable(mondayIso, fridayIso),
-            client.calendar.getCalendar(currentMonth, currentYear).catch(() => [])
+            client.calendar.getCalendar(currentMonth, currentYear).catch(() => []),
+            fetchRealizedLessonTopics(client).catch((): Record<string, Record<string, string>> => ({}))
         ])
+
+        const topicsRecord: Record<string, Record<string, string>> = realizedTopicsMap || {}
 
         const allAbsentTeachers: AbsentTeacherItem[] = []
         const calendarEvents: TimetableEvent[] = []
@@ -182,6 +230,8 @@ export async function fetchSmartTimetable(
             const lessons: LessonItem[] = []
             const { dateStr, isoStr } = weekDates[day]
 
+            const dayRealized: Record<string, string> = topicsRecord[dateStr] || topicsRecord[isoStr] || {}
+
             if (Array.isArray(daySlots)) {
                 daySlots.forEach((slot, index) => {
                     if (!slot) return
@@ -218,12 +268,15 @@ export async function fetchSmartTimetable(
                         }
                     }
 
-                    const rawTopic = (slot.topic || slot.theme || slot.subjectTopic || slot.description || '').trim()
-                    const topic = rawTopic.length > 0 ? rawTopic : undefined
+                    const rawSubject = (slot.subject || '').trim()
+                    const slotTopic = (slot.topic || slot.theme || slot.subjectTopic || slot.description || '').trim()
+                    const realizedTopic = dayRealized[slot.time] || dayRealized[String(index + 1)] || dayRealized[String(index)] || dayRealized[rawSubject.toLowerCase()] || ''
+
+                    const finalTopic = realizedTopic || slotTopic || undefined
 
                     lessons.push({
                         number: index,
-                        subject: slot.subject || '',
+                        subject: rawSubject,
                         teacher: cleanedTeacher,
                         room: slot.room || '',
                         time: slot.time || '',
@@ -234,7 +287,7 @@ export async function fetchSmartTimetable(
                         flag: slot.flag || null,
                         teacherAbsent: isAbsent || isCancelled,
                         teacherAbsenceReason: isAbsent || isCancelled ? 'Nauczyciel nieobecny' : undefined,
-                        topic
+                        topic: finalTopic
                     })
                 })
             }

@@ -11,6 +11,14 @@ import {
     getAttendanceAction
 } from '@/app/actions'
 
+function getTodayIsoString(): string {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = String(now.getMonth() + 1).padStart(2, '0')
+    const d = String(now.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+}
+
 function getTodayDayName(): string {
     const dayMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     const name = dayMap[new Date().getDay()]
@@ -30,6 +38,14 @@ function getInitialWeekPivot(): string {
     const m = String(target.getMonth() + 1).padStart(2, '0')
     const d = String(target.getDate()).padStart(2, '0')
     return `${y}-${m}-${d}`
+}
+
+function recalibrateScheduleToday(schedule: DaySchedule[]): DaySchedule[] {
+    const realTodayIso = getTodayIsoString()
+    return schedule.map((d) => ({
+        ...d,
+        isToday: d.isoDate === realTodayIso
+    }))
 }
 
 interface UseTimetableSyncOptions {
@@ -63,7 +79,8 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
     const resolveSmartDefaultDay = useCallback((schedule: DaySchedule[]): string => {
         if (!Array.isArray(schedule) || schedule.length === 0) return 'Monday'
 
-        const todayMatch = schedule.find((d) => d.isToday)
+        const realTodayIso = getTodayIsoString()
+        const todayMatch = schedule.find((d) => d.isoDate === realTodayIso)
         if (todayMatch) return todayMatch.dayName
 
         const weekdaysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
@@ -92,7 +109,12 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
                 if (requestId !== activeRequestCounter.current) return
 
                 if (tRes.success && gRes.success && aRes.success && tRes.data && gRes.data && aRes.data) {
-                    const fetchedData = tRes.data
+                    const recalibratedSchedule = recalibrateScheduleToday(tRes.data.schedule)
+                    const fetchedData: SmartTimetableResult = {
+                        ...tRes.data,
+                        schedule: recalibratedSchedule
+                    }
+
                     const previousDataForThisWeek = weekCacheRef.current[weekPivot]
                     weekCacheRef.current[weekPivot] = fetchedData
                     localStorage.setItem('synapse_week_cache', JSON.stringify(weekCacheRef.current))
@@ -109,7 +131,8 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
                     } else {
                         setTimetableData(fetchedData)
                         setSelectedDay((prev) => {
-                            const currentToday = fetchedData.schedule.find((d) => d.isToday)
+                            const realTodayIso = getTodayIsoString()
+                            const currentToday = fetchedData.schedule.find((d) => d.isoDate === realTodayIso)
                             if (currentToday) return currentToday.dayName
                             const hasPrev = fetchedData.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
                             return hasPrev ? prev : resolveSmartDefaultDay(fetchedData.schedule)
@@ -135,7 +158,13 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
         const storedWeekCache = localStorage.getItem('synapse_week_cache')
         if (storedWeekCache) {
             try {
-                weekCacheRef.current = JSON.parse(storedWeekCache)
+                const parsedWeekCache = JSON.parse(storedWeekCache)
+                for (const key of Object.keys(parsedWeekCache)) {
+                    if (parsedWeekCache[key]?.schedule) {
+                        parsedWeekCache[key].schedule = recalibrateScheduleToday(parsedWeekCache[key].schedule)
+                    }
+                }
+                weekCacheRef.current = parsedWeekCache
             } catch { }
         }
 
@@ -144,12 +173,20 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
             try {
                 const parsed = JSON.parse(cachedSnapshot)
                 if (parsed.t && Array.isArray(parsed.t.schedule)) {
-                    setTimetableData(parsed.t)
-                    if (!weekCacheRef.current[parsed.t.weekStart]) {
-                        weekCacheRef.current[parsed.t.weekStart] = parsed.t
+                    const calibratedSchedule = recalibrateScheduleToday(parsed.t.schedule)
+                    const calibratedTimetable: SmartTimetableResult = {
+                        ...parsed.t,
+                        schedule: calibratedSchedule
                     }
-                    const currentToday = parsed.t.schedule.find((d: DaySchedule) => d.isToday)
-                    setSelectedDay(currentToday ? currentToday.dayName : resolveSmartDefaultDay(parsed.t.schedule))
+                    setTimetableData(calibratedTimetable)
+
+                    if (!weekCacheRef.current[calibratedTimetable.weekStart]) {
+                        weekCacheRef.current[calibratedTimetable.weekStart] = calibratedTimetable
+                    }
+
+                    const realTodayIso = getTodayIsoString()
+                    const currentToday = calibratedSchedule.find((d: DaySchedule) => d.isoDate === realTodayIso)
+                    setSelectedDay(currentToday ? currentToday.dayName : resolveSmartDefaultDay(calibratedSchedule))
                 }
                 if (parsed.g) setGradesData(parsed.g)
                 if (parsed.a) setAttendanceData(parsed.a)
@@ -166,12 +203,17 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
 
         const cached = weekCacheRef.current[targetPivot]
         if (cached) {
-            setTimetableData(cached)
+            const calibrated = {
+                ...cached,
+                schedule: recalibrateScheduleToday(cached.schedule)
+            }
+            setTimetableData(calibrated)
             setSelectedDay((prev) => {
-                const currentToday = cached.schedule.find((d) => d.isToday)
+                const realTodayIso = getTodayIsoString()
+                const currentToday = calibrated.schedule.find((d) => d.isoDate === realTodayIso)
                 if (currentToday) return currentToday.dayName
-                const hasPrev = cached.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
-                return hasPrev ? prev : resolveSmartDefaultDay(cached.schedule)
+                const hasPrev = calibrated.schedule.some((d) => d.dayName === prev && d.lessons.length > 0)
+                return hasPrev ? prev : resolveSmartDefaultDay(calibrated.schedule)
             })
             setIsLoadingWeek(false)
         } else {
@@ -203,13 +245,21 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
 
     const applyPendingUpdates = () => {
         if (pendingSnapshot) {
-            setTimetableData(pendingSnapshot.t)
-            weekCacheRef.current[currentWeekPivot] = pendingSnapshot.t
+            const calibratedTimetable: SmartTimetableResult = {
+                ...pendingSnapshot.t,
+                schedule: recalibrateScheduleToday(pendingSnapshot.t.schedule)
+            }
+            setTimetableData(calibratedTimetable)
+            weekCacheRef.current[currentWeekPivot] = calibratedTimetable
             localStorage.setItem('synapse_week_cache', JSON.stringify(weekCacheRef.current))
-            setSelectedDay(resolveSmartDefaultDay(pendingSnapshot.t.schedule))
+            setSelectedDay(resolveSmartDefaultDay(calibratedTimetable.schedule))
             setGradesData(pendingSnapshot.g)
             setAttendanceData(pendingSnapshot.a)
-            localStorage.setItem('synapse_cache', JSON.stringify(pendingSnapshot))
+            localStorage.setItem('synapse_cache', JSON.stringify({
+                t: calibratedTimetable,
+                g: pendingSnapshot.g,
+                a: pendingSnapshot.a
+            }))
             setPendingSnapshot(null)
             setHasNewUpdate(false)
         }

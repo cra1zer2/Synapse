@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-10-06T07:24:57.522Z",
+  "authorizationDurationMs": 1943,
+  "totalDurationMs": 5838,
+  "slowestEndpoint": "inbox.listReceivers (815 ms)",
+  "fastestEndpoint": "absence.getAbsences (255 ms)",
+  "items": [
+    {
+      "endpoint": "info.getAccountInfo",
+      "durationMs": 314,
+      "success": true,
+      "payloadBytes": 186
+    },
+    {
+      "endpoint": "info.getLuckyNumber",
+      "durationMs": 461,
+      "success": true,
+      "payloadBytes": 1
+    },
+    {
+      "endpoint": "calendar.getTimetable",
+      "durationMs": 789,
+      "success": true,
+      "payloadBytes": 6334
+    },
+    {
+      "endpoint": "info.getGrades",
+      "durationMs": 331,
+      "success": true,
+      "payloadBytes": 3860
+    },
+    {
+      "endpoint": "absence.getAbsences",
+      "durationMs": 255,
+      "success": true,
+      "payloadBytes": 529
+    },
+    {
+      "endpoint": "calendar.getCalendar",
+      "durationMs": 302,
+      "success": true,
+      "payloadBytes": 3333
+    },
+    {
+      "endpoint": "inbox.listInbox",
+      "durationMs": 257,
+      "success": true,
+      "payloadBytes": 1042
+    },
+    {
+      "endpoint": "inbox.listAnnouncements",
+      "durationMs": 369,
+      "success": true,
+      "payloadBytes": 7038
+    },
+    {
+      "endpoint": "inbox.listReceivers",
+      "durationMs": 815,
+      "success": true,
+      "payloadBytes": 6184
+    }
+  ]
+}

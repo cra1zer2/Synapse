@@ -12,46 +12,46 @@ interface FeatureItem {
 const CHANGELOG: Record<'pl' | 'en', FeatureItem[]> = {
     pl: [
         {
-            icon: '📅',
-            title: 'Składany pasek tygodnia',
-            description: 'Kompaktowy kalendarz płynnie zwija się pod nagłówek przy przewijaniu lekcji.'
+            icon: '🗓️',
+            title: 'Korekta kalendarza i bieżącego dnia',
+            description: 'Naprawiono synchronizację aktywnego dnia. Aplikacja otwiera dokładnie dzisiejszy dzień bez opóźnień pamięci podręcznej.'
         },
         {
-            icon: '🩺',
-            title: 'Czysta frekwencja',
-            description: 'Scalone statystyki przedmiotów, brak nieznanych lekcji i pełny ekran nieobecności.'
+            icon: '💬',
+            title: 'Kaskadowy widok wiadomości',
+            description: 'Wiadomości opadają z miękką przezroczystością od góry bez skoków wysokości bloku.'
         },
         {
-            icon: '⚡',
-            title: 'Zaawansowane opcje',
-            description: 'Kalkulator średniej bez +/- oraz natychmiastowy test opóźnień Librusa jednym kliknięciem.'
+            icon: '⏱️',
+            title: 'Wycentrowany indykator ładowania',
+            description: 'Nowy, symetryczny wskaźnik Apple Activity Indicator o precyzyjnym wyśrodkowaniu.'
         },
         {
             icon: '📱',
-            title: 'Metaliczne ikony i animacje',
-            description: 'Nowa srebrna ikona PWA oraz płynne gesty powrotu w fizyce Apple.'
+            title: 'Optymalizacja widoku ekranu',
+            description: 'Tymczasowo zawieszono przypinany pasek dla płynnego przewijania na dużych wyświetlaczach.'
         }
     ],
     en: [
         {
-            icon: '📅',
-            title: 'Collapsible Week Bar',
-            description: 'Compact weekly schedule bar pins seamlessly into the header on scroll.'
+            icon: '🗓️',
+            title: 'Live Current Day Synchronization',
+            description: 'Fixed schedule day tracking. Today is selected immediately with zero cached date drift.'
         },
         {
-            icon: '🩺',
-            title: 'Revamped Attendance',
-            description: 'Merged subjects, zero phantom lessons, and native fullscreen absence details.'
+            icon: '💬',
+            title: 'Cascading Message Feed',
+            description: 'Messages glide into view with gentle top-to-bottom opacity without layout jerks.'
         },
         {
-            icon: '⚡',
-            title: 'Advanced Settings',
-            description: 'Grade GPA calculation without +/- and instant Librus latency tests in one tap.'
+            icon: '⏱️',
+            title: 'Centered Activity Indicator',
+            description: 'Authentic Apple Activity Indicator with balanced alignment and fluid rotation.'
         },
         {
             icon: '📱',
-            title: 'Metallic Icons & Gestures',
-            description: 'New metallic silver PWA app icon and authentic iOS spring curve animations.'
+            title: 'Display Layout Calibration',
+            description: 'Pinned navigation bar temporarily paused to maximize smooth scrolling on larger screens.'
         }
     ]
 }
@@ -103,8 +103,8 @@ export function WhatsNewModal({
             <div
                 onClick={(e) => e.stopPropagation()}
                 className={`bg-[var(--ios-card-solid)] rounded-[22px] w-full max-w-sm p-6 shadow-2xl flex flex-col gap-5 transition-all duration-260 ease-[cubic-bezier(0.16,1,0.3,1)] ${isEntered && !isDismissing
-                        ? 'opacity-100 scale-100 translate-y-0'
-                        : 'opacity-0 scale-95 translate-y-4 sm:translate-y-2'
+                    ? 'opacity-100 scale-100 translate-y-0'
+                    : 'opacity-0 scale-95 translate-y-4 sm:translate-y-2'
                     }`}
             >
                 <div className="flex flex-col items-center text-center gap-1.5 pt-1">
@@ -115,7 +115,7 @@ export function WhatsNewModal({
                         {t.whatsNewTitle}
                     </h3>
                     <p className="text-xs font-normal text-[var(--ios-secondary)]">
-                        {t.whatsNewSubtitle}
+                        v3.0.1
                     </p>
                 </div>
 

@@ -109,9 +109,9 @@ export function MessagesWidget({
         isContentSwiping.current = false
         const deltaX = e.changedTouches[0].clientX - contentTouchStartX.current
 
-        if (deltaX < -50 && activeTab === 'inbox') {
+        if (deltaX < -45 && activeTab === 'inbox') {
             setActiveTab('announcements')
-        } else if (deltaX > 50 && activeTab === 'announcements') {
+        } else if (deltaX > 45 && activeTab === 'announcements') {
             setActiveTab('inbox')
         }
     }
@@ -192,7 +192,7 @@ export function MessagesWidget({
             <div className="flex items-center justify-between gap-2">
                 <div className="relative bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex flex-1 max-w-xs overflow-hidden">
                     <div
-                        className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-lg bg-[var(--ios-card)] shadow-xs transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                        className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-lg bg-[var(--ios-card)] shadow-xs transition-transform duration-280 ease-[cubic-bezier(0.25,1,0.5,1)]"
                         style={{
                             transform: activeTab === 'inbox' ? 'translateX(0)' : 'translateX(100%)'
                         }}
@@ -243,26 +243,26 @@ export function MessagesWidget({
                 className="w-full overflow-hidden"
             >
                 <div
-                    className="flex w-[200%] transition-transform duration-320 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                    className="flex w-[200%] transition-transform duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]"
                     style={{
                         transform: activeTab === 'inbox' ? 'translateX(0%)' : 'translateX(-50%)'
                     }}
                 >
                     <div className="w-1/2 shrink-0 pr-1">
                         {isLoading && messages.length === 0 ? (
-                            <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-separator)] flex flex-col items-center justify-center gap-3">
+                            <div className="bg-[var(--ios-card)] rounded-[18px] min-h-[220px] flex flex-col items-center justify-center gap-3">
                                 <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
                                 <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.loadingMessages}</p>
                             </div>
                         ) : (
-                            <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-[var(--ios-shadow)] divide-y divide-[var(--ios-separator)] animate-in fade-in duration-300">
+                            <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                                 {filteredMessages.length > 0 ? (
                                     filteredMessages.map((msg, index) => (
                                         <article
                                             key={msg.id}
                                             onClick={() => handleReadMessage(msg)}
-                                            style={{ animationDelay: `${index * 25}ms` }}
-                                            className="p-3.5 flex items-start gap-2.5 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-bottom-1 fill-mode-both duration-200"
+                                            style={{ animationDelay: `${Math.min(index * 20, 180)}ms` }}
+                                            className="p-3.5 flex items-start gap-2.5 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-top-1.5 duration-250 fill-mode-both"
                                         >
                                             {!msg.isRead ? (
                                                 <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] mt-1.5 shrink-0" />
@@ -294,12 +294,12 @@ export function MessagesWidget({
 
                     <div className="w-1/2 shrink-0 pl-1">
                         {isLoading && announcements.length === 0 ? (
-                            <div className="bg-[var(--ios-card)] rounded-2xl p-12 border border-[var(--ios-separator)] flex flex-col items-center justify-center gap-3">
+                            <div className="bg-[var(--ios-card)] rounded-[18px] min-h-[220px] flex flex-col items-center justify-center gap-3">
                                 <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
                                 <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.loadingMessages}</p>
                             </div>
                         ) : (
-                            <div className="bg-[var(--ios-card)] rounded-2xl border border-[var(--ios-separator)] overflow-hidden shadow-[var(--ios-shadow)] divide-y divide-[var(--ios-separator)] animate-in fade-in duration-300">
+                            <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                                 {filteredAnnouncements.length > 0 ? (
                                     filteredAnnouncements.map((item, index) => (
                                         <article
@@ -313,8 +313,8 @@ export function MessagesWidget({
                                                     originalItem: item
                                                 })
                                             }
-                                            style={{ animationDelay: `${index * 25}ms` }}
-                                            className="p-3.5 flex flex-col gap-1 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-bottom-1 fill-mode-both duration-200"
+                                            style={{ animationDelay: `${Math.min(index * 20, 180)}ms` }}
+                                            className="p-3.5 flex flex-col gap-1 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-top-1.5 duration-250 fill-mode-both"
                                         >
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-semibold text-[var(--ios-blue)]">{cleanSenderName(item.author)}</span>
@@ -342,7 +342,7 @@ export function MessagesWidget({
                     onTouchEnd={handleTouchEnd}
                     style={{
                         transform: `translateX(${dragOffset}px)`,
-                        transition: isSwiping.current ? 'none' : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+                        transition: isSwiping.current ? 'none' : 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)'
                     }}
                     className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250"
                 >
@@ -370,7 +370,7 @@ export function MessagesWidget({
                     </header>
 
                     <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
-                        <div className="bg-[var(--ios-card)] rounded-2xl p-4 border border-[var(--ios-border)] shadow-xs flex flex-col gap-2">
+                        <div className="bg-[var(--ios-card)] rounded-[18px] p-4 shadow-xs flex flex-col gap-2">
                             <div className="flex items-center justify-between gap-2 border-b border-[var(--ios-separator)] pb-2.5">
                                 <div className="min-w-0">
                                     <span className="text-[10px] font-semibold text-[var(--ios-blue)] uppercase tracking-wider block">
@@ -387,7 +387,7 @@ export function MessagesWidget({
                             </h2>
                         </div>
 
-                        <div className="bg-[var(--ios-card)] rounded-2xl p-4 border border-[var(--ios-border)] shadow-xs min-h-[160px] flex flex-col">
+                        <div className="bg-[var(--ios-card)] rounded-[18px] p-4 shadow-xs min-h-[160px] flex flex-col">
                             {isLoadingContent ? (
                                 <div className="py-12 flex flex-col items-center justify-center gap-2.5 my-auto">
                                     <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
@@ -409,7 +409,7 @@ export function MessagesWidget({
                 >
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-[var(--ios-card)] rounded-3xl p-5 w-full max-w-lg border border-[var(--ios-border)] shadow-2xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto"
+                        className="bg-[var(--ios-card)] rounded-[22px] p-5 w-full max-w-lg shadow-2xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto"
                     >
                         <div className="flex items-center justify-between border-b border-[var(--ios-separator)] pb-2.5">
                             <h3 className="text-sm font-semibold text-[var(--ios-label)]">{t.newMessageTitle}</h3>

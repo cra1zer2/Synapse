@@ -79,6 +79,15 @@ export interface AppDictionary {
     gradesCalcSectionTitle: string
     ignoreModifiersLabel: string
     ignoreModifiersDescription: string
+    benchmarkSectionTitle: string
+    benchmarkButtonLabel: string
+    benchmarkDescription: string
+    benchmarkTotalDuration: string
+    benchmarkAuthDuration: string
+    benchmarkFastestEndpoint: string
+    benchmarkSlowestEndpoint: string
+    runBenchmarkAction: string
+    benchmarkingStatus: string
     onLabel: string
     offLabel: string
     textClampLabel: string
@@ -89,6 +98,9 @@ export interface AppDictionary {
     logout: string
     done: string
     backAction: string
+    whatsNewTitle: string
+    whatsNewSubtitle: string
+    whatsNewAction: string
     messagesInbox: string
     messagesAnnouncements: string
     noMessages: string
@@ -200,6 +212,15 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             gradesCalcSectionTitle: 'Grade Calculations',
             ignoreModifiersLabel: 'Ignore pluses and minuses',
             ignoreModifiersDescription: 'Calculate GPA from base grades (e.g. 4+ and 4- as 4)',
+            benchmarkSectionTitle: 'Diagnostics & Latency',
+            benchmarkButtonLabel: 'Librus Benchmark',
+            benchmarkDescription: 'Measure latency across all Synergia endpoints without entering credentials',
+            benchmarkTotalDuration: 'Total request time',
+            benchmarkAuthDuration: 'Authorization time',
+            benchmarkFastestEndpoint: 'Fastest endpoint',
+            benchmarkSlowestEndpoint: 'Slowest endpoint',
+            runBenchmarkAction: 'Run Test',
+            benchmarkingStatus: 'Testing...',
             onLabel: 'On',
             offLabel: 'Off',
             textClampLabel: 'Single-line subject names',
@@ -210,6 +231,9 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             logout: 'Sign Out',
             done: 'Done',
             backAction: 'Back',
+            whatsNewTitle: "What's New in Synapse",
+            whatsNewSubtitle: 'Version 3.0',
+            whatsNewAction: 'Continue',
             messagesInbox: 'Inbox',
             messagesAnnouncements: 'Announcements',
             noMessages: 'No messages yet',
@@ -320,6 +344,15 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         gradesCalcSectionTitle: 'Kalkulator ocen',
         ignoreModifiersLabel: 'Ignoruj plusy i minusy',
         ignoreModifiersDescription: 'Obliczaj średnią z bazowych ocen (np. 4+ i 4- jako 4)',
+        benchmarkSectionTitle: 'Diagnostyka i opóźnienia',
+        benchmarkButtonLabel: 'Test opóźnień Librus',
+        benchmarkDescription: 'Zmierz czas odpowiedzi Synergii bez ponownego wpisywania hasła',
+        benchmarkTotalDuration: 'Łączny czas zapytań',
+        benchmarkAuthDuration: 'Czas autoryzacji',
+        benchmarkFastestEndpoint: 'Najszybszy punkt',
+        benchmarkSlowestEndpoint: 'Najwolniejszy punkt',
+        runBenchmarkAction: 'Uruchom test',
+        benchmarkingStatus: 'Testowanie...',
         onLabel: 'Wł.',
         offLabel: 'Wył.',
         textClampLabel: 'Skracanie nazw przedmiotów',
@@ -330,6 +363,9 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         logout: 'Wyloguj się',
         done: 'Gotowe',
         backAction: 'Wróć',
+        whatsNewTitle: 'Co nowego w Synapse',
+        whatsNewSubtitle: 'Wersja 3.0',
+        whatsNewAction: 'Kontynuuj',
         messagesInbox: 'Odebrane',
         messagesAnnouncements: 'Ogłoszenia',
         noMessages: 'Brak wiadomości',

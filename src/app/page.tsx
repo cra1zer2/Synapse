@@ -6,6 +6,7 @@ import { DaySchedule } from '@/models/timetable.model'
 import { GradeItem, SubjectGrades } from '@/models/grade.model'
 import { SubjectAttendance } from '@/models/attendance.model'
 import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
+import { CURRENT_APP_VERSION } from '@/config/version.config'
 
 import { useAccountSession } from '@/utils/account.hook'
 import { useTimetableSync } from '@/utils/timetable-sync.hook'
@@ -25,8 +26,6 @@ import { TerminarzModal } from './widgets/terminarz-modal'
 import { WhatsNewModal } from '@/app/widgets/whats-new-modal'
 
 export type TextClampOption = 'full' | '1' | '2'
-
-const CURRENT_APP_VERSION = '3.0.0'
 
 const SECTION_INDEX: Record<MainSection, number> = {
   schedule: 0,
@@ -293,10 +292,7 @@ export default function Home() {
     )
   }
 
-  const currentDaySchedule = timetable.timetableData?.schedule.find((d) => d.dayName === timetable.selectedDay)
-  const currentDayLessonCount = currentDaySchedule?.lessons.length || 0
-  const canPinCalendar = currentDayLessonCount >= 5
-  const shouldShowPinnedBar = isCalendarPinned && activeSection === 'schedule' && timetable.timetableData && canPinCalendar
+  const shouldShowPinnedBar = false
 
   return (
     <div className="w-full min-h-screen bg-[var(--ios-bg)] flex flex-col">
@@ -327,8 +323,8 @@ export default function Home() {
 
           <div
             className={`grid transition-all duration-300 ease-[var(--ease-out-cubic)] ${shouldShowPinnedBar
-                ? 'grid-rows-[1fr] opacity-100 pt-1.5'
-                : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+              ? 'grid-rows-[1fr] opacity-100 pt-1.5'
+              : 'grid-rows-[0fr] opacity-0 pointer-events-none'
               }`}
           >
             <div className="overflow-hidden">
@@ -353,8 +349,8 @@ export default function Home() {
                         key={day.dayName}
                         onClick={() => handleSelectDay(day.dayName)}
                         className={`py-1 flex-1 flex flex-col items-center justify-center transition-colors ${isSelected
-                            ? 'text-[var(--ios-blue)]'
-                            : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
+                          ? 'text-[var(--ios-blue)]'
+                          : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
                           }`}
                       >
                         <span className={`text-[10px] uppercase tracking-tight ${isSelected ? 'font-semibold' : 'font-normal opacity-70'}`}>
@@ -390,7 +386,7 @@ export default function Home() {
         {timetable.hasNewUpdate && (
           <div
             onClick={timetable.applyPendingUpdates}
-            className="bg-[var(--ios-blue)] text-white p-3 rounded-2xl flex items-center justify-between cursor-pointer active:opacity-90 shadow-sm"
+            className="bg-[var(--ios-blue)] text-white p-3 rounded-2xl flex items-center justify-between cursor-pointer active:opacity-90 shadow-xs"
           >
             <div className="flex items-center gap-2">
               <span className="text-sm">✨</span>

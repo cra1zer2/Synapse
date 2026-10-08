@@ -9,6 +9,7 @@ import { getAuthenticatedClient } from '@/services/librus.service'
 import { translateBatch } from '@/services/translation.service'
 import { formatDisplayDate, extractTimeInterval } from '@/utils/date.util'
 import { parseLessonTimeRange } from '@/utils/time.util'
+import { extractCookieHeader } from '@/utils/cookie.util'
 
 function cleanTeacherName(rawTeacher: string): string {
     if (!rawTeacher) {
@@ -76,15 +77,79 @@ function getWeekDates(pivotDate: Date): { monday: Date; friday: Date; weekDates:
     return { monday, friday, weekDates }
 }
 
-async function fetchRealizedLessonTopics(client: any): Promise<Record<string, Record<string, string>>> {
-    const topicsMap: Record<string, Record<string, string>> = {}
-    try {
-        const caller = client._caller || client.caller
-        if (!caller) return topicsMap
+function normalizePolishDateToIso(rawDateStr: string): string | null {
+    if (!rawDateStr) return null
+    const clean = rawDateStr.toLowerCase().trim()
 
-        const res = await caller.get('https://synergia.librus.pl/zrealizowane_lekcje').catch(() => null)
-        const html = typeof res === 'string' ? res : res?.body || res?.text || ''
-        if (!html) return topicsMap
+    const isoMatch = clean.match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
+    if (isoMatch) {
+        return `${isoMatch[1]}-${isoMatch[2].padStart(2, '0')}-${isoMatch[3].padStart(2, '0')}`
+    }
+
+    const dotMatch = clean.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/)
+    if (dotMatch) {
+        return `${dotMatch[3]}-${dotMatch[2].padStart(2, '0')}-${dotMatch[1].padStart(2, '0')}`
+    }
+
+    const monthMap: Record<string, string> = {
+        'sty': '01',
+        'lut': '02',
+        'mar': '03',
+        'kwi': '04',
+        'maj': '05',
+        'cze': '06',
+        'lip': '07',
+        'sie': '08',
+        'wrz': '09',
+        'paź': '10',
+        'paz': '10',
+        'lis': '11',
+        'gru': '12'
+    }
+
+    const textMatch = clean.match(/(\d{1,2})\s*([a-ząćęłńóśźż]{3,})\s*(\d{4})/)
+    if (textMatch) {
+        const day = textMatch[1].padStart(2, '0')
+        const monthKey = textMatch[2].slice(0, 3)
+        const month = monthMap[monthKey] || '10'
+        const year = textMatch[3]
+        return `${year}-${month}-${day}`
+    }
+
+    return null
+}
+
+async function fetchRealizedLessonTopics(
+    client: any,
+    mondayIso: string,
+    fridayIso: string,
+    weekDates: Record<string, { dateStr: string; isoStr: string }>
+): Promise<Record<string, Record<string, string>>> {
+    const topicsMap: Record<string, Record<string, string>> = {}
+    const cookieHeader = extractCookieHeader(client)
+
+    const registerTopic = (dateKey: string, timeKey: string, subjectKey: string, topicText: string) => {
+        if (!topicText || topicText === '-' || topicText.trim().length <= 1) return
+        const cleanTopic = topicText.trim()
+        if (!topicsMap[dateKey]) {
+            topicsMap[dateKey] = {}
+        }
+        if (timeKey) {
+            topicsMap[dateKey][timeKey.replace(/\s+/g, '')] = cleanTopic
+        }
+        if (subjectKey) {
+            topicsMap[dateKey][subjectKey.toLowerCase().trim()] = cleanTopic
+        }
+    }
+
+    const parseRealizedHtml = (html: string, fallbackDateIso?: string) => {
+        if (!html) return
+
+        let pageDateIso = fallbackDateIso || null
+        const headerDateMatch = html.match(/lekcje\s+zrealizowane\s*:\s*[^<]*?(\d{1,2}\s+[a-ząćęłńóśźż]{3,}\s+\d{4})/i)
+        if (headerDateMatch) {
+            pageDateIso = normalizePolishDateToIso(headerDateMatch[1])
+        }
 
         const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
         let rowMatch: RegExpExecArray | null
@@ -102,22 +167,148 @@ async function fetchRealizedLessonTopics(client: any): Promise<Record<string, Re
                 cells.push(cellText)
             }
 
-            if (cells.length >= 5) {
-                const rawDate = cells[0].replace(/[^\d.-]/g, '').trim()
-                const rawHour = cells[1].trim()
-                const rawSubject = cells[2].toLowerCase().trim()
-                const rawTopic = cells[4].trim()
-
-                if (rawTopic && rawTopic !== '-' && rawTopic.length > 1) {
-                    if (!topicsMap[rawDate]) {
-                        topicsMap[rawDate] = {}
+            if (cells.length >= 4) {
+                const hasTimeInCol0 = /\d{1,2}:\d{2}/.test(cells[0])
+                if (hasTimeInCol0) {
+                    const rawTime = cells[0]
+                    const rawSubject = cells[1]
+                    const rawTopic = cells[3]
+                    const effectiveDate = pageDateIso || ''
+                    if (effectiveDate) {
+                        registerTopic(effectiveDate, rawTime, rawSubject, rawTopic)
+                        const parts = effectiveDate.split('-')
+                        if (parts.length === 3) {
+                            registerTopic(`${parts[2]}.${parts[1]}.${parts[0]}`, rawTime, rawSubject, rawTopic)
+                        }
                     }
-                    topicsMap[rawDate][rawHour] = rawTopic
-                    topicsMap[rawDate][rawSubject] = rawTopic
+                } else if (cells.length >= 5) {
+                    const parsedDate = normalizePolishDateToIso(cells[0])
+                    const rawTime = cells[1]
+                    const rawSubject = cells[2]
+                    const rawTopic = cells[4]
+                    if (parsedDate) {
+                        registerTopic(parsedDate, rawTime, rawSubject, rawTopic)
+                        const parts = parsedDate.split('-')
+                        if (parts.length === 3) {
+                            registerTopic(`${parts[2]}.${parts[1]}.${parts[0]}`, rawTime, rawSubject, rawTopic)
+                        }
+                    }
                 }
             }
         }
+    }
+
+    const parseRealizedJson = (data: any) => {
+        if (!data) return
+        const list = Array.isArray(data)
+            ? data
+            : Array.isArray(data.entries)
+                ? data.entries
+                : Array.isArray(data.data)
+                    ? data.data
+                    : Array.isArray(data.lessons)
+                        ? data.lessons
+                        : []
+
+        for (const item of list) {
+            if (!item || typeof item !== 'object') continue
+            const dateStr = item.date || item.lessonDate || item.day || ''
+            const parsedDate = normalizePolishDateToIso(dateStr)
+            const timeStr = item.time || item.lessonTime || item.hour || ''
+            const subjectStr = item.subject || item.subjectName || (item.subject && item.subject.name) || ''
+            const topicStr = item.topic || item.theme || item.subjectTopic || item.title || ''
+
+            if (parsedDate && topicStr) {
+                registerTopic(parsedDate, timeStr, subjectStr, topicStr)
+                const parts = parsedDate.split('-')
+                if (parts.length === 3) {
+                    registerTopic(`${parts[2]}.${parts[1]}.${parts[0]}`, timeStr, subjectStr, topicStr)
+                }
+            }
+        }
+    }
+
+    if (cookieHeader) {
+        const daysIso = Object.values(weekDates).map((w) => w.isoStr)
+        for (const dateIso of daysIso) {
+            try {
+                const panelUiUrl = `https://synergia.librus.pl/gateway/ms/studentdatapanel/ui/lekcje/zrealizowane?date=${dateIso}`
+                const uiRes = await fetch(panelUiUrl, {
+                    headers: {
+                        'Cookie': cookieHeader,
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+                    }
+                })
+                if (uiRes.ok) {
+                    const text = await uiRes.text()
+                    parseRealizedHtml(text, dateIso)
+                }
+            } catch { }
+
+            try {
+                const panelApiUrl = `https://synergia.librus.pl/gateway/ms/studentdatapanel/api/lessons/realized?date=${dateIso}`
+                const apiRes = await fetch(panelApiUrl, {
+                    headers: {
+                        'Cookie': cookieHeader,
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+                    }
+                })
+                if (apiRes.ok) {
+                    const json = await apiRes.json()
+                    parseRealizedJson(json)
+                }
+            } catch { }
+        }
+
+        try {
+            const classicRes = await fetch('https://synergia.librus.pl/zrealizowane_lekcje', {
+                headers: {
+                    'Cookie': cookieHeader,
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+                }
+            })
+            if (classicRes.ok) {
+                const text = await classicRes.text()
+                parseRealizedHtml(text)
+            }
+        } catch { }
+
+        try {
+            const gwUrl = `https://synergia.librus.pl/gateway/api/2.0/RealizedLessons?dateFrom=${mondayIso}&dateTo=${fridayIso}`
+            const gwRes = await fetch(gwUrl, {
+                headers: {
+                    'Cookie': cookieHeader,
+                    'Accept': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+                }
+            })
+            if (gwRes.ok) {
+                const json = await gwRes.json()
+                parseRealizedJson(json)
+            }
+        } catch { }
+    }
+
+    try {
+        const caller = client._caller || client.caller
+        if (caller) {
+            const raw = await caller.get('https://synergia.librus.pl/zrealizowane_lekcje').catch(() => null)
+            let htmlText = ''
+            if (typeof raw === 'function') {
+                htmlText = raw.html ? raw.html() : ''
+            } else if (typeof raw === 'string') {
+                htmlText = raw
+            } else if (raw?.body) {
+                htmlText = typeof raw.body === 'string' ? raw.body : (raw.body.html ? raw.body.html() : '')
+            }
+            if (htmlText) {
+                parseRealizedHtml(htmlText)
+            }
+        }
     } catch { }
+
     return topicsMap
 }
 
@@ -149,7 +340,7 @@ export async function fetchSmartTimetable(
         const [rawTimetable, rawCalendar, realizedTopicsMap] = await Promise.all([
             client.calendar.getTimetable(mondayIso, fridayIso),
             client.calendar.getCalendar(currentMonth, currentYear).catch(() => []),
-            fetchRealizedLessonTopics(client).catch((): Record<string, Record<string, string>> => ({}))
+            fetchRealizedLessonTopics(client, mondayIso, fridayIso, weekDates).catch((): Record<string, Record<string, string>> => ({}))
         ])
 
         const topicsRecord: Record<string, Record<string, string>> = realizedTopicsMap || {}
@@ -269,10 +460,18 @@ export async function fetchSmartTimetable(
                     }
 
                     const rawSubject = (slot.subject || '').trim()
+                    const normalizedTime = (slot.time || '').replace(/\s+/g, '')
                     const slotTopic = (slot.topic || slot.theme || slot.subjectTopic || slot.description || '').trim()
-                    const realizedTopic = dayRealized[slot.time] || dayRealized[String(index + 1)] || dayRealized[String(index)] || dayRealized[rawSubject.toLowerCase()] || ''
 
-                    const finalTopic = realizedTopic || slotTopic || undefined
+                    const realizedTopic =
+                        dayRealized[normalizedTime] ||
+                        dayRealized[slot.time] ||
+                        dayRealized[rawSubject.toLowerCase()] ||
+                        dayRealized[String(index + 1)] ||
+                        dayRealized[String(index)] ||
+                        ''
+
+                    const finalTopic = (realizedTopic && realizedTopic !== '-') ? realizedTopic : (slotTopic && slotTopic !== '-' ? slotTopic : undefined)
 
                     lessons.push({
                         number: index,
@@ -311,26 +510,23 @@ export async function fetchSmartTimetable(
         }
 
         if (translate) {
-            const subjectsToTranslate = new Set<string>()
-            const reasonsToTranslate = new Set<string>()
+            const textsToTranslate = new Set<string>()
 
             schedule.forEach((day) => {
                 day.lessons.forEach((lesson) => {
-                    if (lesson.subject) subjectsToTranslate.add(lesson.subject)
-                    if (lesson.topic) reasonsToTranslate.add(lesson.topic)
+                    if (lesson.subject) textsToTranslate.add(lesson.subject)
+                    if (lesson.topic) textsToTranslate.add(lesson.topic)
                 })
                 day.events.forEach((ev) => {
-                    if (ev.title) reasonsToTranslate.add(ev.title)
+                    if (ev.title) textsToTranslate.add(ev.title)
                 })
             })
 
             allAbsentTeachers.forEach((item) => {
-                if (item.reason) reasonsToTranslate.add(item.reason)
+                if (item.reason) textsToTranslate.add(item.reason)
             })
 
-            const translatedMap = await translateBatch(
-                Array.from(subjectsToTranslate).concat(Array.from(reasonsToTranslate))
-            )
+            const translatedMap = await translateBatch(Array.from(textsToTranslate))
 
             schedule.forEach((day) => {
                 day.lessons.forEach((lesson) => {

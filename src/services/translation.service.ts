@@ -94,9 +94,62 @@ function normalizeKey(str: string): string {
         .trim()
 }
 
+async function fetchFromDynamicTranslationEngines(text: string): Promise<string | null> {
+    const encoded = encodeURIComponent(text)
+
+    try {
+        const urlChrome = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=pl&tl=en&q=${encoded}`
+        const resChrome = await fetch(urlChrome, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        })
+        if (resChrome.ok) {
+            const json = await resChrome.json()
+            if (Array.isArray(json) && typeof json[0] === 'string' && json[0].trim().length > 0) {
+                return json[0].trim()
+            }
+        }
+    } catch { }
+
+    try {
+        const urlGtx = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=pl&tl=en&dt=t&q=${encoded}`
+        const resGtx = await fetch(urlGtx, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+            }
+        })
+        if (resGtx.ok) {
+            const json = await resGtx.json()
+            if (Array.isArray(json) && Array.isArray(json[0])) {
+                const combined = json[0].map((item: any) => item[0]).join('').trim()
+                if (combined.length > 0) {
+                    return combined
+                }
+            }
+        }
+    } catch { }
+
+    try {
+        const urlMemory = `https://api.mymemory.translated.net/get?q=${encoded}&langpair=pl|en`
+        const resMemory = await fetch(urlMemory)
+        if (resMemory.ok) {
+            const json = await resMemory.json()
+            if (json && json.responseData && typeof json.responseData.translatedText === 'string') {
+                const clean = json.responseData.translatedText.trim()
+                if (clean.length > 0 && !clean.toUpperCase().includes('MYMEMORY WARNING')) {
+                    return clean
+                }
+            }
+        }
+    } catch { }
+
+    return null
+}
+
 export async function translateTextToEnglish(text: string): Promise<string> {
     const trimmed = text.trim()
-    if (!trimmed) {
+    if (!trimmed || trimmed === '-') {
         return text
     }
 
@@ -118,29 +171,13 @@ export async function translateTextToEnglish(text: string): Promise<string> {
         }
     }
 
-    try {
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=pl&tl=en&dt=t&q=${encodeURIComponent(trimmed)}`
-        const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
-            }
-        })
-
-        if (!response.ok) {
-            return trimmed
-        }
-
-        const json = await response.json()
-        if (Array.isArray(json) && Array.isArray(json[0])) {
-            const translated = json[0].map((item: any) => item[0]).join('')
-            translationCache.set(trimmed, translated)
-            return translated
-        }
-
-        return trimmed
-    } catch {
-        return trimmed
+    const dynamicTranslation = await fetchFromDynamicTranslationEngines(trimmed)
+    if (dynamicTranslation) {
+        translationCache.set(trimmed, dynamicTranslation)
+        return dynamicTranslation
     }
+
+    return trimmed
 }
 
 export async function translateBatch(texts: string[]): Promise<Record<string, string>> {

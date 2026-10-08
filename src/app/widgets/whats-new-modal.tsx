@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 
 interface FeatureItem {
@@ -68,18 +69,43 @@ export function WhatsNewModal({
     lang,
     t
 }: WhatsNewModalProps) {
+    const [isEntered, setIsEntered] = useState(false)
+    const [isDismissing, setIsDismissing] = useState(false)
+
+    useEffect(() => {
+        if (isOpen) {
+            const frame = requestAnimationFrame(() => setIsEntered(true))
+            return () => cancelAnimationFrame(frame)
+        } else {
+            setIsEntered(false)
+            setIsDismissing(false)
+        }
+    }, [isOpen])
+
+    const handleDismiss = () => {
+        if (isDismissing) return
+        setIsDismissing(true)
+        setTimeout(() => {
+            onClose()
+        }, 260)
+    }
+
     if (!isOpen) return null
 
     const features = CHANGELOG[lang] || CHANGELOG.pl
 
     return (
         <div
-            onClick={onClose}
-            className="fixed inset-0 z-60 bg-black/55 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+            onClick={handleDismiss}
+            className={`fixed inset-0 z-60 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 transition-opacity duration-260 ease-[cubic-bezier(0.16,1,0.3,1)] ${isEntered && !isDismissing ? 'opacity-100' : 'opacity-0'
+                }`}
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                className="bg-[var(--ios-card-solid)] rounded-[22px] w-full max-w-sm p-6 shadow-2xl flex flex-col gap-5 animate-in zoom-in-95 duration-200"
+                className={`bg-[var(--ios-card-solid)] rounded-[22px] w-full max-w-sm p-6 shadow-2xl flex flex-col gap-5 transition-all duration-260 ease-[cubic-bezier(0.16,1,0.3,1)] ${isEntered && !isDismissing
+                        ? 'opacity-100 scale-100 translate-y-0'
+                        : 'opacity-0 scale-95 translate-y-4 sm:translate-y-2'
+                    }`}
             >
                 <div className="flex flex-col items-center text-center gap-1.5 pt-1">
                     <div className="w-12 h-12 rounded-2xl bg-[var(--ios-element)] flex items-center justify-center text-2xl shadow-xs mb-1">
@@ -113,8 +139,8 @@ export function WhatsNewModal({
 
                 <button
                     type="button"
-                    onClick={onClose}
-                    className="h-12 w-full bg-[var(--ios-blue)] text-white text-xs font-semibold rounded-xl active:opacity-85 shadow-xs transition-opacity mt-1 flex items-center justify-center"
+                    onClick={handleDismiss}
+                    className="h-12 w-full bg-[var(--ios-blue)] text-white text-xs font-semibold rounded-xl active:scale-[0.98] active:opacity-85 shadow-xs transition-all mt-1 flex items-center justify-center cursor-pointer"
                 >
                     {t.whatsNewAction}
                 </button>

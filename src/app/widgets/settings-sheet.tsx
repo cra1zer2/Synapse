@@ -6,6 +6,8 @@ import { NotificationPreferences } from '@/models/notification.model'
 import { AppDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 import { TextClampOption } from '@/app/page'
 import { requestPushPermission, getNotificationPermissionStatus } from '@/services/notification.service'
+import { executeLibrusBenchmarkAction } from '@/app/actions'
+import { BenchmarkReport } from '@/models/benchmark.model'
 
 interface SettingsSheetProps {
     isOpen: boolean
@@ -102,6 +104,9 @@ export function SettingsSheet({
     const [isDismissing, setIsDismissing] = useState(false)
     const [isSubDismissing, setIsSubDismissing] = useState(false)
     const [pushStatus, setPushStatus] = useState<string>(() => getNotificationPermissionStatus())
+
+    const [isBenchmarking, setIsBenchmarking] = useState(false)
+    const [benchmarkReport, setBenchmarkReport] = useState<BenchmarkReport | null>(null)
 
     const [dragOffset, setDragOffset] = useState(0)
     const touchStartX = useRef(0)
@@ -207,7 +212,7 @@ export function SettingsSheet({
     const handleSubTouchMove = (e: React.TouchEvent) => {
         if (!isSubSwiping.current) return
         const currentX = e.touches[0].clientX
-        const delta = currentX - touchStartX.current
+        const delta = currentX - subTouchStartX.current
         if (delta > 0) {
             setSubDragOffset(delta)
         }
@@ -234,6 +239,16 @@ export function SettingsSheet({
             const updated = { ...notificationPrefs, enabled: !notificationPrefs.enabled }
             setNotificationPrefs(updated)
             localStorage.setItem('synapse_notification_prefs', JSON.stringify(updated))
+        }
+    }
+
+    const handleRunBenchmark = async () => {
+        if (!activeAccount || !activeAccount.username || !activeAccount.password || isBenchmarking) return
+        setIsBenchmarking(true)
+        const res = await executeLibrusBenchmarkAction(activeAccount.username, activeAccount.password)
+        setIsBenchmarking(false)
+        if (res.success && res.data) {
+            setBenchmarkReport(res.data)
         }
     }
 
@@ -555,6 +570,61 @@ export function SettingsSheet({
                                         onChange={() => onToggleIgnoreGradeModifiers(!ignoreGradeModifiers)}
                                     />
                                 </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                                {t.benchmarkSectionTitle}
+                            </span>
+
+                            <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                                <div className="p-3.5 flex items-center justify-between gap-3">
+                                    <div className="min-w-0 pr-2">
+                                        <p className="text-xs font-medium text-[var(--ios-label)]">
+                                            {t.benchmarkButtonLabel}
+                                        </p>
+                                        <p className="text-[11px] text-[var(--ios-secondary)] mt-0.5 leading-snug">
+                                            {t.benchmarkDescription}
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleRunBenchmark}
+                                        disabled={isBenchmarking}
+                                        className="text-xs font-semibold px-3 py-1.5 bg-[var(--ios-blue)] text-white rounded-full shadow-xs active:scale-95 disabled:opacity-50 transition-all shrink-0 flex items-center gap-1.5"
+                                    >
+                                        {isBenchmarking && (
+                                            <svg className="w-3 h-3 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
+                                                <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" className="opacity-75" />
+                                            </svg>
+                                        )}
+                                        <span>{isBenchmarking ? t.benchmarkingStatus : t.runBenchmarkAction}</span>
+                                    </button>
+                                </div>
+
+                                {benchmarkReport && (
+                                    <div className="p-3.5 flex flex-col gap-2 bg-[var(--ios-bg)]/50 animate-in fade-in">
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-[var(--ios-secondary)] font-normal">{t.benchmarkTotalDuration}:</span>
+                                            <span className="font-semibold text-[var(--ios-label)]">{benchmarkReport.totalDurationMs} ms</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-[var(--ios-secondary)] font-normal">{t.benchmarkAuthDuration}:</span>
+                                            <span className="font-semibold text-[var(--ios-label)]">{benchmarkReport.authorizationDurationMs} ms</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-[var(--ios-secondary)] font-normal">{t.benchmarkFastestEndpoint}:</span>
+                                            <span className="font-semibold text-[#34c759] truncate max-w-[200px] text-right">{benchmarkReport.fastestEndpoint}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-[var(--ios-secondary)] font-normal">{t.benchmarkSlowestEndpoint}:</span>
+                                            <span className="font-semibold text-[#ff9500] truncate max-w-[200px] text-right">{benchmarkReport.slowestEndpoint}</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

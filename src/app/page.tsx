@@ -46,13 +46,13 @@ function IosSpinner({ className = 'w-3.5 h-3.5 text-[var(--ios-blue)]' }: { clas
 function getDayIndicatorColor(day: DaySchedule): string | null {
   const hasCancelled = day.lessons.some((l) => l.isCancelled)
   const hasHoliday = day.events && day.events.some((e) => e.category === 'holiday')
-  if (hasCancelled || hasHoliday) return 'bg-[#ff3b30]'
+  if (hasCancelled || hasHoliday) return 'bg-[var(--ios-red)]'
 
   const hasSubstitution = day.lessons.some((l) => l.isSubstitution)
-  if (hasSubstitution) return 'bg-[#af52de]'
+  if (hasSubstitution) return 'bg-[var(--ios-purple)]'
 
   const hasShortened = day.lessons.some((l) => l.isShortened)
-  if (hasShortened) return 'bg-[#ff9500]'
+  if (hasShortened) return 'bg-[var(--ios-orange)]'
 
   return null
 }
@@ -373,13 +373,13 @@ export default function Home() {
         {timetable.hasNewUpdate && (
           <div
             onClick={timetable.applyPendingUpdates}
-            className="bg-[var(--ios-blue)] text-white p-3 rounded-2xl flex items-center justify-between cursor-pointer active:opacity-90 shadow-xs"
+            className="bg-[var(--ios-blue)] text-white p-3.5 rounded-[16px] flex items-center justify-between cursor-pointer active:opacity-90 shadow-xs"
           >
             <div className="flex items-center gap-2">
               <span className="text-sm">✨</span>
-              <p className="text-xs font-medium tracking-tight">{t.newChanges}</p>
+              <p className="text-xs font-semibold tracking-tight">{t.newChanges}</p>
             </div>
-            <span className="text-xs font-medium underline bg-white/20 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-semibold underline bg-white/20 px-2.5 py-1 rounded-[8px]">
               {t.updateNow}
             </span>
           </div>
@@ -443,7 +443,7 @@ export default function Home() {
         </div>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--ios-separator)] bg-[var(--ios-card)] backdrop-blur-xl pb-[env(safe-area-inset-bottom,0px)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--ios-separator)] bg-[var(--ios-card)]/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom,0px)]">
         <div className="max-w-md mx-auto grid grid-cols-4 h-12">
           {[
             {
@@ -496,7 +496,7 @@ export default function Home() {
                   }`}
               >
                 {tab.icon}
-                <span className="text-[10px] font-normal tracking-tight mt-0.5">{tab.label}</span>
+                <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? 'font-semibold' : 'font-normal'}`}>{tab.label}</span>
               </button>
             )
           })}

@@ -69,13 +69,13 @@ export function WhatsNewModal({
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                className={`bg-[var(--ios-card-solid)] rounded-[22px] w-full max-w-sm p-6 shadow-2xl flex flex-col gap-4 max-h-[85vh] overflow-y-auto transition-all duration-260 ease-[cubic-bezier(0.16,1,0.3,1)] ${isEntered && !isDismissing
+                className={`bg-[var(--ios-card)] rounded-[28px] w-full max-w-sm p-6 shadow-2xl border border-[var(--ios-separator)]/60 flex flex-col gap-4 max-h-[85vh] overflow-y-auto transition-all duration-260 ease-[cubic-bezier(0.16,1,0.3,1)] ${isEntered && !isDismissing
                     ? 'opacity-100 scale-100 translate-y-0'
                     : 'opacity-0 scale-95 translate-y-4 sm:translate-y-2'
                     }`}
             >
                 <div className="flex flex-col items-center text-center gap-1 pt-1">
-                    <div className="w-12 h-12 rounded-2xl bg-[var(--ios-element)] flex items-center justify-center text-2xl shadow-xs mb-1">
+                    <div className="w-12 h-12 rounded-[16px] bg-[var(--ios-element)]/60 flex items-center justify-center text-2xl shadow-xs mb-1">
                         ✨
                     </div>
                     <h3 className="text-xl font-semibold tracking-tight text-[var(--ios-label)]">
@@ -90,7 +90,7 @@ export function WhatsNewModal({
                     <div className="flex flex-col gap-3 my-1">
                         {changelogData.topHighlights.map((item) => (
                             <div key={item.id} className="flex items-start gap-3">
-                                <div className="w-8 h-8 rounded-xl bg-[var(--ios-room-bg)] text-[var(--ios-blue)] flex items-center justify-center text-base shrink-0 mt-0.5">
+                                <div className="w-8 h-8 rounded-[12px] bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] flex items-center justify-center text-base shrink-0 mt-0.5">
                                     {item.icon}
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -150,7 +150,7 @@ export function WhatsNewModal({
                 <button
                     type="button"
                     onClick={handleDismiss}
-                    className="h-11 w-full bg-[var(--ios-blue)] text-white text-xs font-semibold rounded-xl active:scale-[0.98] active:opacity-85 shadow-xs transition-all mt-1 flex items-center justify-center cursor-pointer shrink-0"
+                    className="h-12 w-full bg-[var(--ios-blue)] text-white text-xs font-semibold rounded-[14px] active:scale-[0.98] active:opacity-90 shadow-xs transition-all mt-1 flex items-center justify-center cursor-pointer shrink-0"
                 >
                     {t.whatsNewAction}
                 </button>

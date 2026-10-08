@@ -19,10 +19,10 @@ export function AttendanceWidget({
     const isWarning = attendanceData.overallStatus === 'warning'
 
     const statusColor = isDanger
-        ? 'text-[#ff3b30]'
+        ? 'text-[var(--ios-red)]'
         : isWarning
-            ? 'text-[#ff9500]'
-            : 'text-[#34c759]'
+            ? 'text-[var(--ios-orange)]'
+            : 'text-[var(--ios-green)]'
 
     const sortedSubjects = [...attendanceData.subjects].sort((a, b) => {
         if (a.unexcusedCount > 0 && b.unexcusedCount === 0) return -1
@@ -34,8 +34,8 @@ export function AttendanceWidget({
     })
 
     return (
-        <section className="w-full flex flex-col gap-3 min-h-[500px]">
-            <div className="bg-[var(--ios-card)] rounded-[18px] p-4 shadow-xs flex items-center justify-between">
+        <section className="w-full flex flex-col gap-3.5 min-h-[500px]">
+            <div className="bg-[var(--ios-card)] rounded-[20px] p-4 shadow-xs border border-[var(--ios-separator)]/60 flex items-center justify-between">
                 <div>
                     <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.attendanceRate}</p>
                     <h2 className={`text-3xl font-semibold tracking-tight mt-0.5 ${statusColor}`}>
@@ -45,10 +45,10 @@ export function AttendanceWidget({
 
                 <span
                     className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isDanger
-                        ? 'bg-[#ff3b30]/15 text-[#ff3b30]'
+                        ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
                         : isWarning
-                            ? 'bg-[#ff9500]/15 text-[#ff9500]'
-                            : 'bg-[#34c759]/15 text-[#34c759]'
+                            ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
+                            : 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
                         }`}
                 >
                     {isDanger ? t.dangerBadge : isWarning ? t.warningBadge : t.safeBadge}
@@ -60,7 +60,7 @@ export function AttendanceWidget({
                     {t.subjectsSection}
                 </span>
 
-                <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)] border border-[var(--ios-separator)]/60">
                     {sortedSubjects.map((sub) => {
                         const subDanger = sub.status === 'danger'
                         const subWarning = sub.status === 'warning'
@@ -77,7 +77,7 @@ export function AttendanceWidget({
                                             {sub.subject}
                                         </h4>
                                         {sub.unexcusedCount > 0 && (
-                                            <span className="text-[9px] font-semibold bg-[#ff3b30]/15 text-[#ff3b30] px-1.5 py-0.5 rounded-full shrink-0">
+                                            <span className="text-[10px] font-semibold bg-[var(--ios-red-subtle)] text-[var(--ios-red)] px-2 py-0.5 rounded-full shrink-0">
                                                 {t.unexcusedShortBadge(sub.unexcusedCount)}
                                             </span>
                                         )}
@@ -89,10 +89,10 @@ export function AttendanceWidget({
 
                                 <div className="flex items-center gap-2 shrink-0">
                                     <span
-                                        className={`text-xs font-semibold px-2 py-0.5 rounded-md ${subDanger
-                                            ? 'bg-[#ff3b30]/15 text-[#ff3b30]'
+                                        className={`text-xs font-semibold px-2 py-0.5 rounded-[8px] ${subDanger
+                                            ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
                                             : subWarning
-                                                ? 'bg-[#ff9500]/15 text-[#ff9500]'
+                                                ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
                                                 : 'text-[var(--ios-label)]'
                                             }`}
                                     >

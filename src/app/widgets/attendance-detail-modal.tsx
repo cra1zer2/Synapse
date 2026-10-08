@@ -76,25 +76,25 @@ export function AttendanceDetailModal({
                     <span>{t.attendance}</span>
                 </button>
 
-                <h2 className="text-sm font-medium text-[var(--ios-label)] tracking-tight max-w-[200px] truncate text-center">
+                <h2 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight max-w-[200px] truncate text-center">
                     {subjectDetail.subject}
                 </h2>
 
                 <button
                     onClick={onClose}
-                    className="text-xs font-medium text-[var(--ios-blue)] active:opacity-70 py-1 pl-2"
+                    className="text-xs font-semibold text-[var(--ios-blue)] active:opacity-70 py-1 pl-2"
                 >
                     {t.done}
                 </button>
             </header>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
-                <div className="bg-[var(--ios-card)] rounded-[18px] p-4 flex items-center justify-between shadow-xs">
+                <div className="bg-[var(--ios-card)] rounded-[20px] p-4 flex items-center justify-between shadow-xs border border-[var(--ios-separator)]/60">
                     <div>
-                        <span className="text-[11px] font-normal text-[var(--ios-secondary)] uppercase tracking-wider block">
+                        <span className="text-[11px] font-medium text-[var(--ios-secondary)] uppercase tracking-wider block">
                             {t.subjectAttendance}
                         </span>
-                        <h3 className="text-2xl font-medium tracking-tight text-[var(--ios-label)] mt-0.5">
+                        <h3 className="text-2xl font-semibold tracking-tight text-[var(--ios-label)] mt-0.5">
                             {subjectDetail.percentage}%
                         </h3>
                     </div>
@@ -110,17 +110,17 @@ export function AttendanceDetailModal({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] font-normal text-[var(--ios-secondary)] uppercase tracking-wider px-1">
+                    <span className="text-[11px] font-medium text-[var(--ios-secondary)] uppercase tracking-wider px-1">
                         {t.recordedAbsencesTitle}
                     </span>
 
                     {absences.length > 0 ? (
-                        <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                        <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)] border border-[var(--ios-separator)]/60">
                             {absences.map((item, idx) => (
                                 <article key={`${item.date}-${item.lessonNumber}-${idx}`} className="p-3.5 flex flex-col gap-1.5">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs font-medium text-[var(--ios-label)]">{item.date}</span>
+                                            <span className="text-xs font-semibold text-[var(--ios-label)]">{item.date}</span>
                                             <span className="text-[11px] font-normal text-[var(--ios-secondary)]">
                                                 {t.lessonNumberLabel(item.lessonNumber)} {item.time ? `(${item.time})` : ''}
                                             </span>
@@ -128,8 +128,8 @@ export function AttendanceDetailModal({
 
                                         <span
                                             className={`px-2 py-0.5 rounded-full font-medium text-[10px] ${item.isUnexcused
-                                                ? 'bg-[#ff3b30]/15 text-[#ff3b30]'
-                                                : 'bg-[#34c759]/15 text-[#34c759]'
+                                                ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
+                                                : 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
                                                 }`}
                                         >
                                             {item.type.toUpperCase()}
@@ -144,7 +144,7 @@ export function AttendanceDetailModal({
                             ))}
                         </div>
                     ) : (
-                        <div className="bg-[var(--ios-card)] rounded-[18px] p-8 text-center text-xs font-normal text-[var(--ios-secondary)]">
+                        <div className="bg-[var(--ios-card)] rounded-[20px] p-8 text-center text-xs font-normal text-[var(--ios-secondary)] border border-[var(--ios-separator)]/60 shadow-xs">
                             {t.noAbsencesRecorded}
                         </div>
                     )}

@@ -45,13 +45,13 @@ function IosSpinner({ className = 'w-5 h-5 text-[var(--ios-secondary)]' }: { cla
 function getDayIndicatorColor(day: DaySchedule): string | null {
     const hasCancelled = day.lessons.some((l) => l.isCancelled)
     const hasHoliday = day.events && day.events.some((e) => e.category === 'holiday')
-    if (hasCancelled || hasHoliday) return 'bg-[#ff3b30]'
+    if (hasCancelled || hasHoliday) return 'bg-[var(--ios-red)]'
 
     const hasSubstitution = day.lessons.some((l) => l.isSubstitution)
-    if (hasSubstitution) return 'bg-[#af52de]'
+    if (hasSubstitution) return 'bg-[var(--ios-purple)]'
 
     const hasShortened = day.lessons.some((l) => l.isShortened)
-    if (hasShortened) return 'bg-[#ff9500]'
+    if (hasShortened) return 'bg-[var(--ios-orange)]'
 
     return null
 }
@@ -167,12 +167,12 @@ export function ScheduleWidget({
     const titleClampClass = textClamp === '1' ? 'line-clamp-1' : textClamp === '2' ? 'line-clamp-2' : ''
 
     return (
-        <section className="w-full flex flex-col gap-2.5 min-h-[500px]">
-            <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs">
+        <section className="w-full flex flex-col gap-3 min-h-[500px]">
+            <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs border border-[var(--ios-separator)]/60">
                 <div className="px-3.5 py-2 flex items-center justify-between border-b border-[var(--ios-separator)]">
                     <button
                         onClick={() => onShiftWeek(-7)}
-                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)]/65 hover:text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-all"
+                        className="w-7 h-7 rounded-full bg-[var(--ios-element)]/70 text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-all"
                         aria-label="Previous week"
                     >
                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -181,7 +181,7 @@ export function ScheduleWidget({
                     </button>
 
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-[var(--ios-label)] tracking-tight">
+                        <span className="text-xs font-semibold text-[var(--ios-label)] tracking-tight">
                             {formatWeekRange(timetableData.weekStart, timetableData.weekEnd)}
                         </span>
 
@@ -217,7 +217,7 @@ export function ScheduleWidget({
 
                         <button
                             onClick={onOpenTerminarz}
-                            className="text-[10px] font-medium text-[var(--ios-blue)] bg-[var(--ios-room-bg)] px-2 py-0.5 rounded-[6px] ml-0.5 active:scale-95 transition-transform"
+                            className="text-[10px] font-semibold text-[var(--ios-blue)] bg-[var(--ios-room-bg)] px-2 py-0.5 rounded-[6px] ml-0.5 active:scale-95 transition-transform"
                         >
                             {t.terminarzButton}
                         </button>
@@ -225,7 +225,7 @@ export function ScheduleWidget({
 
                     <button
                         onClick={() => onShiftWeek(7)}
-                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)]/65 hover:text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-all"
+                        className="w-7 h-7 rounded-full bg-[var(--ios-element)]/70 text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-all"
                         aria-label="Next week"
                     >
                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -244,12 +244,12 @@ export function ScheduleWidget({
                                 key={day.dayName}
                                 onClick={() => onSelectDay(day.dayName)}
                                 className={`py-1.5 rounded-[12px] text-xs font-normal flex flex-col items-center justify-center transition-all ${isSelected
-                                    ? 'bg-[var(--ios-blue)] text-white shadow-xs font-medium'
-                                    : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]'
+                                    ? 'bg-[var(--ios-blue)] text-white shadow-xs font-semibold'
+                                    : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]/60'
                                     }`}
                             >
-                                <span className="text-[10px] uppercase font-normal opacity-85">{getDayAbbr(day.dayName, lang)}</span>
-                                <span className="relative text-[13px] font-medium mt-0.5">
+                                <span className="text-[10px] uppercase font-medium opacity-85">{getDayAbbr(day.dayName, lang)}</span>
+                                <span className="relative text-[13px] font-semibold mt-0.5">
                                     {day.date ? day.date.split('.')[0] : ''}
                                     {dotColor && (
                                         <span className={`absolute -top-0.5 -right-1.5 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : dotColor}`} />
@@ -262,7 +262,7 @@ export function ScheduleWidget({
             </div>
 
             {isLoadingWeek ? (
-                <div className="bg-[var(--ios-card)] rounded-[18px] p-10 flex flex-col items-center justify-center gap-3">
+                <div className="bg-[var(--ios-card)] rounded-[20px] p-10 flex flex-col items-center justify-center gap-3 border border-[var(--ios-separator)]/60 shadow-xs">
                     <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
                     <p className="text-xs font-normal text-[var(--ios-secondary)]">{t.loadingTimetable}</p>
                 </div>
@@ -274,10 +274,10 @@ export function ScheduleWidget({
                                 <div
                                     key={idx}
                                     className={`px-3.5 py-2.5 rounded-[14px] text-xs font-normal flex items-center gap-2 ${ev.category === 'holiday'
-                                        ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
+                                        ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
                                         : ev.category === 'exam'
-                                            ? 'bg-[#34c759]/10 text-[#34c759]'
-                                            : 'bg-[#007aff]/10 text-[#007aff]'
+                                            ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
+                                            : 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)]'
                                         }`}
                                 >
                                     <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
@@ -306,13 +306,13 @@ export function ScheduleWidget({
                                         <div ref={liveState === 'active' ? activeLessonRef : null} className="w-full">
                                             <article
                                                 onClick={() => onSelectLesson(lesson)}
-                                                className={`w-full bg-[var(--ios-card)] rounded-[16px] px-4 py-2.5 flex items-start justify-between gap-2.5 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/30 transition-all ${liveState === 'passed' ? 'opacity-45' : 'opacity-100'
+                                                className={`w-full bg-[var(--ios-card)] rounded-[16px] px-4 py-2.5 flex items-start justify-between gap-2.5 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/30 border border-[var(--ios-separator)]/50 shadow-xs transition-all ${liveState === 'passed' ? 'opacity-45' : 'opacity-100'
                                                     }`}
                                             >
                                                 <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                                                     <div className="flex items-center gap-1.5">
                                                         {liveState === 'active' && (
-                                                            <span className="w-2 h-2 rounded-full bg-[#007aff] dark:bg-[#0a84ff] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
+                                                            <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
                                                         )}
                                                         <span className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight">
                                                             {lesson.time}
@@ -335,17 +335,17 @@ export function ScheduleWidget({
                                                         </span>
                                                     )}
                                                     {lesson.isShortened && (
-                                                        <span className="text-[10px] font-medium text-[#ff9500] bg-[#ff9500]/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                                        <span className="text-[10px] font-semibold text-[var(--ios-orange)] bg-[var(--ios-orange-subtle)] px-2 py-0.5 rounded-full whitespace-nowrap">
                                                             {lesson.durationMinutes} min
                                                         </span>
                                                     )}
                                                     {lesson.isCancelled && (
-                                                        <span className="text-[10px] font-medium text-[#ff3b30] bg-[#ff3b30]/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                                        <span className="text-[10px] font-semibold text-[var(--ios-red)] bg-[var(--ios-red-subtle)] px-2 py-0.5 rounded-full whitespace-nowrap">
                                                             {t.cancelledLabel}
                                                         </span>
                                                     )}
                                                     {lesson.isSubstitution && (
-                                                        <span className="text-[10px] font-medium text-[#af52de] bg-[#af52de]/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                                        <span className="text-[10px] font-semibold text-[var(--ios-purple)] bg-[var(--ios-purple-subtle)] px-2 py-0.5 rounded-full whitespace-nowrap">
                                                             {t.substitutionLabel}
                                                         </span>
                                                     )}
@@ -355,10 +355,10 @@ export function ScheduleWidget({
 
                                         {hasBreakDivider && (
                                             <div className="w-full flex items-center gap-3 px-2 py-1">
-                                                <div className="h-[0.5px] flex-1 bg-black/15 dark:bg-white/18" />
+                                                <div className="h-[1px] flex-1 bg-[var(--ios-separator)]/60" />
                                                 <div
-                                                    className={`flex items-center gap-1.5 text-[11px] font-normal shrink-0 px-2 py-0.5 rounded-full ${shouldShowCountdown
-                                                        ? 'text-[var(--ios-blue)] bg-[var(--ios-room-bg)] animate-pulse'
+                                                    className={`flex items-center gap-1.5 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full ${shouldShowCountdown
+                                                        ? 'text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] animate-pulse'
                                                         : 'text-[var(--ios-secondary)] bg-[var(--ios-element)]/60'
                                                         }`}
                                                 >
@@ -372,14 +372,14 @@ export function ScheduleWidget({
                                                             : `${breakMinutes} min`}
                                                     </span>
                                                 </div>
-                                                <div className="h-[0.5px] flex-1 bg-black/15 dark:bg-white/18" />
+                                                <div className="h-[1px] flex-1 bg-[var(--ios-separator)]/60" />
                                             </div>
                                         )}
                                     </Fragment>
                                 )
                             })
                         ) : (
-                            <div className="bg-[var(--ios-card)] rounded-[18px] p-8 text-center text-xs font-normal text-[var(--ios-secondary)]">
+                            <div className="bg-[var(--ios-card)] rounded-[20px] p-8 text-center text-xs font-normal text-[var(--ios-secondary)] border border-[var(--ios-separator)]/60 shadow-xs">
                                 {t.noLessonsDay}
                             </div>
                         )}

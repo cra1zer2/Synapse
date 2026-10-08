@@ -1,21 +1,86 @@
 @import "tailwindcss";
+@config "../../tailwind.config.ts";
+
+@theme {
+  --font-apple: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", Arial, sans-serif;
+
+  --color-ios-bg: var(--ios-bg);
+  --color-ios-bg-secondary: var(--ios-bg-secondary);
+  --color-ios-card: var(--ios-card);
+  --color-ios-card-solid: var(--ios-card-solid);
+  --color-ios-card-secondary: var(--ios-card-secondary);
+  --color-ios-element: var(--ios-element);
+  --color-ios-input: var(--ios-input);
+  --color-ios-separator: var(--ios-separator);
+  --color-ios-border: var(--ios-border);
+  --color-ios-label: var(--ios-label);
+  --color-ios-secondary: var(--ios-secondary);
+  --color-ios-tertiary: var(--ios-tertiary);
+  --color-ios-quaternary: var(--ios-quaternary);
+
+  --color-ios-blue: var(--ios-blue);
+  --color-ios-blue-subtle: var(--ios-blue-subtle);
+  --color-ios-green: var(--ios-green);
+  --color-ios-green-subtle: var(--ios-green-subtle);
+  --color-ios-orange: var(--ios-orange);
+  --color-ios-orange-subtle: var(--ios-orange-subtle);
+  --color-ios-red: var(--ios-red);
+  --color-ios-red-subtle: var(--ios-red-subtle);
+  --color-ios-purple: var(--ios-purple);
+  --color-ios-purple-subtle: var(--ios-purple-subtle);
+  --color-ios-teal: var(--ios-teal);
+  --color-ios-yellow: var(--ios-yellow);
+
+  --color-ios-room-bg: var(--ios-room-bg);
+  --color-ios-room-text: var(--ios-room-text);
+  --color-ios-switch-off: var(--ios-switch-off);
+
+  --radius-ios-sheet: 28px;
+  --radius-ios-card: 20px;
+  --radius-ios-inner: 14px;
+  --radius-ios-input: 12px;
+  --radius-ios-button: 12px;
+  --radius-ios-badge: 8px;
+
+  --shadow-ios-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-ios-modal: 0 10px 40px rgba(0, 0, 0, 0.15);
+  --shadow-ios-sheet: 0 -8px 30px rgba(0, 0, 0, 0.12);
+}
 
 :root {
-  --font-apple: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  --font-apple: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", Arial, sans-serif;
   --ios-bg: #f2f2f7;
+  --ios-bg-secondary: #ffffff;
   --ios-card: #ffffff;
   --ios-card-solid: #ffffff;
+  --ios-card-secondary: #f2f2f7;
   --ios-element: #e5e5ea;
   --ios-input: rgba(118, 118, 128, 0.12);
   --ios-separator: rgba(60, 60, 67, 0.15);
+  --ios-border: rgba(60, 60, 67, 0.12);
   --ios-label: #000000;
   --ios-secondary: #8e8e93;
   --ios-tertiary: #c7c7cc;
+  --ios-quaternary: #d1d1d6;
+
   --ios-blue: #007aff;
+  --ios-blue-subtle: rgba(0, 122, 255, 0.12);
+  --ios-green: #34c759;
+  --ios-green-subtle: rgba(52, 199, 89, 0.12);
+  --ios-orange: #ff9500;
+  --ios-orange-subtle: rgba(255, 149, 0, 0.12);
+  --ios-red: #ff3b30;
+  --ios-red-subtle: rgba(255, 59, 48, 0.12);
+  --ios-purple: #af52de;
+  --ios-purple-subtle: rgba(175, 82, 222, 0.12);
+  --ios-teal: #5ac8fa;
+  --ios-yellow: #ffcc00;
+
   --ios-room-bg: rgba(0, 122, 255, 0.08);
   --ios-room-text: #007aff;
   --ios-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   --ios-switch-off: #e5e5ea;
+
   --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -24,15 +89,32 @@
 
 .dark {
   --ios-bg: #000000;
+  --ios-bg-secondary: #1c1c1e;
   --ios-card: #1c1c1e;
   --ios-card-solid: #1c1c1e;
+  --ios-card-secondary: #2c2c2e;
   --ios-element: #2c2c2e;
   --ios-input: rgba(118, 118, 128, 0.24);
-  --ios-separator: rgba(255, 255, 255, 0.08);
+  --ios-separator: rgba(255, 255, 255, 0.12);
+  --ios-border: rgba(255, 255, 255, 0.10);
   --ios-label: #ffffff;
   --ios-secondary: #8e8e93;
   --ios-tertiary: #636366;
+  --ios-quaternary: #48484a;
+
   --ios-blue: #0a84ff;
+  --ios-blue-subtle: rgba(10, 132, 255, 0.18);
+  --ios-green: #30d158;
+  --ios-green-subtle: rgba(48, 209, 88, 0.18);
+  --ios-orange: #ff9f0a;
+  --ios-orange-subtle: rgba(255, 159, 10, 0.18);
+  --ios-red: #ff453a;
+  --ios-red-subtle: rgba(255, 69, 58, 0.18);
+  --ios-purple: #bf5af2;
+  --ios-purple-subtle: rgba(191, 90, 242, 0.18);
+  --ios-teal: #64d2ff;
+  --ios-yellow: #ffd60a;
+
   --ios-room-bg: rgba(10, 132, 255, 0.15);
   --ios-room-text: #64d2ff;
   --ios-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);

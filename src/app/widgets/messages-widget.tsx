@@ -197,11 +197,11 @@ export function MessagesWidget({
     }
 
     return (
-        <section className="w-full flex flex-col gap-3 min-h-[500px]">
+        <section className="w-full flex flex-col gap-3.5 min-h-[500px]">
             <div className="flex items-center justify-between gap-2">
-                <div className="relative bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex flex-1 max-w-xs overflow-hidden">
+                <div className="relative bg-[var(--ios-element)]/60 p-0.5 rounded-[12px] flex flex-1 max-w-xs overflow-hidden">
                     <div
-                        className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-lg bg-[var(--ios-card)] shadow-xs transition-transform duration-350 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                        className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-[10px] bg-[var(--ios-card)] shadow-xs transition-transform duration-350 ease-[cubic-bezier(0.32,0.72,0,1)]"
                         style={{
                             transform: activeTab === 'inbox' ? 'translateX(0)' : 'translateX(100%)'
                         }}
@@ -209,14 +209,14 @@ export function MessagesWidget({
 
                     <button
                         onClick={() => setActiveTab('inbox')}
-                        className={`relative z-10 flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors duration-250 ${activeTab === 'inbox' ? 'text-[var(--ios-label)]' : 'text-[var(--ios-secondary)]'
+                        className={`relative z-10 flex-1 py-1.5 text-xs font-medium rounded-[10px] transition-colors duration-250 ${activeTab === 'inbox' ? 'text-[var(--ios-label)] font-semibold' : 'text-[var(--ios-secondary)]'
                             }`}
                     >
                         {t.messagesInbox} ({messages.length})
                     </button>
                     <button
                         onClick={() => setActiveTab('announcements')}
-                        className={`relative z-10 flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors duration-250 ${activeTab === 'announcements' ? 'text-[var(--ios-label)]' : 'text-[var(--ios-secondary)]'
+                        className={`relative z-10 flex-1 py-1.5 text-xs font-medium rounded-[10px] transition-colors duration-250 ${activeTab === 'announcements' ? 'text-[var(--ios-label)] font-semibold' : 'text-[var(--ios-secondary)]'
                             }`}
                     >
                         {t.messagesAnnouncements} ({announcements.length})
@@ -225,14 +225,14 @@ export function MessagesWidget({
 
                 <button
                     onClick={() => setShowCompose(true)}
-                    className="text-xs font-medium text-[var(--ios-blue)] flex items-center gap-1 active:opacity-70 px-2 py-1"
+                    className="text-xs font-semibold text-[var(--ios-blue)] flex items-center gap-1 active:opacity-70 px-2 py-1"
                 >
                     <span className="text-base font-normal">+</span>
                     <span>{t.writeNewMessage}</span>
                 </button>
             </div>
 
-            <div className="bg-[var(--ios-element)]/50 rounded-xl px-3 py-2 flex items-center gap-2">
+            <div className="bg-[var(--ios-element)]/60 rounded-[12px] px-3.5 py-2 flex items-center gap-2 border border-transparent focus-within:border-[var(--ios-blue)] transition-all">
                 <svg className="w-3.5 h-3.5 text-[var(--ios-secondary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="11" cy="11" r="8" />
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -259,12 +259,12 @@ export function MessagesWidget({
                 >
                     <div className="w-1/2 shrink-0 pr-1">
                         {isLoading && messages.length === 0 ? (
-                            <div className="bg-[var(--ios-card)] rounded-[18px] min-h-[220px] flex flex-col items-center justify-center gap-3">
+                            <div className="bg-[var(--ios-card)] rounded-[20px] min-h-[220px] flex flex-col items-center justify-center gap-3 border border-[var(--ios-separator)]/60 shadow-xs">
                                 <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
                                 <p className="text-xs font-normal text-[var(--ios-secondary)]">{t.loadingMessages}</p>
                             </div>
                         ) : (
-                            <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                            <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)] border border-[var(--ios-separator)]/60">
                                 {filteredMessages.length > 0 ? (
                                     filteredMessages.map((msg, index) => (
                                         <article
@@ -281,7 +281,7 @@ export function MessagesWidget({
 
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between gap-1">
-                                                    <span className="text-xs font-medium text-[var(--ios-label)] truncate">
+                                                    <span className="text-xs font-semibold text-[var(--ios-label)] truncate">
                                                         {cleanSenderName(msg.sender)}
                                                     </span>
                                                     <span className="text-[10px] font-normal text-[var(--ios-secondary)] shrink-0">
@@ -303,12 +303,12 @@ export function MessagesWidget({
 
                     <div className="w-1/2 shrink-0 pl-1">
                         {isLoading && announcements.length === 0 ? (
-                            <div className="bg-[var(--ios-card)] rounded-[18px] min-h-[220px] flex flex-col items-center justify-center gap-3">
+                            <div className="bg-[var(--ios-card)] rounded-[20px] min-h-[220px] flex flex-col items-center justify-center gap-3 border border-[var(--ios-separator)]/60 shadow-xs">
                                 <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
                                 <p className="text-xs font-normal text-[var(--ios-secondary)]">{t.loadingMessages}</p>
                             </div>
                         ) : (
-                            <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                            <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)] border border-[var(--ios-separator)]/60">
                                 {filteredAnnouncements.length > 0 ? (
                                     filteredAnnouncements.map((item, index) => (
                                         <article
@@ -326,10 +326,10 @@ export function MessagesWidget({
                                             className="p-3.5 flex flex-col gap-1 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-top-1.5 duration-250 fill-mode-both"
                                         >
                                             <div className="flex items-center justify-between">
-                                                <span className="text-xs font-medium text-[var(--ios-blue)]">{cleanSenderName(item.author)}</span>
+                                                <span className="text-xs font-semibold text-[var(--ios-blue)]">{cleanSenderName(item.author)}</span>
                                                 <span className="text-[10px] font-normal text-[var(--ios-secondary)]">{item.date}</span>
                                             </div>
-                                            <h4 className="text-xs font-medium text-[var(--ios-label)]">{item.title}</h4>
+                                            <h4 className="text-xs font-semibold text-[var(--ios-label)]">{item.title}</h4>
                                             <p className="text-xs font-normal text-[var(--ios-secondary)] line-clamp-2 leading-relaxed">
                                                 {item.content}
                                             </p>
@@ -365,7 +365,7 @@ export function MessagesWidget({
 
                         <button
                             onClick={handleInitiateReply}
-                            className="flex items-center gap-1.5 text-xs font-medium text-[var(--ios-blue)] active:opacity-75 py-1 px-3 bg-[var(--ios-blue)]/12 rounded-full transition-all"
+                            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--ios-blue)] active:opacity-75 py-1 px-3 bg-[var(--ios-blue-subtle)] rounded-full transition-all"
                         >
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="9 17 4 12 9 7" />
@@ -376,10 +376,10 @@ export function MessagesWidget({
                     </header>
 
                     <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
-                        <div className="bg-[var(--ios-card)] rounded-[18px] p-4 shadow-xs flex flex-col gap-2">
+                        <div className="bg-[var(--ios-card)] rounded-[20px] p-4 shadow-xs border border-[var(--ios-separator)]/60 flex flex-col gap-2">
                             <div className="flex items-center justify-between gap-2 border-b border-[var(--ios-separator)] pb-2.5">
                                 <div className="min-w-0">
-                                    <span className="text-[10px] font-normal text-[var(--ios-blue)] uppercase tracking-wider block">
+                                    <span className="text-[10px] font-semibold text-[var(--ios-blue)] uppercase tracking-wider block">
                                         {cleanSenderName(activeReader.sender)}
                                     </span>
                                     <p className="text-[11px] font-normal text-[var(--ios-secondary)] mt-0.5">
@@ -388,12 +388,12 @@ export function MessagesWidget({
                                 </div>
                             </div>
 
-                            <h2 className="text-sm font-medium text-[var(--ios-label)] leading-snug break-words">
+                            <h2 className="text-sm font-semibold text-[var(--ios-label)] leading-snug break-words">
                                 {activeReader.title}
                             </h2>
                         </div>
 
-                        <div className="bg-[var(--ios-card)] rounded-[18px] p-4 shadow-xs min-h-[160px] flex flex-col">
+                        <div className="bg-[var(--ios-card)] rounded-[20px] p-4 shadow-xs border border-[var(--ios-separator)]/60 min-h-[160px] flex flex-col">
                             {isLoadingContent ? (
                                 <div className="py-12 flex flex-col items-center justify-center gap-2.5 my-auto">
                                     <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
@@ -411,24 +411,27 @@ export function MessagesWidget({
             {showCompose && (
                 <div
                     onClick={() => setShowCompose(false)}
-                    className="fixed inset-0 z-50 bg-black/45 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in"
+                    className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
                 >
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-[var(--ios-card)] rounded-[22px] p-5 w-full max-w-lg shadow-2xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto"
+                        className="bg-[var(--ios-card)] rounded-t-[28px] sm:rounded-[28px] p-5 w-full max-w-lg shadow-2xl border border-[var(--ios-separator)]/60 flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto"
                     >
+                        <div className="w-9 h-1 rounded-full bg-[var(--ios-element)] mx-auto -mt-1 mb-0.5 sm:hidden shrink-0 opacity-60" />
+
                         <div className="flex items-center justify-between border-b border-[var(--ios-separator)] pb-2.5">
-                            <h3 className="text-sm font-medium text-[var(--ios-label)]">{t.newMessageTitle}</h3>
+                            <h3 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight">{t.newMessageTitle}</h3>
                             <button
                                 onClick={() => setShowCompose(false)}
-                                className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] text-xs font-normal flex items-center justify-center active:scale-95 transition-transform"
+                                className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] text-xs font-medium flex items-center justify-center active:scale-95 transition-transform"
+                                aria-label="Close"
                             >
                                 ✕
                             </button>
                         </div>
 
                         {sendSuccess ? (
-                            <div className="bg-[#34c759]/15 text-[#34c759] p-4 rounded-xl text-center text-xs font-medium flex items-center justify-center gap-2">
+                            <div className="bg-[var(--ios-green-subtle)] border border-[var(--ios-green)]/20 text-[var(--ios-green)] p-4 rounded-[16px] text-center text-xs font-semibold flex items-center justify-center gap-2">
                                 <span>✓</span>
                                 <span>{t.messageSent}</span>
                             </div>
@@ -437,7 +440,7 @@ export function MessagesWidget({
                                 <select
                                     value={selectedReceiverId || ''}
                                     onChange={(e) => setSelectedReceiverId(Number(e.target.value))}
-                                    className="w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-normal rounded-xl px-3.5 py-2.5 outline-none"
+                                    className="w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-normal rounded-[12px] px-3.5 py-2.5 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-all"
                                     required
                                 >
                                     <option value="">{t.recipientPlaceholder}</option>
@@ -453,7 +456,7 @@ export function MessagesWidget({
                                     placeholder={t.subjectPlaceholder}
                                     value={composeTitle}
                                     onChange={(e) => setComposeTitle(e.target.value)}
-                                    className="w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-normal rounded-xl px-3.5 py-2.5 outline-none placeholder-[var(--ios-secondary)]"
+                                    className="w-full bg-[var(--ios-input)] text-[var(--ios-label)] placeholder-[var(--ios-secondary)] text-xs font-normal rounded-[12px] px-3.5 py-2.5 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-all"
                                     required
                                 />
 
@@ -461,22 +464,22 @@ export function MessagesWidget({
                                     placeholder={t.messagePlaceholder}
                                     value={composeBody}
                                     onChange={(e) => setComposeBody(e.target.value)}
-                                    className="w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-normal rounded-xl p-3 outline-none resize-none h-28 placeholder-[var(--ios-secondary)]"
+                                    className="w-full bg-[var(--ios-input)] text-[var(--ios-label)] placeholder-[var(--ios-secondary)] text-xs font-normal rounded-[12px] p-3 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-all resize-none h-28"
                                     required
                                 />
 
-                                <div className="flex gap-2 pt-1">
+                                <div className="flex gap-2.5 pt-1">
                                     <button
                                         type="button"
                                         onClick={() => setShowCompose(false)}
-                                        className="flex-1 bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-medium py-2.5 rounded-xl active:opacity-75 transition-opacity"
+                                        className="flex-1 bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-medium py-3 rounded-[12px] active:scale-[0.98] transition-all"
                                     >
                                         {t.cancel}
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={isSending}
-                                        className="flex-1 bg-[var(--ios-blue)] text-white text-xs font-medium py-2.5 rounded-xl disabled:opacity-45 active:opacity-85 transition-all shadow-xs flex items-center justify-center gap-1.5"
+                                        className="flex-1 bg-[var(--ios-blue)] text-white text-xs font-semibold py-3 rounded-[12px] disabled:opacity-45 active:scale-[0.98] transition-all shadow-xs flex items-center justify-center gap-1.5"
                                     >
                                         {isSending && <IosSpinner className="w-3.5 h-3.5 text-white" />}
                                         <span>{isSending ? t.sending : t.send}</span>

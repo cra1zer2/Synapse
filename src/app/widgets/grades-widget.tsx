@@ -68,10 +68,10 @@ export function GradesWidget({
 }: GradesWidgetProps) {
     const getBadgeStyle = (num: number | null) => {
         if (num === null) return 'bg-[var(--ios-element)] text-[var(--ios-secondary)]'
-        if (num >= 5) return 'bg-[#34c759]/15 text-[#34c759]'
-        if (num >= 4) return 'bg-[#007aff]/15 text-[#007aff]'
-        if (num >= 3) return 'bg-[#ff9500]/15 text-[#ff9500]'
-        return 'bg-[#ff3b30]/15 text-[#ff3b30]'
+        if (num >= 5) return 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
+        if (num >= 4) return 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)]'
+        if (num >= 3) return 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
+        return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
     }
 
     let totalSubjectAverages = 0
@@ -115,7 +115,7 @@ export function GradesWidget({
 
     return (
         <section className="w-full flex flex-col gap-4 min-h-[500px]">
-            <div className="bg-[var(--ios-card)] rounded-[18px] p-4 shadow-xs flex items-center justify-between">
+            <div className="bg-[var(--ios-card)] rounded-[20px] p-4 shadow-xs border border-[var(--ios-separator)]/60 flex items-center justify-between">
                 <div>
                     <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.gpaTitle}</p>
                     <h2 className="text-3xl font-semibold text-[var(--ios-label)] tracking-tight mt-0.5">
@@ -129,7 +129,7 @@ export function GradesWidget({
                     {t.partialGradesTitle}
                 </span>
 
-                <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)] border border-[var(--ios-separator)]/60">
                     {subjectsWithCalculatedAverages.map((sub) => (
                         <article key={sub.subject} className="p-3.5 flex flex-col gap-2.5">
                             <div className="flex items-center justify-between">
@@ -138,7 +138,7 @@ export function GradesWidget({
                                     {sub.warning && (
                                         <button
                                             onClick={() => onSelectWarning(sub)}
-                                            className="text-[9px] font-semibold bg-[#ff3b30]/15 text-[#ff3b30] px-1.5 py-0.5 rounded-full"
+                                            className="text-[10px] font-semibold bg-[var(--ios-red-subtle)] text-[var(--ios-red)] px-2 py-0.5 rounded-full"
                                         >
                                             &lt; 2.0
                                         </button>
@@ -157,7 +157,7 @@ export function GradesWidget({
                                     <button
                                         key={`${item.grade}-${item.date}-${idx}`}
                                         onClick={() => onSelectGrade(item)}
-                                        className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center transition-transform active:scale-95 ${getBadgeStyle(
+                                        className={`w-7 h-7 rounded-[9px] text-xs font-semibold flex items-center justify-center transition-transform active:scale-95 ${getBadgeStyle(
                                             item.numericValue
                                         )}`}
                                     >

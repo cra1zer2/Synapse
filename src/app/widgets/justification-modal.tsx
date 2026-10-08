@@ -138,27 +138,30 @@ export function JustificationModal({
     return (
         <div
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in"
+            className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200"
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-3xl p-5 w-full max-w-lg border border-[#e5e5ea] shadow-2xl flex flex-col gap-4 max-h-[88vh] overflow-y-auto"
+                className="bg-[var(--ios-card)] text-[var(--ios-label)] rounded-t-[28px] sm:rounded-[28px] p-5 w-full max-w-lg border border-[var(--ios-separator)]/60 shadow-2xl flex flex-col gap-4 max-h-[88vh] overflow-y-auto"
             >
-                <div className="flex items-center justify-between border-b border-[#e5e5ea] pb-3">
+                <div className="w-9 h-1 rounded-full bg-[var(--ios-element)] mx-auto -mt-1 mb-0.5 sm:hidden opacity-60 shrink-0" />
+
+                <div className="flex items-center justify-between border-b border-[var(--ios-separator)] pb-3">
                     <div>
-                        <h3 className="text-base font-black text-[#1c1c1e]">e-Usprawiedliwienia</h3>
-                        <p className="text-xs text-[#8e8e93] mt-0.5">Wybierz godziny nieobecności</p>
+                        <h3 className="text-base font-semibold text-[var(--ios-label)] tracking-tight">e-Usprawiedliwienia</h3>
+                        <p className="text-xs font-normal text-[var(--ios-secondary)] mt-0.5">Wybierz godziny nieobecności</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-8 h-8 rounded-full bg-[#f2f2f7] text-[#8e8e93] font-bold text-xs flex items-center justify-center"
+                        className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] text-xs font-medium flex items-center justify-center active:scale-95 transition-all"
+                        aria-label="Close"
                     >
                         ✕
                     </button>
                 </div>
 
                 {success ? (
-                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-5 rounded-3xl text-center text-xs font-bold">
+                    <div className="bg-[var(--ios-green-subtle)] border border-[var(--ios-green)]/20 text-[var(--ios-green)] p-5 rounded-[20px] text-center text-xs font-semibold">
                         ✓ {t.justificationSent}
                     </div>
                 ) : (
@@ -166,13 +169,13 @@ export function JustificationModal({
                         {matrix.length > 0 ? (
                             <div className="flex flex-col gap-3">
                                 {matrix.map((group) => (
-                                    <div key={group.date} className="bg-[#f2f2f7] rounded-3xl p-3.5 flex flex-col gap-2.5">
+                                    <div key={group.date} className="bg-[var(--ios-element)]/35 rounded-[20px] p-3.5 flex flex-col gap-2.5 border border-[var(--ios-separator)]/30">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs font-black text-[#1c1c1e]">{group.date}</span>
+                                            <span className="text-xs font-semibold text-[var(--ios-label)]">{group.date}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => selectAllNbInDay(group.date)}
-                                                className="text-[10px] font-bold text-[#007aff] bg-white px-2.5 py-1 rounded-xl shadow-xs active:scale-95 transition-transform"
+                                                className="text-[11px] font-medium text-[var(--ios-blue)] bg-[var(--ios-card)] px-2.5 py-1 rounded-[8px] shadow-xs active:scale-95 transition-all"
                                             >
                                                 Zaznacz NB
                                             </button>
@@ -186,33 +189,33 @@ export function JustificationModal({
                                                     <div
                                                         key={lesson.lessonNumber}
                                                         onClick={() => !isLocked && toggleLesson(group.date, lesson.lessonNumber)}
-                                                        className={`p-2.5 rounded-2xl flex items-center justify-between border transition-all ${isLocked
-                                                            ? 'bg-white/60 border-transparent opacity-60 cursor-not-allowed'
+                                                        className={`p-2.5 rounded-[14px] flex items-center justify-between border transition-all ${isLocked
+                                                            ? 'bg-[var(--ios-card)]/50 border-transparent opacity-60 cursor-not-allowed'
                                                             : lesson.isSelected
-                                                                ? 'bg-white border-[#007aff] shadow-xs cursor-pointer'
-                                                                : 'bg-white border-transparent cursor-pointer'
+                                                                ? 'bg-[var(--ios-card)] border-[var(--ios-blue)] shadow-xs cursor-pointer'
+                                                                : 'bg-[var(--ios-card)] border-transparent cursor-pointer hover:border-[var(--ios-separator)]'
                                                             }`}
                                                     >
-                                                        <div className="flex items-center gap-2.5">
+                                                        <div className="flex items-center gap-2.5 min-w-0">
                                                             <input
                                                                 type="checkbox"
                                                                 checked={lesson.isSelected}
                                                                 disabled={isLocked}
                                                                 onChange={() => { }}
-                                                                className="w-4 h-4 rounded text-[#007aff] cursor-pointer pointer-events-none"
+                                                                className="w-4 h-4 rounded text-[var(--ios-blue)] accent-[var(--ios-blue)] cursor-pointer pointer-events-none"
                                                             />
-                                                            <div>
-                                                                <p className="text-xs font-bold text-[#1c1c1e]">{lesson.subject}</p>
-                                                                <p className="text-[10px] text-[#8e8e93]">
+                                                            <div className="min-w-0">
+                                                                <p className="text-xs font-medium text-[var(--ios-label)] truncate">{lesson.subject}</p>
+                                                                <p className="text-[10px] font-normal text-[var(--ios-secondary)]">
                                                                     Lekcja {lesson.lessonNumber} {lesson.time ? `• ${lesson.time}` : ''}
                                                                 </p>
                                                             </div>
                                                         </div>
 
                                                         <span
-                                                            className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${isLocked
-                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                                : 'bg-rose-50 text-rose-700 border-rose-200'
+                                                            className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${isLocked
+                                                                ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
+                                                                : 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
                                                                 }`}
                                                         >
                                                             {isLocked ? '🔒 Usprawiedliwione' : 'NB'}
@@ -225,7 +228,7 @@ export function JustificationModal({
                                 ))}
                             </div>
                         ) : (
-                            <div className="bg-[#f2f2f7] p-8 rounded-3xl text-center text-xs font-medium text-[#8e8e93]">
+                            <div className="bg-[var(--ios-element)]/30 p-8 rounded-[20px] text-center text-xs font-normal text-[var(--ios-secondary)]">
                                 Brak nieobecności wymagających usprawiedliwienia
                             </div>
                         )}
@@ -234,21 +237,21 @@ export function JustificationModal({
                             placeholder={t.commentPlaceholder}
                             value={parentMessage}
                             onChange={(e) => setParentMessage(e.target.value)}
-                            className="w-full bg-[#f2f2f7] text-[#1c1c1e] text-xs rounded-2xl p-3 outline-none focus:ring-2 focus:ring-[#007aff] resize-none h-20"
+                            className="w-full bg-[var(--ios-input)] text-[var(--ios-label)] placeholder-[var(--ios-secondary)] text-xs rounded-[14px] p-3 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-all resize-none h-20"
                         />
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2.5">
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="flex-1 bg-[#f2f2f7] text-[#1c1c1e] text-xs font-bold py-3 rounded-2xl active:opacity-80"
+                                className="flex-1 bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-medium py-3 rounded-[14px] active:scale-[0.98] transition-all"
                             >
                                 {t.cancel}
                             </button>
                             <button
                                 type="submit"
                                 disabled={isSubmitting || selectedCount === 0}
-                                className="flex-1 bg-[#007aff] text-white text-xs font-bold py-3 rounded-2xl active:opacity-80 disabled:opacity-40 transition-all shadow-xs"
+                                className="flex-1 bg-[var(--ios-blue)] text-white text-xs font-semibold py-3 rounded-[14px] active:scale-[0.98] disabled:opacity-40 transition-all shadow-xs"
                             >
                                 {isSubmitting ? t.sending : `Usprawiedliw (${selectedCount})`}
                             </button>

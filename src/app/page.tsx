@@ -22,8 +22,11 @@ import { JustificationModal } from './widgets/justification-modal'
 import { GradeModal } from './widgets/grade-modal'
 import { SettingsSheet } from './widgets/settings-sheet'
 import { TerminarzModal } from './widgets/terminarz-modal'
+import { WhatsNewModal } from '@/app/widgets/whats-new-modal'
 
 export type TextClampOption = 'full' | '1' | '2'
+
+const CURRENT_APP_VERSION = '3.0.0'
 
 const SECTION_INDEX: Record<MainSection, number> = {
   schedule: 0,
@@ -92,6 +95,7 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState<MainSection>('schedule')
   const [tabDirection, setTabDirection] = useState<'forward' | 'backward'>('forward')
   const [isCalendarPinned, setIsCalendarPinned] = useState(false)
+  const [showWhatsNew, setShowWhatsNew] = useState(false)
 
   const [selectedGrade, setSelectedGrade] = useState<GradeItem | null>(null)
   const [selectedWarningSubject, setSelectedWarningSubject] = useState<SubjectGrades | null>(null)
@@ -136,6 +140,7 @@ export default function Home() {
     showSettings ||
     showExcuseMatrix ||
     showTerminarz ||
+    showWhatsNew ||
     Boolean(selectedSubjectDetail) ||
     Boolean(selectedGrade) ||
     Boolean(selectedWarningSubject)
@@ -148,11 +153,17 @@ export default function Home() {
     const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
     const savedClamp = (localStorage.getItem('synapse_text_clamp') as TextClampOption) || 'full'
     const savedIgnore = localStorage.getItem('synapse_ignore_modifiers') === 'true'
+    const lastSeenVersion = localStorage.getItem('synapse_seen_version')
+
     setLang(savedLang)
     setTheme(savedTheme)
     setTextClamp(savedClamp)
     setIgnoreGradeModifiers(savedIgnore)
     applyTheme(savedTheme)
+
+    if (lastSeenVersion !== CURRENT_APP_VERSION) {
+      setShowWhatsNew(true)
+    }
   }, [applyTheme])
 
   useEffect(() => {
@@ -206,6 +217,11 @@ export default function Home() {
   const handleToggleIgnoreGradeModifiers = (val: boolean) => {
     setIgnoreGradeModifiers(val)
     localStorage.setItem('synapse_ignore_modifiers', String(val))
+  }
+
+  const handleDismissWhatsNew = () => {
+    localStorage.setItem('synapse_seen_version', CURRENT_APP_VERSION)
+    setShowWhatsNew(false)
   }
 
   const handleSelectDay = (dayName: string) => {
@@ -560,6 +576,13 @@ export default function Home() {
           t={t}
         />
       )}
+
+      <WhatsNewModal
+        isOpen={showWhatsNew}
+        onClose={handleDismissWhatsNew}
+        lang={lang}
+        t={t}
+      />
     </div>
   )
 }

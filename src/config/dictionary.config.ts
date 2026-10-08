@@ -130,6 +130,16 @@ export interface AppDictionary {
     loadingMessages: string
     messageSent: string
     emptyMessageContent: string
+    subjectsSection: string
+    subjectAttendance: string
+    missedLessonsCount: (count: number) => string
+    ofScheduled: (total: number) => string
+    recordedAbsencesTitle: string
+    lessonNumberLabel: (num: number) => string
+    unexcusedShortBadge: (count: number) => string
+    gpaTitle: string
+    partialGradesTitle: string
+    terminarzButton: string
 }
 
 export function getDictionary(lang: AppLanguage): AppDictionary {
@@ -232,7 +242,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             done: 'Done',
             backAction: 'Back',
             whatsNewTitle: "What's New in Synapse",
-            whatsNewSubtitle: 'Version 3.0',
+            whatsNewSubtitle: 'Version 3.0.2',
             whatsNewAction: 'Continue',
             messagesInbox: 'Inbox',
             messagesAnnouncements: 'Announcements',
@@ -262,7 +272,17 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             backToMessages: 'Messages',
             loadingMessages: 'Loading messages...',
             messageSent: 'Message sent successfully',
-            emptyMessageContent: 'No message content available'
+            emptyMessageContent: 'No message content available',
+            subjectsSection: 'Subjects',
+            subjectAttendance: 'Subject Attendance',
+            missedLessonsCount: (count: number) => `${count} missed`,
+            ofScheduled: (total: number) => `of ${total} scheduled`,
+            recordedAbsencesTitle: 'Recorded Absences',
+            lessonNumberLabel: (num: number) => `Lesson ${num}`,
+            unexcusedShortBadge: (count: number) => `${count} unex`,
+            gpaTitle: 'Grade Point Average (GPA)',
+            partialGradesTitle: 'Individual Grades',
+            terminarzButton: 'Calendar'
         }
     }
 
@@ -364,7 +384,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         done: 'Gotowe',
         backAction: 'Wróć',
         whatsNewTitle: 'Co nowego w Synapse',
-        whatsNewSubtitle: 'Wersja 3.0',
+        whatsNewSubtitle: 'Wersja 3.0.2',
         whatsNewAction: 'Kontynuuj',
         messagesInbox: 'Odebrane',
         messagesAnnouncements: 'Ogłoszenia',
@@ -394,6 +414,24 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         backToMessages: 'Wiadomości',
         loadingMessages: 'Wczytywanie wiadomości...',
         messageSent: 'Wysłano wiadomość',
-        emptyMessageContent: 'Brak treści wiadomości'
+        emptyMessageContent: 'Brak treści wiadomości',
+        subjectsSection: 'Przedmioty',
+        subjectAttendance: 'Frekwencja z przedmiotu',
+        missedLessonsCount: (count: number) => {
+            if (count === 0) return '0 opuszczonych'
+            if (count === 1) return '1 opuszczona'
+            const lastTwo = count % 100
+            const last = count % 10
+            if (lastTwo >= 12 && lastTwo <= 14) return `${count} opuszczonych`
+            if (last >= 2 && last <= 4) return `${count} opuszczone`
+            return `${count} opuszczonych`
+        },
+        ofScheduled: (total: number) => `z ${total} zaplanowanych`,
+        recordedAbsencesTitle: 'Zarejestrowane nieobecności',
+        lessonNumberLabel: (num: number) => `Lekcja ${num}`,
+        unexcusedShortBadge: (count: number) => `${count} nb`,
+        gpaTitle: 'Średnia ocen (GPA)',
+        partialGradesTitle: 'Oceny cząstkowe',
+        terminarzButton: 'Terminarz'
     }
 }

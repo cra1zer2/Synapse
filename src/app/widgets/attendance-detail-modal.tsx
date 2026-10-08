@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { SubjectAttendance, AbsenceDetail } from '@/models/attendance.model'
 import { AppDictionary } from '@/config/dictionary.config'
 
@@ -14,51 +14,56 @@ interface AttendanceDetailModalProps {
 export function AttendanceDetailModal({
     subjectDetail,
     onClose,
-    onSelectAbsenceForExcuse,
     t
 }: AttendanceDetailModalProps) {
-    const [dragOffset, setDragOffset] = useState(0)
+    const modalRef = useRef<HTMLDivElement>(null)
     const touchStartX = useRef(0)
     const isSwiping = useRef(false)
+    const currentDelta = useRef(0)
 
     const handleTouchStart = (e: React.TouchEvent) => {
         const clientX = e.touches[0].clientX
         touchStartX.current = clientX
         if (clientX < 60) {
             isSwiping.current = true
+            currentDelta.current = 0
+            if (modalRef.current) {
+                modalRef.current.style.transition = 'none'
+            }
         }
     }
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        if (!isSwiping.current) return
-        const currentX = e.touches[0].clientX
-        const delta = currentX - touchStartX.current
+        if (!isSwiping.current || !modalRef.current) return
+        const delta = e.touches[0].clientX - touchStartX.current
         if (delta > 0) {
-            setDragOffset(delta)
+            currentDelta.current = delta
+            modalRef.current.style.transform = `translateX(${delta}px)`
         }
     }
 
     const handleTouchEnd = () => {
-        if (!isSwiping.current) return
+        if (!isSwiping.current || !modalRef.current) return
         isSwiping.current = false
-        if (dragOffset > 85) {
-            onClose()
+        modalRef.current.style.transition = 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)'
+        if (currentDelta.current > 85) {
+            modalRef.current.style.transform = 'translateX(100%)'
+            setTimeout(onClose, 280)
+        } else {
+            modalRef.current.style.transform = 'translateX(0)'
         }
-        setDragOffset(0)
+        currentDelta.current = 0
     }
 
     const absences = subjectDetail.absences || []
 
     return (
         <div
+            ref={modalRef}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            style={{
-                transform: `translateX(${dragOffset}px)`,
-                transition: isSwiping.current ? 'none' : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
-            }}
-            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250"
+            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250 will-change-transform"
         >
             <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                 <button
@@ -87,7 +92,7 @@ export function AttendanceDetailModal({
                 <div className="bg-[var(--ios-card)] rounded-[18px] p-4 flex items-center justify-between shadow-xs">
                     <div>
                         <span className="text-[11px] font-semibold text-[var(--ios-secondary)] uppercase tracking-wider block">
-                            Frekwencja z przedmiotu
+                            {t.subjectAttendance}
                         </span>
                         <h3 className="text-2xl font-semibold tracking-tight text-[var(--ios-label)] mt-0.5">
                             {subjectDetail.percentage}%
@@ -96,17 +101,17 @@ export function AttendanceDetailModal({
 
                     <div className="text-right">
                         <span className="text-xs font-semibold text-[var(--ios-secondary)] block">
-                            {subjectDetail.absentLessons} opuszczonych
+                            {t.missedLessonsCount(subjectDetail.absentLessons)}
                         </span>
                         <span className="text-[11px] font-normal text-[var(--ios-secondary)]/80 mt-0.5 block">
-                            z {subjectDetail.totalLessons} zaplanowanych
+                            {t.ofScheduled(subjectDetail.totalLessons)}
                         </span>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[11px] font-semibold text-[var(--ios-secondary)] uppercase tracking-wider px-1">
-                        Zarejestrowane nieobecności
+                        {t.recordedAbsencesTitle}
                     </span>
 
                     {absences.length > 0 ? (
@@ -117,7 +122,7 @@ export function AttendanceDetailModal({
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs font-semibold text-[var(--ios-label)]">{item.date}</span>
                                             <span className="text-[11px] font-medium text-[var(--ios-secondary)]">
-                                                Lekcja {item.lessonNumber} {item.time ? `(${item.time})` : ''}
+                                                {t.lessonNumberLabel(item.lessonNumber)} {item.time ? `(${item.time})` : ''}
                                             </span>
                                         </div>
 
@@ -135,18 +140,6 @@ export function AttendanceDetailModal({
                                         <span className="truncate pr-2">{item.typeName}</span>
                                         {item.teacher && <span className="shrink-0 text-[11px]">{item.teacher}</span>}
                                     </div>
-
-                                    {item.isUnexcused && (
-                                        <button
-                                            onClick={() => {
-                                                onClose()
-                                                onSelectAbsenceForExcuse(item)
-                                            }}
-                                            className="mt-1 w-full bg-[var(--ios-blue)] text-white text-xs font-semibold py-2 rounded-xl active:opacity-85 transition-all shadow-xs"
-                                        >
-                                            {t.excuseAction}
-                                        </button>
-                                    )}
                                 </article>
                             ))}
                         </div>

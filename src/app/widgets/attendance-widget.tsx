@@ -10,28 +10,9 @@ interface AttendanceWidgetProps {
     t: AppDictionary
 }
 
-function formatMissedLabel(absent: number, total: number): string {
-    if (absent === 0) {
-        return `0 opuszczonych z ${total}`
-    }
-    if (absent === 1) {
-        return `1 opuszczona z ${total}`
-    }
-    const lastTwo = absent % 100
-    const last = absent % 10
-    if (lastTwo >= 12 && lastTwo <= 14) {
-        return `${absent} opuszczonych z ${total}`
-    }
-    if (last >= 2 && last <= 4) {
-        return `${absent} opuszczone z ${total}`
-    }
-    return `${absent} opuszczonych z ${total}`
-}
-
 export function AttendanceWidget({
     attendanceData,
     onSelectSubject,
-    onOpenExcuseModal,
     t
 }: AttendanceWidgetProps) {
     const isDanger = attendanceData.overallStatus === 'danger'
@@ -54,28 +35,6 @@ export function AttendanceWidget({
 
     return (
         <section className="w-full flex flex-col gap-3 min-h-[500px]">
-            {attendanceData.unexcusedAbsences.length > 0 && (
-                <div className="bg-[#ff3b30]/10 rounded-[18px] p-3.5 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-full bg-[#ff3b30] text-white flex items-center justify-center font-semibold text-xs shrink-0">
-                            !
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-xs font-semibold text-[#ff3b30] tracking-tight">Nieusprawiedliwione godziny</p>
-                            <p className="text-[11px] font-normal text-[#ff3b30]/80 truncate">
-                                {attendanceData.unexcusedAbsences.length} {attendanceData.unexcusedAbsences.length === 1 ? 'lekcja' : 'lekcji'} do usprawiedliwienia
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onOpenExcuseModal}
-                        className="text-xs font-semibold bg-[#ff3b30] text-white px-3 py-1.5 rounded-full shadow-xs active:scale-95 transition-transform shrink-0"
-                    >
-                        {t.excuseAction}
-                    </button>
-                </div>
-            )}
-
             <div className="bg-[var(--ios-card)] rounded-[18px] p-4 shadow-xs flex items-center justify-between">
                 <div>
                     <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.attendanceRate}</p>
@@ -98,7 +57,7 @@ export function AttendanceWidget({
 
             <div className="flex flex-col gap-1.5">
                 <span className="text-[11px] font-semibold text-[var(--ios-secondary)] uppercase tracking-wider px-1">
-                    Przedmioty
+                    {t.subjectsSection}
                 </span>
 
                 <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
@@ -119,12 +78,12 @@ export function AttendanceWidget({
                                         </h4>
                                         {sub.unexcusedCount > 0 && (
                                             <span className="text-[9px] font-semibold bg-[#ff3b30]/15 text-[#ff3b30] px-1.5 py-0.5 rounded-full shrink-0">
-                                                {sub.unexcusedCount} nb
+                                                {t.unexcusedShortBadge(sub.unexcusedCount)}
                                             </span>
                                         )}
                                     </div>
                                     <p className="text-[11px] font-normal text-[var(--ios-secondary)] mt-0.5">
-                                        {formatMissedLabel(sub.absentLessons, sub.totalLessons)}
+                                        {t.missedLessonsCount(sub.absentLessons)} {t.ofScheduled(sub.totalLessons)}
                                     </p>
                                 </div>
 

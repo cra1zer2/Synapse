@@ -46,11 +46,11 @@ function IosSwitch({
             role="switch"
             aria-checked={checked}
             onClick={onChange}
-            className={`relative inline-flex h-[24px] w-[42px] shrink-0 cursor-pointer rounded-full p-[2px] transition-colors duration-200 ease-in-out ${checked ? 'bg-[#34c759]' : 'bg-[var(--ios-switch-off)]'
+            className={`relative inline-flex h-[24px] w-[42px] shrink-0 cursor-pointer rounded-full p-[2px] transition-colors duration-250 ease-in-out ${checked ? 'bg-[#34c759]' : 'bg-[var(--ios-switch-off)]'
                 }`}
         >
             <span
-                className={`pointer-events-none inline-block h-[20px] w-[20px] transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition duration-200 ease-in-out ${checked ? 'translate-x-[18px]' : 'translate-x-0'
+                className={`pointer-events-none inline-block h-[20px] w-[20px] transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)] transition duration-250 ease-in-out ${checked ? 'translate-x-[18px]' : 'translate-x-0'
                     }`}
             />
         </button>
@@ -102,6 +102,7 @@ export function SettingsSheet({
     const [showAdvanced, setShowAdvanced] = useState(false)
     const [isEntered, setIsEntered] = useState(false)
     const [isDismissing, setIsDismissing] = useState(false)
+    const [isSubEntered, setIsSubEntered] = useState(false)
     const [isSubDismissing, setIsSubDismissing] = useState(false)
     const [pushStatus, setPushStatus] = useState<string>(() => getNotificationPermissionStatus())
 
@@ -124,6 +125,14 @@ export function SettingsSheet({
             setIsEntered(false)
         }
     }, [isOpen])
+
+    const handleOpenAdvanced = () => {
+        setShowAdvanced(true)
+        setIsSubDismissing(false)
+        requestAnimationFrame(() => {
+            setIsSubEntered(true)
+        })
+    }
 
     const accountsList = Array.isArray(savedAccounts) ? savedAccounts : []
     const activeAccount = accountsList.find((a) => a.isActive) || accountsList[0]
@@ -162,16 +171,17 @@ export function SettingsSheet({
             setIsEntered(false)
             setDragOffset(0)
             onClose()
-        }, 320)
+        }, 350)
     }
 
     const handleSubDismiss = () => {
         setIsSubDismissing(true)
+        setIsSubEntered(false)
         setTimeout(() => {
             setIsSubDismissing(false)
             setSubDragOffset(0)
             setShowAdvanced(false)
-        }, 320)
+        }, 350)
     }
 
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -265,14 +275,14 @@ export function SettingsSheet({
                     : !isEntered
                         ? 'translateX(100%)'
                         : `translateX(${dragOffset}px)`,
-                transition: isSwiping.current ? 'none' : 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)'
+                transition: isSwiping.current ? 'none' : 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)'
             }}
-            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col"
+            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col shadow-[-16px_0_36px_rgba(0,0,0,0.22)] dark:shadow-[-20px_0_48px_rgba(0,0,0,0.6)] will-change-transform"
         >
             <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                 <button
                     onClick={handleDismiss}
-                    className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-medium active:opacity-70 -ml-1 py-1 pr-2 w-20"
+                    className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-normal active:opacity-70 -ml-1 py-1 pr-2 w-20"
                 >
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="15 18 9 12 15 6" />
@@ -280,7 +290,7 @@ export function SettingsSheet({
                     <span>{t.backAction}</span>
                 </button>
 
-                <h2 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight">
+                <h2 className="text-sm font-medium text-[var(--ios-label)] tracking-tight">
                     {t.settingsTitle}
                 </h2>
 
@@ -291,18 +301,18 @@ export function SettingsSheet({
                 <div className="flex flex-col gap-1.5">
                     <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div className="p-4 flex items-center gap-3.5">
-                            <div className="w-12 h-12 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-semibold text-sm shrink-0">
+                            <div className="w-12 h-12 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-medium text-sm shrink-0">
                                 {heroAvatar}
                             </div>
 
                             <div className="min-w-0 flex-1">
-                                <h3 className="text-[15px] font-semibold text-[var(--ios-label)] truncate leading-tight">
+                                <h3 className="text-sm font-medium text-[var(--ios-label)] truncate leading-tight">
                                     {heroTitle}
                                 </h3>
                                 <p className="text-xs font-normal text-[var(--ios-secondary)] truncate mt-0.5">
                                     {heroSubtitle}
                                 </p>
-                                <span className="text-[10px] font-medium text-[var(--ios-secondary)]/80 mt-0.5 block">
+                                <span className="text-[10px] font-normal text-[var(--ios-secondary)]/80 mt-0.5 block">
                                     Login: {activeUsername}
                                 </span>
                             </div>
@@ -322,23 +332,23 @@ export function SettingsSheet({
                                         }`}
                                 >
                                     <div className="flex items-center gap-2.5 min-w-0">
-                                        <div className="w-6 h-6 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center text-[10px] font-semibold shrink-0">
+                                        <div className="w-6 h-6 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center text-[10px] font-medium shrink-0">
                                             {resolveAvatarLetter(acc.profile?.fullName, acc.username, acc.role)}
                                         </div>
                                         <div className="min-w-0">
-                                            <h4 className="text-xs font-medium text-[var(--ios-label)] truncate">
+                                            <h4 className="text-xs font-normal text-[var(--ios-label)] truncate">
                                                 {accTitle}
                                             </h4>
-                                            <p className="text-[10px] text-[var(--ios-secondary)] truncate">
+                                            <p className="text-[10px] font-normal text-[var(--ios-secondary)] truncate">
                                                 {accRole} • {acc.username}
                                             </p>
                                         </div>
                                     </div>
 
                                     {isCurrent ? (
-                                        <span className="text-sm font-semibold text-[var(--ios-blue)] pr-1">✓</span>
+                                        <span className="text-sm font-medium text-[var(--ios-blue)] pr-1">✓</span>
                                     ) : (
-                                        <span className="text-xs font-medium text-[var(--ios-blue)]">{t.switchAccount}</span>
+                                        <span className="text-xs font-normal text-[var(--ios-blue)]">{t.switchAccount}</span>
                                     )}
                                 </div>
                             )
@@ -347,10 +357,10 @@ export function SettingsSheet({
                         <button
                             type="button"
                             onClick={() => setShowAddForm(!showAddForm)}
-                            className="w-full p-3.5 text-left text-xs font-medium text-[var(--ios-blue)] flex items-center justify-between active:bg-[var(--ios-element)]/30 transition-colors"
+                            className="w-full p-3.5 text-left text-xs font-normal text-[var(--ios-blue)] flex items-center justify-between active:bg-[var(--ios-element)]/30 transition-colors"
                         >
                             <span>+ {t.addAccount}</span>
-                            <span className="text-xs text-[var(--ios-secondary)]">{showAddForm ? '▲' : '›'}</span>
+                            <span className="text-xs text-[var(--ios-secondary)] font-normal">{showAddForm ? '▲' : '›'}</span>
                         </button>
 
                         {showAddForm && (
@@ -360,7 +370,7 @@ export function SettingsSheet({
                                     placeholder={t.loginPlaceholder}
                                     value={newUsername}
                                     onChange={(e) => setNewUsername(e.target.value)}
-                                    className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-medium rounded-xl px-3.5 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
+                                    className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-normal rounded-xl px-3.5 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
                                     required
                                 />
                                 <input
@@ -368,13 +378,13 @@ export function SettingsSheet({
                                     placeholder={t.passwordPlaceholder}
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
-                                    className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-medium rounded-xl px-3.5 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
+                                    className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-normal rounded-xl px-3.5 outline-none border border-transparent focus:border-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
                                     required
                                 />
                                 <button
                                     type="submit"
                                     disabled={isAddingAccount}
-                                    className="h-10 w-full bg-[var(--ios-blue)] text-white text-xs font-semibold rounded-xl disabled:opacity-50 active:opacity-85 shadow-xs transition-all"
+                                    className="h-10 w-full bg-[var(--ios-blue)] text-white text-xs font-medium rounded-xl disabled:opacity-50 active:opacity-85 shadow-xs transition-all"
                                 >
                                     {isAddingAccount ? t.verifyingAccount : t.saveAccount}
                                 </button>
@@ -384,13 +394,13 @@ export function SettingsSheet({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                    <span className="text-[11px] uppercase font-normal text-[var(--ios-secondary)] px-3 tracking-wider">
                         {t.preferences}
                     </span>
 
                     <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div className="p-3.5 flex items-center justify-between">
-                            <span className="text-xs font-medium text-[var(--ios-label)]">{t.appTheme}</span>
+                            <span className="text-xs font-normal text-[var(--ios-label)]">{t.appTheme}</span>
                             <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex gap-0.5">
                                 {[
                                     { id: 'system' as AppTheme, label: t.themeSystem },
@@ -400,8 +410,8 @@ export function SettingsSheet({
                                     <button
                                         key={th.id}
                                         onClick={() => onSelectTheme(th.id)}
-                                        className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${currentTheme === th.id
-                                            ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs'
+                                        className={`px-3 py-1 text-xs font-normal rounded-lg transition-all ${currentTheme === th.id
+                                            ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs font-medium'
                                             : 'text-[var(--ios-secondary)]'
                                             }`}
                                     >
@@ -412,7 +422,7 @@ export function SettingsSheet({
                         </div>
 
                         <div className="p-3.5 flex items-center justify-between">
-                            <span className="text-xs font-medium text-[var(--ios-label)]">{t.appLanguage}</span>
+                            <span className="text-xs font-normal text-[var(--ios-label)]">{t.appLanguage}</span>
                             <div className="bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex gap-0.5">
                                 {[
                                     { id: 'pl' as AppLanguage, label: 'PL' },
@@ -421,8 +431,8 @@ export function SettingsSheet({
                                     <button
                                         key={l.id}
                                         onClick={() => onSelectLang(l.id)}
-                                        className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${currentLang === l.id
-                                            ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs'
+                                        className={`px-3 py-1 text-xs font-normal rounded-lg transition-all ${currentLang === l.id
+                                            ? 'bg-[var(--ios-card-solid)] text-[var(--ios-label)] shadow-xs font-medium'
                                             : 'text-[var(--ios-secondary)]'
                                             }`}
                                     >
@@ -435,15 +445,15 @@ export function SettingsSheet({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                    <span className="text-[11px] uppercase font-normal text-[var(--ios-secondary)] px-3 tracking-wider">
                         {t.notifications}
                     </span>
 
                     <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div className="p-3.5 flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-medium text-[var(--ios-label)]">{t.pushNotificationsTitle}</p>
-                                <p className="text-[11px] text-[var(--ios-secondary)]">{t.pushSubtitle}</p>
+                                <p className="text-xs font-normal text-[var(--ios-label)]">{t.pushNotificationsTitle}</p>
+                                <p className="text-[11px] font-normal text-[var(--ios-secondary)]">{t.pushSubtitle}</p>
                             </div>
 
                             {pushStatus === 'granted' ? (
@@ -455,7 +465,7 @@ export function SettingsSheet({
                                 <button
                                     type="button"
                                     onClick={handleTogglePushMaster}
-                                    className="text-xs font-semibold px-3 py-1 bg-[var(--ios-blue)] text-white rounded-full shadow-xs active:scale-95 transition-transform"
+                                    className="text-xs font-medium px-3 py-1 bg-[var(--ios-blue)] text-white rounded-full shadow-xs active:scale-95 transition-transform"
                                 >
                                     {t.pushEnableAction}
                                 </button>
@@ -465,20 +475,20 @@ export function SettingsSheet({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                    <span className="text-[11px] uppercase font-normal text-[var(--ios-secondary)] px-3 tracking-wider">
                         {t.systemSection}
                     </span>
 
                     <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div
-                            onClick={() => setShowAdvanced(true)}
+                            onClick={handleOpenAdvanced}
                             className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
                         >
-                            <span className="text-xs font-medium text-[var(--ios-label)]">
+                            <span className="text-xs font-normal text-[var(--ios-label)]">
                                 {t.advancedTitle}
                             </span>
 
-                            <span className="text-xs text-[var(--ios-secondary)] font-medium">›</span>
+                            <span className="text-xs text-[var(--ios-secondary)] font-normal">›</span>
                         </div>
                     </div>
                 </div>
@@ -487,7 +497,7 @@ export function SettingsSheet({
                     <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs">
                         <button
                             onClick={onLogout}
-                            className="w-full text-center p-3.5 text-xs font-semibold text-[#ff3b30] active:bg-[var(--ios-element)]/30 transition-colors"
+                            className="w-full text-center p-3.5 text-xs font-medium text-[#ff3b30] active:bg-[var(--ios-element)]/30 transition-colors"
                         >
                             {t.logout}
                         </button>
@@ -501,15 +511,19 @@ export function SettingsSheet({
                     onTouchMove={handleSubTouchMove}
                     onTouchEnd={handleSubTouchEnd}
                     style={{
-                        transform: isSubDismissing ? 'translateX(100%)' : `translateX(${subDragOffset}px)`,
-                        transition: isSubSwiping.current ? 'none' : 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)'
+                        transform: isSubDismissing
+                            ? 'translateX(100%)'
+                            : !isSubEntered
+                                ? 'translateX(100%)'
+                                : `translateX(${subDragOffset}px)`,
+                        transition: isSubSwiping.current ? 'none' : 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1)'
                     }}
-                    className="fixed inset-0 z-60 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-300"
+                    className="fixed inset-0 z-60 bg-[var(--ios-bg)] flex flex-col shadow-[-16px_0_36px_rgba(0,0,0,0.22)] dark:shadow-[-20px_0_48px_rgba(0,0,0,0.6)] will-change-transform"
                 >
                     <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                         <button
                             onClick={handleSubDismiss}
-                            className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-medium active:opacity-70 -ml-1 py-1 pr-2 w-24"
+                            className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-normal active:opacity-70 -ml-1 py-1 pr-2 w-24"
                         >
                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="15 18 9 12 15 6" />
@@ -517,7 +531,7 @@ export function SettingsSheet({
                             <span>{t.settingsTitle}</span>
                         </button>
 
-                        <h2 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight">
+                        <h2 className="text-sm font-medium text-[var(--ios-label)] tracking-tight">
                             {t.advancedTitle}
                         </h2>
 
@@ -526,17 +540,17 @@ export function SettingsSheet({
 
                     <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
                         <div className="flex flex-col gap-1.5">
-                            <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                            <span className="text-[11px] uppercase font-normal text-[var(--ios-secondary)] px-3 tracking-wider">
                                 {t.displaySectionTitle}
                             </span>
 
                             <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                                 <div className="p-3.5 flex items-center justify-between gap-3">
                                     <div className="min-w-0 pr-2">
-                                        <p className="text-xs font-medium text-[var(--ios-label)]">
+                                        <p className="text-xs font-normal text-[var(--ios-label)]">
                                             {t.textClampLabel}
                                         </p>
-                                        <p className="text-[11px] text-[var(--ios-secondary)] mt-0.5 leading-snug">
+                                        <p className="text-[11px] font-normal text-[var(--ios-secondary)] mt-0.5 leading-snug">
                                             {t.textClampSingleLineDescription}
                                         </p>
                                     </div>
@@ -550,17 +564,17 @@ export function SettingsSheet({
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                            <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                            <span className="text-[11px] uppercase font-normal text-[var(--ios-secondary)] px-3 tracking-wider">
                                 {t.gradesCalcSectionTitle}
                             </span>
 
                             <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                                 <div className="p-3.5 flex items-center justify-between gap-3">
                                     <div className="min-w-0 pr-2">
-                                        <p className="text-xs font-medium text-[var(--ios-label)]">
+                                        <p className="text-xs font-normal text-[var(--ios-label)]">
                                             {t.ignoreModifiersLabel}
                                         </p>
-                                        <p className="text-[11px] text-[var(--ios-secondary)] mt-0.5 leading-snug">
+                                        <p className="text-[11px] font-normal text-[var(--ios-secondary)] mt-0.5 leading-snug">
                                             {t.ignoreModifiersDescription}
                                         </p>
                                     </div>
@@ -574,17 +588,17 @@ export function SettingsSheet({
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                            <span className="text-[11px] uppercase font-semibold text-[var(--ios-secondary)] px-3 tracking-wider">
+                            <span className="text-[11px] uppercase font-normal text-[var(--ios-secondary)] px-3 tracking-wider">
                                 {t.benchmarkSectionTitle}
                             </span>
 
                             <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                                 <div className="p-3.5 flex items-center justify-between gap-3">
                                     <div className="min-w-0 pr-2">
-                                        <p className="text-xs font-medium text-[var(--ios-label)]">
+                                        <p className="text-xs font-normal text-[var(--ios-label)]">
                                             {t.benchmarkButtonLabel}
                                         </p>
-                                        <p className="text-[11px] text-[var(--ios-secondary)] mt-0.5 leading-snug">
+                                        <p className="text-[11px] font-normal text-[var(--ios-secondary)] mt-0.5 leading-snug">
                                             {t.benchmarkDescription}
                                         </p>
                                     </div>
@@ -593,7 +607,7 @@ export function SettingsSheet({
                                         type="button"
                                         onClick={handleRunBenchmark}
                                         disabled={isBenchmarking}
-                                        className="text-xs font-semibold px-3 py-1.5 bg-[var(--ios-blue)] text-white rounded-full shadow-xs active:scale-95 disabled:opacity-50 transition-all shrink-0 flex items-center gap-1.5"
+                                        className="text-xs font-medium px-3 py-1.5 bg-[var(--ios-blue)] text-white rounded-full shadow-xs active:scale-95 disabled:opacity-50 transition-all shrink-0 flex items-center gap-1.5"
                                     >
                                         {isBenchmarking && (
                                             <svg className="w-3 h-3 animate-spin text-white" viewBox="0 0 24 24" fill="none">
@@ -607,21 +621,21 @@ export function SettingsSheet({
 
                                 {benchmarkReport && (
                                     <div className="p-3.5 flex flex-col gap-2 bg-[var(--ios-bg)]/50 animate-in fade-in">
-                                        <div className="flex items-center justify-between text-xs">
-                                            <span className="text-[var(--ios-secondary)] font-normal">{t.benchmarkTotalDuration}:</span>
-                                            <span className="font-semibold text-[var(--ios-label)]">{benchmarkReport.totalDurationMs} ms</span>
+                                        <div className="flex items-center justify-between text-xs font-normal">
+                                            <span className="text-[var(--ios-secondary)]">{t.benchmarkTotalDuration}:</span>
+                                            <span className="text-[var(--ios-label)]">{benchmarkReport.totalDurationMs} ms</span>
                                         </div>
-                                        <div className="flex items-center justify-between text-xs">
-                                            <span className="text-[var(--ios-secondary)] font-normal">{t.benchmarkAuthDuration}:</span>
-                                            <span className="font-semibold text-[var(--ios-label)]">{benchmarkReport.authorizationDurationMs} ms</span>
+                                        <div className="flex items-center justify-between text-xs font-normal">
+                                            <span className="text-[var(--ios-secondary)]">{t.benchmarkAuthDuration}:</span>
+                                            <span className="text-[var(--ios-label)]">{benchmarkReport.authorizationDurationMs} ms</span>
                                         </div>
-                                        <div className="flex items-center justify-between text-xs">
-                                            <span className="text-[var(--ios-secondary)] font-normal">{t.benchmarkFastestEndpoint}:</span>
-                                            <span className="font-semibold text-[#34c759] truncate max-w-[200px] text-right">{benchmarkReport.fastestEndpoint}</span>
+                                        <div className="flex items-center justify-between text-xs font-normal">
+                                            <span className="text-[var(--ios-secondary)]">{t.benchmarkFastestEndpoint}:</span>
+                                            <span className="text-[#34c759] truncate max-w-[200px] text-right">{benchmarkReport.fastestEndpoint}</span>
                                         </div>
-                                        <div className="flex items-center justify-between text-xs">
-                                            <span className="text-[var(--ios-secondary)] font-normal">{t.benchmarkSlowestEndpoint}:</span>
-                                            <span className="font-semibold text-[#ff9500] truncate max-w-[200px] text-right">{benchmarkReport.slowestEndpoint}</span>
+                                        <div className="flex items-center justify-between text-xs font-normal">
+                                            <span className="text-[var(--ios-secondary)]">{t.benchmarkSlowestEndpoint}:</span>
+                                            <span className="text-[#ff9500] truncate max-w-[200px] text-right">{benchmarkReport.slowestEndpoint}</span>
                                         </div>
                                     </div>
                                 )}

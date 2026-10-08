@@ -58,9 +58,10 @@ export function MessagesWidget({
     const [isSending, setIsSending] = useState(false)
     const [sendSuccess, setSendSuccess] = useState(false)
 
-    const [dragOffset, setDragOffset] = useState(0)
+    const readerRef = useRef<HTMLDivElement>(null)
     const touchStartX = useRef(0)
     const isSwiping = useRef(false)
+    const currentDelta = useRef(0)
 
     const contentTouchStartX = useRef(0)
     const isContentSwiping = useRef(false)
@@ -109,9 +110,9 @@ export function MessagesWidget({
         isContentSwiping.current = false
         const deltaX = e.changedTouches[0].clientX - contentTouchStartX.current
 
-        if (deltaX < -45 && activeTab === 'inbox') {
+        if (deltaX < -50 && activeTab === 'inbox') {
             setActiveTab('announcements')
-        } else if (deltaX > 45 && activeTab === 'announcements') {
+        } else if (deltaX > 50 && activeTab === 'announcements') {
             setActiveTab('inbox')
         }
     }
@@ -121,25 +122,33 @@ export function MessagesWidget({
         touchStartX.current = clientX
         if (clientX < 60) {
             isSwiping.current = true
+            currentDelta.current = 0
+            if (readerRef.current) {
+                readerRef.current.style.transition = 'none'
+            }
         }
     }
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        if (!isSwiping.current) return
-        const currentX = e.touches[0].clientX
-        const delta = currentX - touchStartX.current
+        if (!isSwiping.current || !readerRef.current) return
+        const delta = e.touches[0].clientX - touchStartX.current
         if (delta > 0) {
-            setDragOffset(delta)
+            currentDelta.current = delta
+            readerRef.current.style.transform = `translateX(${delta}px)`
         }
     }
 
     const handleTouchEnd = () => {
-        if (!isSwiping.current) return
+        if (!isSwiping.current || !readerRef.current) return
         isSwiping.current = false
-        if (dragOffset > 85) {
-            setActiveReader(null)
+        readerRef.current.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)'
+        if (currentDelta.current > 85) {
+            readerRef.current.style.transform = 'translateX(100%)'
+            setTimeout(() => setActiveReader(null), 350)
+        } else {
+            readerRef.current.style.transform = 'translateX(0)'
         }
-        setDragOffset(0)
+        currentDelta.current = 0
     }
 
     const handleInitiateReply = () => {
@@ -192,7 +201,7 @@ export function MessagesWidget({
             <div className="flex items-center justify-between gap-2">
                 <div className="relative bg-[var(--ios-element)]/60 p-0.5 rounded-xl flex flex-1 max-w-xs overflow-hidden">
                     <div
-                        className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-lg bg-[var(--ios-card)] shadow-xs transition-transform duration-280 ease-[cubic-bezier(0.25,1,0.5,1)]"
+                        className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-lg bg-[var(--ios-card)] shadow-xs transition-transform duration-350 ease-[cubic-bezier(0.32,0.72,0,1)]"
                         style={{
                             transform: activeTab === 'inbox' ? 'translateX(0)' : 'translateX(100%)'
                         }}
@@ -200,14 +209,14 @@ export function MessagesWidget({
 
                     <button
                         onClick={() => setActiveTab('inbox')}
-                        className={`relative z-10 flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-200 ${activeTab === 'inbox' ? 'text-[var(--ios-label)]' : 'text-[var(--ios-secondary)]'
+                        className={`relative z-10 flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors duration-250 ${activeTab === 'inbox' ? 'text-[var(--ios-label)]' : 'text-[var(--ios-secondary)]'
                             }`}
                     >
                         {t.messagesInbox} ({messages.length})
                     </button>
                     <button
                         onClick={() => setActiveTab('announcements')}
-                        className={`relative z-10 flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-200 ${activeTab === 'announcements' ? 'text-[var(--ios-label)]' : 'text-[var(--ios-secondary)]'
+                        className={`relative z-10 flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors duration-250 ${activeTab === 'announcements' ? 'text-[var(--ios-label)]' : 'text-[var(--ios-secondary)]'
                             }`}
                     >
                         {t.messagesAnnouncements} ({announcements.length})
@@ -216,15 +225,15 @@ export function MessagesWidget({
 
                 <button
                     onClick={() => setShowCompose(true)}
-                    className="text-xs font-semibold text-[var(--ios-blue)] flex items-center gap-1 active:opacity-70 px-2 py-1"
+                    className="text-xs font-medium text-[var(--ios-blue)] flex items-center gap-1 active:opacity-70 px-2 py-1"
                 >
-                    <span className="text-base font-semibold">+</span>
+                    <span className="text-base font-normal">+</span>
                     <span>{t.writeNewMessage}</span>
                 </button>
             </div>
 
             <div className="bg-[var(--ios-element)]/50 rounded-xl px-3 py-2 flex items-center gap-2">
-                <svg className="w-3.5 h-3.5 text-[var(--ios-secondary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <svg className="w-3.5 h-3.5 text-[var(--ios-secondary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="11" cy="11" r="8" />
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
@@ -233,7 +242,7 @@ export function MessagesWidget({
                     placeholder={t.searchMessagesPlaceholder}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-transparent text-xs text-[var(--ios-label)] outline-none placeholder-[var(--ios-secondary)]"
+                    className="w-full bg-transparent text-xs text-[var(--ios-label)] outline-none placeholder-[var(--ios-secondary)] font-normal"
                 />
             </div>
 
@@ -243,7 +252,7 @@ export function MessagesWidget({
                 className="w-full overflow-hidden"
             >
                 <div
-                    className="flex w-[200%] transition-transform duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]"
+                    className="flex w-[200%] transition-transform duration-380 ease-[cubic-bezier(0.32,0.72,0,1)]"
                     style={{
                         transform: activeTab === 'inbox' ? 'translateX(0%)' : 'translateX(-50%)'
                     }}
@@ -252,7 +261,7 @@ export function MessagesWidget({
                         {isLoading && messages.length === 0 ? (
                             <div className="bg-[var(--ios-card)] rounded-[18px] min-h-[220px] flex flex-col items-center justify-center gap-3">
                                 <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
-                                <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.loadingMessages}</p>
+                                <p className="text-xs font-normal text-[var(--ios-secondary)]">{t.loadingMessages}</p>
                             </div>
                         ) : (
                             <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
@@ -261,7 +270,7 @@ export function MessagesWidget({
                                         <article
                                             key={msg.id}
                                             onClick={() => handleReadMessage(msg)}
-                                            style={{ animationDelay: `${Math.min(index * 20, 180)}ms` }}
+                                            style={{ animationDelay: `${Math.min(index * 20, 160)}ms` }}
                                             className="p-3.5 flex items-start gap-2.5 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-top-1.5 duration-250 fill-mode-both"
                                         >
                                             {!msg.isRead ? (
@@ -272,7 +281,7 @@ export function MessagesWidget({
 
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between gap-1">
-                                                    <span className="text-xs font-semibold text-[var(--ios-label)] truncate">
+                                                    <span className="text-xs font-medium text-[var(--ios-label)] truncate">
                                                         {cleanSenderName(msg.sender)}
                                                     </span>
                                                     <span className="text-[10px] font-normal text-[var(--ios-secondary)] shrink-0">
@@ -286,7 +295,7 @@ export function MessagesWidget({
                                         </article>
                                     ))
                                 ) : (
-                                    <div className="p-8 text-center text-xs text-[var(--ios-secondary)]">{t.noMessages}</div>
+                                    <div className="p-8 text-center text-xs font-normal text-[var(--ios-secondary)]">{t.noMessages}</div>
                                 )}
                             </div>
                         )}
@@ -296,7 +305,7 @@ export function MessagesWidget({
                         {isLoading && announcements.length === 0 ? (
                             <div className="bg-[var(--ios-card)] rounded-[18px] min-h-[220px] flex flex-col items-center justify-center gap-3">
                                 <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
-                                <p className="text-xs font-medium text-[var(--ios-secondary)]">{t.loadingMessages}</p>
+                                <p className="text-xs font-normal text-[var(--ios-secondary)]">{t.loadingMessages}</p>
                             </div>
                         ) : (
                             <div className="bg-[var(--ios-card)] rounded-[18px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
@@ -313,21 +322,21 @@ export function MessagesWidget({
                                                     originalItem: item
                                                 })
                                             }
-                                            style={{ animationDelay: `${Math.min(index * 20, 180)}ms` }}
+                                            style={{ animationDelay: `${Math.min(index * 20, 160)}ms` }}
                                             className="p-3.5 flex flex-col gap-1 cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors animate-in fade-in slide-in-from-top-1.5 duration-250 fill-mode-both"
                                         >
                                             <div className="flex items-center justify-between">
-                                                <span className="text-xs font-semibold text-[var(--ios-blue)]">{cleanSenderName(item.author)}</span>
+                                                <span className="text-xs font-medium text-[var(--ios-blue)]">{cleanSenderName(item.author)}</span>
                                                 <span className="text-[10px] font-normal text-[var(--ios-secondary)]">{item.date}</span>
                                             </div>
-                                            <h4 className="text-xs font-semibold text-[var(--ios-label)]">{item.title}</h4>
+                                            <h4 className="text-xs font-medium text-[var(--ios-label)]">{item.title}</h4>
                                             <p className="text-xs font-normal text-[var(--ios-secondary)] line-clamp-2 leading-relaxed">
                                                 {item.content}
                                             </p>
                                         </article>
                                     ))
                                 ) : (
-                                    <div className="p-8 text-center text-xs text-[var(--ios-secondary)]">{t.noMessages}</div>
+                                    <div className="p-8 text-center text-xs font-normal text-[var(--ios-secondary)]">{t.noMessages}</div>
                                 )}
                             </div>
                         )}
@@ -337,19 +346,16 @@ export function MessagesWidget({
 
             {activeReader && (
                 <div
+                    ref={readerRef}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
-                    style={{
-                        transform: `translateX(${dragOffset}px)`,
-                        transition: isSwiping.current ? 'none' : 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)'
-                    }}
-                    className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in slide-in-from-right duration-250"
+                    className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col shadow-[-16px_0_36px_rgba(0,0,0,0.22)] dark:shadow-[-20px_0_48px_rgba(0,0,0,0.6)] will-change-transform"
                 >
                     <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                         <button
                             onClick={() => setActiveReader(null)}
-                            className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-medium active:opacity-70 -ml-1 py-1 pr-2"
+                            className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-normal active:opacity-70 -ml-1 py-1 pr-2"
                         >
                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="15 18 9 12 15 6" />
@@ -359,9 +365,9 @@ export function MessagesWidget({
 
                         <button
                             onClick={handleInitiateReply}
-                            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--ios-blue)] active:opacity-75 py-1 px-3 bg-[var(--ios-blue)]/12 rounded-full transition-all"
+                            className="flex items-center gap-1.5 text-xs font-medium text-[var(--ios-blue)] active:opacity-75 py-1 px-3 bg-[var(--ios-blue)]/12 rounded-full transition-all"
                         >
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="9 17 4 12 9 7" />
                                 <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
                             </svg>
@@ -373,7 +379,7 @@ export function MessagesWidget({
                         <div className="bg-[var(--ios-card)] rounded-[18px] p-4 shadow-xs flex flex-col gap-2">
                             <div className="flex items-center justify-between gap-2 border-b border-[var(--ios-separator)] pb-2.5">
                                 <div className="min-w-0">
-                                    <span className="text-[10px] font-semibold text-[var(--ios-blue)] uppercase tracking-wider block">
+                                    <span className="text-[10px] font-normal text-[var(--ios-blue)] uppercase tracking-wider block">
                                         {cleanSenderName(activeReader.sender)}
                                     </span>
                                     <p className="text-[11px] font-normal text-[var(--ios-secondary)] mt-0.5">
@@ -382,7 +388,7 @@ export function MessagesWidget({
                                 </div>
                             </div>
 
-                            <h2 className="text-base font-semibold text-[var(--ios-label)] leading-snug break-words">
+                            <h2 className="text-sm font-medium text-[var(--ios-label)] leading-snug break-words">
                                 {activeReader.title}
                             </h2>
                         </div>
@@ -412,17 +418,17 @@ export function MessagesWidget({
                         className="bg-[var(--ios-card)] rounded-[22px] p-5 w-full max-w-lg shadow-2xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto"
                     >
                         <div className="flex items-center justify-between border-b border-[var(--ios-separator)] pb-2.5">
-                            <h3 className="text-sm font-semibold text-[var(--ios-label)]">{t.newMessageTitle}</h3>
+                            <h3 className="text-sm font-medium text-[var(--ios-label)]">{t.newMessageTitle}</h3>
                             <button
                                 onClick={() => setShowCompose(false)}
-                                className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] text-xs font-semibold flex items-center justify-center active:scale-95 transition-transform"
+                                className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] text-xs font-normal flex items-center justify-center active:scale-95 transition-transform"
                             >
                                 ✕
                             </button>
                         </div>
 
                         {sendSuccess ? (
-                            <div className="bg-[#34c759]/15 text-[#34c759] p-4 rounded-xl text-center text-xs font-semibold flex items-center justify-center gap-2">
+                            <div className="bg-[#34c759]/15 text-[#34c759] p-4 rounded-xl text-center text-xs font-medium flex items-center justify-center gap-2">
                                 <span>✓</span>
                                 <span>{t.messageSent}</span>
                             </div>
@@ -431,7 +437,7 @@ export function MessagesWidget({
                                 <select
                                     value={selectedReceiverId || ''}
                                     onChange={(e) => setSelectedReceiverId(Number(e.target.value))}
-                                    className="w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-medium rounded-xl px-3.5 py-2.5 outline-none"
+                                    className="w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-normal rounded-xl px-3.5 py-2.5 outline-none"
                                     required
                                 >
                                     <option value="">{t.recipientPlaceholder}</option>
@@ -447,7 +453,7 @@ export function MessagesWidget({
                                     placeholder={t.subjectPlaceholder}
                                     value={composeTitle}
                                     onChange={(e) => setComposeTitle(e.target.value)}
-                                    className="w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-medium rounded-xl px-3.5 py-2.5 outline-none placeholder-[var(--ios-secondary)]"
+                                    className="w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-normal rounded-xl px-3.5 py-2.5 outline-none placeholder-[var(--ios-secondary)]"
                                     required
                                 />
 
@@ -463,14 +469,14 @@ export function MessagesWidget({
                                     <button
                                         type="button"
                                         onClick={() => setShowCompose(false)}
-                                        className="flex-1 bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-semibold py-2.5 rounded-xl active:opacity-75 transition-opacity"
+                                        className="flex-1 bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-medium py-2.5 rounded-xl active:opacity-75 transition-opacity"
                                     >
                                         {t.cancel}
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={isSending}
-                                        className="flex-1 bg-[var(--ios-blue)] text-white text-xs font-semibold py-2.5 rounded-xl disabled:opacity-45 active:opacity-85 transition-all shadow-xs flex items-center justify-center gap-1.5"
+                                        className="flex-1 bg-[var(--ios-blue)] text-white text-xs font-medium py-2.5 rounded-xl disabled:opacity-45 active:opacity-85 transition-all shadow-xs flex items-center justify-center gap-1.5"
                                     >
                                         {isSending && <IosSpinner className="w-3.5 h-3.5 text-white" />}
                                         <span>{isSending ? t.sending : t.send}</span>

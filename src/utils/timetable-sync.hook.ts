@@ -48,6 +48,15 @@ function recalibrateScheduleToday(schedule: DaySchedule[]): DaySchedule[] {
     }))
 }
 
+function getScheduleFingerprint(timetable: SmartTimetableResult | null): string {
+    if (!timetable || !Array.isArray(timetable.schedule)) return ''
+    return timetable.schedule.map((day) => {
+        const lessons = day.lessons.map((l) => `${l.number}:${l.time}:${l.subject}:${l.room}:${l.teacher}:${l.isCancelled}:${l.isSubstitution}`).join('|')
+        const events = (day.events || []).map((e) => `${e.title}:${e.category}`).join('|')
+        return `${day.isoDate}-${lessons}-${events}`
+    }).join('__')
+}
+
 interface UseTimetableSyncOptions {
     username: string
     password: string
@@ -75,6 +84,7 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
     const weekCacheRef = useRef<Record<string, SmartTimetableResult>>({})
     const activeRequestCounter = useRef(0)
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+    const hasInitializedRef = useRef(false)
 
     const resolveSmartDefaultDay = useCallback((schedule: DaySchedule[]): string => {
         if (!Array.isArray(schedule) || schedule.length === 0) return 'Monday'
@@ -116,19 +126,20 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
                     }
 
                     const previousDataForThisWeek = weekCacheRef.current[weekPivot]
+                    const currentFingerprint = getScheduleFingerprint(previousDataForThisWeek)
+                    const newFingerprint = getScheduleFingerprint(fetchedData)
+
                     weekCacheRef.current[weekPivot] = fetchedData
                     localStorage.setItem('synapse_week_cache', JSON.stringify(weekCacheRef.current))
 
                     setGradesData(gRes.data)
                     setAttendanceData(aRes.data)
 
-                    if (previousDataForThisWeek) {
-                        const isIdentical = JSON.stringify(previousDataForThisWeek) === JSON.stringify(fetchedData)
-                        if (!isIdentical) {
-                            setPendingSnapshot({ t: fetchedData, g: gRes.data, a: aRes.data })
-                            setHasNewUpdate(true)
-                        }
+                    if (hasInitializedRef.current && previousDataForThisWeek && currentFingerprint !== newFingerprint) {
+                        setPendingSnapshot({ t: fetchedData, g: gRes.data, a: aRes.data })
+                        setHasNewUpdate(true)
                     } else {
+                        hasInitializedRef.current = true
                         setTimetableData(fetchedData)
                         setSelectedDay((prev) => {
                             const realTodayIso = getTodayIsoString()

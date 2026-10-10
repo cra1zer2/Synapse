@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# project dump & benchmarks
+project.txt
+/benchmark*
+benchmark-report.json
+benchmark*.json
+
+# agent configs
+AGENTS.md
+CLAUDE.md
+

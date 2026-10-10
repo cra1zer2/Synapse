@@ -108,6 +108,7 @@ export function SettingsSheet({
 
     const [isBenchmarking, setIsBenchmarking] = useState(false)
     const [benchmarkReport, setBenchmarkReport] = useState<BenchmarkReport | null>(null)
+    const [isCopied, setIsCopied] = useState(false)
 
     const [dragOffset, setDragOffset] = useState(0)
     const touchStartX = useRef(0)
@@ -266,6 +267,15 @@ export function SettingsSheet({
         }
     }
 
+    const handleCopyReport = async () => {
+        if (!benchmarkReport) return
+        try {
+            await navigator.clipboard.writeText(JSON.stringify(benchmarkReport, null, 2))
+            setIsCopied(true)
+            setTimeout(() => setIsCopied(false), 2000)
+        } catch { }
+    }
+
     if (!isOpen) return null
 
     return (
@@ -275,13 +285,13 @@ export function SettingsSheet({
             onTouchEnd={handleTouchEnd}
             style={{
                 transform: isDismissing
-                    ? 'translateX(100%)'
+                    ? 'translateX(calc(100% + 48px))'
                     : !isEntered
-                        ? 'translateX(100%)'
+                        ? 'translateX(calc(100% + 48px))'
                         : `translateX(${dragOffset}px)`,
                 transition: isSwiping.current ? 'none' : 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)'
             }}
-            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col shadow-[-16px_0_36px_rgba(0,0,0,0.22)] dark:shadow-[-20px_0_48px_rgba(0,0,0,0.6)] will-change-transform"
+            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col shadow-[-8px_0_24px_rgba(0,0,0,0.18)] dark:shadow-[-8px_0_24px_rgba(0,0,0,0.38)] will-change-transform"
         >
             <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                 <button
@@ -303,7 +313,7 @@ export function SettingsSheet({
 
             <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
                 <div className="flex flex-col gap-1.5">
-                    <div className="bg-[var(--ios-card)] rounded-[20px] border border-[var(--ios-separator)]/60 overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                    <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div className="p-4 flex items-center gap-3.5">
                             <div className="w-12 h-12 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center font-semibold text-sm shrink-0">
                                 {heroAvatar}
@@ -378,7 +388,7 @@ export function SettingsSheet({
                                     placeholder={t.loginPlaceholder}
                                     value={newUsername}
                                     onChange={(e) => setNewUsername(e.target.value)}
-                                    className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-normal rounded-[12px] px-3.5 outline-none border border-[var(--ios-separator)]/60 focus:border-[var(--ios-blue)] focus:ring-1 focus:ring-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
+                                    className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-normal rounded-[12px] px-3.5 outline-none focus:ring-1 focus:ring-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
                                     required
                                 />
                                 <input
@@ -386,7 +396,7 @@ export function SettingsSheet({
                                     placeholder={t.passwordPlaceholder}
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
-                                    className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-normal rounded-[12px] px-3.5 outline-none border border-[var(--ios-separator)]/60 focus:border-[var(--ios-blue)] focus:ring-1 focus:ring-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
+                                    className="h-10 w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-xs font-normal rounded-[12px] px-3.5 outline-none focus:ring-1 focus:ring-[var(--ios-blue)] transition-colors placeholder-[var(--ios-secondary)]"
                                     required
                                 />
                                 <button
@@ -406,7 +416,7 @@ export function SettingsSheet({
                         {t.preferences}
                     </span>
 
-                    <div className="bg-[var(--ios-card)] rounded-[20px] border border-[var(--ios-separator)]/60 overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                    <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div className="p-3.5 flex items-center justify-between">
                             <span className="text-xs font-medium text-[var(--ios-label)]">{t.appTheme}</span>
                             <div className="bg-[var(--ios-element)] p-1 rounded-[12px] flex gap-0.5">
@@ -457,7 +467,7 @@ export function SettingsSheet({
                         {t.notifications}
                     </span>
 
-                    <div className="bg-[var(--ios-card)] rounded-[20px] border border-[var(--ios-separator)]/60 overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                    <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div className="p-3.5 flex items-center justify-between">
                             <div>
                                 <p className="text-xs font-medium text-[var(--ios-label)]">{t.pushNotificationsTitle}</p>
@@ -487,7 +497,7 @@ export function SettingsSheet({
                         {t.systemSection}
                     </span>
 
-                    <div className="bg-[var(--ios-card)] rounded-[20px] border border-[var(--ios-separator)]/60 overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                    <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                         <div
                             onClick={handleOpenAdvanced}
                             className="p-3.5 flex items-center justify-between cursor-pointer active:bg-[var(--ios-element)]/30 transition-colors"
@@ -504,7 +514,7 @@ export function SettingsSheet({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <div className="bg-[var(--ios-card)] rounded-[20px] border border-[var(--ios-separator)]/60 overflow-hidden shadow-xs">
+                    <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs">
                         <button
                             onClick={onLogout}
                             className="w-full text-center p-3.5 text-xs font-medium text-[var(--ios-red)] active:bg-[var(--ios-element)]/30 transition-colors"
@@ -522,13 +532,13 @@ export function SettingsSheet({
                     onTouchEnd={handleSubTouchEnd}
                     style={{
                         transform: isSubDismissing
-                            ? 'translateX(100%)'
+                            ? 'translateX(calc(100% + 48px))'
                             : !isSubEntered
-                                ? 'translateX(100%)'
+                                ? 'translateX(calc(100% + 48px))'
                                 : `translateX(${subDragOffset}px)`,
                         transition: isSubSwiping.current ? 'none' : 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1)'
                     }}
-                    className="fixed inset-0 z-60 bg-[var(--ios-bg)] flex flex-col shadow-[-16px_0_36px_rgba(0,0,0,0.22)] dark:shadow-[-20px_0_48px_rgba(0,0,0,0.6)] will-change-transform"
+                    className="fixed inset-0 z-60 bg-[var(--ios-bg)] flex flex-col shadow-[-8px_0_24px_rgba(0,0,0,0.18)] dark:shadow-[-8px_0_24px_rgba(0,0,0,0.38)] will-change-transform"
                 >
                     <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                         <button
@@ -554,7 +564,7 @@ export function SettingsSheet({
                                 {t.displaySectionTitle}
                             </span>
 
-                            <div className="bg-[var(--ios-card)] rounded-[20px] border border-[var(--ios-separator)]/60 overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                            <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                                 <div className="p-3.5 flex items-center justify-between gap-3">
                                     <div className="min-w-0 pr-2">
                                         <p className="text-xs font-medium text-[var(--ios-label)]">
@@ -578,7 +588,7 @@ export function SettingsSheet({
                                 {t.gradesCalcSectionTitle}
                             </span>
 
-                            <div className="bg-[var(--ios-card)] rounded-[20px] border border-[var(--ios-separator)]/60 overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                            <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                                 <div className="p-3.5 flex items-center justify-between gap-3">
                                     <div className="min-w-0 pr-2">
                                         <p className="text-xs font-medium text-[var(--ios-label)]">
@@ -602,7 +612,7 @@ export function SettingsSheet({
                                 {t.benchmarkSectionTitle}
                             </span>
 
-                            <div className="bg-[var(--ios-card)] rounded-[20px] border border-[var(--ios-separator)]/60 overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
+                            <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                                 <div className="p-3.5 flex items-center justify-between gap-3">
                                     <div className="min-w-0 pr-2">
                                         <p className="text-xs font-medium text-[var(--ios-label)]">
@@ -630,23 +640,77 @@ export function SettingsSheet({
                                 </div>
 
                                 {benchmarkReport && (
-                                    <div className="p-3.5 flex flex-col gap-2 bg-[var(--ios-element)]/30 animate-in fade-in">
-                                        <div className="flex items-center justify-between text-xs font-normal">
-                                            <span className="text-[var(--ios-secondary)]">{t.benchmarkTotalDuration}:</span>
-                                            <span className="text-[var(--ios-label)] font-medium">{benchmarkReport.totalDurationMs} ms</span>
+                                    <div className="p-3.5 flex flex-col gap-3 bg-[var(--ios-element)]/25 animate-in fade-in">
+                                        <div className="flex flex-col gap-1.5">
+                                            <div className="flex items-center justify-between text-xs font-normal">
+                                                <span className="text-[var(--ios-secondary)]">{t.benchmarkTotalDuration}:</span>
+                                                <span className="text-[var(--ios-label)] font-semibold">{benchmarkReport.totalDurationMs} ms</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs font-normal">
+                                                <span className="text-[var(--ios-secondary)]">{t.benchmarkAuthDuration}:</span>
+                                                <span className="text-[var(--ios-label)] font-medium">{benchmarkReport.authorizationDurationMs} ms</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs font-normal">
+                                                <span className="text-[var(--ios-secondary)]">{t.benchmarkFastestEndpoint}:</span>
+                                                <span className="text-[var(--ios-green)] font-medium truncate max-w-[200px] text-right">{benchmarkReport.fastestEndpoint}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs font-normal">
+                                                <span className="text-[var(--ios-secondary)]">{t.benchmarkSlowestEndpoint}:</span>
+                                                <span className="text-[var(--ios-orange)] font-medium truncate max-w-[200px] text-right">{benchmarkReport.slowestEndpoint}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center justify-between text-xs font-normal">
-                                            <span className="text-[var(--ios-secondary)]">{t.benchmarkAuthDuration}:</span>
-                                            <span className="text-[var(--ios-label)] font-medium">{benchmarkReport.authorizationDurationMs} ms</span>
+
+                                        <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--ios-separator)]/60">
+                                            <span className="text-[10px] uppercase font-semibold text-[var(--ios-secondary)] tracking-wider">
+                                                {t.benchmarkEndpointsDetails}
+                                            </span>
+
+                                            <div className="flex flex-col gap-1">
+                                                {benchmarkReport.items.map((item, idx) => (
+                                                    <div
+                                                        key={`${item.endpoint}-${idx}`}
+                                                        className="flex items-center justify-between text-[11px] p-2 rounded-[10px] bg-[var(--ios-card)]"
+                                                    >
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.success ? 'bg-[var(--ios-green)]' : 'bg-[var(--ios-red)]'}`} />
+                                                            <span className="text-[var(--ios-label)] font-medium truncate">
+                                                                {item.endpoint}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            <span className="text-[10px] text-[var(--ios-secondary)]">
+                                                                {item.payloadBytes > 0 ? `${Math.round(item.payloadBytes / 1024 * 10) / 10} KB` : '0 B'}
+                                                            </span>
+                                                            <span className="text-xs font-semibold text-[var(--ios-label)] tabular-nums">
+                                                                {item.durationMs} ms
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="flex items-center justify-between text-xs font-normal">
-                                            <span className="text-[var(--ios-secondary)]">{t.benchmarkFastestEndpoint}:</span>
-                                            <span className="text-[var(--ios-green)] font-medium truncate max-w-[200px] text-right">{benchmarkReport.fastestEndpoint}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-xs font-normal">
-                                            <span className="text-[var(--ios-secondary)]">{t.benchmarkSlowestEndpoint}:</span>
-                                            <span className="text-[var(--ios-orange)] font-medium truncate max-w-[200px] text-right">{benchmarkReport.slowestEndpoint}</span>
-                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyReport}
+                                            className="w-full mt-1 py-2.5 px-3 bg-[var(--ios-blue)] text-white text-xs font-semibold rounded-[12px] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                                        >
+                                            {isCopied ? (
+                                                <>
+                                                    <span>✓</span>
+                                                    <span>{t.benchmarkReportCopied}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                                    </svg>
+                                                    <span>{t.benchmarkCopyReportAction}</span>
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 )}
                             </div>

@@ -89,6 +89,9 @@ export interface AppDictionary {
     benchmarkAuthDuration: string
     benchmarkFastestEndpoint: string
     benchmarkSlowestEndpoint: string
+    benchmarkCopyReportAction: string
+    benchmarkReportCopied: string
+    benchmarkEndpointsDetails: string
     runBenchmarkAction: string
     benchmarkingStatus: string
     onLabel: string
@@ -242,6 +245,9 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             benchmarkAuthDuration: 'Authorization time',
             benchmarkFastestEndpoint: 'Fastest endpoint',
             benchmarkSlowestEndpoint: 'Slowest endpoint',
+            benchmarkCopyReportAction: 'Copy JSON Report',
+            benchmarkReportCopied: 'Copied to clipboard!',
+            benchmarkEndpointsDetails: 'Endpoints Breakdown',
             runBenchmarkAction: 'Run Test',
             benchmarkingStatus: 'Testing...',
             onLabel: 'On',
@@ -394,6 +400,9 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         benchmarkAuthDuration: 'Czas autoryzacji',
         benchmarkFastestEndpoint: 'Najszybszy punkt',
         benchmarkSlowestEndpoint: 'Najwolniejszy punkt',
+        benchmarkCopyReportAction: 'Kopiuj raport JSON',
+        benchmarkReportCopied: 'Skopiowano do schowka!',
+        benchmarkEndpointsDetails: 'Szczegóły punktów końcowych',
         runBenchmarkAction: 'Uruchom test',
         benchmarkingStatus: 'Testowanie...',
         onLabel: 'Wł.',

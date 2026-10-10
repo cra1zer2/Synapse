@@ -13,7 +13,6 @@ interface AttendanceWidgetProps {
 export function AttendanceWidget({
     attendanceData,
     onSelectSubject,
-    onOpenExcuseModal,
     t
 }: AttendanceWidgetProps) {
     const isDanger = attendanceData.overallStatus === 'danger'
@@ -55,16 +54,6 @@ export function AttendanceWidget({
                     >
                         {isDanger ? t.dangerBadge : isWarning ? t.warningBadge : t.safeBadge}
                     </span>
-
-                    {attendanceData.unexcusedAbsences.length > 0 && (
-                        <button
-                            type="button"
-                            onClick={onOpenExcuseModal}
-                            className="text-xs font-semibold text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] px-2.5 py-1 rounded-full active:opacity-75 transition-all"
-                        >
-                            {t.excuseAction} ({attendanceData.unexcusedAbsences.length})
-                        </button>
-                    )}
                 </div>
             </div>
 

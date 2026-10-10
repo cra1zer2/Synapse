@@ -89,13 +89,13 @@ export function LessonDetailModal({
                 onTouchEnd={handleTouchEnd}
                 style={{
                     transform: isDismissing
-                        ? 'translateY(100%)'
+                        ? 'translateY(calc(100% + 48px))'
                         : !isEntered
-                            ? 'translateY(100%)'
+                            ? 'translateY(calc(100% + 48px))'
                             : `translateY(${dragOffsetY}px)`,
                     transition: isDragging.current ? 'none' : 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)'
                 }}
-                className="bg-[var(--ios-card)] rounded-t-[28px] sm:rounded-[28px] w-full max-w-sm p-5 shadow-2xl border border-[var(--ios-separator)]/60 flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto will-change-transform"
+                className="bg-[var(--ios-card)] rounded-t-[28px] sm:rounded-[28px] w-full max-w-sm p-5 shadow-2xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto will-change-transform"
             >
                 <div className="w-9 h-1 rounded-full bg-[var(--ios-element)] mx-auto -mt-1 mb-1 sm:hidden shrink-0 opacity-60" />
 
@@ -114,7 +114,7 @@ export function LessonDetailModal({
                     </h3>
                 </div>
 
-                <div className="bg-[var(--ios-element)]/35 rounded-[16px] p-3.5 flex flex-col gap-1 border border-[var(--ios-separator)]/40">
+                <div className="bg-[var(--ios-element)]/35 rounded-[16px] p-3.5 flex flex-col gap-1">
                     <span className="text-[10px] font-medium text-[var(--ios-secondary)] uppercase tracking-wider block">
                         {t.lessonTopic}
                     </span>
@@ -123,7 +123,7 @@ export function LessonDetailModal({
                     </p>
                 </div>
 
-                <div className="bg-[var(--ios-element)]/35 rounded-[16px] overflow-hidden divide-y divide-[var(--ios-separator)] border border-[var(--ios-separator)]/40">
+                <div className="bg-[var(--ios-element)]/35 rounded-[16px] overflow-hidden divide-y divide-[var(--ios-separator)]">
                     <div className="p-3.5 flex items-center justify-between text-xs">
                         <span className="text-[var(--ios-secondary)] font-normal">{t.teacherLabel}</span>
                         <span className="text-[var(--ios-label)] font-medium text-right truncate max-w-[200px]">

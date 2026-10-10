@@ -47,7 +47,7 @@ export function AttendanceDetailModal({
         isSwiping.current = false
         modalRef.current.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)'
         if (currentDelta.current > 85) {
-            modalRef.current.style.transform = 'translateX(100%)'
+            modalRef.current.style.transform = 'translateX(calc(100% + 48px))'
             setTimeout(onClose, 350)
         } else {
             modalRef.current.style.transform = 'translateX(0)'
@@ -63,7 +63,7 @@ export function AttendanceDetailModal({
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col shadow-[-16px_0_36px_rgba(0,0,0,0.22)] dark:shadow-[-20px_0_48px_rgba(0,0,0,0.6)] will-change-transform"
+            className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col shadow-[-8px_0_24px_rgba(0,0,0,0.18)] dark:shadow-[-8px_0_24px_rgba(0,0,0,0.38)] will-change-transform"
         >
             <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                 <button
@@ -89,7 +89,7 @@ export function AttendanceDetailModal({
             </header>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
-                <div className="bg-[var(--ios-card)] rounded-[20px] p-4 flex items-center justify-between shadow-xs border border-[var(--ios-separator)]/60">
+                <div className="bg-[var(--ios-card)] rounded-[20px] p-4 flex items-center justify-between shadow-xs">
                     <div>
                         <span className="text-[11px] font-medium text-[var(--ios-secondary)] uppercase tracking-wider block">
                             {t.subjectAttendance}
@@ -115,7 +115,7 @@ export function AttendanceDetailModal({
                     </span>
 
                     {absences.length > 0 ? (
-                        <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)] border border-[var(--ios-separator)]/60">
+                        <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs divide-y divide-[var(--ios-separator)]">
                             {absences.map((item, idx) => (
                                 <article key={`${item.date}-${item.lessonNumber}-${idx}`} className="p-3.5 flex flex-col gap-1.5">
                                     <div className="flex items-center justify-between">
@@ -144,7 +144,7 @@ export function AttendanceDetailModal({
                             ))}
                         </div>
                     ) : (
-                        <div className="bg-[var(--ios-card)] rounded-[20px] p-8 text-center text-xs font-normal text-[var(--ios-secondary)] border border-[var(--ios-separator)]/60 shadow-xs">
+                        <div className="bg-[var(--ios-card)] rounded-[20px] p-8 text-center text-xs font-normal text-[var(--ios-secondary)] shadow-xs">
                             {t.noAbsencesRecorded}
                         </div>
                     )}

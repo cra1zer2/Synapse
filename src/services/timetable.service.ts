@@ -128,17 +128,31 @@ async function fetchRealizedLessonTopics(
     const topicsMap: Record<string, Record<string, string>> = {}
     const cookieHeader = extractCookieHeader(client)
 
-    const registerTopic = (dateKey: string, timeKey: string, subjectKey: string, topicText: string) => {
+    const registerTopic = (
+        dateKey: string,
+        timeKey: string,
+        subjectKey: string,
+        topicText: string,
+        lessonNr?: number
+    ) => {
         if (!topicText || topicText === '-' || topicText.trim().length <= 1) return
         const cleanTopic = topicText.trim()
         if (!topicsMap[dateKey]) {
             topicsMap[dateKey] = {}
         }
+        if (lessonNr !== undefined && !isNaN(lessonNr)) {
+            topicsMap[dateKey][`nr_${lessonNr}`] = cleanTopic
+            topicsMap[dateKey][String(lessonNr)] = cleanTopic
+        }
         if (timeKey) {
-            topicsMap[dateKey][timeKey.replace(/\s+/g, '')] = cleanTopic
+            const cleanTime = timeKey.replace(/\s+/g, '')
+            topicsMap[dateKey][`time_${cleanTime}`] = cleanTopic
+            topicsMap[dateKey][cleanTime] = cleanTopic
         }
         if (subjectKey) {
-            topicsMap[dateKey][subjectKey.toLowerCase().trim()] = cleanTopic
+            const norm = subjectKey.toLowerCase().trim()
+            topicsMap[dateKey][`sub_${norm}`] = cleanTopic
+            topicsMap[dateKey][norm] = cleanTopic
         }
     }
 
@@ -151,47 +165,94 @@ async function fetchRealizedLessonTopics(
             pageDateIso = normalizePolishDateToIso(headerDateMatch[1])
         }
 
-        const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
-        let rowMatch: RegExpExecArray | null
+        const tableRegex = /<table[^>]*>([\s\S]*?)<\/table>/gi
+        let tableMatch: RegExpExecArray | null
 
-        while ((rowMatch = rowRegex.exec(html)) !== null) {
-            const rowContent = rowMatch[1]
-            if (!rowContent.includes('<td')) continue
+        while ((tableMatch = tableRegex.exec(html)) !== null) {
+            const tableContent = tableMatch[1]
+            const rows = tableContent.split(/<\/tr>/i)
 
-            const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi
-            const cells: string[] = []
-            let tdMatch: RegExpExecArray | null
+            let colIndexNr = -1
+            let colIndexDate = -1
+            let colIndexTime = -1
+            let colIndexSubject = -1
+            let colIndexTopic = -1
 
-            while ((tdMatch = tdRegex.exec(rowContent)) !== null) {
-                const cellText = tdMatch[1].replace(/<[^>]+>/g, '').trim()
-                cells.push(cellText)
-            }
+            for (const row of rows) {
+                if (!row.includes('<td') && !row.includes('<th')) continue
 
-            if (cells.length >= 4) {
-                const hasTimeInCol0 = /\d{1,2}:\d{2}/.test(cells[0])
-                if (hasTimeInCol0) {
-                    const rawTime = cells[0]
-                    const rawSubject = cells[1]
-                    const rawTopic = cells[3]
-                    const effectiveDate = pageDateIso || ''
-                    if (effectiveDate) {
-                        registerTopic(effectiveDate, rawTime, rawSubject, rawTopic)
-                        const parts = effectiveDate.split('-')
-                        if (parts.length === 3) {
-                            registerTopic(`${parts[2]}.${parts[1]}.${parts[0]}`, rawTime, rawSubject, rawTopic)
+                if (row.includes('<th')) {
+                    const thCells = Array.from(row.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gi)).map((m) =>
+                        m[1].replace(/<[^>]+>/g, '').trim().toLowerCase()
+                    )
+                    thCells.forEach((text, idx) => {
+                        if (text.includes('nr') || text.includes('lp') || text.includes('lekcja')) colIndexNr = idx
+                        else if (text.includes('data')) colIndexDate = idx
+                        else if (text.includes('godz') || text.includes('czas')) colIndexTime = idx
+                        else if (text.includes('przedmiot')) colIndexSubject = idx
+                        else if (text.includes('temat') || text.includes('treść') || text.includes('tresc')) colIndexTopic = idx
+                    })
+                    continue
+                }
+
+                const tdCells = Array.from(row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map((m) =>
+                    m[1].replace(/<[^>]+>/g, '').trim()
+                )
+                if (tdCells.length === 0) continue
+
+                let rowDateIso = pageDateIso
+                let rowNr: number | undefined
+                let rowTime = ''
+                let rowSubject = ''
+                let rowTopic = ''
+
+                if (colIndexTopic !== -1 && tdCells[colIndexTopic]) {
+                    rowTopic = tdCells[colIndexTopic]
+                    if (colIndexNr !== -1 && tdCells[colIndexNr]) {
+                        const num = parseInt(tdCells[colIndexNr], 10)
+                        if (!isNaN(num)) rowNr = num
+                    }
+                    if (colIndexDate !== -1 && tdCells[colIndexDate]) {
+                        const parsed = normalizePolishDateToIso(tdCells[colIndexDate])
+                        if (parsed) rowDateIso = parsed
+                    }
+                    if (colIndexTime !== -1 && tdCells[colIndexTime]) {
+                        rowTime = tdCells[colIndexTime]
+                    }
+                    if (colIndexSubject !== -1 && tdCells[colIndexSubject]) {
+                        rowSubject = tdCells[colIndexSubject]
+                    }
+                } else {
+                    for (let i = 0; i < tdCells.length; i++) {
+                        const cell = tdCells[i]
+                        if (!rowDateIso) {
+                            const d = normalizePolishDateToIso(cell)
+                            if (d) {
+                                rowDateIso = d
+                                continue
+                            }
+                        }
+                        if (rowNr === undefined && /^\d+$/.test(cell) && parseInt(cell, 10) <= 20) {
+                            rowNr = parseInt(cell, 10)
+                            continue
+                        }
+                        if (!rowTime && /\d{1,2}:\d{2}/.test(cell)) {
+                            rowTime = cell
+                            continue
+                        }
+                        if (!rowSubject && cell.length > 2 && !cell.includes('-') && i < tdCells.length - 1) {
+                            rowSubject = cell
+                            continue
                         }
                     }
-                } else if (cells.length >= 5) {
-                    const parsedDate = normalizePolishDateToIso(cells[0])
-                    const rawTime = cells[1]
-                    const rawSubject = cells[2]
-                    const rawTopic = cells[4]
-                    if (parsedDate) {
-                        registerTopic(parsedDate, rawTime, rawSubject, rawTopic)
-                        const parts = parsedDate.split('-')
-                        if (parts.length === 3) {
-                            registerTopic(`${parts[2]}.${parts[1]}.${parts[0]}`, rawTime, rawSubject, rawTopic)
-                        }
+                    rowTopic = tdCells[tdCells.length - 1]
+                }
+
+                if (rowDateIso && rowTopic) {
+                    registerTopic(rowDateIso, rowTime, rowSubject, rowTopic, rowNr)
+                    const parts = rowDateIso.split('-')
+                    if (parts.length === 3) {
+                        registerTopic(`${parts[2]}.${parts[1]}.${parts[0]}`, rowTime, rowSubject, rowTopic, rowNr)
                     }
                 }
             }
@@ -202,27 +263,34 @@ async function fetchRealizedLessonTopics(
         if (!data) return
         const list = Array.isArray(data)
             ? data
-            : Array.isArray(data.entries)
-                ? data.entries
-                : Array.isArray(data.data)
-                    ? data.data
-                    : Array.isArray(data.lessons)
-                        ? data.lessons
-                        : []
+            : Array.isArray(data.Realizations)
+                ? data.Realizations
+                : Array.isArray(data.entries)
+                    ? data.entries
+                    : Array.isArray(data.data)
+                        ? data.data
+                        : Array.isArray(data.lessons)
+                            ? data.lessons
+                            : Array.isArray(data.realizedLessons)
+                                ? data.realizedLessons
+                                : []
 
         for (const item of list) {
             if (!item || typeof item !== 'object') continue
-            const dateStr = item.date || item.lessonDate || item.day || ''
-            const parsedDate = normalizePolishDateToIso(dateStr)
-            const timeStr = item.time || item.lessonTime || item.hour || ''
-            const subjectStr = item.subject || item.subjectName || (item.subject && item.subject.name) || ''
-            const topicStr = item.topic || item.theme || item.subjectTopic || item.title || ''
+            const rawDate = item.LessonDate || item.lessonDate || item.date || item.day || ''
+            const parsedDate = normalizePolishDateToIso(String(rawDate))
+            const rawTime = item.Time || item.lessonTime || item.hour || item.time || ''
+            const rawSubject = typeof item.Subject === 'string'
+                ? item.Subject
+                : item.Subject?.Name || item.subjectName || item.subject || ''
+            const rawTopic = item.Topic || item.topic || item.Theme || item.theme || item.Note || item.title || ''
+            const rawNr = item.LessonNumber || item.LessonNo || item.lessonNumber || item.nr || item.lessonNo
 
-            if (parsedDate && topicStr) {
-                registerTopic(parsedDate, timeStr, subjectStr, topicStr)
+            if (parsedDate && rawTopic) {
+                registerTopic(parsedDate, String(rawTime), String(rawSubject), String(rawTopic), rawNr ? Number(rawNr) : undefined)
                 const parts = parsedDate.split('-')
                 if (parts.length === 3) {
-                    registerTopic(`${parts[2]}.${parts[1]}.${parts[0]}`, timeStr, subjectStr, topicStr)
+                    registerTopic(`${parts[2]}.${parts[1]}.${parts[0]}`, String(rawTime), String(rawSubject), String(rawTopic), rawNr ? Number(rawNr) : undefined)
                 }
             }
         }
@@ -263,6 +331,36 @@ async function fetchRealizedLessonTopics(
         }
 
         try {
+            const gwRealizationsUrl = `https://synergia.librus.pl/gateway/api/2.0/Realizations?dateFrom=${mondayIso}&dateTo=${fridayIso}`
+            const gwRealizationsRes = await fetch(gwRealizationsUrl, {
+                headers: {
+                    'Cookie': cookieHeader,
+                    'Accept': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+                }
+            })
+            if (gwRealizationsRes.ok) {
+                const json = await gwRealizationsRes.json()
+                parseRealizedJson(json)
+            }
+        } catch { }
+
+        try {
+            const gwLessonsUrl = `https://synergia.librus.pl/gateway/api/2.0/RealizedLessons?dateFrom=${mondayIso}&dateTo=${fridayIso}`
+            const gwLessonsRes = await fetch(gwLessonsUrl, {
+                headers: {
+                    'Cookie': cookieHeader,
+                    'Accept': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+                }
+            })
+            if (gwLessonsRes.ok) {
+                const json = await gwLessonsRes.json()
+                parseRealizedJson(json)
+            }
+        } catch { }
+
+        try {
             const classicRes = await fetch('https://synergia.librus.pl/zrealizowane_lekcje', {
                 headers: {
                     'Cookie': cookieHeader,
@@ -272,21 +370,6 @@ async function fetchRealizedLessonTopics(
             if (classicRes.ok) {
                 const text = await classicRes.text()
                 parseRealizedHtml(text)
-            }
-        } catch { }
-
-        try {
-            const gwUrl = `https://synergia.librus.pl/gateway/api/2.0/RealizedLessons?dateFrom=${mondayIso}&dateTo=${fridayIso}`
-            const gwRes = await fetch(gwUrl, {
-                headers: {
-                    'Cookie': cookieHeader,
-                    'Accept': 'application/json',
-                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
-                }
-            })
-            if (gwRes.ok) {
-                const json = await gwRes.json()
-                parseRealizedJson(json)
             }
         } catch { }
     }
@@ -462,12 +545,18 @@ export async function fetchSmartTimetable(
                     const rawSubject = (slot.subject || '').trim()
                     const normalizedTime = (slot.time || '').replace(/\s+/g, '')
                     const slotTopic = (slot.topic || slot.theme || slot.subjectTopic || slot.description || '').trim()
+                    const lessonNum = index + 1
+                    const normSubject = rawSubject.toLowerCase().trim()
 
                     const realizedTopic =
+                        dayRealized[`nr_${lessonNum}`] ||
+                        dayRealized[`nr_${index}`] ||
+                        dayRealized[`time_${normalizedTime}`] ||
                         dayRealized[normalizedTime] ||
-                        dayRealized[slot.time] ||
+                        dayRealized[`sub_${normSubject}`] ||
+                        dayRealized[normSubject] ||
                         dayRealized[rawSubject.toLowerCase()] ||
-                        dayRealized[String(index + 1)] ||
+                        dayRealized[String(lessonNum)] ||
                         dayRealized[String(index)] ||
                         ''
 

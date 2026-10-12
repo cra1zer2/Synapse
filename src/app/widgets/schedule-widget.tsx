@@ -18,9 +18,9 @@ interface ScheduleWidgetProps {
     onSelectLesson: (lesson: LessonItem) => void
     currentWeekPivot: string
     onShiftWeek: (deltaDays: number) => void
-    onSelectDate: (dateIso: string) => void
-    onManualRefresh: () => void
-    onOpenTerminarz: () => void
+    onSelectDate?: (dateIso: string) => void
+    onManualRefresh?: () => void
+    onOpenTerminarz?: () => void
     isLoadingWeek: boolean
     textClamp?: TextClampOption
     lang?: AppLanguage
@@ -83,11 +83,7 @@ export function ScheduleWidget({
     selectedDay,
     onSelectDay,
     onSelectLesson,
-    currentWeekPivot,
     onShiftWeek,
-    onSelectDate,
-    onManualRefresh,
-    onOpenTerminarz,
     isLoadingWeek,
     textClamp = 'full',
     lang = 'pl',
@@ -167,68 +163,29 @@ export function ScheduleWidget({
     const titleClampClass = textClamp === '1' ? 'line-clamp-1' : textClamp === '2' ? 'line-clamp-2' : ''
 
     return (
-        <section className="w-full flex flex-col gap-3 min-h-[500px]">
-            <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs border border-[var(--ios-separator)]/60">
-                <div className="px-3.5 py-2 flex items-center justify-between border-b border-[var(--ios-separator)]">
+        <section className="w-full flex flex-col gap-3">
+            <div className="bg-[var(--ios-card)] rounded-[20px] overflow-hidden shadow-xs">
+                <div className="px-3.5 py-2.5 flex items-center justify-between border-b border-[var(--ios-separator)]">
                     <button
                         onClick={() => onShiftWeek(-7)}
-                        className="w-7 h-7 rounded-full bg-[var(--ios-element)]/70 text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-all"
+                        className="w-8 h-8 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-transform"
                         aria-label="Previous week"
                     >
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="15 18 9 12 15 6" />
                         </svg>
                     </button>
 
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-[var(--ios-label)] tracking-tight">
-                            {formatWeekRange(timetableData.weekStart, timetableData.weekEnd)}
-                        </span>
-
-                        <div className="relative flex items-center justify-center p-1 text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] transition-colors cursor-pointer">
-                            <svg className="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                                <line x1="16" y1="2" x2="16" y2="6" />
-                                <line x1="8" y1="2" x2="8" y2="6" />
-                                <line x1="3" y1="10" x2="21" y2="10" />
-                            </svg>
-                            <input
-                                type="date"
-                                value={currentWeekPivot}
-                                onChange={(e) => {
-                                    if (e.target.value) {
-                                        onSelectDate(e.target.value)
-                                    }
-                                }}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                aria-label="Select date"
-                            />
-                        </div>
-
-                        <button
-                            onClick={onManualRefresh}
-                            disabled={isLoadingWeek}
-                            className="p-1 text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] transition-colors disabled:opacity-30"
-                        >
-                            <svg className={`w-3.5 h-3.5 ${isLoadingWeek ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-                            </svg>
-                        </button>
-
-                        <button
-                            onClick={onOpenTerminarz}
-                            className="text-[10px] font-semibold text-[var(--ios-blue)] bg-[var(--ios-room-bg)] px-2 py-0.5 rounded-[6px] ml-0.5 active:scale-95 transition-transform"
-                        >
-                            {t.terminarzButton}
-                        </button>
-                    </div>
+                    <span className="text-xs font-semibold text-[var(--ios-label)] tracking-tight">
+                        {formatWeekRange(timetableData.weekStart, timetableData.weekEnd)}
+                    </span>
 
                     <button
                         onClick={() => onShiftWeek(7)}
-                        className="w-7 h-7 rounded-full bg-[var(--ios-element)]/70 text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-all"
+                        className="w-8 h-8 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-transform"
                         aria-label="Next week"
                     >
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="9 18 15 12 9 6" />
                         </svg>
                     </button>
@@ -243,9 +200,9 @@ export function ScheduleWidget({
                             <button
                                 key={day.dayName}
                                 onClick={() => onSelectDay(day.dayName)}
-                                className={`py-1.5 rounded-[12px] text-xs font-normal flex flex-col items-center justify-center transition-all ${isSelected
+                                className={`py-1.5 rounded-[12px] text-xs flex flex-col items-center justify-center transition-all ${isSelected
                                     ? 'bg-[var(--ios-blue)] text-white shadow-xs font-semibold'
-                                    : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]/60'
+                                    : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]/60 font-normal'
                                     }`}
                             >
                                 <span className="text-[10px] uppercase font-medium opacity-85">{getDayAbbr(day.dayName, lang)}</span>
@@ -262,7 +219,7 @@ export function ScheduleWidget({
             </div>
 
             {isLoadingWeek ? (
-                <div className="bg-[var(--ios-card)] rounded-[20px] p-10 flex flex-col items-center justify-center gap-3 border border-[var(--ios-separator)]/60 shadow-xs">
+                <div className="bg-[var(--ios-card)] rounded-[20px] p-10 flex flex-col items-center justify-center gap-3 shadow-xs">
                     <IosSpinner className="w-6 h-6 text-[var(--ios-blue)]" />
                     <p className="text-xs font-normal text-[var(--ios-secondary)]">{t.loadingTimetable}</p>
                 </div>
@@ -306,7 +263,7 @@ export function ScheduleWidget({
                                         <div ref={liveState === 'active' ? activeLessonRef : null} className="w-full">
                                             <article
                                                 onClick={() => onSelectLesson(lesson)}
-                                                className={`w-full bg-[var(--ios-card)] rounded-[16px] px-4 py-2.5 flex items-start justify-between gap-2.5 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/30 border border-[var(--ios-separator)]/50 shadow-xs transition-all ${liveState === 'passed' ? 'opacity-45' : 'opacity-100'
+                                                className={`w-full bg-[var(--ios-card)] rounded-[16px] px-4 py-2.5 flex items-start justify-between gap-2.5 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/30 shadow-xs transition-all ${liveState === 'passed' ? 'opacity-45' : 'opacity-100'
                                                     }`}
                                             >
                                                 <div className="flex-1 min-w-0 flex flex-col gap-0.5">
@@ -379,7 +336,7 @@ export function ScheduleWidget({
                                 )
                             })
                         ) : (
-                            <div className="bg-[var(--ios-card)] rounded-[20px] p-8 text-center text-xs font-normal text-[var(--ios-secondary)] border border-[var(--ios-separator)]/60 shadow-xs">
+                            <div className="bg-[var(--ios-card)] rounded-[20px] p-8 text-center text-xs font-normal text-[var(--ios-secondary)] shadow-xs">
                                 {t.noLessonsDay}
                             </div>
                         )}

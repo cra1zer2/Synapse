@@ -9,12 +9,11 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
         const [rawInbox, rawAnnouncements, rawReceivers] = await Promise.all([
             client.inbox.listInbox(5).catch(() => []),
             client.inbox.listAnnouncements().catch(() => []),
-            client.inbox.listReceivers().catch(() => [])
+            client.inbox.listReceivers().catch(() => ({}))
         ])
 
         const inboxList = Array.isArray(rawInbox) ? rawInbox : []
         const announcementsList = Array.isArray(rawAnnouncements) ? rawAnnouncements : []
-        const receiversList = Array.isArray(rawReceivers) ? rawReceivers : []
 
         const messages: MessageItem[] = inboxList.map((item: any, idx: number) => ({
             id: item.id || idx,
@@ -33,11 +32,35 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
             content: item.content || ''
         }))
 
-        const receivers: ReceiverItem[] = receiversList.map((item: any) => ({
-            id: item.id,
-            name: item.name || item.user || 'Pracownik',
-            group: item.group || 'Nauczyciele'
-        }))
+        const receivers: ReceiverItem[] = []
+
+        if (Array.isArray(rawReceivers)) {
+            rawReceivers.forEach((item: any) => {
+                if (item && item.id && item.name) {
+                    receivers.push({
+                        id: item.id,
+                        name: item.name || item.user || 'Pracownik',
+                        group: item.group || 'Nauczyciele'
+                    })
+                }
+            })
+        } else if (rawReceivers && typeof rawReceivers === 'object') {
+            for (const [groupName, users] of Object.entries(rawReceivers)) {
+                if (Array.isArray(users)) {
+                    users.forEach((u: any) => {
+                        if (u && (u.id || u.userId) && (u.name || u.user)) {
+                            receivers.push({
+                                id: u.id || u.userId,
+                                name: u.name || u.user,
+                                group: u.group || groupName || 'Nauczyciele'
+                            })
+                        }
+                    })
+                }
+            }
+        }
+
+        receivers.sort((a, b) => a.name.localeCompare(b.name, 'pl'))
 
         return {
             success: true,

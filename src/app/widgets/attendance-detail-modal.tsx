@@ -68,7 +68,7 @@ export function AttendanceDetailModal({
             <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                 <button
                     onClick={onClose}
-                    className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-normal active:opacity-70 -ml-1 py-1 pr-2"
+                    className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-normal active:opacity-70 -ml-1 py-1 pr-2 w-24"
                 >
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="15 18 9 12 15 6" />
@@ -76,25 +76,20 @@ export function AttendanceDetailModal({
                     <span>{t.attendance}</span>
                 </button>
 
-                <h2 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight max-w-[200px] truncate text-center">
+                <h2 className="text-sm font-medium text-[var(--ios-label)] tracking-tight truncate text-center flex-1">
                     {subjectDetail.subject}
                 </h2>
 
-                <button
-                    onClick={onClose}
-                    className="text-xs font-semibold text-[var(--ios-blue)] active:opacity-70 py-1 pl-2"
-                >
-                    {t.done}
-                </button>
+                <div className="w-24" />
             </header>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
                 <div className="bg-[var(--ios-card)] rounded-[20px] p-4 flex items-center justify-between shadow-xs">
                     <div>
-                        <span className="text-[11px] font-medium text-[var(--ios-secondary)] uppercase tracking-wider block">
+                        <span className="text-[11px] font-normal text-[var(--ios-secondary)] uppercase tracking-wider block">
                             {t.subjectAttendance}
                         </span>
-                        <h3 className="text-2xl font-semibold tracking-tight text-[var(--ios-label)] mt-0.5">
+                        <h3 className="text-3xl font-semibold tracking-tight text-[var(--ios-label)] mt-0.5">
                             {subjectDetail.percentage}%
                         </h3>
                     </div>
@@ -103,14 +98,14 @@ export function AttendanceDetailModal({
                         <span className="text-xs font-normal text-[var(--ios-secondary)] block">
                             {t.missedLessonsCount(subjectDetail.absentLessons)}
                         </span>
-                        <span className="text-[11px] font-normal text-[var(--ios-secondary)]/80 mt-0.5 block">
+                        <span className="text-[11px] font-normal text-[var(--ios-secondary)] mt-0.5 block">
                             {t.ofScheduled(subjectDetail.totalLessons)}
                         </span>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] font-medium text-[var(--ios-secondary)] uppercase tracking-wider px-1">
+                    <span className="text-[11px] font-normal text-[var(--ios-secondary)] uppercase tracking-wider px-1">
                         {t.recordedAbsencesTitle}
                     </span>
 
@@ -120,7 +115,7 @@ export function AttendanceDetailModal({
                                 <article key={`${item.date}-${item.lessonNumber}-${idx}`} className="p-3.5 flex flex-col gap-1.5">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs font-semibold text-[var(--ios-label)]">{item.date}</span>
+                                            <span className="text-xs font-medium text-[var(--ios-label)]">{item.date}</span>
                                             <span className="text-[11px] font-normal text-[var(--ios-secondary)]">
                                                 {t.lessonNumberLabel(item.lessonNumber)} {item.time ? `(${item.time})` : ''}
                                             </span>

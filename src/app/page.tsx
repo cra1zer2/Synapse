@@ -25,6 +25,7 @@ import { LessonDetailModal } from './widgets/lesson-detail-modal'
 import { SettingsSheet } from './widgets/settings-sheet'
 import { TerminarzModal } from './widgets/terminarz-modal'
 import { WhatsNewModal } from '@/app/widgets/whats-new-modal'
+import { HomeDashboard } from '@/components/dashboard/home-dashboard'
 
 export type TextClampOption = 'full' | '1' | '2'
 
@@ -43,42 +44,6 @@ function IosSpinner({ className = 'w-3.5 h-3.5 text-[var(--ios-blue)]' }: { clas
   )
 }
 
-function getDayIndicatorColor(day: DaySchedule): string | null {
-  const hasCancelled = day.lessons.some((l) => l.isCancelled)
-  const hasHoliday = day.events && day.events.some((e) => e.category === 'holiday')
-  if (hasCancelled || hasHoliday) return 'bg-[var(--ios-red)]'
-
-  const hasSubstitution = day.lessons.some((l) => l.isSubstitution)
-  if (hasSubstitution) return 'bg-[var(--ios-purple)]'
-
-  const hasShortened = day.lessons.some((l) => l.isShortened)
-  if (hasShortened) return 'bg-[var(--ios-orange)]'
-
-  return null
-}
-
-function getDayAbbr(dayName: string, lang: AppLanguage): string {
-  const mapPl: Record<string, string> = {
-    Monday: 'Pn',
-    Tuesday: 'Wt',
-    Wednesday: 'Śr',
-    Thursday: 'Cz',
-    Friday: 'Pt',
-    Saturday: 'So',
-    Sunday: 'Nd'
-  }
-  const mapEn: Record<string, string> = {
-    Monday: 'Mo',
-    Tuesday: 'Tu',
-    Wednesday: 'We',
-    Thursday: 'Th',
-    Friday: 'Fr',
-    Saturday: 'Sa',
-    Sunday: 'Su'
-  }
-  return (lang === 'en' ? mapEn[dayName] : mapPl[dayName]) || dayName.slice(0, 2)
-}
-
 export default function Home() {
   const [mounted, setMounted] = useState(false)
   const [lang, setLang] = useState<AppLanguage>('pl')
@@ -86,7 +51,6 @@ export default function Home() {
   const [textClamp, setTextClamp] = useState<TextClampOption>('full')
   const [ignoreGradeModifiers, setIgnoreGradeModifiers] = useState<boolean>(false)
   const [activeSection, setActiveSection] = useState<MainSection>('schedule')
-  const [isCalendarPinned, setIsCalendarPinned] = useState(false)
   const [showWhatsNew, setShowWhatsNew] = useState(false)
 
   const [selectedLesson, setSelectedLesson] = useState<LessonItem | null>(null)
@@ -172,23 +136,6 @@ export default function Home() {
     return () => mediaQuery.removeEventListener('change', handler)
   }, [theme])
 
-  useEffect(() => {
-    let isPinned = isCalendarPinned
-    const handleScroll = () => {
-      if (isAnyOverlayActive) return
-      const y = window.scrollY
-      if (!isPinned && y > 105) {
-        isPinned = true
-        setIsCalendarPinned(true)
-      } else if (isPinned && y <= 90) {
-        isPinned = false
-        setIsCalendarPinned(false)
-      }
-    }
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [isAnyOverlayActive, isCalendarPinned])
-
   const handleSelectLanguage = (newLang: AppLanguage) => {
     setLang(newLang)
     localStorage.setItem('synapse_lang', newLang)
@@ -220,12 +167,13 @@ export default function Home() {
 
   const handleSelectDay = (dayName: string) => {
     timetable.setSelectedDay(dayName)
-    setIsCalendarPinned(false)
   }
 
   const handleTabChange = (targetTab: MainSection) => {
     setActiveSection(targetTab)
-    setIsCalendarPinned(false)
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
   }
 
   const canSubmitExcuse = Boolean(
@@ -283,94 +231,33 @@ export default function Home() {
     )
   }
 
-  const shouldShowPinnedBar = false
   const currentDaySchedule = timetable.timetableData?.schedule.find((d) => d.dayName === timetable.selectedDay)
+  const unreadMessagesCount = messagesInbox.messages.filter((m) => !m.isRead).length
 
   return (
     <div className="w-full min-h-screen bg-[var(--ios-bg)] flex flex-col">
-      <header className="sticky top-0 z-30 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] px-4 bg-[var(--ios-bg)]/90 backdrop-blur-xl border-b border-[var(--ios-separator)] transition-all duration-300 ease-[var(--ease-out-cubic)]">
-        <div className="max-w-md mx-auto flex flex-col pb-2">
-          <div className="flex items-center justify-between pb-1">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight text-[var(--ios-label)]">Synapse</h1>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                {timetable.isUpdating && <IosSpinner className="w-3 h-3 text-[var(--ios-blue)]" />}
-                <p className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight">
-                  {timetable.isUpdating ? t.updatingStatus : t.syncedStatus}
-                </p>
-              </div>
+      <header className="sticky top-0 z-30 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] px-4 bg-[var(--ios-bg)]/90 backdrop-blur-xl border-b border-[var(--ios-separator)] transition-all">
+        <div className="max-w-md mx-auto flex items-center justify-between pb-2.5">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--ios-label)]">Synapse</h1>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {timetable.isUpdating && <IosSpinner className="w-3 h-3 text-[var(--ios-blue)]" />}
+              <p className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight">
+                {timetable.isUpdating ? t.updatingStatus : t.syncedStatus}
+              </p>
             </div>
-
-            <button
-              onClick={() => setShowSettings(true)}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-all"
-              aria-label="Settings"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </button>
           </div>
 
-          <div
-            className={`grid transition-all duration-300 ease-[var(--ease-out-cubic)] ${shouldShowPinnedBar
-              ? 'grid-rows-[1fr] opacity-100 pt-1.5'
-              : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-              }`}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-transform"
+            aria-label="Settings"
           >
-            <div className="overflow-hidden">
-              <div className="flex items-center justify-between gap-1 border-t border-[var(--ios-separator)]/60 pt-1.5">
-                <button
-                  onClick={() => timetable.shiftWeek(-7)}
-                  className="w-7 h-7 flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-all shrink-0"
-                  aria-label="Previous week"
-                >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
-                </button>
-
-                <div className="flex items-center justify-between flex-1 px-1">
-                  {timetable.timetableData?.schedule.map((day) => {
-                    const dotColor = getDayIndicatorColor(day)
-                    const isSelected = timetable.selectedDay === day.dayName
-
-                    return (
-                      <button
-                        key={day.dayName}
-                        onClick={() => handleSelectDay(day.dayName)}
-                        className={`py-1 flex-1 flex flex-col items-center justify-center transition-colors ${isSelected
-                          ? 'text-[var(--ios-blue)]'
-                          : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
-                          }`}
-                      >
-                        <span className={`text-[10px] uppercase tracking-tight ${isSelected ? 'font-medium' : 'font-normal opacity-70'}`}>
-                          {getDayAbbr(day.dayName, lang)}
-                        </span>
-                        <span className={`relative text-[13px] tracking-tight mt-0.5 ${isSelected ? 'font-medium' : 'font-normal opacity-80'}`}>
-                          {day.date ? day.date.split('.')[0] : ''}
-                          {dotColor && (
-                            <span className={`absolute -top-0.5 -right-1.5 w-1.5 h-1.5 rounded-full ${dotColor}`} />
-                          )}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <button
-                  onClick={() => timetable.shiftWeek(7)}
-                  className="w-7 h-7 flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-all shrink-0"
-                  aria-label="Next week"
-                >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -390,6 +277,15 @@ export default function Home() {
           </div>
         )}
 
+        <HomeDashboard
+          profile={account.profile}
+          timetableData={timetable.timetableData}
+          gradesData={timetable.gradesData}
+          attendanceData={timetable.attendanceData}
+          unreadMessagesCount={unreadMessagesCount}
+          onNavigateTab={handleTabChange}
+        />
+
         <div className="w-full flex-1 flex flex-col gap-3">
           <div className={activeSection === 'schedule' ? 'w-full flex flex-col gap-3' : 'hidden'}>
             {timetable.timetableData && (
@@ -400,9 +296,6 @@ export default function Home() {
                 onSelectLesson={setSelectedLesson}
                 currentWeekPivot={timetable.currentWeekPivot}
                 onShiftWeek={timetable.shiftWeek}
-                onSelectDate={timetable.queueWeekChange}
-                onManualRefresh={timetable.handleManualRefresh}
-                onOpenTerminarz={() => setShowTerminarz(true)}
                 isLoadingWeek={timetable.isLoadingWeek}
                 textClamp={textClamp}
                 lang={lang}

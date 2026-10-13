@@ -72,10 +72,12 @@ export default function Home() {
     }
     return {
       mini_schedule: true,
+      next_lesson: true,
       attendance: true,
       gpa: true,
       messages: true,
-      lucky_number: true
+      lucky_number: true,
+      changes: true
     }
   })
 
@@ -351,6 +353,7 @@ export default function Home() {
               onSelectLesson={setSelectedLesson}
               currentWeekPivot={timetable.currentWeekPivot}
               onShiftWeek={timetable.shiftWeek}
+              onSelectDate={timetable.queueWeekChange}
               isLoadingWeek={timetable.isLoadingWeek}
               textClamp={textClamp}
               lang={lang}

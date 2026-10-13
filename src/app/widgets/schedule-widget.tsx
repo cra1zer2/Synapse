@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect, Fragment } from 'react'
+import { useRef, useState, useEffect, useMemo, Fragment } from 'react'
 import { SmartTimetableResult, DaySchedule, LessonItem } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { TextClampOption } from '@/app/page'
@@ -19,8 +19,6 @@ interface ScheduleWidgetProps {
     currentWeekPivot: string
     onShiftWeek: (deltaDays: number) => void
     onSelectDate?: (dateIso: string) => void
-    onManualRefresh?: () => void
-    onOpenTerminarz?: () => void
     isLoadingWeek: boolean
     textClamp?: TextClampOption
     lang?: AppLanguage
@@ -42,7 +40,8 @@ function IosSpinner({ className = 'w-5 h-5 text-[var(--ios-secondary)]' }: { cla
     )
 }
 
-function getDayIndicatorColor(day: DaySchedule): string | null {
+function getDayIndicatorColor(day?: DaySchedule): string | null {
+    if (!day) return null
     const hasCancelled = day.lessons.some((l) => l.isCancelled)
     const hasHoliday = day.events && day.events.some((e) => e.category === 'holiday')
     if (hasCancelled || hasHoliday) return 'bg-[var(--ios-red)]'
@@ -78,12 +77,53 @@ function getDayAbbr(dayName: string, lang: AppLanguage = 'pl'): string {
     return (lang === 'en' ? mapEn[dayName] : mapPl[dayName]) || dayName.slice(0, 2)
 }
 
+function computeLiveWeekDays(pivotIso: string) {
+    const parts = pivotIso.split('-').map(Number)
+    const d = new Date(parts[0], parts[1] - 1, parts[2])
+    const day = d.getDay()
+    const diff = day === 0 ? -6 : 1 - day
+    const monday = new Date(d)
+    monday.setDate(d.getDate() + diff)
+
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    const days: Array<{ dayName: string; dateNum: string; isoDate: string; dateDot: string }> = []
+
+    for (let i = 0; i < 5; i++) {
+        const cur = new Date(monday)
+        cur.setDate(monday.getDate() + i)
+        const y = cur.getFullYear()
+        const m = String(cur.getMonth() + 1).padStart(2, '0')
+        const dn = String(cur.getDate()).padStart(2, '0')
+        days.push({
+            dayName: dayNames[i],
+            dateNum: dn,
+            isoDate: `${y}-${m}-${dn}`,
+            dateDot: `${dn}.${m}.${y}`
+        })
+    }
+
+    const friday = new Date(monday)
+    friday.setDate(monday.getDate() + 4)
+
+    const mD = String(monday.getDate()).padStart(2, '0')
+    const mM = String(monday.getMonth() + 1).padStart(2, '0')
+    const fD = String(friday.getDate()).padStart(2, '0')
+    const fM = String(friday.getMonth() + 1).padStart(2, '0')
+
+    return {
+        days,
+        rangeLabel: `${mD}.${mM} — ${fD}.${fM}`
+    }
+}
+
 export function ScheduleWidget({
     timetableData,
     selectedDay,
     onSelectDay,
     onSelectLesson,
+    currentWeekPivot,
     onShiftWeek,
+    onSelectDate,
     isLoadingWeek,
     textClamp = 'full',
     lang = 'pl',
@@ -91,6 +131,7 @@ export function ScheduleWidget({
 }: ScheduleWidgetProps) {
     const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
     const activeLessonRef = useRef<HTMLDivElement>(null)
+    const dateInputRef = useRef<HTMLInputElement>(null)
     const hasInitialAutoScrolledRef = useRef(false)
 
     useEffect(() => {
@@ -112,18 +153,13 @@ export function ScheduleWidget({
         }
     }, [selectedDay])
 
+    const liveWeek = useMemo(() => {
+        return computeLiveWeekDays(currentWeekPivot)
+    }, [currentWeekPivot])
+
     const currentDaySchedule: DaySchedule | undefined = timetableData.schedule.find(
         (d) => d.dayName === selectedDay
     )
-
-    const formatWeekRange = (startIso: string, endIso: string) => {
-        const sParts = (startIso || '').split('-')
-        const eParts = (endIso || '').split('-')
-        if (sParts.length === 3 && eParts.length === 3) {
-            return `${sParts[2]}.${sParts[1]} — ${eParts[2]}.${eParts[1]}`
-        }
-        return `${startIso} — ${endIso}`
-    }
 
     const todayIsoString = () => {
         const now = new Date()
@@ -160,6 +196,20 @@ export function ScheduleWidget({
         return currentMinutes > r1.endMinutes && currentMinutes < r2.startMinutes
     }
 
+    const handleCalendarIconClick = () => {
+        if (dateInputRef.current) {
+            if ('showPicker' in HTMLInputElement.prototype) {
+                try {
+                    dateInputRef.current.showPicker()
+                } catch {
+                    dateInputRef.current.click()
+                }
+            } else {
+                dateInputRef.current.click()
+            }
+        }
+    }
+
     const titleClampClass = textClamp === '1' ? 'line-clamp-1' : textClamp === '2' ? 'line-clamp-2' : ''
 
     return (
@@ -176,9 +226,38 @@ export function ScheduleWidget({
                         </svg>
                     </button>
 
-                    <span className="text-xs font-semibold text-[var(--ios-label)] tracking-tight">
-                        {formatWeekRange(timetableData.weekStart, timetableData.weekEnd)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-[var(--ios-label)] tracking-tight">
+                            {liveWeek.rangeLabel}
+                        </span>
+
+                        <button
+                            type="button"
+                            onClick={handleCalendarIconClick}
+                            className="p-1 rounded-[8px] text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] active:scale-95 transition-all"
+                            aria-label="Select date"
+                        >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                        </button>
+
+                        <input
+                            ref={dateInputRef}
+                            type="date"
+                            value={currentWeekPivot}
+                            onChange={(e) => {
+                                if (e.target.value && onSelectDate) {
+                                    onSelectDate(e.target.value)
+                                }
+                            }}
+                            className="sr-only"
+                            aria-label="Date picker hidden"
+                        />
+                    </div>
 
                     <button
                         onClick={() => onShiftWeek(7)}
@@ -192,22 +271,25 @@ export function ScheduleWidget({
                 </div>
 
                 <div className="p-1.5 grid grid-cols-5 gap-1">
-                    {timetableData.schedule.map((day) => {
-                        const dotColor = getDayIndicatorColor(day)
-                        const isSelected = selectedDay === day.dayName
+                    {liveWeek.days.map((daySlot) => {
+                        const dayData = timetableData.schedule.find((d) => d.dayName === daySlot.dayName)
+                        const dotColor = getDayIndicatorColor(dayData)
+                        const isSelected = selectedDay === daySlot.dayName
 
                         return (
                             <button
-                                key={day.dayName}
-                                onClick={() => onSelectDay(day.dayName)}
+                                key={daySlot.dayName}
+                                onClick={() => onSelectDay(daySlot.dayName)}
                                 className={`py-1.5 rounded-[12px] text-xs flex flex-col items-center justify-center transition-all ${isSelected
                                     ? 'bg-[var(--ios-blue)] text-white shadow-xs font-semibold'
                                     : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]/60 font-normal'
                                     }`}
                             >
-                                <span className="text-[10px] uppercase font-medium opacity-85">{getDayAbbr(day.dayName, lang)}</span>
+                                <span className="text-[10px] uppercase font-medium opacity-85">
+                                    {getDayAbbr(daySlot.dayName, lang)}
+                                </span>
                                 <span className="relative text-[13px] font-semibold mt-0.5">
-                                    {day.date ? day.date.split('.')[0] : ''}
+                                    {daySlot.dateNum}
                                     {dotColor && (
                                         <span className={`absolute -top-0.5 -right-1.5 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : dotColor}`} />
                                     )}
@@ -271,7 +353,7 @@ export function ScheduleWidget({
                                                         {liveState === 'active' && (
                                                             <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
                                                         )}
-                                                        <span className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight">
+                                                        <span className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight tabular-nums">
                                                             {lesson.time}
                                                         </span>
                                                     </div>
@@ -323,7 +405,7 @@ export function ScheduleWidget({
                                                         <circle cx="12" cy="12" r="10" />
                                                         <polyline points="12 6 12 12 16 14" />
                                                     </svg>
-                                                    <span>
+                                                    <span className="tabular-nums">
                                                         {shouldShowCountdown
                                                             ? t.breakCountdownLabel(breakRemaining)
                                                             : `${breakMinutes} min`}

@@ -74,7 +74,7 @@ function BreakIndicator({ minutes }: { minutes: number }) {
     return (
         <div className="w-full flex items-center gap-3 px-2 py-0.5">
             <div className="h-[1px] flex-1 bg-[var(--ios-separator)]/40" />
-            <div className="flex items-center gap-1 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full text-[var(--ios-secondary)] bg-[var(--ios-element)]/60">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full text-[var(--ios-secondary)] bg-[var(--ios-element)]/60">
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
@@ -108,14 +108,13 @@ export function MiniScheduleWidget({
         return todaySchedule?.lessons || []
     }, [todaySchedule])
 
-    const { pastLesson, currentLesson, nextLesson, break1Minutes, break2Minutes } = useMemo(() => {
+    const { pastLesson, currentLesson, nextLesson, breakMinutes } = useMemo(() => {
         if (lessons.length === 0) {
             return {
                 pastLesson: null,
                 currentLesson: null,
                 nextLesson: null,
-                break1Minutes: 0,
-                break2Minutes: 0
+                breakMinutes: 0
             }
         }
 
@@ -142,15 +141,13 @@ export function MiniScheduleWidget({
         const past = focusIdx > 0 ? lessons[focusIdx - 1] : null
         const next = focusIdx < lessons.length - 1 ? lessons[focusIdx + 1] : null
 
-        const b1 = past && curr ? calculateBreakDuration(past.time, curr.time) : 0
-        const b2 = curr && next ? calculateBreakDuration(curr.time, next.time) : 0
+        const b = curr && next ? calculateBreakDuration(curr.time, next.time) : 0
 
         return {
             pastLesson: past,
             currentLesson: curr,
             nextLesson: next,
-            break1Minutes: b1,
-            break2Minutes: b2
+            breakMinutes: b
         }
     }, [lessons])
 
@@ -161,7 +158,7 @@ export function MiniScheduleWidget({
         >
             <div className="flex items-center justify-between px-1 pb-1 border-b border-[var(--ios-separator)]/50">
                 <span className="text-[11px] font-medium uppercase text-[var(--ios-secondary)] tracking-wider">
-                    Plan lekcji • {todaySchedule?.date || 'Dzisiaj'}
+                    Plan lekcji
                 </span>
 
                 <svg className="w-4 h-4 text-[var(--ios-tertiary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -179,13 +176,11 @@ export function MiniScheduleWidget({
                         <LessonRowCard lesson={pastLesson} isPast={true} />
                     )}
 
-                    {break1Minutes > 0 && <BreakIndicator minutes={break1Minutes} />}
-
                     {currentLesson && (
                         <LessonRowCard lesson={currentLesson} isActive={true} />
                     )}
 
-                    {break2Minutes > 0 && <BreakIndicator minutes={break2Minutes} />}
+                    {breakMinutes > 0 && <BreakIndicator minutes={breakMinutes} />}
 
                     {nextLesson && (
                         <LessonRowCard lesson={nextLesson} />

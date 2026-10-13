@@ -7,6 +7,7 @@ import { TextClampOption } from '@/app/page'
 
 interface MiniScheduleWidgetProps {
     timetableData: SmartTimetableResult | null
+    isLoading?: boolean
     textClamp?: TextClampOption
     onOpenFullSchedule: () => void
 }
@@ -14,10 +15,12 @@ interface MiniScheduleWidgetProps {
 function LessonRowCard({
     lesson,
     isActive = false,
+    labelBadge,
     textClamp = 'full'
 }: {
     lesson: LessonItem
     isActive?: boolean
+    labelBadge?: string
     textClamp?: TextClampOption
 }) {
     const titleClampClass = textClamp === '1' ? 'line-clamp-1' : textClamp === '2' ? 'line-clamp-2' : ''
@@ -26,9 +29,14 @@ function LessonRowCard({
         <div className="w-full bg-[var(--ios-element)]/35 rounded-[16px] px-4 py-2.5 flex items-start justify-between gap-2.5 transition-all">
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <div className="flex items-center gap-1.5">
-                    {isActive && (
+                    {isActive ? (
                         <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] shadow-[0_0_8px_rgba(10,132,255,0.8)] shrink-0" />
-                    )}
+                    ) : labelBadge ? (
+                        <span className="text-[10px] font-semibold text-[var(--ios-secondary)] uppercase shrink-0">
+                            {labelBadge} •
+                        </span>
+                    ) : null}
+
                     <span className="text-[11px] font-normal text-[var(--ios-secondary)] tracking-tight tabular-nums">
                         {lesson.time}
                     </span>
@@ -70,8 +78,6 @@ function LessonRowCard({
 }
 
 function BreakIndicator({ minutes }: { minutes: number }) {
-    if (minutes <= 0) return null
-
     return (
         <div className="w-full flex items-center gap-3 px-2 py-0.5">
             <div className="h-[1px] flex-1 bg-[var(--ios-separator)]/40" />
@@ -80,7 +86,7 @@ function BreakIndicator({ minutes }: { minutes: number }) {
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                 </svg>
-                <span className="tabular-nums">{minutes} min</span>
+                <span className="tabular-nums">{minutes > 0 ? `${minutes} min` : 'Przerwa'}</span>
             </div>
             <div className="h-[1px] flex-1 bg-[var(--ios-separator)]/40" />
         </div>
@@ -89,6 +95,7 @@ function BreakIndicator({ minutes }: { minutes: number }) {
 
 export function MiniScheduleWidget({
     timetableData,
+    isLoading = false,
     textClamp = 'full',
     onOpenFullSchedule
 }: MiniScheduleWidgetProps) {
@@ -115,18 +122,32 @@ export function MiniScheduleWidget({
             return timetableData.schedule.find((d) => d.dayName === 'Monday') || null
         }
 
-        return null
+        return timetableData.schedule.find((d) => d.isToday) || null
     }, [timetableData, realTodayIso, todayDayName])
+
+    const nextUpcomingDaySchedule = useMemo(() => {
+        if (!timetableData?.schedule || !todaySchedule) return null
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        const currentIdx = days.indexOf(todaySchedule.dayName)
+        if (currentIdx === -1) return null
+
+        for (let i = currentIdx + 1; i < days.length; i++) {
+            const nextDay = timetableData.schedule.find((d) => d.dayName === days[i])
+            if (nextDay && nextDay.lessons.length > 0) return nextDay
+        }
+        return null
+    }, [timetableData, todaySchedule])
 
     const lessons = useMemo(() => {
         return todaySchedule?.lessons || []
     }, [todaySchedule])
 
-    const { currentLesson, nextLesson, breakMinutes, allEnded } = useMemo(() => {
+    const { currentLesson, nextLesson, nextLessonBadge, breakMinutes, allEnded } = useMemo(() => {
         if (lessons.length === 0) {
             return {
                 currentLesson: null,
                 nextLesson: null,
+                nextLessonBadge: undefined,
                 breakMinutes: 0,
                 allEnded: false
             }
@@ -151,22 +172,31 @@ export function MiniScheduleWidget({
             return {
                 currentLesson: null,
                 nextLesson: null,
+                nextLessonBadge: undefined,
                 breakMinutes: 0,
                 allEnded: true
             }
         }
 
         const curr = lessons[focusIdx] || null
-        const next = focusIdx < lessons.length - 1 ? lessons[focusIdx + 1] : null
-        const b = curr && next ? calculateBreakDuration(curr.time, next.time) : 0
+        let next = focusIdx < lessons.length - 1 ? lessons[focusIdx + 1] : null
+        let badge: string | undefined = undefined
+
+        if (!next && nextUpcomingDaySchedule && nextUpcomingDaySchedule.lessons.length > 0) {
+            next = nextUpcomingDaySchedule.lessons[0]
+            badge = nextUpcomingDaySchedule.dayName === 'Monday' ? 'Pn' : 'Jutro'
+        }
+
+        const b = curr && next && !badge ? calculateBreakDuration(curr.time, next.time) : 10
 
         return {
             currentLesson: curr,
             nextLesson: next,
+            nextLessonBadge: badge,
             breakMinutes: b,
             allEnded: false
         }
-    }, [lessons])
+    }, [lessons, nextUpcomingDaySchedule])
 
     return (
         <section
@@ -183,7 +213,13 @@ export function MiniScheduleWidget({
                 </svg>
             </div>
 
-            {allEnded ? (
+            {isLoading ? (
+                <div className="py-7 flex flex-col items-center justify-center gap-2">
+                    <div className="w-full h-14 rounded-[16px] bg-[var(--ios-element)]/30 animate-pulse" />
+                    <div className="w-24 h-4 rounded-full bg-[var(--ios-element)]/20 animate-pulse" />
+                    <div className="w-full h-14 rounded-[16px] bg-[var(--ios-element)]/30 animate-pulse" />
+                </div>
+            ) : allEnded ? (
                 <div className="py-7 flex flex-col items-center justify-center gap-1 text-center">
                     <span className="text-sm">🎉</span>
                     <span className="text-[13px] font-medium text-[var(--ios-label)]">
@@ -207,11 +243,12 @@ export function MiniScheduleWidget({
                         />
                     )}
 
-                    {breakMinutes > 0 && <BreakIndicator minutes={breakMinutes} />}
+                    {nextLesson && <BreakIndicator minutes={breakMinutes} />}
 
                     {nextLesson && (
                         <LessonRowCard
                             lesson={nextLesson}
+                            labelBadge={nextLessonBadge}
                             textClamp={textClamp}
                         />
                     )}

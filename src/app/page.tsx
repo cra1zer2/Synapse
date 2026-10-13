@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { LessonItem } from '@/models/timetable.model'
 import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 import { CURRENT_APP_VERSION } from '@/config/version.config'
@@ -16,7 +16,7 @@ import { SettingsSheet } from './widgets/settings-sheet'
 import { WhatsNewModal } from '@/app/widgets/whats-new-modal'
 import { MiniScheduleWidget } from '@/components/dashboard/mini-schedule-widget'
 import { WidgetCustomizerSheet, DashboardWidgetId, DEFAULT_WIDGET_CONFIGS } from '@/components/dashboard/widget-customizer-sheet'
-import { IosBackButton } from '@/components/ios/ios-buttons'
+import { IosSubView } from '@/components/ios/ios-subview'
 
 export type TextClampOption = 'full' | '1' | '2'
 
@@ -82,11 +82,6 @@ export default function Home() {
     }
   })
 
-  const fullScheduleRef = useRef<HTMLDivElement>(null)
-  const touchStartX = useRef(0)
-  const isSwiping = useRef(false)
-  const [swipeOffset, setSwipeOffset] = useState(0)
-
   const t = getDictionary(lang)
 
   const applyTheme = useCallback((targetTheme: AppTheme) => {
@@ -117,6 +112,7 @@ export default function Home() {
     showSettings ||
     showCustomizer ||
     showWhatsNew ||
+    showFullSchedule ||
     Boolean(selectedLesson)
 
   useBodyScrollLock(isAnyOverlayActive)
@@ -190,32 +186,6 @@ export default function Home() {
     }
   }
 
-  const handleScheduleTouchStart = (e: React.TouchEvent) => {
-    const clientX = e.touches[0].clientX
-    touchStartX.current = clientX
-    if (clientX < 60) {
-      isSwiping.current = true
-      setSwipeOffset(0)
-    }
-  }
-
-  const handleScheduleTouchMove = (e: React.TouchEvent) => {
-    if (!isSwiping.current) return
-    const delta = e.touches[0].clientX - touchStartX.current
-    if (delta > 0) {
-      setSwipeOffset(delta)
-    }
-  }
-
-  const handleScheduleTouchEnd = () => {
-    if (!isSwiping.current) return
-    isSwiping.current = false
-    if (swipeOffset > 85) {
-      setShowFullSchedule(false)
-    }
-    setSwipeOffset(0)
-  }
-
   if (!mounted) return null
 
   if (!account.isConfigured) {
@@ -281,7 +251,7 @@ export default function Home() {
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                 </svg>
               </button>
             </div>
@@ -307,6 +277,7 @@ export default function Home() {
           {activeWidgets.mini_schedule && (
             <MiniScheduleWidget
               timetableData={activeTodayData}
+              isLoading={timetable.isLoadingWeek && !activeTodayData}
               textClamp={textClamp}
               onOpenFullSchedule={() => setShowFullSchedule(true)}
             />
@@ -314,52 +285,28 @@ export default function Home() {
         </main>
       </div>
 
-      <div
-        ref={fullScheduleRef}
-        onTouchStart={handleScheduleTouchStart}
-        onTouchMove={handleScheduleTouchMove}
-        onTouchEnd={handleScheduleTouchEnd}
-        style={{
-          transform: !showFullSchedule
-            ? 'translateX(calc(100% + 48px))'
-            : isSwiping.current
-              ? `translateX(${swipeOffset}px)`
-              : 'translateX(0)',
-          transition: isSwiping.current ? 'none' : 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)'
-        }}
-        className="fixed inset-0 z-40 bg-[var(--ios-bg)] flex flex-col shadow-[-8px_0_24px_rgba(0,0,0,0.18)] dark:shadow-[-8px_0_24px_rgba(0,0,0,0.38)] will-change-transform"
+      <IosSubView
+        isOpen={showFullSchedule}
+        onClose={() => setShowFullSchedule(false)}
+        title={t.schedule}
+        backLabel={t.backAction}
       >
-        <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
-          <IosBackButton
-            onClick={() => setShowFullSchedule(false)}
-            label={t.backAction}
+        {timetable.timetableData && (
+          <ScheduleWidget
+            timetableData={timetable.timetableData}
+            selectedDay={timetable.selectedDay}
+            onSelectDay={(day) => timetable.setSelectedDay(day)}
+            onSelectLesson={setSelectedLesson}
+            currentWeekPivot={timetable.currentWeekPivot}
+            onShiftWeek={timetable.shiftWeek}
+            onSelectDate={timetable.queueWeekChange}
+            isLoadingWeek={timetable.isLoadingWeek}
+            textClamp={textClamp}
+            lang={lang}
+            t={t}
           />
-
-          <h2 className="text-sm font-medium text-[var(--ios-label)] tracking-tight text-center flex-1">
-            {t.schedule}
-          </h2>
-
-          <div className="w-20 shrink-0" />
-        </header>
-
-        <div className="flex-1 overflow-y-auto px-4 py-4 max-w-md mx-auto w-full pb-10">
-          {timetable.timetableData && (
-            <ScheduleWidget
-              timetableData={timetable.timetableData}
-              selectedDay={timetable.selectedDay}
-              onSelectDay={(day) => timetable.setSelectedDay(day)}
-              onSelectLesson={setSelectedLesson}
-              currentWeekPivot={timetable.currentWeekPivot}
-              onShiftWeek={timetable.shiftWeek}
-              onSelectDate={timetable.queueWeekChange}
-              isLoadingWeek={timetable.isLoadingWeek}
-              textClamp={textClamp}
-              lang={lang}
-              t={t}
-            />
-          )}
-        </div>
-      </div>
+        )}
+      </IosSubView>
 
       {selectedLesson && (
         <LessonDetailModal

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { StudentProfile } from '@/models/account.model'
 import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
 import { GradesResult } from '@/models/grade.model'
@@ -51,7 +51,8 @@ export function HomeDashboard({
                 } catch { }
             }
         }
-        const initial: Record<DashboardWidgetId, boolean> = {
+        return {
+            mini_schedule: true,
             next_lesson: true,
             attendance: true,
             gpa: true,
@@ -59,7 +60,6 @@ export function HomeDashboard({
             lucky_number: true,
             changes: true
         }
-        return initial
     })
 
     const [showCustomizer, setShowCustomizer] = useState(false)

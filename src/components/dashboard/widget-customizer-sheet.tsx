@@ -5,6 +5,7 @@ import { IosListGroup, IosListCell } from '@/components/ios/ios-list'
 import { IosSwitch } from '@/components/ios/ios-switch'
 
 export type DashboardWidgetId =
+    | 'mini_schedule'
     | 'next_lesson'
     | 'attendance'
     | 'gpa'
@@ -20,6 +21,12 @@ export interface WidgetMeta {
 }
 
 export const DEFAULT_WIDGET_CONFIGS: WidgetMeta[] = [
+    {
+        id: 'mini_schedule',
+        title: 'Podgląd planu lekcji',
+        description: 'Trzy lekcje: przeszła, aktualna i kolejna z przerwami',
+        icon: '⏱️'
+    },
     {
         id: 'next_lesson',
         title: 'Następna lekcja',
@@ -47,7 +54,7 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetMeta[] = [
     {
         id: 'lucky_number',
         title: 'Szczęśliwy numerek',
-        description: 'Numer zwalniający z pytania na dany dzień',
+        description: 'Numer zwalniający z pytania na dany день',
         icon: '🍀'
     },
     {
@@ -106,7 +113,7 @@ export function WidgetCustomizerSheet({
 
     return (
         <div className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in duration-200">
-            <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
+            <header className="sticky top-0 z-10 w-full pt-12 pb-3 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
                 <button
                     type="button"
                     onClick={onClose}
@@ -129,10 +136,10 @@ export function WidgetCustomizerSheet({
                 </button>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
+            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-10">
                 <IosListGroup
                     header="Widżety na pulpicie"
-                    footer="Użyj strzałek, aby zmienić kolejność wyświetlania kafli na głównym ekranie."
+                    footer="Użyj strzałek, aby zmienić kolejność wyświetlania modułów."
                 >
                     {enabledIds.map((id, index) => {
                         const meta = DEFAULT_WIDGET_CONFIGS.find((w) => w.id === id)

@@ -3,26 +3,27 @@
 import { useMemo } from 'react'
 import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
 import { parseLessonTimeRange, calculateBreakDuration } from '@/utils/time.util'
+import { TextClampOption } from '@/app/page'
 
 interface MiniScheduleWidgetProps {
     timetableData: SmartTimetableResult | null
+    textClamp?: TextClampOption
     onOpenFullSchedule: () => void
 }
 
 function LessonRowCard({
     lesson,
-    isPast = false,
-    isActive = false
+    isActive = false,
+    textClamp = 'full'
 }: {
     lesson: LessonItem
-    isPast?: boolean
     isActive?: boolean
+    textClamp?: TextClampOption
 }) {
+    const titleClampClass = textClamp === '1' ? 'line-clamp-1' : textClamp === '2' ? 'line-clamp-2' : ''
+
     return (
-        <div
-            className={`w-full bg-[var(--ios-element)]/35 rounded-[16px] px-4 py-2.5 flex items-start justify-between gap-2.5 transition-all ${isPast ? 'opacity-45' : 'opacity-100'
-                }`}
-        >
+        <div className="w-full bg-[var(--ios-element)]/35 rounded-[16px] px-4 py-2.5 flex items-start justify-between gap-2.5 transition-all">
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <div className="flex items-center gap-1.5">
                     {isActive && (
@@ -33,7 +34,7 @@ function LessonRowCard({
                     </span>
                 </div>
 
-                <h4 className="text-[15px] font-medium text-[var(--ios-label)] leading-[1.25] break-words">
+                <h4 className={`text-[15px] font-medium text-[var(--ios-label)] leading-[1.25] break-words ${titleClampClass}`}>
                     {lesson.subject}
                 </h4>
 
@@ -88,8 +89,17 @@ function BreakIndicator({ minutes }: { minutes: number }) {
 
 export function MiniScheduleWidget({
     timetableData,
+    textClamp = 'full',
     onOpenFullSchedule
 }: MiniScheduleWidgetProps) {
+    const realTodayIso = useMemo(() => {
+        const now = new Date()
+        const y = now.getFullYear()
+        const m = String(now.getMonth() + 1).padStart(2, '0')
+        const d = String(now.getDate()).padStart(2, '0')
+        return `${y}-${m}-${d}`
+    }, [])
+
     const todayDayName = useMemo(() => {
         const dayMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
         return dayMap[new Date().getDay()]
@@ -97,57 +107,64 @@ export function MiniScheduleWidget({
 
     const todaySchedule = useMemo(() => {
         if (!timetableData?.schedule) return null
-        return (
-            timetableData.schedule.find((d) => d.isToday) ||
-            timetableData.schedule.find((d) => d.dayName === todayDayName) ||
-            timetableData.schedule[0]
-        )
-    }, [timetableData, todayDayName])
+        const exactMatch = timetableData.schedule.find((d) => d.isoDate === realTodayIso)
+        if (exactMatch) return exactMatch
+
+        const isWeekend = todayDayName === 'Saturday' || todayDayName === 'Sunday'
+        if (isWeekend) {
+            return timetableData.schedule.find((d) => d.dayName === 'Monday') || null
+        }
+
+        return null
+    }, [timetableData, realTodayIso, todayDayName])
 
     const lessons = useMemo(() => {
         return todaySchedule?.lessons || []
     }, [todaySchedule])
 
-    const { pastLesson, currentLesson, nextLesson, breakMinutes } = useMemo(() => {
+    const { currentLesson, nextLesson, breakMinutes, allEnded } = useMemo(() => {
         if (lessons.length === 0) {
             return {
-                pastLesson: null,
                 currentLesson: null,
                 nextLesson: null,
-                breakMinutes: 0
+                breakMinutes: 0,
+                allEnded: false
             }
         }
 
         const now = new Date()
         const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
-        let focusIdx = 0
+        let focusIdx = -1
 
         for (let i = 0; i < lessons.length; i++) {
             const range = parseLessonTimeRange(lessons[i].time)
             if (range.isValid) {
-                if (currentMinutes >= range.startMinutes && currentMinutes <= range.endMinutes) {
-                    focusIdx = i
-                    break
-                }
-                if (currentMinutes < range.startMinutes) {
+                if (currentMinutes <= range.endMinutes) {
                     focusIdx = i
                     break
                 }
             }
         }
 
-        const curr = lessons[focusIdx] || lessons[0] || null
-        const past = focusIdx > 0 ? lessons[focusIdx - 1] : null
-        const next = focusIdx < lessons.length - 1 ? lessons[focusIdx + 1] : null
+        if (focusIdx === -1) {
+            return {
+                currentLesson: null,
+                nextLesson: null,
+                breakMinutes: 0,
+                allEnded: true
+            }
+        }
 
+        const curr = lessons[focusIdx] || null
+        const next = focusIdx < lessons.length - 1 ? lessons[focusIdx + 1] : null
         const b = curr && next ? calculateBreakDuration(curr.time, next.time) : 0
 
         return {
-            pastLesson: past,
             currentLesson: curr,
             nextLesson: next,
-            breakMinutes: b
+            breakMinutes: b,
+            allEnded: false
         }
     }, [lessons])
 
@@ -166,24 +183,37 @@ export function MiniScheduleWidget({
                 </svg>
             </div>
 
-            {lessons.length === 0 ? (
-                <div className="py-8 text-center text-xs font-normal text-[var(--ios-secondary)]">
+            {allEnded ? (
+                <div className="py-7 flex flex-col items-center justify-center gap-1 text-center">
+                    <span className="text-sm">🎉</span>
+                    <span className="text-[13px] font-medium text-[var(--ios-label)]">
+                        Wszystkie lekcje na dziś zakończone
+                    </span>
+                    <span className="text-[11px] font-normal text-[var(--ios-secondary)]">
+                        Odpocznij przed kolejnym dniem
+                    </span>
+                </div>
+            ) : lessons.length === 0 ? (
+                <div className="py-7 text-center text-xs font-normal text-[var(--ios-secondary)]">
                     Brak zaplanowanych lekcji na dziś
                 </div>
             ) : (
                 <div className="flex flex-col gap-2">
-                    {pastLesson && (
-                        <LessonRowCard lesson={pastLesson} isPast={true} />
-                    )}
-
                     {currentLesson && (
-                        <LessonRowCard lesson={currentLesson} isActive={true} />
+                        <LessonRowCard
+                            lesson={currentLesson}
+                            isActive={true}
+                            textClamp={textClamp}
+                        />
                     )}
 
                     {breakMinutes > 0 && <BreakIndicator minutes={breakMinutes} />}
 
                     {nextLesson && (
-                        <LessonRowCard lesson={nextLesson} />
+                        <LessonRowCard
+                            lesson={nextLesson}
+                            textClamp={textClamp}
+                        />
                     )}
                 </div>
             )}

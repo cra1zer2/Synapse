@@ -72,7 +72,13 @@ export default function Home() {
       }
     }
     return {
-      mini_schedule: true
+      mini_schedule: true,
+      next_lesson: false,
+      attendance: false,
+      gpa: false,
+      messages: false,
+      lucky_number: false,
+      changes: false
     }
   })
 
@@ -233,6 +239,7 @@ export default function Home() {
   }
 
   const currentDaySchedule = timetable.timetableData?.schedule.find((d) => d.dayName === timetable.selectedDay)
+  const activeTodayData = timetable.todayTimetableData || timetable.timetableData
 
   return (
     <div className="w-full min-h-screen bg-[var(--ios-bg)] overflow-hidden relative">
@@ -299,7 +306,8 @@ export default function Home() {
 
           {activeWidgets.mini_schedule && (
             <MiniScheduleWidget
-              timetableData={timetable.timetableData}
+              timetableData={activeTodayData}
+              textClamp={textClamp}
               onOpenFullSchedule={() => setShowFullSchedule(true)}
             />
           )}
@@ -327,11 +335,11 @@ export default function Home() {
             label={t.backAction}
           />
 
-          <h2 className="text-sm font-medium text-[var(--ios-label)] tracking-tight">
+          <h2 className="text-sm font-medium text-[var(--ios-label)] tracking-tight text-center flex-1">
             {t.schedule}
           </h2>
 
-          <div className="w-16" />
+          <div className="w-20 shrink-0" />
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 py-4 max-w-md mx-auto w-full pb-10">

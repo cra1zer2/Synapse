@@ -72,6 +72,7 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
     const [currentWeekPivot, setCurrentWeekPivot] = useState(getInitialWeekPivot)
 
     const [timetableData, setTimetableData] = useState<SmartTimetableResult | null>(null)
+    const [todayTimetableData, setTodayTimetableData] = useState<SmartTimetableResult | null>(null)
     const [gradesData, setGradesData] = useState<GradesResult | null>(null)
     const [attendanceData, setAttendanceData] = useState<AttendanceResult | null>(null)
     const [selectedDay, setSelectedDay] = useState<string>(getTodayDayName)
@@ -106,6 +107,8 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
     const executeSync = useCallback(
         async (u: string, p: string, currentAppLang: AppLanguage, rawPivot: string, silentUpdate: boolean) => {
             const weekPivot = normalizeToMondayIso(rawPivot)
+            const todayMonday = normalizeToMondayIso(getTodayIsoString())
+            const isTargetTodayWeek = weekPivot === todayMonday
             const requestId = ++activeRequestCounter.current
 
             if (!silentUpdate) {
@@ -135,6 +138,10 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
                     const newFingerprint = getScheduleFingerprint(fetchedData)
 
                     weekCacheRef.current[weekPivot] = fetchedData
+                    if (isTargetTodayWeek) {
+                        setTodayTimetableData(fetchedData)
+                    }
+
                     if (typeof window !== 'undefined') {
                         localStorage.setItem('synapse_week_cache', JSON.stringify(weekCacheRef.current))
                     }
@@ -175,6 +182,8 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
     useEffect(() => {
         if (!isConfigured || !username || !password) return
 
+        const todayMonday = normalizeToMondayIso(getTodayIsoString())
+
         if (typeof window !== 'undefined') {
             const storedWeekCache = localStorage.getItem('synapse_week_cache')
             if (storedWeekCache) {
@@ -186,6 +195,9 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
                         }
                     }
                     weekCacheRef.current = parsedWeekCache
+                    if (parsedWeekCache[todayMonday]) {
+                        setTodayTimetableData(parsedWeekCache[todayMonday])
+                    }
                 } catch { }
             }
 
@@ -204,6 +216,10 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
                         const mondayKey = normalizeToMondayIso(calibratedTimetable.weekStart)
                         if (!weekCacheRef.current[mondayKey]) {
                             weekCacheRef.current[mondayKey] = calibratedTimetable
+                        }
+
+                        if (mondayKey === todayMonday) {
+                            setTodayTimetableData(calibratedTimetable)
                         }
 
                         const realTodayIso = getTodayIsoString()
@@ -302,6 +318,7 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
         hasNewUpdate,
         currentWeekPivot,
         timetableData,
+        todayTimetableData,
         gradesData,
         attendanceData,
         selectedDay,

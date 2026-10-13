@@ -53,12 +53,12 @@ export function HomeDashboard({
         }
         return {
             mini_schedule: true,
-            next_lesson: true,
-            attendance: true,
-            gpa: true,
-            messages: true,
-            lucky_number: true,
-            changes: true
+            next_lesson: false,
+            attendance: false,
+            gpa: false,
+            messages: false,
+            lucky_number: false,
+            changes: false
         }
     })
 

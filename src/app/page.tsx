@@ -16,6 +16,7 @@ import { SettingsSheet } from './widgets/settings-sheet'
 import { WhatsNewModal } from '@/app/widgets/whats-new-modal'
 import { MiniScheduleWidget } from '@/components/dashboard/mini-schedule-widget'
 import { WidgetCustomizerSheet, DashboardWidgetId, DEFAULT_WIDGET_CONFIGS } from '@/components/dashboard/widget-customizer-sheet'
+import { IosBackButton } from '@/components/ios/ios-buttons'
 
 export type TextClampOption = 'full' | '1' | '2'
 
@@ -71,13 +72,7 @@ export default function Home() {
       }
     }
     return {
-      mini_schedule: true,
-      next_lesson: true,
-      attendance: true,
-      gpa: true,
-      messages: true,
-      lucky_number: true,
-      changes: true
+      mini_schedule: true
     }
   })
 
@@ -267,7 +262,7 @@ export default function Home() {
                 className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-transform"
                 aria-label="Customize"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                 </svg>
               </button>
@@ -327,21 +322,16 @@ export default function Home() {
         className="fixed inset-0 z-40 bg-[var(--ios-bg)] flex flex-col shadow-[-8px_0_24px_rgba(0,0,0,0.18)] dark:shadow-[-8px_0_24px_rgba(0,0,0,0.38)] will-change-transform"
       >
         <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
-          <button
+          <IosBackButton
             onClick={() => setShowFullSchedule(false)}
-            className="flex items-center gap-1 text-[var(--ios-blue)] text-xs font-normal active:opacity-70 -ml-1 py-1 pr-2 w-20"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            <span>{t.backAction}</span>
-          </button>
+            label={t.backAction}
+          />
 
           <h2 className="text-sm font-medium text-[var(--ios-label)] tracking-tight">
             {t.schedule}
           </h2>
 
-          <div className="w-20" />
+          <div className="w-16" />
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 py-4 max-w-md mx-auto w-full pb-10">

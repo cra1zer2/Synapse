@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { IosListGroup, IosListCell } from '@/components/ios/ios-list'
 import { IosSwitch } from '@/components/ios/ios-switch'
+import { IosCloseButton } from '@/components/ios/ios-buttons'
 
 export type DashboardWidgetId =
     | 'mini_schedule'
@@ -26,42 +27,6 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetMeta[] = [
         title: 'Podgląd planu lekcji',
         description: 'Trzy lekcje: przeszła, aktualna i kolejna z przerwami',
         icon: '⏱️'
-    },
-    {
-        id: 'next_lesson',
-        title: 'Następna lekcja',
-        description: 'Bieżący przedmiot, gabinet i czas trwania',
-        icon: '⏱️'
-    },
-    {
-        id: 'attendance',
-        title: 'Frekwencja ogólna',
-        description: 'Procent obecności z alertem progu 50%',
-        icon: '🩺'
-    },
-    {
-        id: 'gpa',
-        title: 'Średnia ocen (GPA)',
-        description: 'Aktualna średnia ważona wszystkich przedmiotów',
-        icon: '📊'
-    },
-    {
-        id: 'messages',
-        title: 'Wiadomości',
-        description: 'Licznik nieprzeczytanych wiadomości i ogłoszeń',
-        icon: '💬'
-    },
-    {
-        id: 'lucky_number',
-        title: 'Szczęśliwy numerek',
-        description: 'Numer zwalniający z pytania na dany день',
-        icon: '🍀'
-    },
-    {
-        id: 'changes',
-        title: 'Zastępstwa i zmiany',
-        description: 'Liczba odwołanych lekcji i zastępstw na dziś',
-        icon: '🔄'
     }
 ]
 
@@ -108,20 +73,10 @@ export function WidgetCustomizerSheet({
         onClose()
     }
 
-    const enabledIds = localOrder.filter((id) => localActive[id])
-    const disabledIds = localOrder.filter((id) => !localActive[id])
-
     return (
         <div className="fixed inset-0 z-50 bg-[var(--ios-bg)] flex flex-col animate-in fade-in duration-200">
-            <header className="sticky top-0 z-10 w-full pt-12 pb-3 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="w-8 h-8 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-transform"
-                    aria-label="Close"
-                >
-                    ✕
-                </button>
+            <header className="sticky top-0 z-10 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] flex items-center justify-between">
+                <IosCloseButton onClick={onClose} />
 
                 <h2 className="text-sm font-semibold text-[var(--ios-label)] tracking-tight">
                     Dostosuj pulpit
@@ -139,47 +94,58 @@ export function WidgetCustomizerSheet({
             <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 max-w-lg mx-auto w-full pb-10">
                 <IosListGroup
                     header="Widżety na pulpicie"
-                    footer="Użyj strzałek, aby zmienić kolejność wyświetlania modułów."
+                    footer="Wyłączaj lub zmieniaj kolejność modułów wyświetlanych na głównym pulpicie."
                 >
-                    {enabledIds.map((id, index) => {
+                    {localOrder.map((id, index) => {
                         const meta = DEFAULT_WIDGET_CONFIGS.find((w) => w.id === id)
                         if (!meta) return null
+                        const isEnabled = Boolean(localActive[id])
 
                         return (
                             <IosListCell
                                 key={id}
                                 leading={
-                                    <div className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)]/60 flex items-center justify-center text-sm">
+                                    <div className={`w-8 h-8 rounded-[10px] bg-[var(--ios-element)]/60 flex items-center justify-center text-sm transition-opacity ${isEnabled ? 'opacity-100' : 'opacity-40'}`}>
                                         {meta.icon}
                                     </div>
                                 }
-                                title={meta.title}
+                                title={
+                                    <span className={isEnabled ? 'opacity-100' : 'opacity-50'}>
+                                        {meta.title}
+                                    </span>
+                                }
                                 subtitle={meta.description}
                                 trailing={
                                     <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-0.5">
-                                            <button
-                                                type="button"
-                                                disabled={index === 0}
-                                                onClick={() => moveWidget(index, 'up')}
-                                                className="w-7 h-7 rounded-[8px] bg-[var(--ios-element)]/60 text-[var(--ios-label)] flex items-center justify-center disabled:opacity-25 active:scale-90 transition-all text-xs font-bold"
-                                                aria-label="Move up"
-                                            >
-                                                ▲
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={index === enabledIds.length - 1}
-                                                onClick={() => moveWidget(index, 'down')}
-                                                className="w-7 h-7 rounded-[8px] bg-[var(--ios-element)]/60 text-[var(--ios-label)] flex items-center justify-center disabled:opacity-25 active:scale-90 transition-all text-xs font-bold"
-                                                aria-label="Move down"
-                                            >
-                                                ▼
-                                            </button>
-                                        </div>
+                                        {localOrder.length > 1 && (
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    disabled={index === 0}
+                                                    onClick={() => moveWidget(index, 'up')}
+                                                    className="w-6 h-6 flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] disabled:opacity-20 active:scale-90 transition-all"
+                                                    aria-label="Move up"
+                                                >
+                                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <polyline points="18 15 12 9 6 15" />
+                                                    </svg>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={index === localOrder.length - 1}
+                                                    onClick={() => moveWidget(index, 'down')}
+                                                    className="w-6 h-6 flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] disabled:opacity-20 active:scale-90 transition-all"
+                                                    aria-label="Move down"
+                                                >
+                                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <polyline points="6 9 12 15 18 9" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        )}
 
                                         <IosSwitch
-                                            checked={true}
+                                            checked={isEnabled}
                                             onChange={(val) => toggleWidget(id, val)}
                                         />
                                     </div>
@@ -188,34 +154,6 @@ export function WidgetCustomizerSheet({
                         )
                     })}
                 </IosListGroup>
-
-                {disabledIds.length > 0 && (
-                    <IosListGroup header="Ukryte widżety">
-                        {disabledIds.map((id) => {
-                            const meta = DEFAULT_WIDGET_CONFIGS.find((w) => w.id === id)
-                            if (!meta) return null
-
-                            return (
-                                <IosListCell
-                                    key={id}
-                                    leading={
-                                        <div className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)]/60 opacity-60 flex items-center justify-center text-sm">
-                                            {meta.icon}
-                                        </div>
-                                    }
-                                    title={meta.title}
-                                    subtitle={meta.description}
-                                    trailing={
-                                        <IosSwitch
-                                            checked={false}
-                                            onChange={(val) => toggleWidget(id, val)}
-                                        />
-                                    }
-                                />
-                            )
-                        })}
-                    </IosListGroup>
-                )}
             </div>
         </div>
     )

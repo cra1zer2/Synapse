@@ -74,7 +74,7 @@ function BreakIndicator({ minutes }: { minutes: number }) {
     return (
         <div className="w-full flex items-center gap-3 px-2 py-0.5">
             <div className="h-[1px] flex-1 bg-[var(--ios-separator)]/40" />
-            <div className="flex items-center gap-1.5 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full text-[var(--ios-secondary)] bg-[var(--ios-element)]/60">
+            <div className="flex items-center gap-1 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full text-[var(--ios-secondary)] bg-[var(--ios-element)]/60">
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
@@ -156,12 +156,12 @@ export function MiniScheduleWidget({
             onClick={onOpenFullSchedule}
             className="w-full bg-[var(--ios-card)] rounded-[22px] p-3.5 flex flex-col gap-2.5 shadow-xs cursor-pointer active:scale-[0.985] transition-transform select-none"
         >
-            <div className="flex items-center justify-between px-1 pb-1 border-b border-[var(--ios-separator)]/50">
-                <span className="text-[11px] font-medium uppercase text-[var(--ios-secondary)] tracking-wider">
+            <div className="flex items-center justify-between px-1.5 pb-2.5 pt-0.5 border-b border-[var(--ios-separator)]/50">
+                <span className="text-[12px] font-semibold text-[var(--ios-label)] tracking-tight leading-none">
                     Plan lekcji
                 </span>
 
-                <svg className="w-4 h-4 text-[var(--ios-tertiary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0 leading-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="9 18 15 12 9 6" />
                 </svg>
             </div>

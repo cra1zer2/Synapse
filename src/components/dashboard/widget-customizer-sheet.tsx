@@ -18,12 +18,15 @@ export type DashboardWidgetId =
 export interface WidgetMeta {
     id: DashboardWidgetId
     icon: string
+    title?: string
+    description?: string
 }
 
 export const DEFAULT_WIDGET_CONFIGS: WidgetMeta[] = [
     {
         id: 'mini_schedule',
-        icon: '⏱️'
+        icon: '⏱️',
+        title: 'Plan lekcji'
     }
 ]
 

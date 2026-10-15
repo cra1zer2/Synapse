@@ -41,10 +41,6 @@
   --radius-ios-input: 12px;
   --radius-ios-button: 12px;
   --radius-ios-badge: 8px;
-
-  --shadow-ios-card: 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-ios-modal: 0 10px 40px rgba(0, 0, 0, 0.15);
-  --shadow-ios-sheet: 0 -8px 30px rgba(0, 0, 0, 0.12);
 }
 
 :root {
@@ -78,13 +74,7 @@
 
   --ios-room-bg: rgba(0, 122, 255, 0.08);
   --ios-room-text: #007aff;
-  --ios-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   --ios-switch-off: #e5e5ea;
-
-  --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
-  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out-cubic: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 .dark {
@@ -117,7 +107,6 @@
 
   --ios-room-bg: rgba(10, 132, 255, 0.15);
   --ios-room-text: #64d2ff;
-  --ios-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   --ios-switch-off: #39393d;
 }
 
@@ -132,10 +121,96 @@ body {
   font-family: var(--font-apple);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
   margin: 0;
   padding: 0;
   touch-action: manipulation;
   min-height: 100vh;
-  transition: background-color 0.25s var(--ease-out-cubic), color 0.25s var(--ease-out-cubic);
+}
+
+.ios-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  width: 100%;
+  padding-top: max(calc(env(safe-area-inset-top, 0px) + 0.75rem), 1.75rem);
+  padding-bottom: 0.65rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  background-color: color-mix(in srgb, var(--ios-bg) 85%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--ios-separator);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ios-title-nav {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ios-label);
+  letter-spacing: -0.015em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ios-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--ios-blue);
+  font-size: 17px;
+  font-weight: 400;
+  width: 70px;
+  flex-shrink: 0;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  margin-left: -0.25rem;
+  transition: opacity 0.15s ease;
+}
+
+.ios-back-btn:active {
+  opacity: 0.6;
+}
+
+.ios-card {
+  background-color: var(--ios-card);
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.ios-cell {
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 16px;
+  color: var(--ios-label);
+  transition: background-color 0.15s ease;
+}
+
+.ios-subview-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background-color: var(--ios-bg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+  will-change: transform;
+}
+
+.dark .ios-subview-panel {
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.38);
+}
+
+.ios-skeleton {
+  background-color: color-mix(in srgb, var(--ios-element) 35%, transparent);
+  border-radius: 14px;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

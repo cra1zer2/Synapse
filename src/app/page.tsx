@@ -16,7 +16,7 @@ import { SettingsSheet } from './widgets/settings-sheet'
 import { WhatsNewModal } from '@/app/widgets/whats-new-modal'
 import { MiniScheduleWidget } from '@/components/dashboard/mini-schedule-widget'
 import { WidgetCustomizerSheet, DashboardWidgetId, DEFAULT_WIDGET_CONFIGS } from '@/components/dashboard/widget-customizer-sheet'
-import { IosSubView } from '@/components/ios/ios-subview'
+import { IosScreen } from '@/components/ios/ios-screen'
 
 export type TextClampOption = 'full' | '1' | '2'
 
@@ -215,14 +215,14 @@ export default function Home() {
     <div className="w-full min-h-screen bg-[var(--ios-bg)] overflow-hidden relative">
       <div
         style={{
-          transform: showFullSchedule ? 'translateX(-25%) scale(0.96)' : 'translateX(0) scale(1)',
-          opacity: showFullSchedule ? 0.6 : 1,
-          transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1)'
+          transform: showFullSchedule ? 'translate3d(-20%, 0, 0)' : 'translate3d(0, 0, 0)',
+          opacity: showFullSchedule ? 0.7 : 1,
+          transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1)'
         }}
         className="w-full min-h-screen flex flex-col will-change-transform"
       >
-        <header className="sticky top-0 z-30 w-full pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.75rem)] pb-2.5 px-4 bg-[var(--ios-bg)]/90 backdrop-blur-xl border-b border-[var(--ios-separator)]">
-          <div className="max-w-md mx-auto flex items-center justify-between">
+        <header className="ios-header">
+          <div className="max-w-md mx-auto w-full flex items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold tracking-tight text-[var(--ios-label)]">Synapse</h1>
               <div className="flex items-center gap-1.5 mt-0.5">
@@ -233,10 +233,11 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => setShowCustomizer(true)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-transform"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-90 transition-transform"
                 aria-label="Customize"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -245,13 +246,14 @@ export default function Home() {
               </button>
 
               <button
+                type="button"
                 onClick={() => setShowSettings(true)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-transform"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-90 transition-transform"
                 aria-label="Settings"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                 </svg>
               </button>
             </div>
@@ -285,11 +287,12 @@ export default function Home() {
         </main>
       </div>
 
-      <IosSubView
+      <IosScreen
         isOpen={showFullSchedule}
         onClose={() => setShowFullSchedule(false)}
         title={t.schedule}
         backLabel={t.backAction}
+        isSubView={true}
       >
         {timetable.timetableData && (
           <ScheduleWidget
@@ -306,7 +309,7 @@ export default function Home() {
             t={t}
           />
         )}
-      </IosSubView>
+      </IosScreen>
 
       {selectedLesson && (
         <LessonDetailModal

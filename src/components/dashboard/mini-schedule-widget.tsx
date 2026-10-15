@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
 import { parseLessonTimeRange, calculateBreakDuration } from '@/utils/time.util'
 import { TextClampOption } from '@/app/page'
+import { IosCard, IosBadge, IosBreakDivider } from '@/components/ios/ios-ui'
 
 interface MiniScheduleWidgetProps {
     timetableData: SmartTimetableResult | null
@@ -12,7 +13,7 @@ interface MiniScheduleWidgetProps {
     onOpenFullSchedule: () => void
 }
 
-function LessonRowCard({
+function MiniLessonItem({
     lesson,
     isActive = false,
     labelBadge,
@@ -53,42 +54,18 @@ function LessonRowCard({
 
             <div className="shrink-0 flex flex-col items-end gap-1 pt-0.5">
                 {lesson.room && (
-                    <span className="text-[11px] font-medium bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] px-2 py-0.5 rounded-[6px] whitespace-nowrap">
-                        {lesson.room}
-                    </span>
+                    <IosBadge variant="room" text={lesson.room} />
                 )}
                 {lesson.isShortened && (
-                    <span className="text-[10px] font-semibold text-[var(--ios-orange)] bg-[var(--ios-orange-subtle)] px-2 py-0.5 rounded-full whitespace-nowrap">
-                        {lesson.durationMinutes} min
-                    </span>
+                    <IosBadge variant="shortened" text={`${lesson.durationMinutes} min`} />
                 )}
                 {lesson.isCancelled && (
-                    <span className="text-[10px] font-semibold text-[var(--ios-red)] bg-[var(--ios-red-subtle)] px-2 py-0.5 rounded-full whitespace-nowrap">
-                        Odwołane
-                    </span>
+                    <IosBadge variant="cancelled" text="Odwołane" />
                 )}
                 {lesson.isSubstitution && (
-                    <span className="text-[10px] font-semibold text-[var(--ios-purple)] bg-[var(--ios-purple-subtle)] px-2 py-0.5 rounded-full whitespace-nowrap">
-                        Zastępstwo
-                    </span>
+                    <IosBadge variant="substitution" text="Zastępstwo" />
                 )}
             </div>
-        </div>
-    )
-}
-
-function BreakIndicator({ minutes }: { minutes: number }) {
-    return (
-        <div className="w-full flex items-center gap-3 px-2 py-0.5">
-            <div className="h-[1px] flex-1 bg-[var(--ios-separator)]/40" />
-            <div className="flex items-center gap-1 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full text-[var(--ios-secondary)] bg-[var(--ios-element)]/60">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                </svg>
-                <span className="tabular-nums">{minutes > 0 ? `${minutes} min` : 'Przerwa'}</span>
-            </div>
-            <div className="h-[1px] flex-1 bg-[var(--ios-separator)]/40" />
         </div>
     )
 }
@@ -199,9 +176,9 @@ export function MiniScheduleWidget({
     }, [lessons, nextUpcomingDaySchedule])
 
     return (
-        <section
+        <IosCard
             onClick={onOpenFullSchedule}
-            className="w-full bg-[var(--ios-card)] rounded-[22px] p-3.5 flex flex-col gap-2.5 shadow-xs cursor-pointer active:scale-[0.985] transition-transform select-none"
+            className="p-3.5 flex flex-col gap-2.5 cursor-pointer active:scale-[0.985] transition-transform select-none"
         >
             <div className="flex items-center justify-between px-1.5 pb-2.5 pt-0.5 border-b border-[var(--ios-separator)]/50">
                 <span className="text-[12px] font-semibold text-[var(--ios-label)] tracking-tight leading-none">
@@ -215,9 +192,9 @@ export function MiniScheduleWidget({
 
             {isLoading ? (
                 <div className="py-7 flex flex-col items-center justify-center gap-2">
-                    <div className="w-full h-14 rounded-[16px] bg-[var(--ios-element)]/30 animate-pulse" />
-                    <div className="w-24 h-4 rounded-full bg-[var(--ios-element)]/20 animate-pulse" />
-                    <div className="w-full h-14 rounded-[16px] bg-[var(--ios-element)]/30 animate-pulse" />
+                    <div className="w-full h-14 ios-skeleton" />
+                    <div className="w-24 h-4 rounded-full ios-skeleton" />
+                    <div className="w-full h-14 ios-skeleton" />
                 </div>
             ) : allEnded ? (
                 <div className="py-7 flex flex-col items-center justify-center gap-1 text-center">
@@ -236,17 +213,17 @@ export function MiniScheduleWidget({
             ) : (
                 <div className="flex flex-col gap-2">
                     {currentLesson && (
-                        <LessonRowCard
+                        <MiniLessonItem
                             lesson={currentLesson}
                             isActive={true}
                             textClamp={textClamp}
                         />
                     )}
 
-                    {nextLesson && <BreakIndicator minutes={breakMinutes} />}
+                    {nextLesson && <IosBreakDivider minutes={breakMinutes} />}
 
                     {nextLesson && (
-                        <LessonRowCard
+                        <MiniLessonItem
                             lesson={nextLesson}
                             labelBadge={nextLessonBadge}
                             textClamp={textClamp}
@@ -254,6 +231,6 @@ export function MiniScheduleWidget({
                     )}
                 </div>
             )}
-        </section>
+        </IosCard>
     )
 }

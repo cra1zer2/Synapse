@@ -49,10 +49,12 @@ export function WidgetCustomizerSheet({
     const [localActive, setLocalActive] = useState<Record<DashboardWidgetId, boolean>>(activeMap)
 
     const toggleWidget = (id: DashboardWidgetId, checked: boolean) => {
-        setLocalActive((prev) => ({
-            ...prev,
+        const updatedActive = {
+            ...localActive,
             [id]: checked
-        }))
+        }
+        setLocalActive(updatedActive)
+        onSave(localOrder, updatedActive)
     }
 
     const moveWidget = (index: number, direction: 'up' | 'down') => {
@@ -64,11 +66,7 @@ export function WidgetCustomizerSheet({
         updated[index] = updated[targetIndex]
         updated[targetIndex] = temp
         setLocalOrder(updated)
-    }
-
-    const handleConfirm = () => {
-        onSave(localOrder, localActive)
-        onClose()
+        onSave(updated, localActive)
     }
 
     return (
@@ -76,15 +74,7 @@ export function WidgetCustomizerSheet({
             isOpen={isOpen}
             onClose={onClose}
             title="Dostosuj pulpit"
-            trailing={
-                <button
-                    type="button"
-                    onClick={handleConfirm}
-                    className="text-xs font-semibold text-[var(--ios-blue)] active:opacity-70 px-2 py-1"
-                >
-                    Gotowe
-                </button>
-            }
+            backLabel="Wróć"
         >
             <IosListGroup
                 header="Widżety na pulpicie"

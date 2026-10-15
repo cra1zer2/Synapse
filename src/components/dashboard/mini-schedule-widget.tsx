@@ -5,7 +5,8 @@ import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
 import { parseLessonTimeRange, calculateBreakDuration } from '@/utils/time.util'
 import { TextClampOption } from '@/app/page'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
-import { IosCard, IosBadge, IosBreakDivider } from '@/components/ios/ios-ui'
+import { IosCard, IosBreakDivider } from '@/components/ios/ios-ui'
+import { IosBadge } from '@/components/ios/ios-badge'
 
 interface MiniScheduleWidgetProps {
     timetableData: SmartTimetableResult | null

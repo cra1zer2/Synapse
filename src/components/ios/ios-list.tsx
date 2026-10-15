@@ -43,7 +43,6 @@ interface IosListCellProps {
     trailing?: ReactNode
     onClick?: () => void
     chevron?: boolean
-    dragHandle?: boolean
     className?: string
 }
 
@@ -54,7 +53,6 @@ export function IosListCell({
     trailing,
     onClick,
     chevron = false,
-    dragHandle = false,
     className = ''
 }: IosListCellProps) {
     const isInteractive = Boolean(onClick)
@@ -66,7 +64,11 @@ export function IosListCell({
                 } ${className}`}
         >
             <div className="flex items-center gap-3 min-w-0 flex-1">
-                {leading && <div className="shrink-0 flex items-center justify-center">{leading}</div>}
+                {leading && (
+                    <div className="shrink-0 flex items-center justify-center">
+                        {leading}
+                    </div>
+                )}
 
                 <div className="flex flex-col justify-center min-w-0 flex-1">
                     <div className="text-[16px] font-normal text-[var(--ios-label)] leading-snug truncate">
@@ -95,14 +97,6 @@ export function IosListCell({
                     >
                         <polyline points="9 18 15 12 9 6" />
                     </svg>
-                )}
-
-                {dragHandle && (
-                    <div className="w-5 h-5 flex flex-col justify-center gap-[3px] text-[var(--ios-tertiary)] cursor-grab active:cursor-grabbing p-0.5">
-                        <span className="w-full h-[2px] bg-current rounded-full" />
-                        <span className="w-full h-[2px] bg-current rounded-full" />
-                        <span className="w-full h-[2px] bg-current rounded-full" />
-                    </div>
                 )}
             </div>
         </div>

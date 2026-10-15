@@ -60,11 +60,10 @@ export function IosScreen({
     const handleTouchEnd = () => {
         if (!isSwiping.current || !containerRef.current) return
         isSwiping.current = false
-        containerRef.current.style.transition = 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)'
         if (currentDelta.current > 85 && onClose) {
-            containerRef.current.style.transform = 'translate3d(calc(100% + 48px), 0, 0)'
-            setTimeout(onClose, 300)
+            onClose()
         } else {
+            containerRef.current.style.transition = 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)'
             containerRef.current.style.transform = 'translate3d(0, 0, 0)'
         }
         currentDelta.current = 0
@@ -92,7 +91,8 @@ export function IosScreen({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             style={{
-                transform: 'translate3d(calc(100% + 48px), 0, 0)'
+                transform: 'translate3d(calc(100% + 48px), 0, 0)',
+                pointerEvents: isOpen ? 'auto' : 'none'
             }}
             className="ios-subview-panel"
         >

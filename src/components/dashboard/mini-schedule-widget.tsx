@@ -4,12 +4,15 @@ import { useMemo } from 'react'
 import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
 import { parseLessonTimeRange, calculateBreakDuration } from '@/utils/time.util'
 import { TextClampOption } from '@/app/page'
+import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard, IosBadge, IosBreakDivider } from '@/components/ios/ios-ui'
 
 interface MiniScheduleWidgetProps {
     timetableData: SmartTimetableResult | null
     isLoading?: boolean
     textClamp?: TextClampOption
+    lang?: AppLanguage
+    t: AppDictionary
     onOpenFullSchedule: () => void
 }
 
@@ -17,12 +20,14 @@ function MiniLessonItem({
     lesson,
     isActive = false,
     labelBadge,
-    textClamp = 'full'
+    textClamp = 'full',
+    t
 }: {
     lesson: LessonItem
     isActive?: boolean
     labelBadge?: string
     textClamp?: TextClampOption
+    t: AppDictionary
 }) {
     const titleClampClass = textClamp === '1' ? 'line-clamp-1' : textClamp === '2' ? 'line-clamp-2' : ''
 
@@ -48,7 +53,7 @@ function MiniLessonItem({
                 </h4>
 
                 <p className="text-[12px] font-normal text-[var(--ios-secondary)]">
-                    {lesson.teacher || '—'}
+                    {lesson.teacher || t.notSpecified}
                 </p>
             </div>
 
@@ -60,10 +65,10 @@ function MiniLessonItem({
                     <IosBadge variant="shortened" text={`${lesson.durationMinutes} min`} />
                 )}
                 {lesson.isCancelled && (
-                    <IosBadge variant="cancelled" text="Odwołane" />
+                    <IosBadge variant="cancelled" text={t.cancelledLabel} />
                 )}
                 {lesson.isSubstitution && (
-                    <IosBadge variant="substitution" text="Zastępstwo" />
+                    <IosBadge variant="substitution" text={t.substitutionLabel} />
                 )}
             </div>
         </div>
@@ -74,6 +79,8 @@ export function MiniScheduleWidget({
     timetableData,
     isLoading = false,
     textClamp = 'full',
+    lang = 'pl',
+    t,
     onOpenFullSchedule
 }: MiniScheduleWidgetProps) {
     const realTodayIso = useMemo(() => {
@@ -161,7 +168,7 @@ export function MiniScheduleWidget({
 
         if (!next && nextUpcomingDaySchedule && nextUpcomingDaySchedule.lessons.length > 0) {
             next = nextUpcomingDaySchedule.lessons[0]
-            badge = nextUpcomingDaySchedule.dayName === 'Monday' ? 'Pn' : 'Jutro'
+            badge = nextUpcomingDaySchedule.dayName === 'Monday' ? (lang === 'en' ? 'Mo' : 'Pn') : (lang === 'en' ? 'Tomorrow' : 'Jutro')
         }
 
         const b = curr && next && !badge ? calculateBreakDuration(curr.time, next.time) : 10
@@ -173,7 +180,7 @@ export function MiniScheduleWidget({
             breakMinutes: b,
             allEnded: false
         }
-    }, [lessons, nextUpcomingDaySchedule])
+    }, [lessons, nextUpcomingDaySchedule, lang])
 
     return (
         <IosCard
@@ -182,7 +189,7 @@ export function MiniScheduleWidget({
         >
             <div className="flex items-center justify-between px-1.5 pb-2.5 pt-0.5 border-b border-[var(--ios-separator)]/50">
                 <span className="text-[12px] font-semibold text-[var(--ios-label)] tracking-tight leading-none">
-                    Plan lekcji
+                    {t.schedule}
                 </span>
 
                 <svg className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0 leading-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -200,15 +207,15 @@ export function MiniScheduleWidget({
                 <div className="py-7 flex flex-col items-center justify-center gap-1 text-center">
                     <span className="text-sm">🎉</span>
                     <span className="text-[13px] font-medium text-[var(--ios-label)]">
-                        Wszystkie lekcje na dziś zakończone
+                        {lang === 'en' ? 'All lessons for today completed' : 'Wszystkie lekcje na dziś zakończone'}
                     </span>
                     <span className="text-[11px] font-normal text-[var(--ios-secondary)]">
-                        Odpocznij przed kolejnym dniem
+                        {lang === 'en' ? 'Rest before tomorrow' : 'Odpocznij przed kolejnym dniem'}
                     </span>
                 </div>
             ) : lessons.length === 0 ? (
                 <div className="py-7 text-center text-xs font-normal text-[var(--ios-secondary)]">
-                    Brak zaplanowanych lekcji na dziś
+                    {t.noLessonsDay}
                 </div>
             ) : (
                 <div className="flex flex-col gap-2">
@@ -217,6 +224,7 @@ export function MiniScheduleWidget({
                             lesson={currentLesson}
                             isActive={true}
                             textClamp={textClamp}
+                            t={t}
                         />
                     )}
 
@@ -227,6 +235,7 @@ export function MiniScheduleWidget({
                             lesson={nextLesson}
                             labelBadge={nextLessonBadge}
                             textClamp={textClamp}
+                            t={t}
                         />
                     )}
                 </div>

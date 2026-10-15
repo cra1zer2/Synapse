@@ -213,14 +213,7 @@ export default function Home() {
 
   return (
     <div className="w-full min-h-screen bg-[var(--ios-bg)] overflow-hidden relative">
-      <div
-        style={{
-          transform: showFullSchedule ? 'translate3d(-20%, 0, 0)' : 'translate3d(0, 0, 0)',
-          opacity: showFullSchedule ? 0.7 : 1,
-          transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1)'
-        }}
-        className="w-full min-h-screen flex flex-col will-change-transform"
-      >
+      <div className="w-full min-h-screen flex flex-col">
         <header className="ios-header">
           <div className="max-w-md mx-auto w-full flex items-center justify-between">
             <div>
@@ -281,6 +274,8 @@ export default function Home() {
               timetableData={activeTodayData}
               isLoading={timetable.isLoadingWeek && !activeTodayData}
               textClamp={textClamp}
+              lang={lang}
+              t={t}
               onOpenFullSchedule={() => setShowFullSchedule(true)}
             />
           )}

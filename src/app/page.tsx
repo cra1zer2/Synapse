@@ -321,6 +321,8 @@ export default function Home() {
         currentOrder={widgetOrder}
         activeMap={activeWidgets}
         onSave={handleSaveWidgetConfig}
+        lang={lang}
+        t={t}
       />
 
       <SettingsSheet

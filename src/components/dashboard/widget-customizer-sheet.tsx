@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { IosListGroup, IosListCell } from '@/components/ios/ios-list'
 import { IosSwitch } from '@/components/ios/ios-switch'
-import { IosSubView } from '@/components/ios/ios-subview'
+import { IosScreen } from '@/components/ios/ios-screen'
+import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 
 export type DashboardWidgetId =
     | 'mini_schedule'
@@ -16,16 +17,12 @@ export type DashboardWidgetId =
 
 export interface WidgetMeta {
     id: DashboardWidgetId
-    title: string
-    description: string
     icon: string
 }
 
 export const DEFAULT_WIDGET_CONFIGS: WidgetMeta[] = [
     {
         id: 'mini_schedule',
-        title: 'Podgląd planu lekcji',
-        description: 'Dwie lekcje: aktualna i kolejna z przerwą między nimi',
         icon: '⏱️'
     }
 ]
@@ -36,6 +33,8 @@ interface WidgetCustomizerSheetProps {
     currentOrder: DashboardWidgetId[]
     activeMap: Record<DashboardWidgetId, boolean>
     onSave: (order: DashboardWidgetId[], active: Record<DashboardWidgetId, boolean>) => void
+    lang?: AppLanguage
+    t: AppDictionary
 }
 
 export function WidgetCustomizerSheet({
@@ -43,7 +42,9 @@ export function WidgetCustomizerSheet({
     onClose,
     currentOrder,
     activeMap,
-    onSave
+    onSave,
+    lang = 'pl',
+    t
 }: WidgetCustomizerSheetProps) {
     const [localOrder, setLocalOrder] = useState<DashboardWidgetId[]>(currentOrder)
     const [localActive, setLocalActive] = useState<Record<DashboardWidgetId, boolean>>(activeMap)
@@ -69,21 +70,30 @@ export function WidgetCustomizerSheet({
         onSave(updated, localActive)
     }
 
+    const resolveWidgetTitle = (id: DashboardWidgetId) => {
+        if (id === 'mini_schedule') {
+            return t.schedule
+        }
+        return id
+    }
+
+    const sheetTitle = lang === 'en' ? 'Edit Dashboard' : 'Dostosuj pulpit'
+    const sectionHeader = lang === 'en' ? 'Dashboard Widgets' : 'Widżety na pulpicie'
+
     return (
-        <IosSubView
+        <IosScreen
             isOpen={isOpen}
             onClose={onClose}
-            title="Dostosuj pulpit"
-            backLabel="Wróć"
+            title={sheetTitle}
+            backLabel={t.backAction}
+            isSubView={true}
         >
-            <IosListGroup
-                header="Widżety na pulpicie"
-                footer="Wyłączaj lub zmieniaj kolejność modułów wyświetlanych na głównym pulpicie."
-            >
+            <IosListGroup header={sectionHeader}>
                 {localOrder.map((id, index) => {
                     const meta = DEFAULT_WIDGET_CONFIGS.find((w) => w.id === id)
                     if (!meta) return null
                     const isEnabled = Boolean(localActive[id])
+                    const widgetTitle = resolveWidgetTitle(id)
 
                     return (
                         <IosListCell
@@ -94,11 +104,10 @@ export function WidgetCustomizerSheet({
                                 </div>
                             }
                             title={
-                                <span className={isEnabled ? 'opacity-100' : 'opacity-50'}>
-                                    {meta.title}
+                                <span className={isEnabled ? 'opacity-100' : 'opacity-40'}>
+                                    {widgetTitle}
                                 </span>
                             }
-                            subtitle={meta.description}
                             trailing={
                                 <div className="flex items-center gap-2">
                                     {localOrder.length > 1 && (
@@ -138,6 +147,6 @@ export function WidgetCustomizerSheet({
                     )
                 })}
             </IosListGroup>
-        </IosSubView>
+        </IosScreen>
     )
 }

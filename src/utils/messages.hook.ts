@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { getMessagesAndAnnouncementsAction, readMessageAction, sendMessageAction } from '@/app/actions'
 
-export type MainSection = 'schedule' | 'grades' | 'attendance' | 'messages'
+export type MainSection = 'dashboard' | 'schedule' | 'grades' | 'attendance' | 'messages'
 
 interface UseMessagesInboxOptions {
     username: string

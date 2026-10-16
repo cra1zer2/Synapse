@@ -2,6 +2,7 @@ export type AppLanguage = 'pl' | 'en'
 export type AppTheme = 'system' | 'light' | 'dark'
 
 export interface AppDictionary {
+    dashboard: string
     schedule: string
     grades: string
     attendance: string
@@ -158,6 +159,7 @@ export interface AppDictionary {
 export function getDictionary(lang: AppLanguage): AppDictionary {
     if (lang === 'en') {
         return {
+            dashboard: 'Home',
             schedule: 'Schedule',
             grades: 'Grades',
             attendance: 'Attendance',
@@ -313,6 +315,7 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
     }
 
     return {
+        dashboard: 'Pulpit',
         schedule: 'Plan',
         grades: 'Oceny',
         attendance: 'Frekwencja',

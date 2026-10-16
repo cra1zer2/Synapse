@@ -1,22 +1,30 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { createJustificationAction } from './actions'
 import { LessonItem } from '@/models/timetable.model'
+import { GradeItem, SubjectGrades } from '@/models/grade.model'
+import { SubjectAttendance } from '@/models/attendance.model'
 import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 import { CURRENT_APP_VERSION } from '@/config/version.config'
 
 import { useAccountSession } from '@/utils/account.hook'
 import { useTimetableSync } from '@/utils/timetable-sync.hook'
+import { useMessagesInbox, MainSection } from '@/utils/messages.hook'
 import { useBodyScrollLock } from '@/utils/scroll-lock.util'
 
 import { AuthView } from './widgets/auth-view'
 import { ScheduleWidget } from './widgets/schedule-widget'
+import { GradesWidget } from './widgets/grades-widget'
+import { AttendanceWidget } from './widgets/attendance-widget'
+import { MessagesWidget } from './widgets/messages-widget'
+import { AttendanceDetailModal } from './widgets/attendance-detail-modal'
+import { JustificationModal } from './widgets/justification-modal'
+import { GradeModal } from './widgets/grade-modal'
 import { LessonDetailModal } from './widgets/lesson-detail-modal'
 import { SettingsSheet } from './widgets/settings-sheet'
 import { WhatsNewModal } from '@/app/widgets/whats-new-modal'
 import { MiniScheduleWidget } from '@/components/dashboard/mini-schedule-widget'
-import { WidgetCustomizerSheet, DashboardWidgetId, DEFAULT_WIDGET_CONFIGS } from '@/components/dashboard/widget-customizer-sheet'
-import { IosScreen } from '@/components/ios/ios-screen'
 
 export type TextClampOption = 'full' | '1' | '2'
 
@@ -41,46 +49,15 @@ export default function Home() {
   const [theme, setTheme] = useState<AppTheme>('system')
   const [textClamp, setTextClamp] = useState<TextClampOption>('full')
   const [ignoreGradeModifiers, setIgnoreGradeModifiers] = useState<boolean>(false)
+  const [activeSection, setActiveSection] = useState<MainSection>('dashboard')
   const [showWhatsNew, setShowWhatsNew] = useState(false)
 
-  const [showFullSchedule, setShowFullSchedule] = useState(false)
   const [selectedLesson, setSelectedLesson] = useState<LessonItem | null>(null)
+  const [selectedGrade, setSelectedGrade] = useState<GradeItem | null>(null)
+  const [selectedWarningSubject, setSelectedWarningSubject] = useState<SubjectGrades | null>(null)
+  const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<SubjectAttendance | null>(null)
   const [showSettings, setShowSettings] = useState(false)
-  const [showCustomizer, setShowCustomizer] = useState(false)
-
-  const [widgetOrder, setWidgetOrder] = useState<DashboardWidgetId[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('synapse_dashboard_widgets')
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed
-        } catch { }
-      }
-    }
-    return DEFAULT_WIDGET_CONFIGS.map((w) => w.id)
-  })
-
-  const [activeWidgets, setActiveWidgets] = useState<Record<DashboardWidgetId, boolean>>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('synapse_dashboard_active_widgets')
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved)
-          if (parsed && typeof parsed === 'object') return parsed
-        } catch { }
-      }
-    }
-    return {
-      mini_schedule: true,
-      next_lesson: false,
-      attendance: false,
-      gpa: false,
-      messages: false,
-      lucky_number: false,
-      changes: false
-    }
-  })
+  const [showExcuseMatrix, setShowExcuseMatrix] = useState(false)
 
   const t = getDictionary(lang)
 
@@ -108,12 +85,20 @@ export default function Home() {
     isConfigured: account.isConfigured
   })
 
+  const messagesInbox = useMessagesInbox({
+    username: account.username,
+    password: account.password,
+    activeSection
+  })
+
   const isAnyOverlayActive =
     showSettings ||
-    showCustomizer ||
+    showExcuseMatrix ||
     showWhatsNew ||
-    showFullSchedule ||
-    Boolean(selectedLesson)
+    Boolean(selectedLesson) ||
+    Boolean(selectedSubjectDetail) ||
+    Boolean(selectedGrade) ||
+    Boolean(selectedWarningSubject)
 
   useBodyScrollLock(isAnyOverlayActive)
 
@@ -177,12 +162,35 @@ export default function Home() {
     setShowWhatsNew(false)
   }
 
-  const handleSaveWidgetConfig = (newOrder: DashboardWidgetId[], newActive: Record<DashboardWidgetId, boolean>) => {
-    setWidgetOrder(newOrder)
-    setActiveWidgets(newActive)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('synapse_dashboard_widgets', JSON.stringify(newOrder))
-      localStorage.setItem('synapse_dashboard_active_widgets', JSON.stringify(newActive))
+  const handleTabChange = (targetTab: MainSection) => {
+    setActiveSection(targetTab)
+  }
+
+  const handleSubmitJustifications = async (payload: {
+    dateIso: string
+    lessons: number[]
+    message: string
+  }): Promise<boolean> => {
+    try {
+      const parentAcc = account.savedAccounts.find((a) => a.role === 'parent')
+      const targetUser = parentAcc ? parentAcc.username : account.username
+      const targetPass = parentAcc ? parentAcc.password : account.password
+
+      const res = await createJustificationAction(targetUser, targetPass, {
+        dateFrom: payload.dateIso,
+        dateTo: payload.dateIso,
+        lessons: payload.lessons,
+        messageFromParent: payload.message,
+        sendNotify: false
+      })
+
+      if (res.success) {
+        timetable.executeSync(account.username, account.password, lang, timetable.currentWeekPivot, true)
+        return true
+      }
+      return false
+    } catch {
+      return false
     }
   }
 
@@ -226,34 +234,21 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowCustomizer(true)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-90 transition-transform"
-                aria-label="Customize"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowSettings(true)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-90 transition-transform"
-                aria-label="Settings"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                </svg>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowSettings(true)}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-90 transition-transform"
+              aria-label="Settings"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
           </div>
         </header>
 
-        <main className="w-full flex-1 pt-4 pb-12 px-4 max-w-md mx-auto flex flex-col gap-4 box-border overflow-x-hidden">
+        <main className="w-full flex-1 pt-4 pb-20 px-4 max-w-md mx-auto flex flex-col gap-4 box-border overflow-x-hidden">
           {timetable.hasNewUpdate && (
             <div
               onClick={timetable.applyPendingUpdates}
@@ -269,42 +264,150 @@ export default function Home() {
             </div>
           )}
 
-          {activeWidgets.mini_schedule && (
-            <MiniScheduleWidget
-              timetableData={activeTodayData}
-              isLoading={timetable.isLoadingWeek && !activeTodayData}
-              textClamp={textClamp}
-              lang={lang}
-              t={t}
-              onOpenFullSchedule={() => setShowFullSchedule(true)}
-            />
-          )}
+          <div className="w-full flex-1 flex flex-col gap-3">
+            {/* Dashboard / Home tab: only the single widget */}
+            <div className={activeSection === 'dashboard' ? 'w-full flex flex-col gap-3' : 'hidden'}>
+              <MiniScheduleWidget
+                timetableData={activeTodayData}
+                isLoading={timetable.isLoadingWeek && !activeTodayData}
+                textClamp={textClamp}
+                lang={lang}
+                t={t}
+                onOpenFullSchedule={() => setActiveSection('schedule')}
+              />
+            </div>
+
+            {/* Schedule tab */}
+            <div className={activeSection === 'schedule' ? 'w-full flex flex-col gap-3' : 'hidden'}>
+              {timetable.timetableData && (
+                <ScheduleWidget
+                  timetableData={timetable.timetableData}
+                  selectedDay={timetable.selectedDay}
+                  onSelectDay={(day) => timetable.setSelectedDay(day)}
+                  onSelectLesson={setSelectedLesson}
+                  currentWeekPivot={timetable.currentWeekPivot}
+                  onShiftWeek={timetable.shiftWeek}
+                  onSelectDate={timetable.queueWeekChange}
+                  isLoadingWeek={timetable.isLoadingWeek}
+                  textClamp={textClamp}
+                  lang={lang}
+                  t={t}
+                />
+              )}
+            </div>
+
+            {/* Grades tab */}
+            <div className={activeSection === 'grades' ? 'w-full flex flex-col gap-3' : 'hidden'}>
+              {timetable.gradesData && (
+                <GradesWidget
+                  gradesData={timetable.gradesData}
+                  ignoreGradeModifiers={ignoreGradeModifiers}
+                  onSelectGrade={setSelectedGrade}
+                  onSelectWarning={setSelectedWarningSubject}
+                  t={t}
+                />
+              )}
+            </div>
+
+            {/* Attendance tab */}
+            <div className={activeSection === 'attendance' ? 'w-full flex flex-col gap-3' : 'hidden'}>
+              {timetable.attendanceData && (
+                <AttendanceWidget
+                  attendanceData={timetable.attendanceData}
+                  onSelectSubject={setSelectedSubjectDetail}
+                  onOpenExcuseModal={() => setShowExcuseMatrix(true)}
+                  t={t}
+                />
+              )}
+            </div>
+
+            {/* Messages tab */}
+            <div className={activeSection === 'messages' ? 'w-full flex flex-col gap-3' : 'hidden'}>
+              <MessagesWidget
+                messages={messagesInbox.messages}
+                announcements={messagesInbox.announcements}
+                receivers={messagesInbox.receivers}
+                onOpenMessage={messagesInbox.handleOpenMessage}
+                onSendMessage={messagesInbox.handleSendMessage}
+                isLoading={messagesInbox.isLoadingMessages}
+                t={t}
+              />
+            </div>
+          </div>
         </main>
       </div>
 
-      <IosScreen
-        isOpen={showFullSchedule}
-        onClose={() => setShowFullSchedule(false)}
-        title={t.schedule}
-        backLabel={t.backAction}
-        isSubView={true}
-      >
-        {timetable.timetableData && (
-          <ScheduleWidget
-            timetableData={timetable.timetableData}
-            selectedDay={timetable.selectedDay}
-            onSelectDay={(day) => timetable.setSelectedDay(day)}
-            onSelectLesson={setSelectedLesson}
-            currentWeekPivot={timetable.currentWeekPivot}
-            onShiftWeek={timetable.shiftWeek}
-            onSelectDate={timetable.queueWeekChange}
-            isLoadingWeek={timetable.isLoadingWeek}
-            textClamp={textClamp}
-            lang={lang}
-            t={t}
-          />
-        )}
-      </IosScreen>
+      {/* Bottom navigation tab bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--ios-separator)] bg-[var(--ios-card)]/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="max-w-md mx-auto grid grid-cols-5 h-12">
+          {[
+            {
+              id: 'dashboard' as MainSection,
+              label: t.dashboard,
+              icon: (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              )
+            },
+            {
+              id: 'schedule' as MainSection,
+              label: t.schedule,
+              icon: (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+              )
+            },
+            {
+              id: 'grades' as MainSection,
+              label: t.grades,
+              icon: (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+                  <text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="600" fill="currentColor" stroke="none">5</text>
+                </svg>
+              )
+            },
+            {
+              id: 'attendance' as MainSection,
+              label: t.attendance,
+              icon: (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+              )
+            },
+            {
+              id: 'messages' as MainSection,
+              label: t.messages,
+              icon: (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              )
+            }
+          ].map((tab) => {
+            const isActive = activeSection === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex flex-col items-center justify-center transition-colors ${
+                  isActive ? 'text-[var(--ios-blue)]' : 'text-[var(--ios-secondary)]'
+                }`}
+              >
+                {tab.icon}
+                <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? 'font-semibold' : 'font-normal'}`}>{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
 
       {selectedLesson && (
         <LessonDetailModal
@@ -315,13 +418,30 @@ export default function Home() {
         />
       )}
 
-      <WidgetCustomizerSheet
-        isOpen={showCustomizer}
-        onClose={() => setShowCustomizer(false)}
-        currentOrder={widgetOrder}
-        activeMap={activeWidgets}
-        onSave={handleSaveWidgetConfig}
-        lang={lang}
+      {selectedSubjectDetail && (
+        <AttendanceDetailModal
+          subjectDetail={selectedSubjectDetail}
+          onClose={() => setSelectedSubjectDetail(null)}
+          onSelectAbsenceForExcuse={() => setShowExcuseMatrix(true)}
+          t={t}
+        />
+      )}
+
+      {showExcuseMatrix && timetable.attendanceData && (
+        <JustificationModal
+          attendanceData={timetable.attendanceData}
+          timetableData={timetable.timetableData}
+          onClose={() => setShowExcuseMatrix(false)}
+          onSubmitMultiple={handleSubmitJustifications}
+          t={t}
+        />
+      )}
+
+      <GradeModal
+        selectedGrade={selectedGrade}
+        selectedWarningSubject={selectedWarningSubject}
+        onCloseGrade={() => setSelectedGrade(null)}
+        onCloseWarning={() => setSelectedWarningSubject(null)}
         t={t}
       />
 

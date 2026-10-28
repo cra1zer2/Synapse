@@ -1,24 +1,72 @@
 import * as cheerio from 'cheerio'
 import { MessageItem, AnnouncementItem, ReceiverItem, MessagesActionResult } from '@/models/message.model'
 import { getNativeLibrusSession, invalidateNativeSession, NativeLibrusSession } from '@/services/session.service'
+import { getAuthenticatedClient, invalidateClientSession } from '@/services/librus.service'
+
+function getDefaultReferer(username: string): string {
+    return String(username || '').trim().toLowerCase().endsWith('u')
+        ? 'https://synergia.librus.pl/uczen/index'
+        : 'https://synergia.librus.pl/rodzic/index'
+}
 
 function isLoggedOutHtml(html: string): boolean {
     if (!html) return true
-    if (html.includes('OAuth/Authorization') || html.includes('form-login')) return true
+    if (
+        html.includes('OAuth/Authorization') ||
+        html.includes('form-login') ||
+        html.includes('Sesja wygasła') ||
+        html.includes('Brak dostępu')
+    ) {
+        return true
+    }
     if (html.includes('Przekierowanie') && html.includes('loguj')) return true
-    return false
+
+    const hasSynergiaLayout =
+        html.includes('container-message') ||
+        html.includes('container-background') ||
+        html.includes('decorated') ||
+        html.includes('Wyloguj')
+
+    return !hasSynergiaLayout
+}
+
+function tryDecodeBase64Content(raw: string): string {
+    const trimmed = raw.trim()
+    if (!trimmed) return ''
+
+    const cdataMatch = trimmed.match(/<!\[CDATA\[([\s\S]*?)\]\]>/i)
+    const candidate = (cdataMatch ? cdataMatch[1] : trimmed).replace(/\s+/g, '')
+
+    if (
+        candidate.length >= 16 &&
+        candidate.length % 4 === 0 &&
+        /^[A-Za-z0-9+/]+={0,2}$/.test(candidate) &&
+        !trimmed.includes(' ')
+    ) {
+        try {
+            const decoded = Buffer.from(candidate, 'base64').toString('utf-8')
+            if (decoded && !decoded.includes('\uFFFD')) {
+                const $ = cheerio.load(decoded)
+                $('br').replaceWith('\n')
+                return $.text().replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim() || decoded.trim()
+            }
+        } catch {}
+    }
+
+    return trimmed
 }
 
 async function fetchHtmlWithRetry(
     cleanUser: string,
     cleanPass: string,
     url: string,
-    referer: string = 'https://synergia.librus.pl/uczen/index'
+    referer?: string
 ): Promise<{ session: NativeLibrusSession; html: string; ok: boolean }> {
+    const effectiveReferer = referer || getDefaultReferer(cleanUser)
     let session = await getNativeLibrusSession(cleanUser, cleanPass)
     let res = await session.fetch(url, {
         headers: {
-            'Referer': referer,
+            'Referer': effectiveReferer,
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         }
     })
@@ -29,7 +77,7 @@ async function fetchHtmlWithRetry(
         session = await getNativeLibrusSession(cleanUser, cleanPass)
         res = await session.fetch(url, {
             headers: {
-                'Referer': referer,
+                'Referer': effectiveReferer,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
             }
         })
@@ -59,18 +107,20 @@ function parseInboxHtml(html: string): MessageItem[] {
         const linkHref =
             $(children[3]).find('a').attr('href') ||
             $(children[2]).find('a').attr('href') ||
-            $(row).find('a[href*="/wiadomosci/"]').attr('href') ||
+            $(row).find('a[href*="wiadomosci"]').attr('href') ||
             ''
 
         let id = 0
         if (linkHref) {
-            const parts = linkHref.split('/').filter(Boolean)
-            const candidate = Number(parts[3] || parts[parts.length - 1])
-            if (!isNaN(candidate) && candidate > 0) {
-                id = candidate
+            const explicitMatch = linkHref.match(/\/?wiadomosci\/\d+\/\d+\/(\d+)/i)
+            if (explicitMatch) {
+                id = Number(explicitMatch[1])
             } else {
-                const match = linkHref.match(/\/wiadomosci\/\d+\/\d+\/(\d+)/)
-                if (match) id = Number(match[1])
+                const parts = linkHref.split('/').filter(Boolean)
+                const candidate = Number(parts[3] || parts[parts.length - 1])
+                if (!isNaN(candidate) && candidate > 0) {
+                    id = candidate
+                }
             }
         }
 
@@ -133,7 +183,8 @@ function parseAnnouncementsHtml(html: string): AnnouncementItem[] {
 
         const contentCell = $(cols[3]).clone()
         contentCell.find('br').replaceWith('\n')
-        const content = contentCell.text().replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+        const rawContent = contentCell.text().replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+        const content = tryDecodeBase64Content(rawContent)
 
         if (content || title) {
             announcements.push({
@@ -279,34 +330,80 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
             }
         }
 
+        const defaultRef = getDefaultReferer(cleanUser)
         const inboxFetch = await fetchHtmlWithRetry(
             cleanUser,
             cleanPass,
-            'https://synergia.librus.pl/wiadomosci/5'
+            'https://synergia.librus.pl/wiadomosci/5',
+            defaultRef
         )
         const session = inboxFetch.session
 
-        const [annRes, receiversList] = await Promise.all([
-            session
-                .fetch('https://synergia.librus.pl/ogloszenia', {
-                    headers: {
-                        'Referer': 'https://synergia.librus.pl/uczen/index',
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-                    }
-                })
-                .then(async (r) => (r.ok ? await r.text() : ''))
-                .catch(() => ''),
+        const [annFetch, receiversList] = await Promise.all([
+            fetchHtmlWithRetry(
+                cleanUser,
+                cleanPass,
+                'https://synergia.librus.pl/ogloszenia',
+                defaultRef
+            ).catch(() => ({ session, html: '', ok: false })),
             fetchReceiversList(session)
         ])
 
-        const inboxMessages = parseInboxHtml(inboxFetch.html)
-        const announcements = parseAnnouncementsHtml(annRes)
+        if (inboxFetch.ok || annFetch.ok) {
+            const inboxMessages = parseInboxHtml(inboxFetch.html)
+            const announcements = parseAnnouncementsHtml(annFetch.html)
 
-        return {
-            success: true,
-            messages: inboxMessages,
-            announcements,
-            receivers: receiversList
+            return {
+                success: true,
+                messages: inboxMessages,
+                announcements,
+                receivers: receiversList
+            }
+        }
+
+        // Fallback to librus-api client if native session HTML was rejected
+        try {
+            invalidateClientSession(cleanUser)
+            const client = await getAuthenticatedClient(cleanUser, cleanPass)
+            const [rawInbox, rawAnnouncements] = await Promise.all([
+                client.inbox.listInbox(5).catch(() => []),
+                client.inbox.listAnnouncements().catch(() => [])
+            ])
+
+            const inboxList = Array.isArray(rawInbox) ? rawInbox : []
+            const announcementsList = Array.isArray(rawAnnouncements) ? rawAnnouncements : []
+
+            const messages: MessageItem[] = inboxList.map((item: any, idx: number) => ({
+                id: Number(item.id) || idx + 1,
+                sender: item.user || item.sender || 'Nauczyciel',
+                subject: item.title || item.subject || 'Wiadomość',
+                date: item.date || '',
+                isRead: Boolean(item.read),
+                hasAttachments: Boolean(item.files && item.files.length > 0)
+            }))
+
+            const announcements: AnnouncementItem[] = announcementsList.map((item: any, idx: number) => ({
+                id: Number(item.id) || idx + 1,
+                author: item.user || item.author || 'Dyrekcja',
+                title: item.title || 'Ogłoszenie',
+                date: item.date || '',
+                content: tryDecodeBase64Content(String(item.content || ''))
+            }))
+
+            return {
+                success: true,
+                messages,
+                announcements,
+                receivers: receiversList
+            }
+        } catch (fallbackErr: any) {
+            return {
+                success: false,
+                messages: [],
+                announcements: [],
+                receivers: [],
+                error: String(fallbackErr?.message || 'Błąd ładowania wiadomości')
+            }
         }
     } catch (error: any) {
         return {
@@ -319,6 +416,42 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
     }
 }
 
+function extractMessageBodyFromHtml(html: string): string {
+    if (!html) return ''
+
+    const xmlMatch = html.match(/<Message>\s*(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?\s*<\/Message>/i)
+    if (xmlMatch && xmlMatch[1]) {
+        return tryDecodeBase64Content(xmlMatch[1])
+    }
+
+    const $ = cheerio.load(html)
+    const contentNode = $('.container-message-content').first()
+
+    if (contentNode.length > 0) {
+        const cloned = contentNode.clone()
+        cloned.find('br').replaceWith('\n')
+        const rawText = cloned.text().replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+        if (rawText) {
+            return tryDecodeBase64Content(rawText)
+        }
+    }
+
+    const fallbackNode = $('table.stretch.container-message td.message-folders+td').first()
+    if (fallbackNode.length > 0) {
+        const innerContent = fallbackNode.find('.container-message-content')
+        if (innerContent.length > 0) {
+            const cloned = innerContent.clone()
+            cloned.find('br').replaceWith('\n')
+            const rawText = cloned.text().replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+            if (rawText) {
+                return tryDecodeBase64Content(rawText)
+            }
+        }
+    }
+
+    return ''
+}
+
 export async function fetchMessageContent(
     username: string,
     pass: string,
@@ -328,33 +461,39 @@ export async function fetchMessageContent(
         const cleanUser = String(username || '').trim()
         const cleanPass = String(pass || '').trim()
 
-        const { html, ok } = await fetchHtmlWithRetry(
+        const primary = await fetchHtmlWithRetry(
+            cleanUser,
+            cleanPass,
+            `https://synergia.librus.pl/wiadomosci/1/5/${messageId}/f0`,
+            'https://synergia.librus.pl/wiadomosci/5'
+        )
+
+        let body = extractMessageBodyFromHtml(primary.html)
+        if (body) {
+            return { success: true, content: body }
+        }
+
+        const secondary = await fetchHtmlWithRetry(
             cleanUser,
             cleanPass,
             `https://synergia.librus.pl/wiadomosci/1/5/${messageId}`,
             'https://synergia.librus.pl/wiadomosci/5'
         )
 
-        if (!ok || !html) {
-            return { success: false, error: 'Nie udało się wczytać wiadomości' }
+        body = extractMessageBodyFromHtml(secondary.html)
+        if (body) {
+            return { success: true, content: body }
         }
 
-        const $ = cheerio.load(html)
-        const contentNode = $('.container-message-content').first()
-
-        if (contentNode.length > 0) {
-            const cloned = contentNode.clone()
-            cloned.find('br').replaceWith('\n')
-            const cleanContent = cloned.text().replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
-            return { success: true, content: cleanContent }
-        }
-
-        const fallbackNode = $('table.stretch.container-message td.message-folders+td').first()
-        if (fallbackNode.length > 0) {
-            const cloned = fallbackNode.clone()
-            cloned.find('br').replaceWith('\n')
-            return { success: true, content: cloned.text().trim() }
-        }
+        // Fallback to librus-api getMessage
+        try {
+            const client = await getAuthenticatedClient(cleanUser, cleanPass)
+            const msgData: any = await client.inbox.getMessage(5, messageId)
+            const rawContent = typeof msgData === 'string' ? msgData : String(msgData?.content || '')
+            if (rawContent) {
+                return { success: true, content: tryDecodeBase64Content(rawContent) }
+            }
+        } catch {}
 
         return { success: true, content: '' }
     } catch (error: any) {

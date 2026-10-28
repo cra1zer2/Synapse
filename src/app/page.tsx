@@ -243,6 +243,30 @@ export default function Home() {
   }, [applyTheme])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleDeepLinking = () => {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const tab = params.get('tab')
+        if (tab === 'grades') {
+          setShowFullGrades(true)
+        } else if (tab === 'messages') {
+          setShowMessagesScreen(true)
+        } else if (tab === 'schedule') {
+          setShowFullSchedule(true)
+        } else if (tab === 'attendance') {
+          setShowFullAttendance(true)
+        }
+      } catch {}
+    }
+
+    handleDeepLinking()
+    window.addEventListener('popstate', handleDeepLinking)
+    return () => window.removeEventListener('popstate', handleDeepLinking)
+  }, [])
+
+  useEffect(() => {
     if (theme !== 'system') return
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     const handler = (e: MediaQueryListEvent) => {
@@ -511,7 +535,12 @@ export default function Home() {
 
       <IosScreen
         isOpen={showFullGrades}
-        onClose={() => setShowFullGrades(false)}
+        onClose={() => {
+          setShowFullGrades(false)
+          if (typeof window !== 'undefined' && window.location.search.includes('tab=grades')) {
+            window.history.replaceState({}, '', window.location.pathname)
+          }
+        }}
         title={t.grades}
         backLabel={t.backAction}
         isSubView={true}
@@ -711,6 +740,9 @@ export default function Home() {
           setShowMessagesScreen(false)
           setIsMessagesSubViewOpen(false)
           setShowComposeInHeader(false)
+          if (typeof window !== 'undefined' && window.location.search.includes('tab=messages')) {
+            window.history.replaceState({}, '', window.location.pathname)
+          }
         }}
         title={t.messagesInbox}
         backLabel={t.backAction}

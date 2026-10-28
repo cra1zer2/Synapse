@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { getMessagesAndAnnouncementsAction, readMessageAction, sendMessageAction } from '@/app/actions'
+import { createMessagesNotification, showAppNotification } from '@/services/notification.service'
+import { AppLanguage } from '@/config/dictionary.config'
 
 export function useMessagesInbox({ username, password }: { username: string; password: string }) {
     const [messages, setMessages] = useState<MessageItem[]>([])
@@ -38,12 +40,31 @@ export function useMessagesInbox({ username, password }: { username: string; pas
                 const mRes = await getMessagesAndAnnouncementsAction(username, password)
                 if (!isCancelled) {
                     if (mRes.success) {
-                        setMessages(mRes.messages || [])
+                        const fetchedMessages = mRes.messages || []
+                        const unreadCount = fetchedMessages.filter((m) => !m.isRead).length
+                        const prevUnreadKey = `synapse_prev_unread_${username}`
+                        const storedPrev = localStorage.getItem(prevUnreadKey)
+
+                        if (storedPrev !== null) {
+                            const prevCount = parseInt(storedPrev, 10)
+                            if (!isNaN(prevCount) && unreadCount > prevCount) {
+                                const diff = unreadCount - prevCount
+                                const appLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
+                                const prefsRaw = localStorage.getItem('synapse_notification_prefs')
+                                const prefs = prefsRaw ? JSON.parse(prefsRaw) : { enabled: true, messages: true }
+                                if (prefs.enabled !== false && prefs.messages !== false) {
+                                    showAppNotification(createMessagesNotification(diff, appLang))
+                                }
+                            }
+                        }
+                        localStorage.setItem(prevUnreadKey, String(unreadCount))
+
+                        setMessages(fetchedMessages)
                         setAnnouncements(mRes.announcements || [])
                         setReceivers(mRes.receivers || [])
                         setMessagesError(null)
                         localStorage.setItem(cacheKey, JSON.stringify({
-                            messages: mRes.messages || [],
+                            messages: fetchedMessages,
                             announcements: mRes.announcements || [],
                             receivers: mRes.receivers || []
                         }))
@@ -75,6 +96,8 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         setMessages((prev) => {
             const updated = prev.map((m) => (Number(m.id) === idNum ? { ...m, isRead: true } : m))
             if (typeof window !== 'undefined') {
+                const newUnread = updated.filter((m) => !m.isRead).length
+                localStorage.setItem(`synapse_prev_unread_${username}`, String(newUnread))
                 const cacheKey = `synapse_msg_${username}`
                 const cached = localStorage.getItem(cacheKey)
                 if (cached) {

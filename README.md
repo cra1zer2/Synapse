@@ -1,115 +1,58 @@
 # Synapse
 
-**Synapse** is a fast, clean, ad-free personal app for the Polish **Librus Synergia** electronic gradebook — designed to work on **any phone** (both **iPhone / iOS** and **Android**) as well as on your computer.
+**Synapse** is a fast, clean, ad-free personal web app for the Polish **Librus Synergia** gradebook — built for **iPhone (iOS)**, **Android**, and desktop.
 
-> **Disclaimer**: Synapse is an independent, unofficial open-source project and is **not** affiliated with or endorsed by Librus sp. z o.o. The author does not host any shared servers or collect any user data — your instance and credentials are 100% yours and local to your device. See the full [Disclaimer & Privacy Notice](#disclaimer--privacy-notice) below.
+> **Disclaimer**: Synapse is an independent, unofficial open-source project and is **not** affiliated with or endorsed by Librus sp. z o.o. The author does not run any shared servers or collect any user data — your instance and credentials are 100% yours and local to your device. See the [Disclaimer & Privacy Notice](#disclaimer--privacy-notice) below.
 
 ### Why I Built This
-After one of the most popular community gradebook apps recently ended support — and was only ever available on Android — iPhone users (and now everyone else) were left with the slow, ad-heavy official portal where basic features are locked behind paywalls.
+After **Szkolny.eu** ended support — and was only ever on Android — iPhone users (and now everyone else) were left with a slow, ad-heavy official portal that locks basic features behind paywalls.
 
-**Synapse is my solution.** It works not only locally on a computer, but can also be hosted for free on **Vercel** as your own personal web app. When you add it to your **Home Screen on iOS** (or Android), it opens in **fullscreen mode** without any browser bars — looking, feeling, and running completely like a real native app.
+**Synapse** solves this. You can run it locally or host your own private copy for free on **Vercel**. Added to your **Home Screen on iOS or Android**, it runs in **fullscreen mode** like a native app.
+
+Unlike **Szkolny.eu**, Synapse is also **extremely light on API requests** — often lighter than the official portal itself (for example, it uses **5x fewer requests** than the official website to fetch the week's *Lesson Topics / Zrealizowane lekcje*).
 
 ---
 
-## How to Use Synapse on Your Phone (No Coding Required)
+## Use on Your Phone (No Coding Required)
 
-You don't need to know how to code or run servers to use Synapse on your phone. You can launch your own personal copy for free in about 2 minutes:
-
-### 1. Deploy Your Own Copy for Free (with Vercel)
-1. Click the button below (or create a free account at [vercel.com](https://vercel.com)):
+1. **Deploy your free private copy on Vercel**:
 
    [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcra1zer2%2FSynapse)
 
-2. Sign in with GitHub and click **Create / Deploy** — no extra settings or keys are needed.
-3. In about a minute, Vercel will give you your own private link (for example, `https://my-synapse.vercel.app`).
-
-### 2. Add It to Your Home Screen as a Fullscreen App
-- **On iPhone (iOS)**:
-  1. Open your Vercel link in **Safari**.
-  2. Tap the **Share** button at the bottom of the screen (the square with an upward arrow).
-  3. Scroll down and tap **"Add to Home Screen"** (*Dodaj do ekranu początkowego*).
-  4. Tap **Add**. Synapse will now appear on your Home Screen and launch in fullscreen just like an App Store app!
-- **On Android**:
-  1. Open your Vercel link in **Chrome**.
-  2. Tap the three-dot menu (`⋮`) in the corner and tap **"Add to Home screen"** or **"Install app"**.
-
-### 3. Log In & Use
-Open **Synapse** from your Home Screen and sign in with your Librus Synergia (`Uczeń` or `Rodzic`) login and password. Your credentials stay saved privately on your device.
+   Sign in with GitHub and click **Create / Deploy** (no extra keys or settings needed). Vercel will give you your own private URL in ~1 minute.
+2. **Add to Home Screen** (for fullscreen native look):
+   - **iOS (Safari)**: Tap **Share** → **Add to Home Screen** (*Dodaj do ekranu początkowego*).
+   - **Android (Chrome)**: Tap **⋮** → **Add to Home screen** / **Install app**.
+3. **Log in** with your Librus Synergia (`Uczeń` or `Rodzic`) credentials.
 
 ---
 
-## Features at a Glance
+## Features
 
-- **Home Dashboard**: See your current or next lesson, live bell/break countdowns, newest grades, attendance percentage, and unread messages on one clean screen.
-- **Smart Timetable**: Automatically merges double lessons, shows classroom numbers, and highlights substitutions, cancelled classes, and upcoming tests/quizzes.
-- **Automatic Weighted Averages (GPA)**: Instant semester and yearly weighted grade averages with a toggle to ignore `+`/`-` modifiers — completely free, no paywalls.
-- **Attendance & 1-Tap Excuses (*e-Usprawiedliwienia*)**: View absences by subject, select unexcused hours (`NB`), or excuse full date ranges directly from the app.
-- **Full Messages (*Wiadomości*) & Announcements**: Read and send messages to teachers with clean formatting and an easy recipient list.
-- **Multiple Accounts & Languages**: Switch between Student and Parent accounts in one tap, choose between **Polish (`PL`)** and **English (`EN`)**, and use Light or Dark mode.
-- **100% Private & Ad-Free**: Zero ads, zero subscriptions, and no tracking. Your login details are stored only on your own device (`localStorage`).
+- **Home Dashboard**: Current/next lesson, live bell countdowns, recent grades, attendance %, and unread messages.
+- **Smart Timetable**: Merges double lessons, shows classrooms, and highlights substitutions, cancellations, and tests.
+- **Weighted Averages (GPA)**: Instant semester/yearly weighted averages with a `+`/`-` modifier toggle — no paywalls.
+- **Attendance & 1-Tap Excuses (*e-Usprawiedliwienia*)**: Excuse selected `NB` hours or full date ranges in one tap.
+- **Messages (*Wiadomości*) & Announcements**: Read and send messages to teachers with a clean recipient picker.
+- **Multi-Account & Bilingual**: 1-tap switch between Student/Parent accounts, **PL / EN** languages, and Light/Dark mode.
+- **Ultra-Low Server Load**: Batch-fetches and caches locally instead of spamming background requests (e.g., 5x fewer requests for weekly lesson topics than the official portal).
 
 ---
 
-## Technical Details (For Developers)
+## Running Locally (For Developers)
 
-If you want to run Synapse locally on your computer, inspect the code, or customize it yourself, everything below covers the technical setup.
-
-### Running Locally
-
-#### Prerequisites
-- Node.js `>= 20.9.0`
-- npm
-
-#### Installation & Development Server
+Requires **Node.js `>= 20.9.0`**. Built with **Next.js 15**, **React 19**, **TypeScript 5**, and **Tailwind CSS 4**.
 
 ```bash
 npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser and sign in with your Librus Synergia (`Rodzic` or `Uczeń`) credentials.
-
-#### Production Build
-
-```bash
-npm run build
-npm start
-```
-
-### Tech Stack
-
-- **Framework**: Next.js 15 (App Router & stateless Server Actions)
-- **UI & Runtime**: React 19, TypeScript 5
-- **Styling**: Tailwind CSS 4 + CSS custom properties for native iOS Light/Dark tokens and 120 FPS hardware-accelerated transitions
-- **PWA**: Web App Manifest & Service Worker configured for standalone iOS/Android Home Screen installation
-
-### Project Structure
-
-```text
-src/
-├── app/                  # Next.js App Router entrypoints, layout, global styles & Server Actions
-├── components/
-│   ├── attendance/       # Attendance views, quick NB excuse flow, manual excuse & history screens
-│   ├── auth/             # Login & account onboarding view
-│   ├── dashboard/        # Glanceable mini-widgets for the Home tab
-│   ├── grades/           # Subject grades list, GPA summary & grade detail modal
-│   ├── ios/              # Reusable iOS primitives (sheets, lists, switches, segmented controls)
-│   ├── messages/         # Inbox, announcements reader, message composer & recipient picker
-│   ├── schedule/         # Weekly smart timetable, lesson details & calendar event modals
-│   └── settings/         # Account switcher, preferences, push notifications & latency benchmark
-├── config/               # Localization dictionaries (PL / EN) & app configuration
-├── hooks/                # React hooks for account sessions, background sync, inbox & scroll lock
-├── models/               # TypeScript domain interfaces (timetable, grades, attendance, messages)
-├── services/             # Librus Synergia native session engine, Gateway 2.0 & HTML parsers
-├── types/                # Ambient type definitions
-└── utils/                # Date, time, text formatting & justification helper utilities
+npm run dev     # http://localhost:3000
 ```
 
 ---
 
 ## Disclaimer & Privacy Notice
 
-- **Unofficial & Independent Project**: **Synapse** is an independent, open-source project created solely for personal and educational use. It is **not** affiliated with, endorsed by, sponsored by, or in any way officially connected with **Librus sp. z o.o.** All product and company names (*Librus*, *Librus Synergia*, etc.) are trademarks or registered trademarks of their respective holders.
-- **Zero Data Collection (100% Yours & Local)**: The author of this repository does **not** run a central server and does **not** collect, store, log, share, or have access to your login credentials, grades, messages, or any other personal data. When you run Synapse locally or deploy your own copy on Vercel, the app belongs entirely to you — your credentials stay exclusively on your own device (`localStorage`) and are only used by your own instance to fetch your data directly from your account.
-- **Fully Open Source & Auditable**: There are no hidden trackers, analytics, or third-party data pipelines. The complete source code is right here in this repository — you are completely free (and encouraged) to inspect, audit, and verify every line of code yourself.
-- **No Liability / Use at Your Own Risk**: This software is provided **"as is"**, without warranty of any kind, express or implied. The author takes no responsibility or liability for any damages, account issues, or consequences resulting from the use or misuse of this software. By using Synapse, you do so entirely at your own risk and responsibility.
+- **Unofficial & Independent**: **Synapse** is an independent open-source project for personal and educational use. It is **not** affiliated with, endorsed by, or connected with **Librus sp. z o.o.** (*Librus* and *Librus Synergia* are trademarks of their respective holders).
+- **Zero Data Collection (100% Yours & Local)**: The author does **not** run a central server and does **not** collect, store, or have access to your credentials or personal data. Your login details stay exclusively on your device (`localStorage`) and communicate only through your own local or Vercel instance.
+- **Fully Open Source & Auditable**: No hidden trackers or analytics — the entire codebase is right here in this repository for anyone to inspect and verify.
+- **No Liability**: Provided **"as is"**, without warranty of any kind. The author takes no responsibility or liability for any issues arising from the use of this software; you use it entirely at your own risk.

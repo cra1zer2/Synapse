@@ -49,30 +49,78 @@ export function calculateScheduleSensitiveTimings(timetable: SmartTimetableResul
 }
 
 export function createGradeNotification(
-    grade: string,
     subject: string,
-    weight: number,
-    teacher: string,
+    grade: string,
+    category: string,
     lang: AppLanguage
 ): PushNotificationPayload {
-    const titles: Record<AppLanguage, string> = {
-        pl: `${grade} • ${subject}`,
-        en: `${grade} • ${subject}`
-    }
-
-    const bodies: Record<AppLanguage, string> = {
-        pl: `Waga ${weight} • ${teacher || 'Nauczyciel'}`,
-        en: `Weight ${weight} • ${teacher || 'Teacher'}`
-    }
+    const title = `${subject} • ${grade}`
+    const body = category ? category.trim() : (lang === 'pl' ? 'Nowa ocena' : 'New grade')
 
     return {
-        title: titles[lang],
-        body: bodies[lang],
-        tag: `grade-${subject}-${Date.now()}`,
+        title,
+        body,
+        tag: `grade-${subject}-${grade}-${Date.now()}`,
         data: {
             url: '/?tab=grades',
             type: 'grade'
         }
+    }
+}
+
+export function createMessagesNotification(
+    newCount: number,
+    lang: AppLanguage
+): PushNotificationPayload {
+    const title = lang === 'pl'
+        ? (newCount === 1 ? 'Nowa wiadomość' : 'Nowe wiadomości')
+        : (newCount === 1 ? 'New Message' : 'New Messages')
+
+    const body = lang === 'pl'
+        ? (newCount === 1 ? '1 nowa wiadomość w Librusie' : `${newCount} nowe wiadomości w Librusie`)
+        : (newCount === 1 ? '1 new message in Librus' : `${newCount} new messages in Librus`)
+
+    return {
+        title,
+        body,
+        tag: 'synapse-messages',
+        data: {
+            url: '/?tab=messages',
+            type: 'message'
+        }
+    }
+}
+
+export async function showAppNotification(payload: PushNotificationPayload): Promise<boolean> {
+    if (typeof window === 'undefined' || !('Notification' in window)) return false
+    if (Notification.permission !== 'granted') return false
+
+    try {
+        if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.ready
+            if (reg && reg.showNotification) {
+                await reg.showNotification(payload.title, {
+                    body: payload.body,
+                    icon: '/icons/icon-192.png',
+                    badge: '/icons/icon-72.png',
+                    tag: payload.tag,
+                    data: payload.data,
+                    vibrate: [80, 40, 80]
+                } as any)
+                return true
+            }
+        }
+
+        new Notification(payload.title, {
+            body: payload.body,
+            icon: '/icons/icon-192.png',
+            tag: payload.tag,
+            data: payload.data
+        })
+        return true
+    } catch (err) {
+        console.error('Failed to display notification', err)
+        return false
     }
 }
 

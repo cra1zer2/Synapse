@@ -1,47 +1,49 @@
 # Synapse
 
-**Synapse** is a fast, clean, ad-free personal web app for the Polish **Librus Synergia** gradebook — built for **iPhone (iOS)**, **Android**, and desktop.
+**🇵🇱 Polski** | **[🇬🇧 English](README.en.md)**
 
-> **Disclaimer**: Synapse is an independent, unofficial open-source project and is **not** affiliated with or endorsed by Librus sp. z o.o. The author does not run any shared servers or collect any user data — your instance and credentials are 100% yours and local to your device. See the [Disclaimer & Privacy Notice](#disclaimer--privacy-notice) below.
+**Synapse** to szybka, przejrzysta i pozbawiona reklam osobista aplikacja webowa dla dziennika **Librus Synergia** — stworzona na **iPhone'a (iOS)**, **Androida** oraz komputer.
 
-### Why I Built This
-After **Szkolny.eu** ended support — and was only ever on Android — iPhone users (and now everyone else) were left with a slow, ad-heavy official portal that locks basic features behind paywalls.
+> **Nota prawna**: Synapse to niezależny, nieoficjalny projekt open-source i **nie jest** powiązany ani wspierany przez firmę Librus sp. z o.o. Autor nie prowadzi żadnych wspólnych serwerów ani nie zbiera żadnych danych użytkowników — Twoja instancja i dane logowania należą w 100% do Ciebie i są przechowywane lokalnie na Twoim urządzeniu. Zobacz pełną sekcję [Nota prawna i prywatność](#nota-prawna-i-prywatność) poniżej.
 
-**Synapse** solves this. You can run it locally or host your own private copy for free on **Vercel**. Added to your **Home Screen on iOS or Android**, it runs in **fullscreen mode** like a native app.
+### Dlaczego powstał ten projekt
+Po tym, jak **Szkolny.eu** zakończył wsparcie — a i tak był dostępny wyłącznie na Androida — użytkownicy iPhone'ów (a teraz wszyscy) zostali z powolnym, pełnym reklam oficjalnym portalem, w którym podstawowe funkcje są zablokowane za mikropłatnościami.
 
-Unlike **Szkolny.eu**, Synapse is also **extremely light on API requests** — often lighter than the official portal itself (for example, it uses **5x fewer requests** than the official website to fetch the week's *Lesson Topics / Zrealizowane lekcje*).
+**Synapse** rozwiązuje ten problem. Możesz uruchomić aplikację lokalnie na komputerze albo postawić własną, prywatną kopię za darmo na **Vercel**. Po dodaniu do **Ekranu początkowego na iOS lub Androidzie** otwiera się na **pełnym ekranie** (bez pasków przeglądarki) i działa jak natywna aplikacja.
+
+W przeciwieństwie do **Szkolny.eu**, Synapse generuje **minimalną liczbę zapytań (API requests)** — często mniejszą niż sam oficjalny portal (np. pobranie *Zrealizowanych lekcji* z całego tygodnia wymaga **5-krotnie mniej zapytań** niż na oficjalnej stronie).
 
 ---
 
-## Use on Your Phone (No Coding Required)
+## Jak zainstalować na telefonie (bez programowania)
 
-1. **Deploy your free private copy on Vercel**:
+1. **Uruchom własną darmową kopię na Vercel**:
 
    [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcra1zer2%2FSynapse)
 
-   Sign in with GitHub and click **Create / Deploy** (no extra keys or settings needed). Vercel will give you your own private URL in ~1 minute.
-2. **Add to Home Screen** (for fullscreen native look):
-   - **iOS (Safari)**: Tap **Share** → **Add to Home Screen** (*Dodaj do ekranu początkowego*).
-   - **Android (Chrome)**: Tap **⋮** → **Add to Home screen** / **Install app**.
-3. **Log in** with your Librus Synergia (`Uczeń` or `Rodzic`) credentials.
+   Zaloguj się przez GitHub i kliknij **Create / Deploy** (nie trzeba ustawiać żadnych kluczy ani opcji). Po około minucie otrzymasz własny prywatny link (np. `https://my-synapse.vercel.app`).
+2. **Dodaj do ekranu głównego** (tryb pełnoekranowy jak zwykła aplikacja):
+   - **iOS (Safari)**: Kliknij **Udostępnij** → **Dodaj do ekranu początkowego**.
+   - **Android (Chrome)**: Kliknij **⋮** → **Dodaj do ekranu głównego** / **Zainstaluj aplikację**.
+3. **Zaloguj się** swoimi danymi do Librus Synergia (`Uczeń` lub `Rodzic`).
 
 ---
 
-## Features
+## Główne funkcje
 
-- **Home Dashboard**: Current/next lesson, live bell countdowns, recent grades, attendance %, and unread messages.
-- **Smart Timetable**: Merges double lessons, shows classrooms, and highlights substitutions, cancellations, and tests.
-- **Weighted Averages (GPA)**: Instant semester/yearly weighted averages with a `+`/`-` modifier toggle — no paywalls.
-- **Attendance & 1-Tap Excuses (*e-Usprawiedliwienia*)**: Excuse selected `NB` hours or full date ranges in one tap.
-- **Messages (*Wiadomości*) & Announcements**: Read and send messages to teachers with a clean recipient picker.
-- **Multi-Account & Bilingual**: 1-tap switch between Student/Parent accounts, **PL / EN** languages, and Light/Dark mode.
-- **Ultra-Low Server Load**: Batch-fetches and caches locally instead of spamming background requests (e.g., 5x fewer requests for weekly lesson topics than the official portal).
+- **Ekran główny**: Aktualna lub następna lekcja, odliczanie do dzwonka na żywo, najnowsze oceny, frekwencja % i nieprzeczytane wiadomości.
+- **Inteligentny plan lekcji**: Automatycznie łączy podwójne lekcje, pokazuje numery sal oraz wyróżnia zastępstwa, odwołane lekcje i sprawdziany.
+- **Średnie ważone**: Natychmiastowe wyliczanie średniej ważonej (semestralnej i rocznej) z przełącznikiem liczenia `+`/`-` — całkowicie za darmo.
+- **Frekwencja i szybkie *e-Usprawiedliwienia***: Usprawiedliwianie wybranych godzin `NB` lub całych zakresów dni jednym kliknięciem.
+- **Wiadomości i Ogłoszenia**: Odczytywanie i wysyłanie wiadomości do nauczycieli z wygodnym wyborem odbiorców.
+- **Wiele kont i języków**: Przełączanie między kontami Ucznia i Rodzica jednym tapnięciem, język **PL / EN** oraz tryb jasny i ciemny.
+- **Minimalne obciążenie serwerów**: Grupowanie zapytań i lokalny cache zamiast ciągłego odpytywania w tle (np. 5x mniej zapytań przy pobieraniu tematów lekcji niż w oficjalnym portalu).
 
 ---
 
-## Running Locally (For Developers)
+## Uruchomienie lokalne (dla programistów)
 
-Requires **Node.js `>= 20.9.0`**. Built with **Next.js 15**, **React 19**, **TypeScript 5**, and **Tailwind CSS 4**.
+Wymagany **Node.js `>= 20.9.0`**. Zbudowane w oparciu o **Next.js 15**, **React 19**, **TypeScript 5** oraz **Tailwind CSS 4**.
 
 ```bash
 npm install
@@ -50,9 +52,9 @@ npm run dev     # http://localhost:3000
 
 ---
 
-## Disclaimer & Privacy Notice
+## Nota prawna i prywatność
 
-- **Unofficial & Independent**: **Synapse** is an independent open-source project for personal and educational use. It is **not** affiliated with, endorsed by, or connected with **Librus sp. z o.o.** (*Librus* and *Librus Synergia* are trademarks of their respective holders).
-- **Zero Data Collection (100% Yours & Local)**: The author does **not** run a central server and does **not** collect, store, or have access to your credentials or personal data. Your login details stay exclusively on your device (`localStorage`) and communicate only through your own local or Vercel instance.
-- **Fully Open Source & Auditable**: No hidden trackers or analytics — the entire codebase is right here in this repository for anyone to inspect and verify.
-- **No Liability**: Provided **"as is"**, without warranty of any kind. The author takes no responsibility or liability for any issues arising from the use of this software; you use it entirely at your own risk.
+- **Projekt nieoficjalny i niezależny**: **Synapse** to niezależny projekt open-source stworzony wyłącznie do użytku osobistego i edukacyjnego. **Nie jest** w żaden sposób powiązany, autoryzowany ani wspierany przez **Librus sp. z o.o.** (nazwy *Librus* oraz *Librus Synergia* są znakami towarowymi ich prawnych właścicieli).
+- **Zero zbierania danych (w 100% Twoje i lokalne)**: Autor tego repozytorium **nie prowadzi** żadnego centralnego serwera i **nie zbiera**, nie przechowuje ani nie ma dostępu do Twoich danych logowania, ocen, wiadomości ani żadnych innych danych osobowych. Twoje dane logowania zostają wyłącznie na Twoim urządzeniu (`localStorage`) i są używane tylko przez Twoją własną instancję aplikacji.
+- **W pełni otwarty kod (Open Source)**: Brak ukrytych trackerów czy analityki — cały kod źródłowy jest publicznie dostępny w tym repozytorium, więc każdy może go samodzielnie przejrzeć i zweryfikować.
+- **Wyłączenie odpowiedzialności**: Oprogramowanie jest udostępniane w stanie **„takim, w jakim jest" (*as is*)**, bez żadnych gwarancji. Autor nie ponosi żadnej odpowiedzialności za jakiekolwiek szkody, problemy z kontem czy konsekwencje wynikające z korzystania z tego oprogramowania; korzystasz z niego wyłącznie na własną odpowiedzialność.

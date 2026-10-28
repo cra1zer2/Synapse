@@ -1,0 +1,443 @@
+import * as cheerio from 'cheerio'
+import { MessageItem, AnnouncementItem, ReceiverItem, MessagesActionResult } from '@/models/message.model'
+import { getNativeLibrusSession, invalidateNativeSession, NativeLibrusSession } from '@/services/session.service'
+
+function isLoggedOutHtml(html: string): boolean {
+    if (!html) return true
+    if (html.includes('OAuth/Authorization') || html.includes('form-login')) return true
+    if (html.includes('Przekierowanie') && html.includes('loguj')) return true
+    return false
+}
+
+async function fetchHtmlWithRetry(
+    cleanUser: string,
+    cleanPass: string,
+    url: string,
+    referer: string = 'https://synergia.librus.pl/uczen/index'
+): Promise<{ session: NativeLibrusSession; html: string; ok: boolean }> {
+    let session = await getNativeLibrusSession(cleanUser, cleanPass)
+    let res = await session.fetch(url, {
+        headers: {
+            'Referer': referer,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+    })
+
+    let html = res.ok ? await res.text() : ''
+    if (!res.ok || res.status === 401 || isLoggedOutHtml(html)) {
+        invalidateNativeSession(cleanUser)
+        session = await getNativeLibrusSession(cleanUser, cleanPass)
+        res = await session.fetch(url, {
+            headers: {
+                'Referer': referer,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            }
+        })
+        html = res.ok ? await res.text() : ''
+    }
+
+    return { session, html, ok: res.ok && !isLoggedOutHtml(html) }
+}
+
+function parseInboxHtml(html: string): MessageItem[] {
+    const messages: MessageItem[] = []
+    if (!html) return messages
+
+    const $ = cheerio.load(html)
+    let rows = $('table.container-message table.decorated.stretch tbody tr')
+    if (rows.length === 0) {
+        rows = $('table.decorated.stretch tbody tr')
+    }
+
+    rows.each((idx, row) => {
+        const children = $(row).children('td')
+        if (children.length < 5) return
+
+        const rowText = $(row).text().trim()
+        if (rowText.includes('Brak wiadomości')) return
+
+        const linkHref =
+            $(children[3]).find('a').attr('href') ||
+            $(children[2]).find('a').attr('href') ||
+            $(row).find('a[href*="/wiadomosci/"]').attr('href') ||
+            ''
+
+        let id = 0
+        if (linkHref) {
+            const parts = linkHref.split('/').filter(Boolean)
+            const candidate = Number(parts[3] || parts[parts.length - 1])
+            if (!isNaN(candidate) && candidate > 0) {
+                id = candidate
+            } else {
+                const match = linkHref.match(/\/wiadomosci\/\d+\/\d+\/(\d+)/)
+                if (match) id = Number(match[1])
+            }
+        }
+
+        if (!id) {
+            const checkboxVal = $(row).find('input[type="checkbox"]').attr('value')
+            if (checkboxVal && !isNaN(Number(checkboxVal))) {
+                id = Number(checkboxVal)
+            }
+        }
+
+        const sender = $(children[2]).text().replace(/\s+/g, ' ').trim()
+        const subject = $(children[3]).text().replace(/\s+/g, ' ').trim()
+        const date = $(children[4]).text().replace(/\s+/g, ' ').trim()
+
+        if (!id && !subject) return
+
+        const style2 = ($(children[2]).attr('style') || '').toLowerCase()
+        const style3 = ($(children[3]).attr('style') || '').toLowerCase()
+        const isRead = !style2.includes('bold') && !style3.includes('bold')
+        const hasAttachments = $(children[1]).find('img').length > 0
+
+        messages.push({
+            id: id || idx + 1,
+            sender: sender || 'Nauczyciel',
+            subject: subject || 'Wiadomość',
+            date,
+            isRead,
+            hasAttachments
+        })
+    })
+
+    messages.sort((a, b) => {
+        const timeA = new Date(a.date.replace(' ', 'T')).getTime() || 0
+        const timeB = new Date(b.date.replace(' ', 'T')).getTime() || 0
+        if (timeB !== timeA) return timeB - timeA
+        return Number(b.id) - Number(a.id)
+    })
+
+    return messages
+}
+
+function parseAnnouncementsHtml(html: string): AnnouncementItem[] {
+    const announcements: AnnouncementItem[] = []
+    if (!html) return announcements
+
+    const $ = cheerio.load(html)
+    let tables = $('div#body div.container-background table.decorated')
+    if (tables.length === 0) {
+        tables = $('table.decorated')
+    }
+
+    let aIdx = 0
+    tables.each((_, table) => {
+        const title = $(table).find('thead').text().replace(/\s+/g, ' ').trim()
+        const cols = $(table).find('td')
+        if (!title || cols.length < 4) return
+
+        const author = $(cols[1]).text().replace(/\s+/g, ' ').trim() || 'Dyrekcja'
+        const date = $(cols[2]).text().replace(/\s+/g, ' ').trim() || ''
+
+        const contentCell = $(cols[3]).clone()
+        contentCell.find('br').replaceWith('\n')
+        const content = contentCell.text().replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+
+        if (content || title) {
+            announcements.push({
+                id: ++aIdx,
+                author,
+                title,
+                date,
+                content
+            })
+        }
+    })
+
+    announcements.sort((a, b) => {
+        const timeA = new Date(a.date.replace(' ', 'T')).getTime() || 0
+        const timeB = new Date(b.date.replace(' ', 'T')).getTime() || 0
+        if (timeB !== timeA) return timeB - timeA
+        return Number(b.id) - Number(a.id)
+    })
+
+    return announcements
+}
+
+function parseRecipientsHtml(html: string, groupName: string): ReceiverItem[] {
+    const list: ReceiverItem[] = []
+    if (!html) return list
+
+    const $ = cheerio.load(html)
+    $("table.message-recipients-detail tr[class*='line'], tr").each((_, row) => {
+        const $row = $(row)
+        const rawVal =
+            $row.find("input[name='DoKogo[]']").attr('value') ||
+            $row.find("input[type='checkbox']").attr('value') ||
+            ''
+        const id = parseInt(rawVal, 10)
+        const name = $row.find('label').text().replace(/\s+/g, ' ').trim()
+        if (id && name && !list.some((x) => x.id === id)) {
+            list.push({ id, name, group: groupName })
+        }
+    })
+
+    if (list.length === 0) {
+        const inputMatches = html.matchAll(/<input[^>]*value="(\d+)"[^>]*>\s*([^<\n\r]+)/gi)
+        for (const m of inputMatches) {
+            const id = Number(m[1])
+            const name = m[2].trim()
+            if (id && name && !list.some((x) => x.id === id)) {
+                list.push({ id, name, group: groupName })
+            }
+        }
+    }
+
+    return list
+}
+
+async function fetchReceiversList(session: NativeLibrusSession): Promise<ReceiverItem[]> {
+    const receiversList: ReceiverItem[] = []
+    try {
+        const composeRes = await session.fetch('https://synergia.librus.pl/wiadomosci/2/5', {
+            headers: {
+                'Referer': 'https://synergia.librus.pl/wiadomosci/5',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            }
+        })
+
+        let csrfToken = ''
+        if (composeRes.ok) {
+            const composeHtml = await composeRes.text()
+            const csrfMatch = composeHtml.match(/var\s+csrfTokenValue\s*=\s*["']([^"']+)["']/)
+            if (csrfMatch) {
+                csrfToken = csrfMatch[1]
+            }
+        }
+
+        const recipientGroups = [
+            { type: 'wychowawca', name: 'Wychowawca' },
+            { type: 'nauczyciel', name: 'Nauczyciele' },
+            { type: 'bibliotekarz', name: 'Bibliotekarz' },
+            { type: 'sekretariat', name: 'Sekretariat' },
+            { type: 'admin', name: 'Administrator' }
+        ]
+
+        const groupResults = await Promise.all(
+            recipientGroups.map(async (g) => {
+                try {
+                    const params = new URLSearchParams({
+                        typAdresata: g.type,
+                        poprzednia: '5',
+                        tabZaznaczonych: '',
+                        czyWirtualneKlasy: 'false',
+                        idGrupy: '0'
+                    })
+
+                    const headers: Record<string, string> = {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'Referer': 'https://synergia.librus.pl/wiadomosci/2/5',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': '*/*'
+                    }
+                    if (csrfToken) {
+                        headers['requestkey'] = csrfToken
+                    }
+
+                    const res = await session.fetch('https://synergia.librus.pl/getRecipients', {
+                        method: 'POST',
+                        headers,
+                        body: params.toString()
+                    })
+
+                    if (res.ok) {
+                        const html = await res.text()
+                        return parseRecipientsHtml(html, g.name)
+                    }
+                } catch {}
+                return [] as ReceiverItem[]
+            })
+        )
+
+        for (const group of groupResults) {
+            for (const r of group) {
+                if (!receiversList.some((x) => x.id === r.id)) {
+                    receiversList.push(r)
+                }
+            }
+        }
+
+        receiversList.sort((a, b) => a.name.localeCompare(b.name, 'pl'))
+    } catch {}
+
+    return receiversList
+}
+
+export async function fetchMessagesBundle(username: string, pass: string): Promise<MessagesActionResult> {
+    try {
+        const cleanUser = String(username || '').trim()
+        const cleanPass = String(pass || '').trim()
+        if (!cleanUser || !cleanPass) {
+            return {
+                success: false,
+                messages: [],
+                announcements: [],
+                receivers: [],
+                error: 'Brak danych logowania'
+            }
+        }
+
+        const inboxFetch = await fetchHtmlWithRetry(
+            cleanUser,
+            cleanPass,
+            'https://synergia.librus.pl/wiadomosci/5'
+        )
+        const session = inboxFetch.session
+
+        const [annRes, receiversList] = await Promise.all([
+            session
+                .fetch('https://synergia.librus.pl/ogloszenia', {
+                    headers: {
+                        'Referer': 'https://synergia.librus.pl/uczen/index',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                    }
+                })
+                .then(async (r) => (r.ok ? await r.text() : ''))
+                .catch(() => ''),
+            fetchReceiversList(session)
+        ])
+
+        const inboxMessages = parseInboxHtml(inboxFetch.html)
+        const announcements = parseAnnouncementsHtml(annRes)
+
+        return {
+            success: true,
+            messages: inboxMessages,
+            announcements,
+            receivers: receiversList
+        }
+    } catch (error: any) {
+        return {
+            success: false,
+            messages: [],
+            announcements: [],
+            receivers: [],
+            error: String(error?.message || error)
+        }
+    }
+}
+
+export async function fetchMessageContent(
+    username: string,
+    pass: string,
+    messageId: number
+): Promise<{ success: boolean; content?: string; error?: string }> {
+    try {
+        const cleanUser = String(username || '').trim()
+        const cleanPass = String(pass || '').trim()
+
+        const { html, ok } = await fetchHtmlWithRetry(
+            cleanUser,
+            cleanPass,
+            `https://synergia.librus.pl/wiadomosci/1/5/${messageId}`,
+            'https://synergia.librus.pl/wiadomosci/5'
+        )
+
+        if (!ok || !html) {
+            return { success: false, error: 'Nie udało się wczytać wiadomości' }
+        }
+
+        const $ = cheerio.load(html)
+        const contentNode = $('.container-message-content').first()
+
+        if (contentNode.length > 0) {
+            const cloned = contentNode.clone()
+            cloned.find('br').replaceWith('\n')
+            const cleanContent = cloned.text().replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+            return { success: true, content: cleanContent }
+        }
+
+        const fallbackNode = $('table.stretch.container-message td.message-folders+td').first()
+        if (fallbackNode.length > 0) {
+            const cloned = fallbackNode.clone()
+            cloned.find('br').replaceWith('\n')
+            return { success: true, content: cloned.text().trim() }
+        }
+
+        return { success: true, content: '' }
+    } catch (error: any) {
+        return { success: false, error: String(error?.message || error) }
+    }
+}
+
+export async function sendMessageToUser(
+    username: string,
+    pass: string,
+    receiverId: number | number[],
+    title: string,
+    body: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const cleanUser = String(username || '').trim()
+        const cleanPass = String(pass || '').trim()
+        const session = await getNativeLibrusSession(cleanUser, cleanPass)
+
+        await session.fetch('https://synergia.librus.pl/wiadomosci/2/5', {
+            headers: {
+                'Referer': 'https://synergia.librus.pl/wiadomosci/5',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            }
+        })
+
+        const formParams = new URLSearchParams()
+        const ids = Array.isArray(receiverId) ? receiverId : [receiverId]
+        if (ids.length === 1) {
+            formParams.append('DoKogo', String(ids[0]))
+        } else {
+            ids.forEach((id, index) => {
+                formParams.append(`DoKogo[${index}]`, String(id))
+            })
+        }
+        formParams.append('temat', title)
+        formParams.append('tresc', body)
+        formParams.append('poprzednia', '6')
+        formParams.append('wyslij', 'Wyślij')
+
+        const res = await session.fetch('https://synergia.librus.pl/wiadomosci/5', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Referer': 'https://synergia.librus.pl/wiadomosci/2/5',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            },
+            body: formParams.toString()
+        })
+
+        if (!res.ok) {
+            return { success: false, error: 'Błąd wysyłania wiadomości' }
+        }
+
+        return { success: true }
+    } catch (error: any) {
+        return { success: false, error: String(error?.message || error) }
+    }
+}
+
+export async function fetchUnreadCounters(
+    username: string,
+    pass: string
+): Promise<{ success: boolean; unreadMessages: number; announcementsCount: number }> {
+    try {
+        const bundle = await fetchMessagesBundle(username, pass)
+        if (!bundle.success) {
+            return { success: false, unreadMessages: 0, announcementsCount: 0 }
+        }
+
+        const unreadMessages = bundle.messages.filter((m) => !m.isRead).length
+        const announcementsCount = bundle.announcements.length
+
+        return {
+            success: true,
+            unreadMessages,
+            announcementsCount
+        }
+    } catch {
+        return {
+            success: false,
+            unreadMessages: 0,
+            announcementsCount: 0
+        }
+    }
+}

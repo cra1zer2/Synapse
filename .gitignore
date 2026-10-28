@@ -1,0 +1,53 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Testing
+/coverage
+
+# Next.js & Production Builds
+/.next/
+/out/
+/build
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment Variables
+.env*
+
+# System & Logs
+.DS_Store
+*.pem
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Private Archive, Dumps, HAR Captures & Local Docs
+/archive/
+/docs/
+Apple iOS 27 UI/
+*.har
+*.txt
+/benchmark*
+benchmark*.json
+.synapse_backup_*
+
+# Agent & Local Scripts
+AGENTS.md
+CLAUDE.md
+dump.mjs
+update.mjs
+fix-and-deploy.mjs
+download_figma.sh

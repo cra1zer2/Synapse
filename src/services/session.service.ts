@@ -10,7 +10,9 @@ function makeBannerHeader(): string {
 }
 
 class NativeCookieJar {
-    private cookies: Map<string, Map<string, string>> = new Map()
+    private cookies: Map<string, Map<string, string>> = new Map([
+        ['synergia.librus.pl', new Map([['TestCookie', '1']])]
+    ])
 
     saveFromHeaders(domain: string, headers: Headers): void {
         let setCookieHeaders: string[] = []
@@ -34,19 +36,27 @@ class NativeCookieJar {
             if (eqIdx > 0) {
                 const name = pair.slice(0, eqIdx).trim()
                 const val = pair.slice(eqIdx + 1).trim()
-                domainMap.set(name, val)
+                if (!val || val === 'deleted') {
+                    domainMap.delete(name)
+                } else {
+                    domainMap.set(name, val)
+                }
             }
         }
     }
 
     getCookieHeader(domain: string): string {
-        const parts: string[] = []
+        const merged = new Map<string, string>()
         for (const [d, map] of this.cookies.entries()) {
             if (domain.includes(d) || d.includes(domain)) {
                 for (const [k, v] of map.entries()) {
-                    parts.push(`${k}=${v}`)
+                    merged.set(k, v)
                 }
             }
+        }
+        const parts: string[] = []
+        for (const [k, v] of merged.entries()) {
+            parts.push(`${k}=${v}`)
         }
         return parts.join('; ')
     }

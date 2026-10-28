@@ -282,24 +282,27 @@ export async function fetchAttendanceMetrics(
         }
 
         let liveExcusedSet = new Set<string>()
-        try {
-            const liveRes = await fetchLiveJustificationsHistory(username, pass, '0')
-            if (liveRes.success && liveRes.data) {
-                for (const item of liveRes.data) {
-                    if (item.statusCode === 'accepted' || item.statusCode === 'pending') {
-                        for (const d of item.dates) {
-                            if (item.lessons.length > 0) {
-                                for (const l of item.lessons) {
-                                    liveExcusedSet.add(`${d}_${l}`)
+        const isStudentAccount = String(username || '').trim().toLowerCase().endsWith('u')
+        if (!isStudentAccount) {
+            try {
+                const liveRes = await fetchLiveJustificationsHistory(username, pass, '0')
+                if (liveRes.success && liveRes.data) {
+                    for (const item of liveRes.data) {
+                        if (item.statusCode === 'accepted' || item.statusCode === 'pending') {
+                            for (const d of item.dates) {
+                                if (item.lessons.length > 0) {
+                                    for (const l of item.lessons) {
+                                        liveExcusedSet.add(`${d}_${l}`)
+                                    }
+                                } else {
+                                    liveExcusedSet.add(d)
                                 }
-                            } else {
-                                liveExcusedSet.add(d)
                             }
                         }
                     }
                 }
-            }
-        } catch {}
+            } catch {}
+        }
 
         const unexcusedAbsences = parsedAbsences.filter((a) => {
             if (!a.isUnexcused) return false

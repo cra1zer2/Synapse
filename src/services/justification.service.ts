@@ -33,6 +33,9 @@ export async function fetchLiveJustificationsHistory(
     try {
         const cleanUser = String(username || '').trim()
         const cleanPass = String(pass || '').trim()
+        if (!cleanUser || !cleanPass || cleanUser.toLowerCase().endsWith('u')) {
+            return { success: true, data: [] }
+        }
         let session = await getNativeLibrusSession(cleanUser, cleanPass)
 
         const now = new Date()

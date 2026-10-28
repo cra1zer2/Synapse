@@ -6,7 +6,6 @@ import { GradesResult } from '@/models/grade.model'
 import { AttendanceResult } from '@/models/attendance.model'
 import { AppLanguage } from '@/config/dictionary.config'
 import { syncAllUserDataAction } from '@/app/actions'
-import { createGradeNotification, showAppNotification } from '@/services/notification.service'
 import { getTodayIsoString, getTodayDayName, normalizeToMondayIso, getSchoolWeekMondayIso } from '@/utils/date.util'
 
 function getInitialWeekPivot(): string {
@@ -96,55 +95,6 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
         if (gRes?.success && 'data' in gRes && gRes.data) {
           setGradesData(gRes.data)
           setGradesError(null)
-
-          if (typeof window !== 'undefined') {
-            try {
-              const currentGradeKeys = new Set<string>()
-              const newGradesList: Array<{ subject: string; grade: string; category: string }> = []
-
-              for (const subj of gRes.data.subjects || []) {
-                const allSubjGrades = [...(subj.semester1 || []), ...(subj.semester2 || [])]
-                for (const g of allSubjGrades) {
-                  const key = `${subj.subject}_${g.category}_${g.grade}_${g.date}`
-                  currentGradeKeys.add(key)
-                }
-              }
-
-              const knownGradesStorageKey = `synapse_known_grades_${u}`
-              const savedKnownJson = localStorage.getItem(knownGradesStorageKey)
-
-              if (savedKnownJson) {
-                const knownSet = new Set<string>(JSON.parse(savedKnownJson))
-                for (const subj of gRes.data.subjects || []) {
-                  const allSubjGrades = [...(subj.semester1 || []), ...(subj.semester2 || [])]
-                  for (const g of allSubjGrades) {
-                    const key = `${subj.subject}_${g.category}_${g.grade}_${g.date}`
-                    if (!knownSet.has(key)) {
-                      newGradesList.push({
-                        subject: subj.subject,
-                        grade: g.grade,
-                        category: g.category
-                      })
-                    }
-                  }
-                }
-
-                if (newGradesList.length > 0) {
-                  const prefsRaw = localStorage.getItem('synapse_notification_prefs')
-                  const prefs = prefsRaw ? JSON.parse(prefsRaw) : { enabled: true, grades: true }
-                  if (prefs.enabled !== false && prefs.grades !== false) {
-                    for (const ng of newGradesList.slice(0, 3)) {
-                      showAppNotification(createGradeNotification(ng.subject, ng.grade, ng.category, currentAppLang))
-                    }
-                  }
-                }
-              }
-
-              localStorage.setItem(knownGradesStorageKey, JSON.stringify(Array.from(currentGradeKeys)))
-            } catch (err) {
-              console.error('Error diffing grades:', err)
-            }
-          }
         } else if (gRes && !gRes.success) {
           setGradesError(gRes.error || 'Błąd ładowania ocen')
         }

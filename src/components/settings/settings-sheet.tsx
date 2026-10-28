@@ -1,23 +1,15 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
-import { NotificationPreferences } from '@/models/notification.model'
 import { AppDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 import { TextClampOption } from '@/app/page'
-import {
-  requestPushPermission,
-  getNotificationPermissionStatus,
-  showAppNotification,
-  createGradeNotification,
-  createMessagesNotification
-} from '@/services/notification.service'
-import { executeLibrusBenchmarkAction, syncAllUserDataAction, getMessagesAndAnnouncementsAction } from '@/app/actions'
+import { executeLibrusBenchmarkAction } from '@/app/actions'
 import { BenchmarkReport } from '@/models/benchmark.model'
 import { IosScreen } from '@/components/ios/ios-screen'
 import { IosListSection, IosCell } from '@/components/ios/ios-list'
-import { IosCard, IosSegmentedControl } from '@/components/ios/ios-ui'
+import { IosCard } from '@/components/ios/ios-ui'
 import { IosSwitch } from '@/components/ios/ios-switch'
 import { IosSpinner } from '@/components/ios/ios-spinner'
 
@@ -141,7 +133,6 @@ export function SettingsSheet({
     }, 260)
   }
 
-  const [pushStatus, setPushStatus] = useState<string>(() => getNotificationPermissionStatus())
   const [isBenchmarking, setIsBenchmarking] = useState(false)
   const [benchmarkReport, setBenchmarkReport] = useState<BenchmarkReport | null>(null)
   const [isCopied, setIsCopied] = useState(false)
@@ -158,40 +149,6 @@ export function SettingsSheet({
     activeAccount?.profile?.className || profile?.className,
     activeAccount?.profile?.schoolName || profile?.schoolName
   ].filter(Boolean).join(' • ') || 'Librus Synergia'
-
-  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('synapse_notification_prefs')
-      if (stored) {
-        try {
-          return JSON.parse(stored)
-        } catch { }
-      }
-    }
-    return {
-      enabled: true,
-      grades: true,
-      timetableChanges: true,
-      absences: true,
-      messages: true,
-      announcements: true,
-      calendarEvents: true
-    }
-  })
-
-  const handleTogglePushMaster = async () => {
-    if (pushStatus !== 'granted') {
-      const res = await requestPushPermission()
-      setPushStatus(res)
-      const updated = { ...notificationPrefs, enabled: res === 'granted' }
-      setNotificationPrefs(updated)
-      localStorage.setItem('synapse_notification_prefs', JSON.stringify(updated))
-    } else {
-      const updated = { ...notificationPrefs, enabled: !notificationPrefs.enabled }
-      setNotificationPrefs(updated)
-      localStorage.setItem('synapse_notification_prefs', JSON.stringify(updated))
-    }
-  }
 
   const handleRunBenchmark = async () => {
     if (!activeAccount || !activeAccount.username || !activeAccount.password || isBenchmarking) return
@@ -210,146 +167,6 @@ export function SettingsSheet({
       setIsCopied(true)
       setTimeout(() => setIsCopied(false), 2000)
     } catch { }
-  }
-
-  const [testDelaySeconds, setTestDelaySeconds] = useState<number>(10)
-  const [testCountdown, setTestCountdown] = useState<number | null>(null)
-  const [isTestRunning, setIsTestRunning] = useState(false)
-  const [testStatusMessage, setTestStatusMessage] = useState<string | null>(null)
-  const testTimerRef = useRef<NodeJS.Timeout | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (testTimerRef.current) clearInterval(testTimerRef.current)
-    }
-  }, [])
-
-  const handleCancelTestSchedule = () => {
-    if (testTimerRef.current) {
-      clearInterval(testTimerRef.current)
-      testTimerRef.current = null
-    }
-    setTestCountdown(null)
-    setIsTestRunning(false)
-    setTestStatusMessage(currentLang === 'en' ? 'Check cancelled' : 'Sprawdzanie anulowane')
-  }
-
-  const handleRunScheduledCheck = async () => {
-    setIsTestRunning(true)
-    setTestStatusMessage(currentLang === 'en' ? 'Checking Librus Synergia...' : 'Sprawdzanie Librus Synergia...')
-
-    try {
-      if (!activeAccount?.username || !activeAccount?.password) {
-        await showAppNotification({
-          title: 'Synapse',
-          body: currentLang === 'en' ? 'No active account configured' : 'Brak aktywnego konta',
-          tag: 'test-check-status',
-          data: { url: '/', type: 'general' }
-        })
-        setTestStatusMessage(currentLang === 'en' ? 'No active account' : 'Brak aktywnego konta')
-        return
-      }
-
-      if (getNotificationPermissionStatus() !== 'granted') {
-        const perm = await requestPushPermission()
-        setPushStatus(perm)
-        if (perm !== 'granted') {
-          setTestStatusMessage(currentLang === 'en' ? 'Notification permission not granted' : 'Brak zgody na powiadomienia')
-          return
-        }
-      }
-
-      const [userData, messagesData] = await Promise.all([
-        syncAllUserDataAction(activeAccount.username, activeAccount.password, currentLang === 'en'),
-        getMessagesAndAnnouncementsAction(activeAccount.username, activeAccount.password)
-      ])
-
-      let foundNew = false
-
-      if (userData.success && userData.grades?.success && userData.grades.data) {
-        const knownGradesStorageKey = `synapse_known_grades_${activeAccount.username}`
-        const savedKnownJson = localStorage.getItem(knownGradesStorageKey)
-        if (savedKnownJson) {
-          const knownSet = new Set<string>(JSON.parse(savedKnownJson))
-          for (const subj of userData.grades.data.subjects || []) {
-            const allSubjGrades = [...(subj.semester1 || []), ...(subj.semester2 || [])]
-            for (const g of allSubjGrades) {
-              const key = `${subj.subject}_${g.category}_${g.grade}_${g.date}`
-              if (!knownSet.has(key)) {
-                foundNew = true
-                await showAppNotification(createGradeNotification(subj.subject, g.grade, g.category, currentLang))
-              }
-            }
-          }
-        }
-      }
-
-      if (messagesData.success && messagesData.messages) {
-        const unreadCount = messagesData.messages.filter((m) => !m.isRead).length
-        const prevUnreadKey = `synapse_prev_unread_${activeAccount.username}`
-        const storedPrev = localStorage.getItem(prevUnreadKey)
-        if (storedPrev !== null) {
-          const prevCount = parseInt(storedPrev, 10)
-          if (!isNaN(prevCount) && unreadCount > prevCount) {
-            foundNew = true
-            await showAppNotification(createMessagesNotification(unreadCount - prevCount, currentLang))
-          }
-        }
-      }
-
-      if (!foundNew) {
-        await showAppNotification({
-          title: 'Synapse • Status',
-          body: currentLang === 'en'
-            ? 'No new grades or messages. Everything is up to date!'
-            : 'Brak nowych ocen i wiadomości. Wszystko jest aktualne!',
-          tag: 'test-check-clean',
-          data: { url: '/?tab=grades', type: 'grade' }
-        })
-      }
-
-      setTestStatusMessage(
-        foundNew
-          ? (currentLang === 'en' ? 'Pushed notification with new updates!' : 'Wysłano powiadomienie o nowościach!')
-          : (currentLang === 'en' ? 'Nothing new — status notification sent!' : 'Brak nowości — wysłano powiadomienie o braku zmian!')
-      )
-    } catch (err: any) {
-      setTestStatusMessage('Błąd: ' + String(err?.message || err))
-    } finally {
-      setIsTestRunning(false)
-      setTestCountdown(null)
-    }
-  }
-
-  const handleStartCountdown = async () => {
-    if (getNotificationPermissionStatus() !== 'granted') {
-      const perm = await requestPushPermission()
-      setPushStatus(perm)
-      if (perm !== 'granted') {
-        setTestStatusMessage(currentLang === 'en' ? 'Permission denied' : 'Brak zgody na powiadomienia')
-        return
-      }
-    }
-
-    if (testDelaySeconds === 0) {
-      handleRunScheduledCheck()
-      return
-    }
-
-    setTestCountdown(testDelaySeconds)
-    let remaining = testDelaySeconds
-
-    if (testTimerRef.current) clearInterval(testTimerRef.current)
-    testTimerRef.current = setInterval(() => {
-      remaining -= 1
-      if (remaining <= 0) {
-        if (testTimerRef.current) clearInterval(testTimerRef.current)
-        testTimerRef.current = null
-        handleRunScheduledCheck()
-      } else {
-        setTestCountdown(remaining)
-      }
-    }, 1000)
   }
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -459,30 +276,6 @@ export function SettingsSheet({
               chevron={true}
               size="standard"
               onClick={() => setShowLangPicker(true)}
-            />
-          </IosListSection>
-
-          <IosListSection header={t.notifications}>
-            <IosCell
-              title={t.pushNotificationsTitle}
-              subtitle={t.pushSubtitle}
-              size="tall"
-              trailing={
-                pushStatus === 'granted' ? (
-                  <IosSwitch
-                    checked={notificationPrefs.enabled}
-                    onChange={handleTogglePushMaster}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleTogglePushMaster}
-                    className="h-[28px] px-3 text-[12px] font-medium bg-[var(--ios-blue)] text-white rounded-full shadow-xs active:scale-95 transition-transform cursor-pointer"
-                  >
-                    {t.pushEnableAction}
-                  </button>
-                )
-              }
             />
           </IosListSection>
 
@@ -738,69 +531,6 @@ export function SettingsSheet({
                 />
               }
             />
-          </IosListSection>
-
-          <IosListSection header={currentLang === 'en' ? 'Notification & Check Test' : 'Test powiadomień i sprawdzanie'}>
-            <div className="p-3.5 flex flex-col gap-3 bg-[var(--ios-card-solid)] border-b border-[var(--ios-separator)]">
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] font-medium text-[var(--ios-label)]">
-                  {currentLang === 'en' ? 'Delay before check' : 'Opóźnienie sprawdzenia'}
-                </span>
-                <span className="text-[12px] font-semibold text-[var(--ios-blue)]">
-                  {testDelaySeconds === 0 ? (currentLang === 'en' ? 'Instant' : 'Natychmiast') : `${testDelaySeconds}s`}
-                </span>
-              </div>
-
-              <IosSegmentedControl
-                options={[
-                  { id: 0, label: currentLang === 'en' ? 'Now' : 'Teraz' },
-                  { id: 5, label: '5s' },
-                  { id: 10, label: '10s' },
-                  { id: 30, label: '30s' },
-                  { id: 60, label: '60s' }
-                ]}
-                value={testDelaySeconds}
-                onChange={(val) => setTestDelaySeconds(Number(val))}
-                size="compact"
-              />
-
-              <div className="flex items-center gap-2 pt-1">
-                {testCountdown !== null ? (
-                  <button
-                    type="button"
-                    onClick={handleCancelTestSchedule}
-                    className="flex-1 py-2 px-3 bg-[var(--ios-red)] text-white text-[13px] font-medium rounded-full shadow-xs active:opacity-75 transition-all text-center cursor-pointer"
-                  >
-                    {currentLang === 'en' ? `Cancel (${testCountdown}s...)` : `Anuluj (${testCountdown}s...)`}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleStartCountdown}
-                    disabled={isTestRunning}
-                    className="flex-1 py-2 px-3 bg-[var(--ios-blue)] text-white text-[13px] font-medium rounded-full shadow-xs active:opacity-75 disabled:opacity-40 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    {isTestRunning ? (
-                      <>
-                        <svg className="w-3.5 h-3.5 animate-spin text-white" viewBox="0 0 24 24" fill="none">
-                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
-                          <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" className="opacity-75" />
-                        </svg>
-                        <span>{currentLang === 'en' ? 'Checking...' : 'Sprawdzanie...'}</span>
-                      </>
-                    ) : (
-                      <span>{currentLang === 'en' ? 'Plan Check & Test' : 'Zaplanuj sprawdzenie i test'}</span>
-                    )}
-                  </button>
-                )}
-              </div>
-
-              {testStatusMessage && (
-                <p className="text-[11px] text-[var(--ios-secondary)] text-center pt-0.5">
-                  {testStatusMessage}
-                </p>
-              )}
-            </div>
           </IosListSection>
 
           <IosListSection header={t.benchmarkSectionTitle}>

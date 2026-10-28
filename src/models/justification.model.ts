@@ -45,3 +45,24 @@ export interface GatewayResponse<T> {
     data?: T
     error?: string
 }
+
+export type DayMatrixLessonStatus = 'nb' | 'u' | 'sl' | 'sp' | 'zw' | 'present' | 'cancelled' | 'pending'
+
+export interface DayMatrixLesson {
+    lessonNumber: number
+    time: string
+    subject: string
+    status: DayMatrixLessonStatus
+    statusLabel: string
+    isSelectable: boolean
+    isSelected: boolean
+    isPending?: boolean
+}
+
+export interface DayMatrixGroup {
+    date: string
+    isoDate: string
+    dayName: string
+    lessons: DayMatrixLesson[]
+    hasUnexcused: boolean
+}

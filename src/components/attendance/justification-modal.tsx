@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AttendanceResult } from '@/models/attendance.model'
 import { SmartTimetableResult } from '@/models/timetable.model'
-import { DayMatrixGroup } from '@/models/notification.model'
+import { DayMatrixGroup } from '@/models/justification.model'
 import { AppDictionary } from '@/config/dictionary.config'
 import {
   getPendingJustifications,

@@ -71,11 +71,6 @@ export interface AppDictionary {
     addAccount: string
     saveAccount: string
     preferences: string
-    notifications: string
-    pushNotificationsTitle: string
-    pushSubtitle: string
-    pushEnabled: string
-    pushEnableAction: string
     accessibilityTitle: string
     advancedTitle: string
     systemSection: string
@@ -228,11 +223,6 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             addAccount: 'Add another account',
             saveAccount: 'Save account',
             preferences: 'Preferences',
-            notifications: 'Notifications',
-            pushNotificationsTitle: 'Push Notifications',
-            pushSubtitle: 'Bells, grades, substitutions & messages',
-            pushEnabled: 'Enabled',
-            pushEnableAction: 'Enable',
             accessibilityTitle: 'Accessibility',
             advancedTitle: 'Advanced',
             systemSection: 'System',
@@ -384,11 +374,6 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         addAccount: 'Dodaj kolejne konto',
         saveAccount: 'Zapisz konto',
         preferences: 'Preferencje',
-        notifications: 'Powiadomienia',
-        pushNotificationsTitle: 'Powiadomienia Push',
-        pushSubtitle: 'Dzwonki, oceny, zastępstwa i wiadomości',
-        pushEnabled: 'Włączone',
-        pushEnableAction: 'Włącz',
         accessibilityTitle: 'Dostępność',
         advancedTitle: 'Zaawansowane',
         systemSection: 'System',

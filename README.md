@@ -2,6 +2,8 @@
 
 **Synapse** is a fast, clean, ad-free personal app for the Polish **Librus Synergia** electronic gradebook — designed to work on **any phone** (both **iPhone / iOS** and **Android**) as well as on your computer.
 
+> **Disclaimer**: Synapse is an independent, unofficial open-source project and is **not** affiliated with or endorsed by Librus sp. z o.o. The author does not host any shared servers or collect any user data — your instance and credentials are 100% yours and local to your device. See the full [Disclaimer & Privacy Notice](#disclaimer--privacy-notice) below.
+
 ### Why I Built This
 After one of the most popular community gradebook apps recently ended support — and was only ever available on Android — iPhone users (and now everyone else) were left with the slow, ad-heavy official portal where basic features are locked behind paywalls.
 
@@ -102,3 +104,12 @@ src/
 ├── types/                # Ambient type definitions
 └── utils/                # Date, time, text formatting & justification helper utilities
 ```
+
+---
+
+## Disclaimer & Privacy Notice
+
+- **Unofficial & Independent Project**: **Synapse** is an independent, open-source project created solely for personal and educational use. It is **not** affiliated with, endorsed by, sponsored by, or in any way officially connected with **Librus sp. z o.o.** All product and company names (*Librus*, *Librus Synergia*, etc.) are trademarks or registered trademarks of their respective holders.
+- **Zero Data Collection (100% Yours & Local)**: The author of this repository does **not** run a central server and does **not** collect, store, log, share, or have access to your login credentials, grades, messages, or any other personal data. When you run Synapse locally or deploy your own copy on Vercel, the app belongs entirely to you — your credentials stay exclusively on your own device (`localStorage`) and are only used by your own instance to fetch your data directly from your account.
+- **Fully Open Source & Auditable**: There are no hidden trackers, analytics, or third-party data pipelines. The complete source code is right here in this repository — you are completely free (and encouraged) to inspect, audit, and verify every line of code yourself.
+- **No Liability / Use at Your Own Risk**: This software is provided **"as is"**, without warranty of any kind, express or implied. The author takes no responsibility or liability for any damages, account issues, or consequences resulting from the use or misuse of this software. By using Synapse, you do so entirely at your own risk and responsibility.

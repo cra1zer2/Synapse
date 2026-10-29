@@ -35,6 +35,9 @@ interface SettingsSheetProps {
   onToggleShowFullSubjectNames: (val: boolean) => void
   ignoreGradeModifiers: boolean
   onToggleIgnoreGradeModifiers: (val: boolean) => void
+  isStudent?: boolean
+  allowStudentJustifications?: boolean
+  onToggleAllowStudentJustifications?: (val: boolean) => void
   onLogout: () => void
   t: AppDictionary
 }
@@ -77,6 +80,9 @@ export function SettingsSheet({
   onToggleShowFullSubjectNames,
   ignoreGradeModifiers,
   onToggleIgnoreGradeModifiers,
+  isStudent,
+  allowStudentJustifications = false,
+  onToggleAllowStudentJustifications,
   onLogout,
   t
 }: SettingsSheetProps) {
@@ -141,6 +147,9 @@ export function SettingsSheet({
   const activeAccount = accountsList.find((a) => a.isActive) || accountsList[0]
 
   const activeRole = activeAccount?.role || profile?.role || 'student'
+  const isStudentUser = isStudent !== undefined
+    ? isStudent
+    : (activeRole === 'student' || Boolean(activeAccount?.username?.toLowerCase().includes('u')))
   const activeRawName = profile?.fullName || activeAccount?.profile?.fullName || ''
   const activeUsername = activeAccount?.username || ''
   const heroTitle = resolveAccountTitle(activeRawName, activeUsername, activeRole, t)
@@ -532,6 +541,22 @@ export function SettingsSheet({
               }
             />
           </IosListSection>
+
+          {isStudentUser && onToggleAllowStudentJustifications && (
+            <IosListSection header={t.studentJustificationsSection}>
+              <IosCell
+                title={t.studentJustificationsTitle}
+                subtitle={t.studentJustificationsDescription}
+                size="tall"
+                trailing={
+                  <IosSwitch
+                    checked={Boolean(allowStudentJustifications)}
+                    onChange={() => onToggleAllowStudentJustifications(!allowStudentJustifications)}
+                  />
+                }
+              />
+            </IosListSection>
+          )}
 
           <IosListSection header={t.benchmarkSectionTitle}>
             <IosCell

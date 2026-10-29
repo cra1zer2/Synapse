@@ -74,6 +74,9 @@ export interface AppDictionary {
     accessibilityTitle: string
     advancedTitle: string
     systemSection: string
+    studentJustificationsSection: string
+    studentJustificationsTitle: string
+    studentJustificationsDescription: string
     displaySectionTitle: string
     gradesCalcSectionTitle: string
     ignoreModifiersLabel: string
@@ -226,6 +229,9 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             accessibilityTitle: 'Accessibility',
             advancedTitle: 'Advanced',
             systemSection: 'System',
+            studentJustificationsSection: 'Excuses & Justifications',
+            studentJustificationsTitle: 'Allow student justifications',
+            studentJustificationsDescription: 'Enable submitting absence excuses from student accounts',
             displaySectionTitle: 'Display & Layout',
             gradesCalcSectionTitle: 'Grade Calculations',
             ignoreModifiersLabel: 'Ignore pluses and minuses',
@@ -377,6 +383,9 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         accessibilityTitle: 'Dostępność',
         advancedTitle: 'Zaawansowane',
         systemSection: 'System',
+        studentJustificationsSection: 'e-Usprawiedliwienia',
+        studentJustificationsTitle: 'Usprawiedliwienia dla uczniów',
+        studentJustificationsDescription: 'Pozwól na przesyłanie usprawiedliwień z konta ucznia',
         displaySectionTitle: 'Ekran i układ',
         gradesCalcSectionTitle: 'Kalkulator ocen',
         ignoreModifiersLabel: 'Ignoruj plusy i minusy',

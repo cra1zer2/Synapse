@@ -33,7 +33,7 @@ export async function fetchLiveJustificationsHistory(
     try {
         const cleanUser = String(username || '').trim()
         const cleanPass = String(pass || '').trim()
-        if (!cleanUser || !cleanPass || cleanUser.toLowerCase().endsWith('u')) {
+        if (!cleanUser || !cleanPass) {
             return { success: true, data: [] }
         }
         let session = await getNativeLibrusSession(cleanUser, cleanPass)
@@ -120,6 +120,12 @@ export async function fetchLiveJustificationsHistory(
 
                 return { success: true, data: items }
             }
+        }
+
+        // Student accounts must never scrape HTML /eusprawiedliwienia with /rodzic/index referer,
+        // because Synergia will immediately terminate student sessions.
+        if (cleanUser.toLowerCase().endsWith('u')) {
+            return { success: true, data: [] }
         }
 
         const getRes = await session.fetch('https://synergia.librus.pl/eusprawiedliwienia', {

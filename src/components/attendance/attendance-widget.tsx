@@ -12,6 +12,7 @@ interface AttendanceWidgetProps {
   attendanceData: AttendanceResult
   showFullSubjectNames?: boolean
   isStudent?: boolean
+  canSubmitExcuse?: boolean
   onSelectSubject: (sub: SubjectAttendance) => void
   onOpenManualExcuse?: () => void
   onOpenQuickNb?: () => void
@@ -24,6 +25,7 @@ export function AttendanceWidget({
   attendanceData,
   showFullSubjectNames = false,
   isStudent = false,
+  canSubmitExcuse,
   onSelectSubject,
   onOpenManualExcuse,
   onOpenQuickNb,
@@ -31,6 +33,7 @@ export function AttendanceWidget({
   lang = 'pl',
   t
 }: AttendanceWidgetProps) {
+  const allowExcuse = canSubmitExcuse !== undefined ? canSubmitExcuse : !isStudent
   const isDanger = attendanceData.overallStatus === 'danger'
   const isWarning = attendanceData.overallStatus === 'warning'
 
@@ -96,7 +99,7 @@ export function AttendanceWidget({
         </div>
       </IosCard>
 
-      {!isStudent && (
+      {allowExcuse && (
         <div className="flex flex-col gap-3 select-none">
           <div className="grid grid-cols-2 gap-3">
             <IosCard

@@ -159,6 +159,7 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         localStorage.removeItem('synapse_week_cache')
         localStorage.removeItem('synapse_theme')
         localStorage.removeItem('synapse_text_clamp')
+        localStorage.removeItem('synapse_allow_student_justifications')
         setUsername('')
         setPassword('')
         setProfile(null)

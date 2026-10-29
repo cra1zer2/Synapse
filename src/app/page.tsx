@@ -56,6 +56,7 @@ export default function Home() {
   const [textClamp, setTextClamp] = useState<TextClampOption>('full')
   const [showFullSubjectNames, setShowFullSubjectNames] = useState<boolean>(false)
   const [ignoreGradeModifiers, setIgnoreGradeModifiers] = useState<boolean>(false)
+  const [allowStudentJustifications, setAllowStudentJustifications] = useState<boolean>(false)
 
   const [selectedLesson, setSelectedLesson] = useState<LessonItem | null>(null)
   const [cachedLesson, setCachedLesson] = useState<LessonItem | null>(null)
@@ -233,12 +234,14 @@ export default function Home() {
     const savedClamp = (localStorage.getItem('synapse_text_clamp') as TextClampOption) || 'full'
     const savedFull = localStorage.getItem('synapse_full_names') === 'true'
     const savedIgnore = localStorage.getItem('synapse_ignore_modifiers') === 'true'
+    const savedStudentJust = localStorage.getItem('synapse_allow_student_justifications') === 'true'
 
     setLang(savedLang)
     setTheme(savedTheme)
     setTextClamp(savedClamp)
     setShowFullSubjectNames(savedFull)
     setIgnoreGradeModifiers(savedIgnore)
+    setAllowStudentJustifications(savedStudentJust)
     applyTheme(savedTheme)
   }, [applyTheme])
 
@@ -308,6 +311,11 @@ export default function Home() {
     localStorage.setItem('synapse_ignore_modifiers', String(val))
   }
 
+  const handleToggleAllowStudentJustifications = (val: boolean) => {
+    setAllowStudentJustifications(val)
+    localStorage.setItem('synapse_allow_student_justifications', String(val))
+  }
+
   const handleManualRefresh = async () => {
     if (timetable.isUpdating || isManualRefreshing || !account.username || !account.password) return
     setIsManualRefreshing(true)
@@ -323,14 +331,16 @@ export default function Home() {
 
   const postSubmitSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const hasParentAccess = Boolean(
-    account.activeAccount?.role === 'parent' ||
-    account.profile?.role === 'parent' ||
-    (account.username && !account.username.trim().toLowerCase().endsWith('u')) ||
-    account.savedAccounts.some(
-      (a) => a.role === 'parent' || (Boolean(a.username) && !a.username.trim().toLowerCase().endsWith('u'))
-    )
-  )
+  const isCurrentStudent = (() => {
+    const role = account.activeAccount?.role || account.profile?.role
+    if (role === 'parent') return false
+    if (role === 'student') return true
+    const user = String(account.activeAccount?.username || account.username || '').trim().toLowerCase()
+    return user.endsWith('u') || user.includes('u')
+  })()
+
+  const canSubmitExcuse = isCurrentStudent ? allowStudentJustifications : true
+  const hasParentAccess = canSubmitExcuse
 
   const handleSubmitJustifications = async (payload: {
     dateIso?: string
@@ -648,7 +658,8 @@ export default function Home() {
             lang={lang}
             showFullSubjectNames={showFullSubjectNames}
             onSelectSubject={handleOpenSubjectDetail}
-            isStudent={!hasParentAccess}
+            isStudent={isCurrentStudent}
+            canSubmitExcuse={canSubmitExcuse}
             onOpenManualExcuse={() => setShowManualExcuse(true)}
             onOpenQuickNb={() => setShowQuickNb(true)}
             onOpenLiveJustifications={() => handleOpenLiveJustifications('0')}
@@ -683,7 +694,7 @@ export default function Home() {
           isOpen={showQuickNb}
           onClose={() => setShowQuickNb(false)}
           attendanceData={timetable.attendanceData}
-          canSubmitExcuse={hasParentAccess}
+          canSubmitExcuse={canSubmitExcuse}
           showFullSubjectNames={showFullSubjectNames}
           onSubmitMultiple={handleSubmitJustifications}
           lang={lang}
@@ -697,7 +708,7 @@ export default function Home() {
           onClose={() => setShowManualExcuse(false)}
           attendanceData={timetable.attendanceData}
           timetableData={timetable.timetableData}
-          canSubmitExcuse={hasParentAccess}
+          canSubmitExcuse={canSubmitExcuse}
           showFullSubjectNames={showFullSubjectNames}
           onSubmitJustification={handleSubmitJustifications}
           lang={lang}
@@ -728,6 +739,7 @@ export default function Home() {
         <JustificationModal
           attendanceData={timetable.attendanceData}
           timetableData={timetable.timetableData}
+          canSubmitExcuse={canSubmitExcuse}
           onClose={() => setShowExcuseMatrix(false)}
           onSubmitMultiple={handleSubmitJustifications}
           t={t}
@@ -905,6 +917,9 @@ export default function Home() {
         onToggleShowFullSubjectNames={handleToggleShowFullSubjectNames}
         ignoreGradeModifiers={ignoreGradeModifiers}
         onToggleIgnoreGradeModifiers={handleToggleIgnoreGradeModifiers}
+        isStudent={isCurrentStudent}
+        allowStudentJustifications={allowStudentJustifications}
+        onToggleAllowStudentJustifications={handleToggleAllowStudentJustifications}
         onLogout={account.handleLogout}
         t={t}
       />

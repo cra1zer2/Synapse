@@ -26,6 +26,7 @@ export interface IosScreenProps {
   isOpen?: boolean
   onClose?: () => void
   title: string
+  titleView?: ReactNode
   backLabel?: string
   isSubView?: boolean
   largeTitle?: boolean
@@ -40,6 +41,7 @@ export function IosScreen({
   isOpen = true,
   onClose,
   title,
+  titleView,
   backLabel = 'Wróć',
   isSubView = false,
   largeTitle = false,
@@ -346,9 +348,9 @@ export function IosScreen({
         )}
       </div>
 
-      <h2 className={"absolute inset-0 flex items-center justify-center text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px] pointer-events-none px-[74px] text-center transition-opacity duration-200 " + (largeTitle && !isScrolled ? "opacity-0" : "opacity-100")}>
-        <span className="truncate max-w-full">{title}</span>
-      </h2>
+      <div className={"absolute inset-0 flex items-center justify-center text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px] px-[74px] text-center transition-opacity duration-200 " + (titleView ? "pointer-events-auto" : "pointer-events-none") + " " + (largeTitle && !isScrolled ? "opacity-0" : "opacity-100")}>
+        {titleView ? titleView : <span className="truncate max-w-full">{title}</span>}
+      </div>
 
       <div className="z-10 min-w-[70px] flex items-center justify-end">
         {trailing}

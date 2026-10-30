@@ -6,6 +6,8 @@ import { getMessagesAndAnnouncementsAction, readMessageAction, sendMessageAction
 
 export function useMessagesInbox({ username, password }: { username: string; password: string }) {
     const [messages, setMessages] = useState<MessageItem[]>([])
+    const [sentMessages, setSentMessages] = useState<MessageItem[]>([])
+    const [currentFolder, setCurrentFolder] = useState<'inbox' | 'sent'>('inbox')
     const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([])
     const [receivers, setReceivers] = useState<ReceiverItem[]>([])
     const [isLoadingMessages, setIsLoadingMessages] = useState(false)
@@ -20,11 +22,13 @@ export function useMessagesInbox({ username, password }: { username: string; pas
             try {
                 const parsed = JSON.parse(cached)
                 if (Array.isArray(parsed.messages)) setMessages(parsed.messages)
+                if (Array.isArray(parsed.sentMessages)) setSentMessages(parsed.sentMessages)
                 if (Array.isArray(parsed.announcements)) setAnnouncements(parsed.announcements)
                 if (Array.isArray(parsed.receivers)) setReceivers(parsed.receivers)
             } catch {}
         } else {
             setMessages([])
+            setSentMessages([])
             setAnnouncements([])
             setReceivers([])
         }
@@ -39,11 +43,13 @@ export function useMessagesInbox({ username, password }: { username: string; pas
                 if (!isCancelled) {
                     if (mRes.success) {
                         setMessages(mRes.messages || [])
+                        setSentMessages(mRes.sentMessages || [])
                         setAnnouncements(mRes.announcements || [])
                         setReceivers(mRes.receivers || [])
                         setMessagesError(null)
                         localStorage.setItem(cacheKey, JSON.stringify({
                             messages: mRes.messages || [],
+                            sentMessages: mRes.sentMessages || [],
                             announcements: mRes.announcements || [],
                             receivers: mRes.receivers || []
                         }))
@@ -69,26 +75,28 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         }
     }, [username, password])
 
-    const handleOpenMessage = async (msgId: number | string): Promise<string> => {
+    const handleOpenMessage = async (msgId: number | string, folder: 'inbox' | 'sent' = 'inbox'): Promise<string> => {
         const idNum = Number(msgId)
 
-        setMessages((prev) => {
-            const updated = prev.map((m) => (Number(m.id) === idNum ? { ...m, isRead: true } : m))
-            if (typeof window !== 'undefined') {
-                const cacheKey = `synapse_msg_${username}`
-                const cached = localStorage.getItem(cacheKey)
-                if (cached) {
-                    try {
-                        const parsed = JSON.parse(cached)
-                        parsed.messages = updated
-                        localStorage.setItem(cacheKey, JSON.stringify(parsed))
-                    } catch {}
+        if (folder === 'inbox') {
+            setMessages((prev) => {
+                const updated = prev.map((m) => (Number(m.id) === idNum ? { ...m, isRead: true } : m))
+                if (typeof window !== 'undefined') {
+                    const cacheKey = `synapse_msg_${username}`
+                    const cached = localStorage.getItem(cacheKey)
+                    if (cached) {
+                        try {
+                            const parsed = JSON.parse(cached)
+                            parsed.messages = updated
+                            localStorage.setItem(cacheKey, JSON.stringify(parsed))
+                        } catch {}
+                    }
                 }
-            }
-            return updated
-        })
+                return updated
+            })
+        }
 
-        const res = await readMessageAction(username, password, idNum)
+        const res = await readMessageAction(username, password, idNum, folder === 'sent' ? 6 : 5)
         return res.content || ''
     }
 
@@ -105,12 +113,14 @@ export function useMessagesInbox({ username, password }: { username: string; pas
             const mRes = await getMessagesAndAnnouncementsAction(username, password)
             if (mRes.success) {
                 setMessages(mRes.messages || [])
+                setSentMessages(mRes.sentMessages || [])
                 setAnnouncements(mRes.announcements || [])
                 setReceivers(mRes.receivers || [])
                 setMessagesError(null)
                 const cacheKey = `synapse_msg_${username}`
                 localStorage.setItem(cacheKey, JSON.stringify({
                     messages: mRes.messages || [],
+                    sentMessages: mRes.sentMessages || [],
                     announcements: mRes.announcements || [],
                     receivers: mRes.receivers || []
                 }))
@@ -124,6 +134,9 @@ export function useMessagesInbox({ username, password }: { username: string; pas
 
     return {
         messages,
+        sentMessages,
+        currentFolder,
+        setCurrentFolder,
         announcements,
         receivers,
         isLoadingMessages,

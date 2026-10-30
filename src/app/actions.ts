@@ -179,9 +179,9 @@ export async function getMessagesAndAnnouncementsAction(
     return fetchMessagesBundle(username, pass)
 }
 
-export async function readMessageAction(username: string, pass: string, messageId: number) {
+export async function readMessageAction(username: string, pass: string, messageId: number, folderId: number = 5) {
     try {
-        const res = await fetchMessageContent(username, pass, messageId)
+        const res = await fetchMessageContent(username, pass, messageId, folderId)
         return res
     } catch (error) {
         return { success: false, error: String(error) }

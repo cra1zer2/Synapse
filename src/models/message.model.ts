@@ -6,6 +6,7 @@ export interface MessageItem {
     content?: string
     isRead: boolean
     hasAttachments: boolean
+    folder?: 'inbox' | 'sent'
 }
 
 export interface AnnouncementItem {
@@ -25,6 +26,7 @@ export interface ReceiverItem {
 export interface MessagesActionResult {
     success: boolean
     messages: MessageItem[]
+    sentMessages?: MessageItem[]
     announcements: AnnouncementItem[]
     receivers: ReceiverItem[]
     error?: string

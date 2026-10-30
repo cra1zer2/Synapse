@@ -12,12 +12,13 @@ import { cn } from '@/utils/cn.util'
 
 interface MessagesWidgetProps {
   mode: 'messages' | 'announcements'
+  folder?: 'inbox' | 'sent'
   messages: MessageItem[]
   announcements: AnnouncementItem[]
   receivers: ReceiverItem[]
   isComposeOpen?: boolean
   onCloseCompose?: () => void
-  onOpenMessage: (id: number | string) => Promise<string>
+  onOpenMessage: (id: number | string, folder?: 'inbox' | 'sent') => Promise<string>
   onSendMessage: (receiverId: number | number[], title: string, body: string) => Promise<boolean>
   isLoading?: boolean
   lang?: AppLanguage
@@ -89,6 +90,7 @@ function deduplicateReceivers(list: ReceiverItem[]): ReceiverItem[] {
 
 export function MessagesWidget({
   mode,
+  folder = 'inbox',
   messages,
   announcements,
   receivers,
@@ -149,7 +151,7 @@ export function MessagesWidget({
     setIsLoadingContent(true)
     notifySubView(true)
 
-    const content = await onOpenMessage(msg.id)
+    const content = await onOpenMessage(msg.id, folder)
     setReaderContent(content)
     setIsLoadingContent(false)
   }
@@ -201,7 +203,7 @@ export function MessagesWidget({
       <IosSearchBar
         value={searchQuery}
         onChange={setSearchQuery}
-        placeholder={mode === 'messages' ? t.searchMessagesPlaceholder : (isEn ? 'Search notices...' : 'Szukaj w ogłoszeniach...')}
+        placeholder={mode === 'messages' ? (folder === 'sent' ? (isEn ? 'Search sent messages...' : 'Szukaj w wysłanych...') : t.searchMessagesPlaceholder) : (isEn ? 'Search notices...' : 'Szukaj w ogłoszeniach...')}
       />
 
       {mode === 'messages' ? (
@@ -209,7 +211,7 @@ export function MessagesWidget({
           {isLoading && messages.length === 0 ? (
             Array.from({ length: 6 }).map((_, idx) => (
               <div key={idx} className="w-full p-3.5 px-4 flex items-center gap-3">
-                <div className="w-2.5 flex items-center justify-center shrink-0 self-center">
+                <div className="w-3.5 flex items-center justify-center shrink-0 self-center">
                   <div className="w-2 h-2 rounded-full ios-skeleton" />
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col gap-1.5">
@@ -228,15 +230,36 @@ export function MessagesWidget({
                 onClick={() => handleReadMessage(msg)}
                 className="w-full p-3.5 px-4 flex items-center gap-3 transition-colors duration-100 cursor-pointer active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20"
               >
-                <div className="w-2.5 flex items-center justify-center shrink-0 self-center">
-                  {!msg.isRead && (
-                    <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)]" />
+                <div className="w-3.5 flex items-center justify-center shrink-0 self-center">
+                  {folder === 'sent' ? (
+                    msg.isRead ? (
+                      <span title={isEn ? 'Read by teacher' : 'Przeczytane przez nauczyciela'} className="flex items-center justify-center">
+                        <svg
+                          width="15"
+                          height="15"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-[var(--ios-blue)] shrink-0"
+                        >
+                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      </span>
+                    ) : null
+                  ) : (
+                    !msg.isRead && (
+                      <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)]" />
+                    )
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className={cn('text-[15px] tracking-[-0.2px] truncate leading-tight', !msg.isRead ? 'font-semibold text-[var(--ios-label)]' : 'font-medium text-[var(--ios-label)]')}>
+                    <span className={cn('text-[15px] tracking-[-0.2px] truncate leading-tight', !msg.isRead && folder !== 'sent' ? 'font-semibold text-[var(--ios-label)]' : 'font-medium text-[var(--ios-label)]')}>
                       {cleanSenderName(msg.sender)}
                     </span>
                     <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] shrink-0 tabular-nums">
@@ -244,7 +267,7 @@ export function MessagesWidget({
                     </span>
                   </div>
 
-                  <h4 className={cn('text-[13px] tracking-[-0.1px] truncate mt-0.5 leading-snug', !msg.isRead ? 'font-normal text-[var(--ios-label)]/90' : 'font-normal text-[var(--ios-secondary)]')}>
+                  <h4 className={cn('text-[13px] tracking-[-0.1px] truncate mt-0.5 leading-snug', !msg.isRead && folder !== 'sent' ? 'font-normal text-[var(--ios-label)]/90' : 'font-normal text-[var(--ios-secondary)]')}>
                     {msg.subject}
                   </h4>
                 </div>
@@ -256,7 +279,7 @@ export function MessagesWidget({
             ))
           ) : (
             <div className="p-8 text-center text-[15px] font-normal text-[var(--ios-secondary)]">
-              {t.noMessages}
+              {folder === 'sent' ? (isEn ? 'No sent messages' : 'Brak wysłanych wiadomości') : t.noMessages}
             </div>
           )}
         </IosCard>

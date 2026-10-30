@@ -148,7 +148,87 @@ function parseInboxHtml(html: string): MessageItem[] {
             subject: subject || 'Wiadomość',
             date,
             isRead,
-            hasAttachments
+            hasAttachments,
+            folder: 'inbox'
+        })
+    })
+
+    messages.sort((a, b) => {
+        const timeA = new Date(a.date.replace(' ', 'T')).getTime() || 0
+        const timeB = new Date(b.date.replace(' ', 'T')).getTime() || 0
+        if (timeB !== timeA) return timeB - timeA
+        return Number(b.id) - Number(a.id)
+    })
+
+    return messages
+}
+
+function parseSentMessagesHtml(html: string): MessageItem[] {
+    const messages: MessageItem[] = []
+    if (!html) return messages
+
+    const $ = cheerio.load(html)
+    let rows = $('table.container-message table.decorated.stretch tbody tr')
+    if (rows.length === 0) {
+        rows = $('table.decorated.stretch tbody tr')
+    }
+    if (rows.length === 0) {
+        rows = $('table.decorated tbody tr')
+    }
+
+    rows.each((idx, row) => {
+        const children = $(row).children('td')
+        if (children.length < 5) return
+
+        const rowText = $(row).text().trim()
+        if (rowText.includes('Brak wiadomości') || rowText.includes('Więcej poleceń')) return
+
+        const linkHref =
+            $(children[3]).find('a').attr('href') ||
+            $(children[2]).find('a').attr('href') ||
+            $(row).find('a[href*="wiadomosci"]').attr('href') ||
+            ''
+
+        let id = 0
+        if (linkHref) {
+            const explicitMatch = linkHref.match(/\/?wiadomosci\/\d+\/\d+\/(\d+)/i)
+            if (explicitMatch) {
+                id = Number(explicitMatch[1])
+            } else {
+                const parts = linkHref.split('/').filter(Boolean)
+                const candidate = Number(parts[3] || parts[parts.length - 1])
+                if (!isNaN(candidate) && candidate > 0) {
+                    id = candidate
+                }
+            }
+        }
+
+        if (!id) {
+            const checkboxVal = $(row).find('input[type="checkbox"]').attr('value')
+            if (checkboxVal && !isNaN(Number(checkboxVal))) {
+                id = Number(checkboxVal)
+            }
+        }
+
+        const sender = $(children[2]).text().replace(/\s+/g, ' ').trim()
+        const subject = $(children[3]).text().replace(/\s+/g, ' ').trim()
+        const date = $(children[4]).text().replace(/\s+/g, ' ').trim()
+        const readStatusText = $(children[5]).text().replace(/\s+/g, ' ').trim().toLowerCase()
+
+        if (!id && !subject) return
+        if (sender.includes('Adresat') || subject.includes('Temat') || date.includes('Wysłano')) return
+
+        const isRead = readStatusText.includes('tak')
+        const hasAttachments = $(children[1]).find('img').length > 0
+
+        messages.push({
+            id: id || idx + 1,
+            sender: sender || 'Nauczyciel',
+            subject: subject || 'Wiadomość',
+            date,
+            isRead,
+            hasAttachments,
+            folder: 'sent'
         })
     })
 
@@ -339,23 +419,31 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
         )
         const session = inboxFetch.session
 
-        const [annFetch, receiversList] = await Promise.all([
+        const [annFetch, receiversList, sentFetch] = await Promise.all([
             fetchHtmlWithRetry(
                 cleanUser,
                 cleanPass,
                 'https://synergia.librus.pl/ogloszenia',
                 defaultRef
             ).catch(() => ({ session, html: '', ok: false })),
-            fetchReceiversList(session)
+            fetchReceiversList(session),
+            fetchHtmlWithRetry(
+                cleanUser,
+                cleanPass,
+                'https://synergia.librus.pl/wiadomosci/6',
+                defaultRef
+            ).catch(() => ({ session, html: '', ok: false }))
         ])
 
-        if (inboxFetch.ok || annFetch.ok) {
+        if (inboxFetch.ok || annFetch.ok || sentFetch.ok) {
             const inboxMessages = parseInboxHtml(inboxFetch.html)
+            const sentMessages = parseSentMessagesHtml(sentFetch.html)
             const announcements = parseAnnouncementsHtml(annFetch.html)
 
             return {
                 success: true,
                 messages: inboxMessages,
+                sentMessages,
                 announcements,
                 receivers: receiversList
             }
@@ -365,12 +453,14 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
         try {
             invalidateClientSession(cleanUser)
             const client = await getAuthenticatedClient(cleanUser, cleanPass)
-            const [rawInbox, rawAnnouncements] = await Promise.all([
+            const [rawInbox, rawSent, rawAnnouncements] = await Promise.all([
                 client.inbox.listInbox(5).catch(() => []),
+                client.inbox.listInbox(6).catch(() => []),
                 client.inbox.listAnnouncements().catch(() => [])
             ])
 
             const inboxList = Array.isArray(rawInbox) ? rawInbox : []
+            const sentList = Array.isArray(rawSent) ? rawSent : []
             const announcementsList = Array.isArray(rawAnnouncements) ? rawAnnouncements : []
 
             const messages: MessageItem[] = inboxList.map((item: any, idx: number) => ({
@@ -379,7 +469,18 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
                 subject: item.title || item.subject || 'Wiadomość',
                 date: item.date || '',
                 isRead: Boolean(item.read),
-                hasAttachments: Boolean(item.files && item.files.length > 0)
+                hasAttachments: Boolean(item.files && item.files.length > 0),
+                folder: 'inbox'
+            }))
+
+            const sentMessages: MessageItem[] = sentList.map((item: any, idx: number) => ({
+                id: Number(item.id) || idx + 1,
+                sender: item.user || item.sender || 'Nauczyciel',
+                subject: item.title || item.subject || 'Wiadomość',
+                date: item.date || '',
+                isRead: Boolean(item.read),
+                hasAttachments: Boolean(item.files && item.files.length > 0),
+                folder: 'sent'
             }))
 
             const announcements: AnnouncementItem[] = announcementsList.map((item: any, idx: number) => ({
@@ -393,6 +494,7 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
             return {
                 success: true,
                 messages,
+                sentMessages,
                 announcements,
                 receivers: receiversList
             }
@@ -455,7 +557,8 @@ function extractMessageBodyFromHtml(html: string): string {
 export async function fetchMessageContent(
     username: string,
     pass: string,
-    messageId: number
+    messageId: number,
+    folderId: number = 5
 ): Promise<{ success: boolean; content?: string; error?: string }> {
     try {
         const cleanUser = String(username || '').trim()
@@ -464,8 +567,8 @@ export async function fetchMessageContent(
         const primary = await fetchHtmlWithRetry(
             cleanUser,
             cleanPass,
-            `https://synergia.librus.pl/wiadomosci/1/5/${messageId}/f0`,
-            'https://synergia.librus.pl/wiadomosci/5'
+            `https://synergia.librus.pl/wiadomosci/1/${folderId}/${messageId}/f0`,
+            `https://synergia.librus.pl/wiadomosci/${folderId}`
         )
 
         let body = extractMessageBodyFromHtml(primary.html)
@@ -476,8 +579,8 @@ export async function fetchMessageContent(
         const secondary = await fetchHtmlWithRetry(
             cleanUser,
             cleanPass,
-            `https://synergia.librus.pl/wiadomosci/1/5/${messageId}`,
-            'https://synergia.librus.pl/wiadomosci/5'
+            `https://synergia.librus.pl/wiadomosci/1/${folderId}/${messageId}`,
+            `https://synergia.librus.pl/wiadomosci/${folderId}`
         )
 
         body = extractMessageBodyFromHtml(secondary.html)
@@ -485,10 +588,22 @@ export async function fetchMessageContent(
             return { success: true, content: body }
         }
 
+        const altFolder = folderId === 5 ? 6 : 5
+        const alt = await fetchHtmlWithRetry(
+            cleanUser,
+            cleanPass,
+            `https://synergia.librus.pl/wiadomosci/1/${altFolder}/${messageId}/f0`,
+            `https://synergia.librus.pl/wiadomosci/${altFolder}`
+        )
+        body = extractMessageBodyFromHtml(alt.html)
+        if (body) {
+            return { success: true, content: body }
+        }
+
         // Fallback to librus-api getMessage
         try {
             const client = await getAuthenticatedClient(cleanUser, cleanPass)
-            const msgData: any = await client.inbox.getMessage(5, messageId)
+            const msgData: any = await client.inbox.getMessage(folderId, messageId)
             const rawContent = typeof msgData === 'string' ? msgData : String(msgData?.content || '')
             if (rawContent) {
                 return { success: true, content: tryDecodeBase64Content(rawContent) }

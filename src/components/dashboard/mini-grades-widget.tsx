@@ -18,7 +18,7 @@ function getGradeBadgeStyle(gradeStr: string): string {
   if (g.startsWith('1')) {
     return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
   }
-  return 'bg-[var(--ios-element)]/65 text-[var(--ios-label)]'
+  return 'bg-[var(--ios-block-bg)] text-[var(--ios-label)]'
 }
 
 export function MiniGradesWidget({

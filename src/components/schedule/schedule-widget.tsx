@@ -82,7 +82,7 @@ function getDayIndicatorColor(day?: DaySchedule): string | null {
 
 function LessonSkeletonRow() {
   return (
-    <div className="w-full bg-[var(--ios-element)]/30 rounded-[16px] p-3.5 flex items-center justify-between gap-3">
+    <div className="w-full bg-[var(--ios-block-bg)] rounded-[16px] p-3.5 flex items-center justify-between gap-3">
       <div className="flex-1 min-w-0 flex flex-col gap-1.5 justify-center py-0.5">
         <div className="w-20 h-[12px] rounded-full ios-skeleton" />
         <div className="w-44 h-[16px] rounded-full ios-skeleton" />
@@ -385,7 +385,7 @@ export function ScheduleWidget({
                         <div
                           onClick={() => onSelectLesson(lesson)}
                           className={cn(
-                            'w-full bg-[var(--ios-element)]/35 hover:bg-[var(--ios-element)]/50 rounded-[16px] p-3.5 pr-4 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/60',
+                            'w-full bg-[var(--ios-block-bg)] hover:bg-[var(--ios-block-bg-hover)] rounded-[16px] p-3.5 pr-4 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-block-bg-active)]',
                             isCancelled && 'opacity-40'
                           )}
                         >

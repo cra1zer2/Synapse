@@ -75,7 +75,7 @@ export function RecipientPickerScreen({
         <button
           type="button"
           onClick={onClose}
-          className="text-[17px] font-semibold text-[var(--ios-blue)] active:opacity-60 select-none cursor-pointer"
+          className="text-[17px] font-semibold text-[var(--ios-blue)] leading-none active:opacity-60 select-none h-full flex items-center cursor-pointer"
         >
           {t.done}
         </button>

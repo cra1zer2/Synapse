@@ -19,8 +19,8 @@
   --ios-switch-off: #e5e5ea;
 
   --ios-segmented-track: rgba(118, 118, 128, 0.12);
-  --ios-segmented-thumb: #ffffff;
-  --ios-segmented-shadow: 0 2px 8px rgba(0, 0, 0, 0.10), 0 0.5px 1px rgba(0, 0, 0, 0.08);
+  --ios-segmented-thumb: rgba(255, 255, 255, 0.85);
+  --ios-segmented-shadow: none;
 
   --ios-glass-border: transparent;
   --ios-card-shadow: none;
@@ -81,8 +81,8 @@
     --ios-switch-off: #38383a;
 
     --ios-segmented-track: rgba(118, 118, 128, 0.24);
-    --ios-segmented-thumb: #3a3a3c;
-    --ios-segmented-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 0.5px 0 rgba(255, 255, 255, 0.14);
+    --ios-segmented-thumb: rgba(255, 255, 255, 0.17);
+    --ios-segmented-shadow: none;
 
     --ios-glass-border: transparent;
     --ios-card-shadow: none;
@@ -138,8 +138,8 @@
   --ios-switch-off: #38383a;
 
   --ios-segmented-track: rgba(118, 118, 128, 0.24);
-  --ios-segmented-thumb: #3a3a3c;
-  --ios-segmented-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 0.5px 0 rgba(255, 255, 255, 0.14);
+  --ios-segmented-thumb: rgba(255, 255, 255, 0.17);
+  --ios-segmented-shadow: none;
 
   --ios-glass-border: transparent;
   --ios-card-shadow: none;
@@ -234,7 +234,7 @@ body {
   top: 0;
   z-index: 30;
   width: 100%;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+  padding-top: max(calc(env(safe-area-inset-top, 0px) + 8px), 8px);
   padding-bottom: 8px;
   padding-left: 1rem;
   padding-right: 1rem;
@@ -244,13 +244,15 @@ body {
 
 /* Extra top inset specifically for iPhone so Safari/iOS status bar blur doesn't clip title or back button */
 html.is-iphone .ios-header {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+  padding-bottom: 8px;
 }
 
 @supports (-webkit-touch-callout: none) {
   @media (max-width: 440px) and (orientation: portrait) {
     .ios-header {
-      padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+      padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+      padding-bottom: 8px;
     }
   }
 }

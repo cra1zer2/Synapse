@@ -50,20 +50,20 @@ export function IosSegmentedControl<T extends string | number>({
   const activeIndex = Math.max(0, options.findIndex((o) => o.id === value))
   const count = Math.max(options.length, 1)
 
-  const heightClass = size === 'compact' ? 'h-[32px]' : 'h-[36px]'
+  const heightClass = size === 'compact' ? 'h-[32px]' : 'h-[32px]'
 
   return (
     <div
       className={cn(
-        'relative bg-[var(--ios-segmented-track)] p-[3px] rounded-full flex items-center select-none',
+        'relative bg-[var(--ios-segmented-track)] p-[2px] rounded-full flex items-center select-none',
         heightClass,
         className
       )}
     >
       <div
-        className="pointer-events-none absolute top-[3px] bottom-[3px] left-[3px] rounded-full bg-[var(--ios-segmented-thumb)] shadow-[var(--ios-segmented-shadow)] transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform"
+        className="pointer-events-none absolute top-[2px] bottom-[2px] left-[2px] rounded-full bg-[var(--ios-segmented-thumb)] transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform"
         style={{
-          width: `calc((100% - 6px) / ${count})`,
+          width: `calc((100% - 4px) / ${count})`,
           transform: `translate3d(${activeIndex * 100}%, 0, 0)`
         }}
       />

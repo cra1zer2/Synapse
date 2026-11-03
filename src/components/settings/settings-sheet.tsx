@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { AppDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 import { TextClampOption } from '@/app/page'
-import { IosScreen } from '@/components/ios/ios-screen'
+import { IosScreen, IOS_PANEL_TRANSITION, IOS_BACKDROP_TRANSITION, IOS_PARALLAX_PERCENT } from '@/components/ios/ios-screen'
 import { IosListSection, IosCell } from '@/components/ios/ios-list'
 import { IosCard } from '@/components/ios/ios-ui'
 import { IosSwitch } from '@/components/ios/ios-switch'
@@ -357,27 +357,35 @@ export function SettingsSheet({
         )
       })()}
 
-      {showAddForm && (
-        <div className="fixed inset-0 z-[70] bg-[var(--ios-bg)] flex flex-col">
-          <AuthView
-            authStep={addAccountStep}
-            username={newUsername}
-            setUsername={setNewUsername}
-            password={newPassword}
-            setPassword={setNewPassword}
-            authError={addAccountError}
-            verifiedCandidate={addAccountCandidate}
-            onStartVerification={onAddAccount}
-            onConfirmLogin={handleConfirmAdd}
-            onBackToInput={() => {
-              if (setAddAccountStep) setAddAccountStep('input')
-            }}
-            onCancel={handleCloseAddForm}
-            lang={currentLang}
-            t={t}
-          />
-        </div>
-      )}
+      <IosScreen
+        isOpen={showAddForm}
+        onClose={handleCloseAddForm}
+        title="Synapse"
+        backLabel={t.backAction}
+        isSubView={true}
+        zIndex={70}
+        hideHeader={true}
+        contentClassName="w-full h-full p-0 max-w-none"
+      >
+        <AuthView
+          authStep={addAccountStep}
+          username={newUsername}
+          setUsername={setNewUsername}
+          password={newPassword}
+          setPassword={setNewPassword}
+          authError={addAccountError}
+          verifiedCandidate={addAccountCandidate}
+          onStartVerification={onAddAccount}
+          onConfirmLogin={handleConfirmAdd}
+          onBackToInput={() => {
+            if (setAddAccountStep) setAddAccountStep('input')
+          }}
+          onCancel={handleCloseAddForm}
+          isSubView={true}
+          lang={currentLang}
+          t={t}
+        />
+      </IosScreen>
 
       <IosScreen
         isOpen={showThemePicker}

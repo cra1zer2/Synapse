@@ -426,7 +426,7 @@ export default function Home() {
       >
         <header className="ios-header">
           <div className="relative flex items-center justify-between w-full max-w-[402px] mx-auto h-[44px]">
-            <div className="z-10 flex items-center min-w-[70px]">
+            <div className="z-10 flex items-center min-w-[70px] h-full">
               <div className="relative w-9 h-9 flex items-center justify-center">
                 <div className={"absolute inset-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none " + ((timetable.isUpdating || isManualRefreshing) ? "opacity-100" : "opacity-0")}>
                   <IosSpinner size="small" className="text-[var(--ios-secondary)]" />
@@ -449,11 +449,11 @@ export default function Home() {
               </div>
             </div>
 
-            <h2 className="absolute inset-0 flex items-center justify-center text-[17px] font-semibold tracking-[-0.4px] text-[var(--ios-label)] pointer-events-none px-20 truncate text-center">
+            <h2 className="absolute inset-0 flex items-center justify-center text-[17px] font-semibold tracking-[-0.4px] leading-none text-[var(--ios-label)] pointer-events-none px-20 truncate text-center">
               Synapse
             </h2>
 
-            <div className="z-10 min-w-[70px] flex items-center justify-end">
+            <div className="z-10 min-w-[70px] flex items-center justify-end h-full">
               <button
                 type="button"
                 onClick={() => setShowSettings(true)}
@@ -649,7 +649,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setShowLegacyAttendance(true)}
-            className="text-[var(--ios-blue)] text-[17px] font-normal active:opacity-60 select-none py-1 pl-2 cursor-pointer"
+            className="text-[var(--ios-blue)] text-[17px] font-normal leading-none active:opacity-60 select-none h-full flex items-center pl-2 cursor-pointer"
           >
             Legacy
           </button>
@@ -872,7 +872,7 @@ export default function Home() {
               setIsFolderMenuOpen(false)
               setShowComposeInHeader(true)
             }}
-            className="text-[var(--ios-blue)] text-[17px] font-normal active:opacity-60 select-none py-1 pl-2 cursor-pointer"
+            className="text-[var(--ios-blue)] text-[17px] font-normal leading-none active:opacity-60 select-none h-full flex items-center pl-2 cursor-pointer"
           >
             {t.writeNewMessage || 'Napisz'}
           </button>
@@ -934,7 +934,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => handleOpenLiveJustifications(liveJustFilter)}
-            className="text-[var(--ios-blue)] text-[17px] font-normal active:opacity-60 cursor-pointer"
+            className="text-[var(--ios-blue)] text-[17px] font-normal leading-none active:opacity-60 select-none h-full flex items-center cursor-pointer"
           >
             {t.refresh}
           </button>

@@ -25,7 +25,7 @@ function findUnderlyingPanel(currentPanel: HTMLElement | null): HTMLElement | nu
 export interface IosScreenProps {
   isOpen?: boolean
   onClose?: () => void
-  title: string
+  title?: string
   titleView?: ReactNode
   backLabel?: string
   isSubView?: boolean
@@ -35,12 +35,14 @@ export interface IosScreenProps {
   children: ReactNode
   className?: string
   zIndex?: number
+  hideHeader?: boolean
+  contentClassName?: string
 }
 
 export function IosScreen({
   isOpen = true,
   onClose,
-  title,
+  title = '',
   titleView,
   backLabel = 'Wróć',
   isSubView = false,
@@ -49,7 +51,9 @@ export function IosScreen({
   trailing,
   children,
   className = '',
-  zIndex
+  zIndex,
+  hideHeader = false,
+  contentClassName
 }: IosScreenProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [isRendered, setIsRendered] = useState(isOpen)
@@ -333,12 +337,12 @@ export function IosScreen({
 
   const headerContent = (
     <div className="relative flex items-center justify-between w-full max-w-[402px] mx-auto h-[44px]">
-      <div className="z-10 flex items-center min-w-[70px]">
+      <div className="z-10 flex items-center min-w-[70px] h-full">
         {onClose && (
           <button
             type="button"
             onClick={handleRequestClose}
-            className="flex items-center gap-1 text-[var(--ios-blue)] text-[17px] font-normal active:opacity-55 active:scale-[0.97] transition-[opacity,transform] duration-150 -ml-1 py-1 pr-2 select-none cursor-pointer"
+            className="flex items-center gap-1 text-[var(--ios-blue)] text-[17px] font-normal leading-none active:opacity-55 active:scale-[0.97] transition-[opacity,transform] duration-150 -ml-1 h-full pr-2 select-none cursor-pointer"
           >
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
@@ -348,11 +352,11 @@ export function IosScreen({
         )}
       </div>
 
-      <div className={"absolute inset-0 flex items-center justify-center text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px] px-[74px] text-center transition-opacity duration-200 " + (titleView ? "pointer-events-auto" : "pointer-events-none") + " " + (largeTitle && !isScrolled ? "opacity-0" : "opacity-100")}>
-        {titleView ? titleView : <span className="truncate max-w-full">{title}</span>}
+      <div className={"absolute inset-0 flex items-center justify-center text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px] leading-none px-[74px] text-center transition-opacity duration-200 pointer-events-none " + (largeTitle && !isScrolled ? "opacity-0" : "opacity-100")}>
+        {titleView ? <div className="pointer-events-auto">{titleView}</div> : <span className="truncate max-w-full">{title}</span>}
       </div>
 
-      <div className="z-10 min-w-[70px] flex items-center justify-end">
+      <div className="z-10 min-w-[70px] flex items-center justify-end h-full">
         {trailing}
       </div>
     </div>
@@ -361,12 +365,14 @@ export function IosScreen({
   if (!isSubView) {
     return (
       <div onScroll={handleScroll} className={"w-full min-h-[100dvh] bg-[var(--ios-bg-primary)] overflow-y-auto " + className}>
-        <header className="ios-header">
-          {headerContent}
-        </header>
+        {!hideHeader && (
+          <header className="ios-header">
+            {headerContent}
+          </header>
+        )}
 
-        <div className="px-4 pt-5 max-w-[402px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]">
-          {largeTitle && (
+        <div className={contentClassName ?? "px-4 pt-5 max-w-[402px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]"}>
+          {!hideHeader && largeTitle && (
             <div className="pt-2 pb-3 select-none">
               <h1 className="text-[34px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-[41px]">
                 {title}
@@ -432,12 +438,14 @@ export function IosScreen({
         }}
         className={className}
       >
-        <header className="ios-header">
-          {headerContent}
-        </header>
+        {!hideHeader && (
+          <header className="ios-header">
+            {headerContent}
+          </header>
+        )}
 
-        <div className="px-4 pt-5 max-w-[402px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]">
-          {largeTitle && (
+        <div className={contentClassName ?? "px-4 pt-5 max-w-[402px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]"}>
+          {!hideHeader && largeTitle && (
             <div className="pt-2 pb-3 select-none">
               <h1 className="text-[34px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-[41px]">
                 {title}

@@ -15,9 +15,9 @@
   --ios-card-solid: #ffffff;
   --ios-card-secondary: #f2f2f7;
   --ios-element: rgba(118, 118, 128, 0.16);
-  --ios-block-bg: rgba(118, 118, 128, 0.10);
-  --ios-block-bg-hover: rgba(118, 118, 128, 0.15);
-  --ios-block-bg-active: rgba(118, 118, 128, 0.20);
+  --ios-block-bg: rgba(118, 118, 128, 0.08);
+  --ios-block-bg-hover: rgba(118, 118, 128, 0.12);
+  --ios-block-bg-active: rgba(118, 118, 128, 0.16);
   --ios-input: rgba(118, 118, 128, 0.14);
   --ios-switch-off: #e5e5ea;
 
@@ -82,7 +82,7 @@
     --ios-card-solid: #1c1c1e;
     --ios-card-secondary: #2c2c2e;
     --ios-element: rgba(255, 255, 255, 0.10);
-    --ios-block-bg: rgba(255, 255, 255, 0.085);
+    --ios-block-bg: rgba(255, 255, 255, 0.08);
     --ios-block-bg-hover: rgba(255, 255, 255, 0.12);
     --ios-block-bg-active: rgba(255, 255, 255, 0.16);
     --ios-input: rgba(118, 118, 128, 0.24);
@@ -142,7 +142,7 @@
   --ios-card-solid: #1c1c1e;
   --ios-card-secondary: #2c2c2e;
   --ios-element: rgba(255, 255, 255, 0.10);
-  --ios-block-bg: rgba(255, 255, 255, 0.085);
+  --ios-block-bg: rgba(255, 255, 255, 0.08);
   --ios-block-bg-hover: rgba(255, 255, 255, 0.12);
   --ios-block-bg-active: rgba(255, 255, 255, 0.16);
   --ios-input: rgba(118, 118, 128, 0.24);

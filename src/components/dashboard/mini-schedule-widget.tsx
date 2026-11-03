@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
-import { parseLessonTimeRange, calculateBreakDuration, getCurrentTimeMinutes } from '@/utils/time.util'
+import { parseLessonTimeRange, calculateBreakDuration, getCurrentTimeMinutes, getBreakRemainingMinutes } from '@/utils/time.util'
 import { formatSubjectName } from '@/utils/text.util'
 import { TextClampOption } from '@/app/page'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
@@ -62,7 +62,7 @@ function MiniLessonItem({
         }
       }}
       className={cn(
-        'w-full bg-[var(--ios-block-bg)] hover:bg-[var(--ios-block-bg-hover)] rounded-[16px] p-3.5 pr-4 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-block-bg-active)]',
+        'w-full py-3 px-1 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]',
         isCancelled && 'opacity-40'
       )}
     >
@@ -285,6 +285,18 @@ export function MiniScheduleWidget({
     return r.isValid && currentMinutes >= r.startMinutes && currentMinutes <= r.endMinutes
   }, [shouldShowNextDay, isWeekend, scheduleState.currentLesson, currentMinutes])
 
+  const isMiniBreakActive = useMemo(() => {
+    if (shouldShowNextDay || isWeekend || !scheduleState.currentLesson || !scheduleState.nextLesson) return false
+    const r1 = parseLessonTimeRange(scheduleState.currentLesson.time)
+    const r2 = parseLessonTimeRange(scheduleState.nextLesson.time)
+    return r1.isValid && r2.isValid && currentMinutes > r1.endMinutes && currentMinutes < r2.startMinutes
+  }, [shouldShowNextDay, isWeekend, scheduleState.currentLesson, scheduleState.nextLesson, currentMinutes])
+
+  const miniBreakRemaining = useMemo(() => {
+    if (!isMiniBreakActive || !scheduleState.nextLesson) return 0
+    return getBreakRemainingMinutes(scheduleState.nextLesson.time)
+  }, [isMiniBreakActive, scheduleState.nextLesson])
+
   return (
     <IosCard
       onClick={handleCardClick}
@@ -375,7 +387,7 @@ export function MiniScheduleWidget({
               {t.noLessonsDay}
             </div>
           ) : (
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col divide-y divide-[var(--ios-separator)]">
               {scheduleState.currentLesson && (
                 <MiniLessonItem
                   lesson={scheduleState.currentLesson}
@@ -387,7 +399,11 @@ export function MiniScheduleWidget({
               )}
 
               {scheduleState.currentLesson && scheduleState.nextLesson && (
-                <IosBreakDivider minutes={scheduleState.breakMinutes} />
+                <IosBreakDivider
+                  minutes={scheduleState.breakMinutes}
+                  isCountdown={isMiniBreakActive && miniBreakRemaining > 0}
+                  countdownText={t.breakCountdownLabel(miniBreakRemaining)}
+                />
               )}
 
               {scheduleState.nextLesson && (

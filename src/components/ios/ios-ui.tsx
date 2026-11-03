@@ -147,16 +147,33 @@ export function IosSearchBar({
   )
 }
 
-export function IosBreakDivider({ minutes }: { minutes: number }) {
+export function IosBreakDivider({
+  minutes,
+  isCountdown = false,
+  countdownText
+}: {
+  minutes: number
+  isCountdown?: boolean
+  countdownText?: string
+}) {
   return (
-    <div className="w-full flex items-center gap-3 px-2 py-0.5">
+    <div className="w-full flex items-center gap-3 px-2 py-1">
       <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/70" />
-      <div className="flex items-center gap-1 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full text-[var(--ios-secondary)] bg-[var(--ios-element)]/75">
+      <div
+        className={cn(
+          'flex items-center gap-1.5 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full',
+          isCountdown
+            ? 'text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] animate-pulse'
+            : 'text-[var(--ios-secondary)] bg-[var(--ios-element)]/75'
+        )}
+      >
         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="10" />
           <polyline points="12 6 12 12 16 14" />
         </svg>
-        <span className="tabular-nums">{minutes > 0 ? minutes + ' min' : 'Przerwa'}</span>
+        <span className="tabular-nums">
+          {isCountdown && countdownText ? countdownText : minutes > 0 ? minutes + ' min' : 'Przerwa'}
+        </span>
       </div>
       <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/70" />
     </div>

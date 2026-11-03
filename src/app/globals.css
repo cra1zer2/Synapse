@@ -29,11 +29,13 @@
   --ios-subview-backdrop: rgba(0, 0, 0, 0.22);
 
   --ios-label: #000000;
-  --ios-label-secondary: #8e8e93;
-  --ios-label-tertiary: #c7c7cc;
-  --ios-label-quaternary: #d1d1d6;
+  --ios-label-secondary: #5c5c60;
+  --ios-label-tertiary: #8e8e93;
+  --ios-label-quaternary: #c7c7cc;
 
-  --ios-secondary: #8e8e93;
+  --ios-secondary: #5c5c60;
+  --ios-tertiary: #8e8e93;
+  --ios-quaternary: #c7c7cc;
   --ios-tertiary: #c7c7cc;
   --ios-quaternary: #d1d1d6;
 
@@ -91,12 +93,12 @@
     --ios-subview-backdrop: rgba(0, 0, 0, 0.48);
 
     --ios-label: #ffffff;
-    --ios-label-secondary: #8e8e93;
-    --ios-label-tertiary: #636366;
+    --ios-label-secondary: #a1a1a6;
+    --ios-label-tertiary: #76767a;
     --ios-label-quaternary: #48484a;
 
-    --ios-secondary: #8e8e93;
-    --ios-tertiary: #636366;
+    --ios-secondary: #a1a1a6;
+    --ios-tertiary: #76767a;
     --ios-quaternary: #48484a;
 
     --ios-separator: rgba(84, 84, 88, 0.42);
@@ -148,12 +150,12 @@
   --ios-subview-backdrop: rgba(0, 0, 0, 0.48);
 
   --ios-label: #ffffff;
-  --ios-label-secondary: #8e8e93;
-  --ios-label-tertiary: #636366;
+  --ios-label-secondary: #a1a1a6;
+  --ios-label-tertiary: #76767a;
   --ios-label-quaternary: #48484a;
 
-  --ios-secondary: #8e8e93;
-  --ios-tertiary: #636366;
+  --ios-secondary: #a1a1a6;
+  --ios-tertiary: #76767a;
   --ios-quaternary: #48484a;
 
   --ios-separator: rgba(84, 84, 88, 0.42);
@@ -234,24 +236,26 @@ body {
   top: 0;
   z-index: 30;
   width: 100%;
-  padding-top: max(calc(env(safe-area-inset-top, 0px) + 8px), 8px);
+  padding-top: max(calc(env(safe-area-inset-top, 0px) + 14px), 14px);
   padding-bottom: 8px;
   padding-left: 1rem;
   padding-right: 1rem;
   background-color: var(--ios-nav-bg);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   border-bottom: var(--ios-hairline) solid var(--ios-separator);
 }
 
 /* Extra top inset specifically for iPhone so Safari/iOS status bar blur doesn't clip title or back button */
 html.is-iphone .ios-header {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
   padding-bottom: 8px;
 }
 
 @supports (-webkit-touch-callout: none) {
   @media (max-width: 440px) and (orientation: portrait) {
     .ios-header {
-      padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+      padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
       padding-bottom: 8px;
     }
   }

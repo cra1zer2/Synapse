@@ -356,7 +356,7 @@ export function IosScreen({
         {titleView ? <div className="pointer-events-auto">{titleView}</div> : <span className="truncate max-w-full">{title}</span>}
       </div>
 
-      <div className="z-10 min-w-[70px] flex items-center justify-end h-full">
+      <div className="z-10 min-w-[70px] flex items-center justify-start h-full">
         {trailing}
       </div>
     </div>

@@ -5,7 +5,7 @@ import { SmartTimetableResult, DaySchedule, LessonItem, TimetableEvent } from '@
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { formatSubjectName } from '@/utils/text.util'
 import { TextClampOption } from '@/app/page'
-import { IosCard } from '@/components/ios/ios-ui'
+import { IosCard, IosBreakDivider } from '@/components/ios/ios-ui'
 import { IosSpinner } from '@/components/ios/ios-spinner'
 import { getDayAbbr, computeLiveWeekDays } from '@/utils/date.util'
 import {
@@ -354,7 +354,7 @@ export function ScheduleWidget({
             )}
 
             {currentDaySchedule && currentDaySchedule.lessons && currentDaySchedule.lessons.length > 0 ? (
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col divide-y divide-[var(--ios-separator)]">
                 {currentDaySchedule.lessons.map((lesson, idx) => {
                   const nextLesson = currentDaySchedule.lessons[idx + 1]
                   const isToday = Boolean(currentDaySchedule.isToday)
@@ -385,7 +385,7 @@ export function ScheduleWidget({
                         <div
                           onClick={() => onSelectLesson(lesson)}
                           className={cn(
-                            'w-full bg-[var(--ios-block-bg)] hover:bg-[var(--ios-block-bg-hover)] rounded-[16px] p-3.5 pr-4 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-block-bg-active)]',
+                            'w-full py-3 px-1 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]',
                             isCancelled && 'opacity-40'
                           )}
                         >
@@ -432,21 +432,12 @@ export function ScheduleWidget({
                       </div>
 
                       {shouldShowBreak && (
-                        <div className="w-full flex items-center gap-3 px-2 py-0.5">
-                          <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/70" />
-                          <div className={cn(
-                            'flex items-center gap-1 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full',
-                            shouldShowCountdown ? 'text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] animate-pulse' : 'text-[var(--ios-secondary)] bg-[var(--ios-element)]/75'
-                          )}>
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <circle cx="12" cy="12" r="10" />
-                              <polyline points="12 6 12 12 16 14" />
-                            </svg>
-                            <span className="tabular-nums">
-                              {shouldShowCountdown ? t.breakCountdownLabel(breakRemaining) : breakMinutes + ' min'}
-                            </span>
-                          </div>
-                          <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/70" />
+                        <div className="w-full py-1">
+                          <IosBreakDivider
+                            minutes={breakMinutes}
+                            isCountdown={shouldShowCountdown}
+                            countdownText={t.breakCountdownLabel(breakRemaining)}
+                          />
                         </div>
                       )}
                     </Fragment>

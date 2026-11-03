@@ -52,10 +52,10 @@ export function MiniMessagesWidget({
         </svg>
       </div>
 
-      <div className="flex flex-col gap-2.5 mt-0.5">
+      <div className="flex flex-col divide-y divide-[var(--ios-separator)]">
         <div
           onClick={onOpenMessages}
-          className="w-full bg-[var(--ios-block-bg)] hover:bg-[var(--ios-block-bg-hover)] rounded-[16px] p-3.5 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-block-bg-active)]"
+          className="w-full py-3 px-1 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]"
         >
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
             <div className="w-[36px] h-[36px] rounded-[10px] bg-[var(--ios-blue)] text-white flex items-center justify-center shrink-0">
@@ -103,7 +103,7 @@ export function MiniMessagesWidget({
 
         <div
           onClick={onOpenAnnouncements}
-          className="w-full bg-[var(--ios-block-bg)] hover:bg-[var(--ios-block-bg-hover)] rounded-[16px] p-3.5 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-block-bg-active)]"
+          className="w-full py-3 px-1 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]"
         >
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
             <div className="w-[36px] h-[36px] rounded-[10px] bg-[var(--ios-purple)] text-white flex items-center justify-center shrink-0">

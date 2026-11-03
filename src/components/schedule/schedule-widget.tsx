@@ -300,52 +300,6 @@ export function ScheduleWidget({
         </div>
       </IosCard>
 
-      {displayEvents.length > 0 && !isLoadingWeek && (
-        <IosCard className="p-4 flex flex-col gap-2.5 select-none">
-          <div className="flex flex-col gap-2">
-            {displayEvents.map((ev, i) => {
-              const isHoliday = ev.category === 'holiday'
-              const isQuiz = ev.category === 'quiz'
-              const badgeText = ev.eventType || (isHoliday ? 'Dzień wolny' : isQuiz ? 'Kartkówka' : 'Sprawdzian')
-              const lessonInfo = ev.lessonNumber !== undefined && ev.lessonNumber !== null ? `${t.lessonNumberLabel(ev.lessonNumber)} • ` : ''
-              const displayTitle = ev.subjectName && ev.subjectName !== ev.eventType ? ev.subjectName : ev.title
-
-              return (
-                <div
-                  key={i}
-                  onClick={() => onSelectEvent?.(ev)}
-                  className={cn(
-                    'px-3.5 py-2.5 rounded-[14px] text-[13px] font-medium cursor-pointer active:scale-[0.985] active:opacity-80 transition-[transform,opacity] duration-150 flex items-center justify-between',
-                    isHoliday
-                      ? 'bg-[var(--ios-teal)]/15 text-[var(--ios-teal)]'
-                      : isQuiz
-                      ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] border border-[var(--ios-orange)]/25'
-                      : ev.category === 'exam'
-                      ? 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)] border border-[var(--ios-purple)]/20'
-                      : 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] border border-[var(--ios-blue)]/20'
-                  )}
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className={cn(
-                      'font-semibold uppercase text-[10px] px-2 py-0.5 rounded-full shrink-0',
-                      isHoliday ? 'bg-[var(--ios-teal)] text-white' : isQuiz ? 'bg-[var(--ios-orange)] text-white' : ev.category === 'exam' ? 'bg-[var(--ios-purple)] text-white' : 'bg-[var(--ios-blue)] text-white'
-                    )}>
-                      {badgeText}
-                    </span>
-                    <p className="truncate text-[13px] text-[var(--ios-label)] font-medium">
-                      {lessonInfo + displayTitle}
-                    </p>
-                  </div>
-                  <svg className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </div>
-              )
-            })}
-          </div>
-        </IosCard>
-      )}
-
       <IosCard className="p-4 flex flex-col gap-2.5 select-none">
         {isLoadingWeek ? (
           <div className="flex flex-col gap-2.5">
@@ -355,8 +309,51 @@ export function ScheduleWidget({
           </div>
         ) : (
           <div className="flex flex-col">
+            {displayEvents.length > 0 && (
+              <div className="flex flex-col mb-1">
+                {displayEvents.map((ev, i) => {
+                  const isHoliday = ev.category === 'holiday'
+                  const isQuiz = ev.category === 'quiz'
+                  const badgeText = ev.eventType || (isHoliday ? 'Dzień wolny' : isQuiz ? 'Kartkówka' : 'Sprawdzian')
+                  const lessonInfo = ev.lessonNumber !== undefined && ev.lessonNumber !== null ? `${t.lessonNumberLabel(ev.lessonNumber)} • ` : ''
+                  const displayTitle = ev.subjectName && ev.subjectName !== ev.eventType ? ev.subjectName : ev.title
+
+                  return (
+                    <div key={i} className="flex flex-col">
+                      <div
+                        onClick={() => onSelectEvent?.(ev)}
+                        className="w-full py-2.5 px-1 rounded-[12px] flex items-center justify-between gap-3 cursor-pointer select-none active:bg-[var(--ios-element)]/40 transition-colors duration-150"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <span className={cn(
+                            'font-semibold uppercase text-[10px] px-2.5 py-0.5 rounded-full shrink-0 tracking-wider shadow-sm',
+                            isHoliday
+                              ? 'bg-[var(--ios-teal)] text-white'
+                              : isQuiz
+                              ? 'bg-[var(--ios-orange)] text-white'
+                              : ev.category === 'exam'
+                              ? 'bg-[var(--ios-purple)] text-white'
+                              : 'bg-[var(--ios-blue)] text-white'
+                          )}>
+                            {badgeText}
+                          </span>
+                          <p className="truncate text-[14px] text-[var(--ios-label)] font-medium">
+                            {lessonInfo + displayTitle}
+                          </p>
+                        </div>
+                        <svg className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                      </div>
+                      <div className="w-full h-[0.5px] bg-[var(--ios-separator)]/60 my-1" />
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
             {currentDaySchedule && currentDaySchedule.lessons && currentDaySchedule.lessons.length > 0 ? (
-              <div className="flex flex-col border-t border-b border-[var(--ios-separator)]/60 my-0.5 py-0.5">
+              <div className="flex flex-col">
                 {currentDaySchedule.lessons.map((lesson, idx) => {
                   const nextLesson = currentDaySchedule.lessons[idx + 1]
                   const isToday = Boolean(currentDaySchedule.isToday)
@@ -387,7 +384,7 @@ export function ScheduleWidget({
                         <div
                           onClick={() => onSelectLesson(lesson)}
                           className={cn(
-                            'w-full py-3 px-1 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]',
+                            'w-full py-2.5 px-1 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]',
                             isCancelled && 'opacity-40'
                           )}
                         >
@@ -442,7 +439,9 @@ export function ScheduleWidget({
                           />
                         </div>
                       ) : nextLesson ? (
-                        <div className="w-full h-[0.5px] bg-[var(--ios-separator)]/60 my-0.5" />
+                        <div className="w-full pl-1">
+                          <div className="w-full h-[0.5px] bg-[var(--ios-separator)]/60 my-0.5" />
+                        </div>
                       ) : null}
                     </Fragment>
                   )

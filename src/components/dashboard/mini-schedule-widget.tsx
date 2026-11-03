@@ -387,7 +387,7 @@ export function MiniScheduleWidget({
               {t.noLessonsDay}
             </div>
           ) : (
-            <div className="flex flex-col divide-y divide-[var(--ios-separator)]">
+            <div className="flex flex-col">
               {scheduleState.currentLesson && (
                 <MiniLessonItem
                   lesson={scheduleState.currentLesson}

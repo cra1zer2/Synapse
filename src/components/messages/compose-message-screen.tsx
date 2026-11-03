@@ -78,7 +78,7 @@ export function ComposeMessageScreen({
             type="button"
             disabled={isSending || recipients.length === 0 || !title.trim() || !body.trim()}
             onClick={() => handleSubmit()}
-            className="text-[17px] font-semibold text-[var(--ios-blue)] disabled:opacity-40 active:opacity-60 transition-all flex items-center gap-1.5 cursor-pointer"
+            className="text-[17px] font-semibold text-[var(--ios-blue)] leading-none disabled:opacity-40 active:opacity-60 transition-all flex items-center gap-1.5 h-full cursor-pointer"
           >
             {isSending && <IosSpinner size="small" className="text-[var(--ios-blue)]" />}
             <span>{isSending ? t.sending : t.send}</span>

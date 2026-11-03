@@ -44,7 +44,7 @@ export function MessageReaderScreen({
           <button
             type="button"
             onClick={() => onReply(message)}
-            className="flex items-center gap-1 text-[17px] font-normal text-[var(--ios-blue)] active:opacity-60 transition-opacity select-none cursor-pointer"
+            className="flex items-center gap-1 text-[17px] font-normal leading-none text-[var(--ios-blue)] active:opacity-60 transition-opacity select-none h-full cursor-pointer"
           >
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 17 4 12 9 7" />

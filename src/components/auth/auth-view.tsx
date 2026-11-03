@@ -18,6 +18,7 @@ interface AuthViewProps {
   onConfirmLogin: () => void
   onBackToInput: () => void
   onCancel?: () => void
+  isSubView?: boolean
   lang: AppLanguage
   onSelectLanguage?: (lang: AppLanguage) => void
   t: AppDictionary
@@ -53,6 +54,7 @@ export function AuthView({
   onConfirmLogin,
   onBackToInput,
   onCancel,
+  isSubView = false,
   lang,
   t
 }: AuthViewProps) {
@@ -74,13 +76,15 @@ export function AuthView({
   const isFormValid = username.trim().length > 0 && password.trim().length > 0
 
   return (
-    <main className="w-full min-h-screen bg-[var(--ios-bg)] flex flex-col justify-between px-5 sm:px-6 pt-[max(calc(env(safe-area-inset-top,0px)+1rem),1.75rem)] pb-[max(calc(env(safe-area-inset-bottom,0px)+1rem),1.75rem)] max-w-[402px] mx-auto box-border select-none">
-      <header className="w-full h-11 flex items-center justify-between relative shrink-0">
+    <main className={`w-full min-h-screen bg-[var(--ios-bg)] flex flex-col justify-between px-5 sm:px-6 pb-[max(calc(env(safe-area-inset-bottom,0px)+1rem),1.75rem)] max-w-[402px] mx-auto box-border select-none ${
+      isSubView ? 'pt-[calc(env(safe-area-inset-top,0px)+8px)]' : 'pt-[max(calc(env(safe-area-inset-top,0px)+1rem),1.75rem)]'
+    }`}>
+      <header className="w-full h-[44px] flex items-center justify-between relative shrink-0">
         {authStep === 'preview' ? (
           <button
             type="button"
             onClick={onBackToInput}
-            className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal active:opacity-60 transition-opacity cursor-pointer select-none z-10"
+            className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
           >
             <svg
               className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0"
@@ -99,7 +103,7 @@ export function AuthView({
           <button
             type="button"
             onClick={onCancel}
-            className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal active:opacity-60 transition-opacity cursor-pointer select-none z-10"
+            className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
           >
             <svg
               className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0"
@@ -118,7 +122,7 @@ export function AuthView({
           <div className="w-[70px] z-10" />
         )}
 
-        <span className="absolute inset-0 flex items-center justify-center text-[17px] font-semibold tracking-[-0.4px] text-[var(--ios-label)] pointer-events-none">
+        <span className="absolute inset-0 flex items-center justify-center text-[17px] font-semibold tracking-[-0.4px] leading-none text-[var(--ios-label)] pointer-events-none">
           Synapse
         </span>
 
@@ -145,31 +149,25 @@ export function AuthView({
 
         {authStep === 'input' && (
           <form onSubmit={onStartVerification} className="flex flex-col gap-4 w-full">
-            <div
-              className={`w-full rounded-[20px] bg-[var(--ios-card-solid)] overflow-hidden divide-y divide-[var(--ios-separator)] transition-all duration-150 ${
-                isUsernameFocused || isPasswordFocused
-                  ? 'ring-2 ring-[var(--ios-blue)] border-transparent'
-                  : 'border border-[var(--ios-separator)]/60'
-              }`}
-            >
-              {/* Login / Username field with floating label */}
+            <div className="w-full rounded-[14px] bg-[var(--ios-card-solid)] border border-[var(--ios-separator)]/70 relative flex flex-col overflow-hidden">
+              {/* Login / Username field with fixed label and focus half */}
               <div
                 onClick={() => {
                   document.getElementById('username-input')?.focus()
                 }}
-                className="relative min-h-[58px] w-full flex items-center px-4 pt-3.5 pb-1 cursor-text"
+                className="relative h-[60px] w-full flex flex-col justify-center px-4 cursor-text border-b border-[var(--ios-separator)] select-none"
               >
-                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <label
-                    htmlFor="username-input"
-                    className={`text-[var(--ios-secondary)] pointer-events-none transition-all duration-150 origin-top-left select-none leading-none ${
-                      isUsernameFocused || username.length > 0
-                        ? 'text-[11px] font-medium tracking-tight mb-0.5'
-                        : 'text-[17px] font-normal tracking-[-0.3px] translate-y-2'
-                    }`}
-                  >
-                    {t.loginPlaceholder}
-                  </label>
+                {isUsernameFocused && (
+                  <div className="absolute inset-0 pointer-events-none rounded-t-[13px] border-2 border-[var(--ios-blue)] z-20" />
+                )}
+
+                <label
+                  htmlFor="username-input"
+                  className="text-[12px] font-normal text-[var(--ios-secondary)] pointer-events-none select-none leading-none tracking-tight mb-1"
+                >
+                  {t.loginPlaceholder}
+                </label>
+                <div className="relative w-full flex items-center">
                   <input
                     id="username-input"
                     type="text"
@@ -177,53 +175,52 @@ export function AuthView({
                     onChange={(e) => setUsername(e.target.value)}
                     onFocus={() => setIsUsernameFocused(true)}
                     onBlur={() => setIsUsernameFocused(false)}
-                    className="w-full bg-transparent text-[17px] font-normal text-[var(--ios-label)] outline-none tracking-[-0.3px] pt-0.5 pb-1"
+                    className="w-full bg-transparent text-[17px] font-normal text-[var(--ios-label)] outline-none tracking-[-0.3px] leading-tight pr-7"
                     required
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck="false"
                     autoComplete="username"
                   />
+                  {username.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setUsername('')
+                        document.getElementById('username-input')?.focus()
+                      }}
+                      className="absolute right-0 w-5 h-5 rounded-full bg-[var(--ios-secondary)]/35 hover:bg-[var(--ios-secondary)]/50 text-[var(--ios-card-solid)] flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer z-30"
+                      tabIndex={-1}
+                      aria-label="Clear username"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
-
-                {username.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setUsername('')
-                      document.getElementById('username-input')?.focus()
-                    }}
-                    className="w-5 h-5 rounded-full bg-[var(--ios-secondary)]/35 hover:bg-[var(--ios-secondary)]/50 text-[var(--ios-card-solid)] flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer ml-2 self-center"
-                    tabIndex={-1}
-                    aria-label="Clear username"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                )}
               </div>
 
-              {/* Password field with floating label */}
+              {/* Password field with fixed label and focus half */}
               <div
                 onClick={() => {
                   document.getElementById('password-input')?.focus()
                 }}
-                className="relative min-h-[58px] w-full flex items-center px-4 pt-3.5 pb-1 cursor-text"
+                className="relative h-[60px] w-full flex flex-col justify-center px-4 cursor-text select-none"
               >
-                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <label
-                    htmlFor="password-input"
-                    className={`text-[var(--ios-secondary)] pointer-events-none transition-all duration-150 origin-top-left select-none leading-none ${
-                      isPasswordFocused || password.length > 0
-                        ? 'text-[11px] font-medium tracking-tight mb-0.5'
-                        : 'text-[17px] font-normal tracking-[-0.3px] translate-y-2'
-                    }`}
-                  >
-                    {t.passwordPlaceholder}
-                  </label>
+                {isPasswordFocused && (
+                  <div className="absolute inset-0 pointer-events-none rounded-b-[13px] border-2 border-[var(--ios-blue)] z-20" />
+                )}
+
+                <label
+                  htmlFor="password-input"
+                  className="text-[12px] font-normal text-[var(--ios-secondary)] pointer-events-none select-none leading-none tracking-tight mb-1"
+                >
+                  {t.passwordPlaceholder}
+                </label>
+                <div className="relative w-full flex items-center">
                   <input
                     id="password-input"
                     type={showPassword ? 'text' : 'password'}
@@ -231,36 +228,35 @@ export function AuthView({
                     onChange={(e) => setPassword(e.target.value)}
                     onFocus={() => setIsPasswordFocused(true)}
                     onBlur={() => setIsPasswordFocused(false)}
-                    className="w-full bg-transparent text-[17px] font-normal text-[var(--ios-label)] outline-none tracking-[-0.3px] pt-0.5 pb-1"
+                    className="w-full bg-transparent text-[17px] font-normal text-[var(--ios-label)] outline-none tracking-[-0.3px] leading-tight pr-7"
                     required
                     autoComplete="current-password"
                   />
+                  {password.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowPassword(!showPassword)
+                      }}
+                      className="absolute right-0 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:opacity-60 transition-opacity p-0.5 cursor-pointer shrink-0 z-30"
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                          <line x1="1" y1="2" x2="23" y2="23" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
                 </div>
-
-                {password.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowPassword(!showPassword)
-                    }}
-                    className="text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:opacity-60 transition-opacity p-1 cursor-pointer shrink-0 ml-2 self-center"
-                    tabIndex={-1}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? (
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="2" x2="23" y2="23" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </button>
-                )}
               </div>
             </div>
 

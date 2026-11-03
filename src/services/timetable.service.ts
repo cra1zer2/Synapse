@@ -211,11 +211,30 @@ export async function fetchSmartTimetable(
 
             const missingSubjectIds = new Set<number>()
             const missingUserIds = new Set<number>()
+            const missingCategoryIds = new Set<number>()
+            const categoryNames = new Map<number, string>()
+
             for (const hw of items) {
                 const sId = Number(hw.Subject?.Id)
                 if (sId && !subjectNames.has(sId)) missingSubjectIds.add(sId)
                 const uId = Number(hw.CreatedBy?.Id)
                 if (uId && !userNames.has(uId)) missingUserIds.add(uId)
+                const cId = Number(hw.Category?.Id)
+                if (cId) missingCategoryIds.add(cId)
+            }
+
+            if (missingCategoryIds.size > 0) {
+                const catRes = await fetchGatewayEndpoint(
+                    username,
+                    pass,
+                    `gateway/api/2.0/HomeWorks/Categories/${Array.from(missingCategoryIds).join(',')}`
+                ).catch(() => null)
+                const extraCats = Array.isArray(catRes?.Categories) ? catRes.Categories : (catRes?.Category ? [catRes.Category] : [])
+                for (const c of extraCats) {
+                    const cId = Number(c.Id)
+                    const name = String(c.Name || '').trim()
+                    if (cId && name) categoryNames.set(cId, name)
+                }
             }
 
             if (missingSubjectIds.size > 0) {
@@ -255,34 +274,36 @@ export async function fetchSmartTimetable(
                     eventsByDate[hwDate] = []
                 }
                 const catId = Number(hw.Category?.Id)
-                const content = String(hw.Content || '').trim()
-                const lower = content.toLowerCase()
-                let category: 'holiday' | 'exam' | 'quiz' | 'homework' | 'info' = 'info'
-                let eventType = 'Wydarzenie'
+                let rawCategoryName = (catId && categoryNames.get(catId)) || (hw.Category?.Name ? String(hw.Category.Name).trim() : '')
+                if (rawCategoryName.includes('/')) {
+                    rawCategoryName = rawCategoryName.split('/')[0].trim()
+                }
 
-                if (catId === 11857 || /wolny|święto|ferie|przerwa/i.test(lower)) {
-                    category = 'holiday'
-                    eventType = 'Dzień wolny'
-                } else if (/konsultacj/i.test(lower)) {
-                    category = 'info'
-                    eventType = 'Konsultacje'
-                } else if (/zebrani|wywiadówk|spotkanie z rodzic/i.test(lower)) {
-                    category = 'info'
-                    eventType = 'Zebranie'
-                } else if (catId === 7672 || /kartkówk/i.test(lower)) {
-                    category = 'quiz'
-                    eventType = 'Kartkówka'
-                } else if (catId === 7187 || /sprawdzian|praca klasowa|test|diagnoz|egzamin/i.test(lower)) {
+                const content = String(hw.Content || '').trim()
+                const lowerContent = content.toLowerCase()
+                const lowerCat = rawCategoryName.toLowerCase()
+
+                let category: 'holiday' | 'exam' | 'quiz' | 'homework' | 'info' = 'info'
+                let eventType = rawCategoryName || 'Wydarzenie'
+
+                if (/sprawdzian|praca klasowa|test|diagnoz|egzamin/i.test(lowerCat) || /sprawdzian|praca klasowa|test|diagnoz|egzamin/i.test(lowerContent)) {
                     category = 'exam'
-                    eventType = 'Sprawdzian'
-                } else if (/zadanie|praca domowa|projekt/i.test(lower)) {
+                    eventType = rawCategoryName || 'Sprawdzian'
+                } else if (/kartkówk/i.test(lowerCat) || /kartkówk/i.test(lowerContent)) {
+                    category = 'quiz'
+                    eventType = rawCategoryName || 'Kartkówka'
+                } else if (/wolny|święto|ferie|przerwa/i.test(lowerCat) || /wolny|święto|ferie|przerwa/i.test(lowerContent)) {
+                    category = 'holiday'
+                    eventType = rawCategoryName || 'Dzień wolny'
+                } else if (/zadanie|praca domowa|projekt/i.test(lowerCat) || /zadanie|praca domowa|projekt/i.test(lowerContent)) {
                     category = 'homework'
-                    eventType = 'Zadanie domowe'
-                } else if (/apel|wycieczk|uroczyst/i.test(lower)) {
+                    eventType = rawCategoryName || 'Zadanie domowe'
+                } else if (/konsultacj/i.test(lowerCat) || /konsultacj/i.test(lowerContent)) {
                     category = 'info'
-                    eventType = 'Wydarzenie'
-                } else if (hw.Category?.Name) {
-                    eventType = String(hw.Category.Name).trim()
+                    eventType = rawCategoryName || 'Konsultacje'
+                } else if (/zebrani|wywiadówk|spotkanie z rodzic/i.test(lowerCat) || /zebrani|wywiadówk|spotkanie z rodzic/i.test(lowerContent)) {
+                    category = 'info'
+                    eventType = rawCategoryName || 'Zebranie'
                 }
 
                 const sId = Number(hw.Subject?.Id)

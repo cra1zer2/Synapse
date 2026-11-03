@@ -20,6 +20,9 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
     const [newAccUser, setNewAccUser] = useState('')
     const [newAccPass, setNewAccPass] = useState('')
     const [isAddingAcc, setIsAddingAcc] = useState(false)
+    const [addAccountStep, setAddAccountStep] = useState<'input' | 'verifying' | 'preview'>('input')
+    const [addAccountCandidate, setAddAccountCandidate] = useState<StudentProfile | null>(null)
+    const [addAccountError, setAddAccountError] = useState<string | null>(null)
 
     const [authStep, setAuthStep] = useState<'input' | 'verifying' | 'preview'>('input')
     const [verifiedCandidate, setVerifiedCandidate] = useState<StudentProfile | null>(null)
@@ -126,29 +129,52 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         setProfile(acc.profile)
     }
 
-    const handleAddSecondaryAccount = async (e: React.FormEvent): Promise<{ success: boolean; error?: string }> => {
+    const handleStartAddAccountVerification = async (e: React.FormEvent) => {
         e.preventDefault()
+        setAddAccountError(null)
+        setAddAccountStep('verifying')
         setIsAddingAcc(true)
+
         const res = await getStudentProfileAction(newAccUser, newAccPass)
         setIsAddingAcc(false)
 
         if (res.success && res.data) {
-            const newAcc: SavedAccount = {
-                id: newAccUser,
-                username: newAccUser,
-                password: newAccPass,
-                role: res.data.role,
-                profile: res.data,
-                isActive: false
-            }
-            const updated = [...savedAccounts, newAcc]
-            setSavedAccounts(updated)
-            localStorage.setItem('synapse_accounts', JSON.stringify(updated))
-            setNewAccUser('')
-            setNewAccPass('')
-            return { success: true }
+            setAddAccountCandidate(res.data)
+            setAddAccountStep('preview')
+        } else {
+            setAddAccountError(res.error || t.loginError)
+            setAddAccountStep('input')
         }
-        return { success: false, error: res.error || t.loginError }
+    }
+
+    const handleConfirmAddAccount = (): boolean => {
+        if (!addAccountCandidate || !newAccUser || !newAccPass) return false
+
+        const newAcc: SavedAccount = {
+            id: newAccUser,
+            username: newAccUser,
+            password: newAccPass,
+            role: addAccountCandidate.role,
+            profile: addAccountCandidate,
+            isActive: false
+        }
+        const updated = [...savedAccounts, newAcc]
+        setSavedAccounts(updated)
+        localStorage.setItem('synapse_accounts', JSON.stringify(updated))
+        setNewAccUser('')
+        setNewAccPass('')
+        setAddAccountCandidate(null)
+        setAddAccountStep('input')
+        setAddAccountError(null)
+        return true
+    }
+
+    const handleResetAddAccount = () => {
+        setNewAccUser('')
+        setNewAccPass('')
+        setAddAccountCandidate(null)
+        setAddAccountStep('input')
+        setAddAccountError(null)
     }
 
     const handleLogout = () => {
@@ -192,7 +218,15 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         handleStartVerification,
         handleConfirmLogin,
         handleSwitchAccount,
-        handleAddSecondaryAccount,
+        handleAddSecondaryAccount: handleStartAddAccountVerification,
+        addAccountStep,
+        setAddAccountStep,
+        addAccountCandidate,
+        addAccountError,
+        setAddAccountError,
+        handleStartAddAccountVerification,
+        handleConfirmAddAccount,
+        handleResetAddAccount,
         handleLogout,
         activeAccount
     }

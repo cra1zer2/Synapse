@@ -107,7 +107,7 @@ export function AttendanceWidget({
               className="p-3.5 rounded-[22px] flex flex-col justify-between min-h-[86px]"
             >
               <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-secondary)] flex items-center justify-center border border-[var(--ios-border)]">
+                <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-secondary)] flex items-center justify-center">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                     <path d="m15 5 4 4"/>
@@ -132,7 +132,7 @@ export function AttendanceWidget({
               className="p-3.5 rounded-[22px] flex flex-col justify-between min-h-[86px]"
             >
               <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-secondary)] flex items-center justify-center border border-[var(--ios-border)]">
+                <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-secondary)] flex items-center justify-center">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/>
                     <polyline points="12 6 12 12 16 14"/>
@@ -164,7 +164,7 @@ export function AttendanceWidget({
             className="p-3.5 px-4 rounded-[26px] flex items-center justify-between gap-3"
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-secondary)] flex items-center justify-center border border-[var(--ios-border)] shrink-0">
+              <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-secondary)] flex items-center justify-center shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 11l3 3L22 4" />
                   <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />

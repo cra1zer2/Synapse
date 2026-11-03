@@ -14,16 +14,16 @@
   --ios-card: #ffffff;
   --ios-card-solid: #ffffff;
   --ios-card-secondary: #f2f2f7;
-  --ios-element: rgba(118, 118, 128, 0.12);
-  --ios-input: rgba(118, 118, 128, 0.11);
+  --ios-element: rgba(118, 118, 128, 0.16);
+  --ios-input: rgba(118, 118, 128, 0.14);
   --ios-switch-off: #e5e5ea;
 
   --ios-segmented-track: rgba(118, 118, 128, 0.12);
   --ios-segmented-thumb: #ffffff;
   --ios-segmented-shadow: 0 2px 8px rgba(0, 0, 0, 0.10), 0 0.5px 1px rgba(0, 0, 0, 0.08);
 
-  --ios-glass-border: rgba(0, 0, 0, 0.06);
-  --ios-card-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.04), 0 0.5px 1.5px rgba(0, 0, 0, 0.03);
+  --ios-glass-border: transparent;
+  --ios-card-shadow: none;
 
   --ios-subview-shadow: -8px 0 24px rgba(0, 0, 0, 0.10);
   --ios-subview-backdrop: rgba(0, 0, 0, 0.22);
@@ -84,8 +84,8 @@
     --ios-segmented-thumb: #3a3a3c;
     --ios-segmented-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 0.5px 0 rgba(255, 255, 255, 0.14);
 
-    --ios-glass-border: rgba(255, 255, 255, 0.09);
-    --ios-card-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.5);
+    --ios-glass-border: transparent;
+    --ios-card-shadow: none;
 
     --ios-subview-shadow: -10px 0 28px rgba(0, 0, 0, 0.65);
     --ios-subview-backdrop: rgba(0, 0, 0, 0.48);
@@ -141,8 +141,8 @@
   --ios-segmented-thumb: #3a3a3c;
   --ios-segmented-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 0.5px 0 rgba(255, 255, 255, 0.14);
 
-  --ios-glass-border: rgba(255, 255, 255, 0.09);
-  --ios-card-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.5);
+  --ios-glass-border: transparent;
+  --ios-card-shadow: none;
 
   --ios-subview-shadow: -10px 0 28px rgba(0, 0, 0, 0.65);
   --ios-subview-backdrop: rgba(0, 0, 0, 0.48);
@@ -242,11 +242,24 @@ body {
   border-bottom: var(--ios-hairline) solid var(--ios-separator);
 }
 
+/* Extra top inset specifically for iPhone so Safari/iOS status bar blur doesn't clip title or back button */
+html.is-iphone .ios-header {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 440px) and (orientation: portrait) {
+    .ios-header {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+    }
+  }
+}
+
 .ios-card {
   background-color: var(--ios-card-solid);
   border-radius: var(--ios-radius-card);
-  border: var(--ios-hairline) solid var(--ios-glass-border);
-  box-shadow: var(--ios-card-shadow);
+  border: none;
+  box-shadow: none;
   overflow: hidden;
 }
 

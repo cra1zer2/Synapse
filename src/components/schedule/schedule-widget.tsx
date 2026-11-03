@@ -63,22 +63,26 @@ function getFocusLessonIndex(lessons: LessonItem[], currentMinutes: number): num
 
 function getDayIndicatorColor(day?: DaySchedule): string | null {
   if (!day) return null
+
+  // Red dot: cancellations or days off / holidays
   const hasCancelled = day.lessons.some((l) => l.isCancelled)
   const hasHoliday = day.events && day.events.some((e) => e.category === 'holiday')
   if (hasCancelled || hasHoliday) return 'bg-[var(--ios-red)]'
 
+  // Blue dot: any tests, quizzes, events, or substitutions happening on this day
+  const hasEventsOrExams = day.events && day.events.length > 0
   const hasSubstitution = day.lessons.some((l) => l.isSubstitution)
-  if (hasSubstitution) return 'bg-[var(--ios-purple)]'
-
   const hasShortened = day.lessons.some((l) => l.isShortened)
-  if (hasShortened) return 'bg-[var(--ios-orange)]'
+  if (hasEventsOrExams || hasSubstitution || hasShortened) {
+    return 'bg-[var(--ios-blue)]'
+  }
 
   return null
 }
 
 function LessonSkeletonRow() {
   return (
-    <div className="w-full bg-[var(--ios-element)]/30 rounded-[16px] p-3.5 flex items-center justify-between gap-3 border border-[var(--ios-border)]">
+    <div className="w-full bg-[var(--ios-element)]/30 rounded-[16px] p-3.5 flex items-center justify-between gap-3">
       <div className="flex-1 min-w-0 flex flex-col gap-1.5 justify-center py-0.5">
         <div className="w-20 h-[12px] rounded-full ios-skeleton" />
         <div className="w-44 h-[16px] rounded-full ios-skeleton" />
@@ -381,7 +385,7 @@ export function ScheduleWidget({
                         <div
                           onClick={() => onSelectLesson(lesson)}
                           className={cn(
-                            'w-full bg-[var(--ios-element)]/35 hover:bg-[var(--ios-element)]/50 rounded-[16px] p-3.5 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 border border-[var(--ios-border)] cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/60',
+                            'w-full bg-[var(--ios-element)]/35 hover:bg-[var(--ios-element)]/50 rounded-[16px] p-3.5 pr-4 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/60',
                             isCancelled && 'opacity-40'
                           )}
                         >
@@ -408,7 +412,7 @@ export function ScheduleWidget({
                             </p>
                           </div>
 
-                          <div className="shrink-0 flex items-center gap-2 self-center">
+                          <div className="shrink-0 flex items-center gap-2 self-center pr-1">
                             {lesson.room ? (
                               <span className={cn(
                                 'text-[13px] tracking-tight font-medium',

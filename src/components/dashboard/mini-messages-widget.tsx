@@ -55,7 +55,7 @@ export function MiniMessagesWidget({
       <div className="flex flex-col gap-2.5 mt-0.5">
         <div
           onClick={onOpenMessages}
-          className="w-full bg-[var(--ios-element)]/35 hover:bg-[var(--ios-element)]/50 rounded-[16px] p-3.5 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 border border-[var(--ios-border)] cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/60"
+          className="w-full bg-[var(--ios-element)]/35 hover:bg-[var(--ios-element)]/50 rounded-[16px] p-3.5 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/60"
         >
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
             <div className="w-[36px] h-[36px] rounded-[10px] bg-[var(--ios-blue)] text-white flex items-center justify-center shrink-0">
@@ -103,7 +103,7 @@ export function MiniMessagesWidget({
 
         <div
           onClick={onOpenAnnouncements}
-          className="w-full bg-[var(--ios-element)]/35 hover:bg-[var(--ios-element)]/50 rounded-[16px] p-3.5 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 border border-[var(--ios-border)] cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/60"
+          className="w-full bg-[var(--ios-element)]/35 hover:bg-[var(--ios-element)]/50 rounded-[16px] p-3.5 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/60"
         >
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
             <div className="w-[36px] h-[36px] rounded-[10px] bg-[var(--ios-purple)] text-white flex items-center justify-center shrink-0">

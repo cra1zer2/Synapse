@@ -280,6 +280,7 @@ export default function Home() {
       root.classList.remove('dark', 'light')
       if (e.matches) root.classList.add('dark')
       else root.classList.add('light')
+      syncMetaThemeColor(e.matches)
     }
     mediaQuery.addEventListener('change', handler)
     return () => mediaQuery.removeEventListener('change', handler)
@@ -1013,6 +1014,12 @@ export default function Home() {
           account.handleSwitchAccount(acc)
         }}
         onAddAccount={account.handleAddSecondaryAccount}
+        onConfirmAddAccount={account.handleConfirmAddAccount}
+        onResetAddAccount={account.handleResetAddAccount}
+        addAccountStep={account.addAccountStep}
+        setAddAccountStep={account.setAddAccountStep}
+        addAccountCandidate={account.addAccountCandidate}
+        addAccountError={account.addAccountError}
         newUsername={account.newAccUser}
         setNewUsername={account.setNewAccUser}
         newPassword={account.newAccPass}

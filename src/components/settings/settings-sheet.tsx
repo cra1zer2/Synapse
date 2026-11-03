@@ -5,13 +5,12 @@ import { createPortal } from 'react-dom'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { AppDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 import { TextClampOption } from '@/app/page'
-import { executeLibrusBenchmarkAction } from '@/app/actions'
-import { BenchmarkReport } from '@/models/benchmark.model'
 import { IosScreen } from '@/components/ios/ios-screen'
 import { IosListSection, IosCell } from '@/components/ios/ios-list'
 import { IosCard } from '@/components/ios/ios-ui'
 import { IosSwitch } from '@/components/ios/ios-switch'
 import { IosSpinner } from '@/components/ios/ios-spinner'
+import { AuthView } from '@/components/auth/auth-view'
 
 interface SettingsSheetProps {
   isOpen: boolean
@@ -19,7 +18,13 @@ interface SettingsSheetProps {
   profile: StudentProfile | null
   savedAccounts?: SavedAccount[]
   onSwitchAccount: (account: SavedAccount) => void
-  onAddAccount: (e: React.FormEvent) => Promise<{ success: boolean; error?: string }> | void
+  onAddAccount: (e: React.FormEvent) => void
+  onConfirmAddAccount?: () => boolean
+  onResetAddAccount?: () => void
+  addAccountStep?: 'input' | 'verifying' | 'preview'
+  setAddAccountStep?: (s: 'input' | 'verifying' | 'preview') => void
+  addAccountCandidate?: StudentProfile | null
+  addAccountError?: string | null
   newUsername: string
   setNewUsername: (u: string) => void
   newPassword: string
@@ -67,6 +72,12 @@ export function SettingsSheet({
   savedAccounts = [],
   onSwitchAccount,
   onAddAccount,
+  onConfirmAddAccount,
+  onResetAddAccount,
+  addAccountStep = 'input',
+  setAddAccountStep,
+  addAccountCandidate = null,
+  addAccountError = null,
   newUsername,
   setNewUsername,
   newPassword,
@@ -87,7 +98,6 @@ export function SettingsSheet({
   t
 }: SettingsSheetProps) {
   const [showAddForm, setShowAddForm] = useState(false)
-  const [addAccountError, setAddAccountError] = useState<string | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [showLangPicker, setShowLangPicker] = useState(false)
@@ -139,10 +149,6 @@ export function SettingsSheet({
     }, 260)
   }
 
-  const [isBenchmarking, setIsBenchmarking] = useState(false)
-  const [benchmarkReport, setBenchmarkReport] = useState<BenchmarkReport | null>(null)
-  const [isCopied, setIsCopied] = useState(false)
-
   const accountsList = Array.isArray(savedAccounts) ? savedAccounts : []
   const activeAccount = accountsList.find((a) => a.isActive) || accountsList[0]
 
@@ -159,34 +165,19 @@ export function SettingsSheet({
     activeAccount?.profile?.schoolName || profile?.schoolName
   ].filter(Boolean).join(' • ') || 'Librus Synergia'
 
-  const handleRunBenchmark = async () => {
-    if (!activeAccount || !activeAccount.username || !activeAccount.password || isBenchmarking) return
-    setIsBenchmarking(true)
-    const res = await executeLibrusBenchmarkAction(activeAccount.username, activeAccount.password)
-    setIsBenchmarking(false)
-    if (res.success && res.data) {
-      setBenchmarkReport(res.data)
+  const handleCloseAddForm = () => {
+    setShowAddForm(false)
+    if (onResetAddAccount) {
+      onResetAddAccount()
     }
   }
 
-  const handleCopyReport = async () => {
-    if (!benchmarkReport) return
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(benchmarkReport, null, 2))
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
-    } catch { }
-  }
-
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setAddAccountError(null)
-    const res = await onAddAccount(e)
-    if (res && !res.success) {
-      setAddAccountError(res.error || t.loginError)
-    } else {
-      setShowAddForm(false)
-      setAddAccountError(null)
+  const handleConfirmAdd = () => {
+    if (onConfirmAddAccount) {
+      const ok = onConfirmAddAccount()
+      if (ok) {
+        setShowAddForm(false)
+      }
     }
   }
 
@@ -201,7 +192,7 @@ export function SettingsSheet({
         title={t.settingsTitle}
         backLabel={t.backAction}
         isSubView={true}
-        isReceded={showThemePicker || showLangPicker || showAdvanced || showAddForm}
+        isReceded={showThemePicker || showAdvanced || showAddForm}
       >
         <div className="flex flex-col gap-5 pb-12 select-none">
           <IosCard>
@@ -258,7 +249,7 @@ export function SettingsSheet({
             <button
               type="button"
               onClick={() => {
-                setAddAccountError(null)
+                if (onResetAddAccount) onResetAddAccount()
                 setShowAddForm(true)
               }}
               className="w-full p-4 text-left text-[15px] font-normal text-[var(--ios-blue)] tracking-[-0.2px] flex items-center justify-between active:bg-[var(--ios-element)]/30 transition-colors cursor-pointer"
@@ -277,14 +268,6 @@ export function SettingsSheet({
               chevron={true}
               size="standard"
               onClick={() => setShowThemePicker(true)}
-            />
-
-            <IosCell
-              title={t.appLanguage}
-              detail={langLabel}
-              chevron={true}
-              size="standard"
-              onClick={() => setShowLangPicker(true)}
             />
           </IosListSection>
 
@@ -374,67 +357,27 @@ export function SettingsSheet({
         )
       })()}
 
-      <IosScreen
-        isOpen={showAddForm}
-        onClose={() => {
-          setShowAddForm(false)
-          setAddAccountError(null)
-        }}
-        title={t.addAccount}
-        backLabel={t.backAction}
-        isSubView={true}
-        zIndex={60}
-      >
-        <div className="flex flex-col gap-4 pb-12 select-none">
-          {addAccountError && (
-            <div className="p-3.5 rounded-[12px] bg-[var(--ios-red-subtle)] border border-[var(--ios-red)]/20 text-[var(--ios-red)] text-[13px] font-normal text-center">
-              {addAccountError}
-            </div>
-          )}
-
-          <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
-            <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
-              <div className="px-4 py-3 flex items-center gap-3">
-                <span className="w-16 text-[15px] font-normal text-[var(--ios-secondary)] shrink-0">Login</span>
-                <input
-                  type="text"
-                  placeholder={t.loginPlaceholder}
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  className="w-full bg-transparent text-[var(--ios-label)] text-[17px] font-normal outline-none placeholder-[var(--ios-secondary)]/50 tracking-[-0.4px]"
-                  required
-                />
-              </div>
-              <div className="px-4 py-3 flex items-center gap-3">
-                <span className="w-16 text-[15px] font-normal text-[var(--ios-secondary)] shrink-0">{t.passwordPlaceholder}</span>
-                <input
-                  type="password"
-                  placeholder={t.passwordPlaceholder}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-transparent text-[var(--ios-label)] text-[17px] font-normal outline-none placeholder-[var(--ios-secondary)]/50 tracking-[-0.4px]"
-                  required
-                />
-              </div>
-            </IosCard>
-
-            <button
-              type="submit"
-              disabled={isAddingAccount || !newUsername.trim() || !newPassword.trim()}
-              className="h-[50px] w-full bg-[var(--ios-blue)] text-white text-[16px] font-medium tracking-[-0.2px] rounded-[16px] disabled:opacity-40 active:scale-[0.985] transition-transform shadow-xs flex items-center justify-center gap-2 cursor-pointer mt-1"
-            >
-              {isAddingAccount ? (
-                <>
-                  <IosSpinner size="small" className="text-white" />
-                  <span>{t.verifyingAccount}</span>
-                </>
-              ) : (
-                <span>{t.saveAccount}</span>
-              )}
-            </button>
-          </form>
+      {showAddForm && (
+        <div className="fixed inset-0 z-[70] bg-[var(--ios-bg)] flex flex-col">
+          <AuthView
+            authStep={addAccountStep}
+            username={newUsername}
+            setUsername={setNewUsername}
+            password={newPassword}
+            setPassword={setNewPassword}
+            authError={addAccountError}
+            verifiedCandidate={addAccountCandidate}
+            onStartVerification={onAddAccount}
+            onConfirmLogin={handleConfirmAdd}
+            onBackToInput={() => {
+              if (setAddAccountStep) setAddAccountStep('input')
+            }}
+            onCancel={handleCloseAddForm}
+            lang={currentLang}
+            t={t}
+          />
         </div>
-      </IosScreen>
+      )}
 
       <IosScreen
         isOpen={showThemePicker}
@@ -557,105 +500,6 @@ export function SettingsSheet({
               />
             </IosListSection>
           )}
-
-          <IosListSection header={t.benchmarkSectionTitle}>
-            <IosCell
-              title={t.benchmarkButtonLabel}
-              subtitle={t.benchmarkDescription}
-              size="tall"
-              trailing={
-                <button
-                  type="button"
-                  onClick={handleRunBenchmark}
-                  disabled={isBenchmarking}
-                  className="h-[28px] px-3 text-[12px] font-medium bg-[var(--ios-blue)] text-white rounded-full shadow-xs active:opacity-75 disabled:opacity-40 transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
-                >
-                  {isBenchmarking && (
-                    <svg className="w-3 h-3 animate-spin text-white" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
-                      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" className="opacity-75" />
-                    </svg>
-                  )}
-                  <span>{isBenchmarking ? t.benchmarkingStatus : t.runBenchmarkAction}</span>
-                </button>
-              }
-            />
-
-            {benchmarkReport && (
-              <div className="p-3.5 flex flex-col gap-2.5 bg-[var(--ios-element)]/25 border-t border-[var(--ios-separator)]">
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="text-[var(--ios-secondary)]">{t.benchmarkTotalDuration}:</span>
-                    <span className="text-[var(--ios-label)] font-medium">{benchmarkReport.totalDurationMs} ms</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="text-[var(--ios-secondary)]">{t.benchmarkAuthDuration}:</span>
-                    <span className="text-[var(--ios-label)] font-medium">{benchmarkReport.authorizationDurationMs} ms</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="text-[var(--ios-secondary)]">{t.benchmarkFastestEndpoint}:</span>
-                    <span className="text-[var(--ios-green)] font-medium truncate max-w-[200px] text-right">{benchmarkReport.fastestEndpoint}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="text-[var(--ios-secondary)]">{t.benchmarkSlowestEndpoint}:</span>
-                    <span className="text-[var(--ios-orange)] font-medium truncate max-w-[200px] text-right">{benchmarkReport.slowestEndpoint}</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--ios-separator)]">
-                  <span className="text-[11px] font-normal text-[var(--ios-secondary)] uppercase tracking-wider">
-                    {t.benchmarkEndpointsDetails}
-                  </span>
-
-                  <div className="flex flex-col gap-1">
-                    {benchmarkReport.items.map((item, idx) => (
-                      <div
-                        key={item.endpoint + '-' + idx}
-                        className="flex items-center justify-between text-[11px] p-2 rounded-[10px] bg-[var(--ios-card)] border border-[var(--ios-separator)]"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className={"w-1.5 h-1.5 rounded-full shrink-0 " + (item.success ? 'bg-[var(--ios-green)]' : 'bg-[var(--ios-red)]')} />
-                          <span className="text-[var(--ios-label)] font-medium truncate">
-                            {item.endpoint}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[11px] text-[var(--ios-secondary)]">
-                            {item.payloadBytes > 0 ? Math.round(item.payloadBytes / 1024 * 10) / 10 + " KB" : "0 B"}
-                          </span>
-                          <span className="text-[12px] font-medium text-[var(--ios-label)] tabular-nums">
-                            {item.durationMs} ms
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleCopyReport}
-                  className="w-full mt-1 py-2.5 px-3 bg-[var(--ios-blue)] text-white text-[13px] font-medium rounded-[12px] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  {isCopied ? (
-                    <>
-                      <span>✓</span>
-                      <span>{t.benchmarkReportCopied}</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                      </svg>
-                      <span>{t.benchmarkCopyReportAction}</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </IosListSection>
         </div>
       </IosScreen>
     </>

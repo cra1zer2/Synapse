@@ -70,6 +70,7 @@ export function ComposeMessageScreen({
         onClose={onClose}
         title={t.newMessageTitle}
         backLabel={t.cancel}
+        showBackButton={true}
         isSubView={true}
         isReceded={showPicker}
         className="z-[70]"
@@ -85,7 +86,7 @@ export function ComposeMessageScreen({
           </button>
         }
       >
-        <div className="flex flex-col gap-4 pb-16 select-none max-w-[402px] mx-auto w-full">
+        <div className="flex flex-col gap-4 pb-16 select-none max-w-2xl mx-auto w-full">
           {isSent ? (
             <IosCard className="p-8 flex flex-col items-center justify-center gap-3 text-center">
               <div className="w-12 h-12 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center text-[22px] font-bold">

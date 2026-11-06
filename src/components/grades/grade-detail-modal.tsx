@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { GradeItem } from '@/models/grade.model'
 import { AppDictionary } from '@/config/dictionary.config'
+import { cn } from '@/utils/cn.util'
 
 interface GradeDetailModalProps {
   gradeDetail: { grade: GradeItem; subject: string } | null
@@ -108,9 +109,9 @@ export function GradeDetailModal({
       style={{
         opacity: isVisible ? 1 : 0,
         pointerEvents: isVisible ? 'auto' : 'none',
-        transition: 'opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
+        transition: 'opacity 0.25s cubic-bezier(0.32, 0.72, 0, 1)'
       }}
-      className="fixed inset-0 z-[80] bg-black/40 flex items-end justify-center select-none"
+      className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-6 select-none"
     >
       <div
         ref={sheetRef}
@@ -118,33 +119,43 @@ export function GradeDetailModal({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{
-          transform: isVisible ? 'translate3d(0, 0, 0)' : 'translate3d(0, 100%, 0)',
-          transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
-          willChange: 'transform'
-        }}
-        className="w-full max-w-[402px] sm:max-w-lg bg-[var(--ios-card-solid)] rounded-t-[34px] sm:rounded-[26px] px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] border-t sm:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto"
+        className={cn(
+          "w-full max-w-[402px] md:max-w-[460px] bg-[var(--ios-card-solid)] rounded-t-[34px] md:rounded-[26px] p-5 md:p-6 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] md:pb-6 border-t md:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto transition-all duration-300",
+          isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-12 md:translate-y-0"
+        )}
       >
-        <div className="w-[36px] h-[5px] rounded-[2.5px] bg-[var(--ios-element)] mx-auto mb-1 shrink-0 opacity-60 sm:hidden" />
+        <div className="w-[36px] h-[5px] rounded-[2.5px] bg-[var(--ios-element)] mx-auto mb-1 shrink-0 opacity-60 md:hidden" />
 
-        <div className="flex flex-col gap-1 pb-1">
-          <span className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-tight">
+        <div className="flex items-center justify-between pb-1">
+          <span className="text-[14px] font-semibold text-[var(--ios-secondary)] tracking-tight truncate pr-2">
             {activeData.subject}
           </span>
+          <button
+            type="button"
+            onClick={handleDismiss}
+            className="w-8 h-8 rounded-full bg-[var(--ios-element)] hover:bg-[var(--ios-element)]/80 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] cursor-pointer active:scale-95 transition-all flex items-center justify-center shrink-0 -mr-1 -mt-1 select-none"
+            title="Zamknij"
+            aria-label="Zamknij"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
 
-          <div className="flex items-center justify-between mt-1">
-            <span className={`min-w-[44px] h-[44px] px-3 rounded-[14px] flex items-center justify-center text-[24px] font-semibold tabular-nums ${getGradeBadgeStyle(activeData.grade.grade)}`}>
-              {activeData.grade.grade}
+        <div className="flex items-center justify-between pb-1">
+          <span className={`min-w-[48px] h-[48px] px-3.5 rounded-[14px] flex items-center justify-center text-[26px] font-semibold tabular-nums ${getGradeBadgeStyle(activeData.grade.grade)}`}>
+            {activeData.grade.grade}
+          </span>
+
+          <div className="flex flex-col items-end">
+            <span className="text-[11px] font-medium text-[var(--ios-secondary)] uppercase tracking-wider">
+              {t.weight}
             </span>
-
-            <div className="flex flex-col items-end">
-              <span className="text-[11px] font-normal text-[var(--ios-secondary)] uppercase tracking-wider">
-                {t.weight}
-              </span>
-              <span className="text-[16px] font-medium text-[var(--ios-label)] tabular-nums">
-                {activeData.grade.weight}
-              </span>
-            </div>
+            <span className="text-[18px] font-semibold text-[var(--ios-label)] tabular-nums">
+              {activeData.grade.weight}
+            </span>
           </div>
         </div>
 
@@ -182,14 +193,6 @@ export function GradeDetailModal({
             </div>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={handleDismiss}
-          className="h-[50px] w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-[15px] font-medium rounded-[16px] active:scale-[0.985] active:opacity-75 transition-all flex items-center justify-center cursor-pointer mt-1"
-        >
-          {t.close}
-        </button>
       </div>
     </div>
   )

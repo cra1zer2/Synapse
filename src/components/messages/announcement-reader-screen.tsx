@@ -26,11 +26,12 @@ export function AnnouncementReaderScreen({
       isOpen={isOpen}
       onClose={onClose}
       title={t.messagesAnnouncements}
-      backLabel={t.backAction}
+      backLabel={t.messagesAnnouncements || t.backAction}
+      showBackButton={true}
       isSubView={true}
       className="z-[60]"
     >
-      <div className="flex flex-col gap-4 pb-16 select-none max-w-[402px] mx-auto w-full">
+      <div className="flex flex-col gap-4 pb-16 select-none max-w-3xl mx-auto w-full">
         {announcement ? (
           <>
             <div className="flex flex-col gap-2 pb-3 border-b border-[var(--ios-separator)]">

@@ -955,104 +955,15 @@ export default function Home() {
         }}
         title={messagesInbox.currentFolder === 'sent' ? (lang === 'en' ? 'Sent' : 'Wysłane') : t.messagesInbox}
         titleView={
-          <div className="relative flex items-center justify-center">
-            <button
-              type="button"
-              onClick={() => setIsFolderMenuOpen((prev) => !prev)}
-              className="flex items-center gap-1.5 py-1 px-2.5 rounded-full active:opacity-60 transition-opacity cursor-pointer select-none"
-            >
-              <span className="text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px]">
-                {messagesInbox.currentFolder === 'sent'
-                  ? (lang === 'en' ? 'Sent' : 'Wysłane')
-                  : t.messagesInbox}
-              </span>
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={cn(
-                  'text-[var(--ios-secondary)] shrink-0 transition-transform duration-200',
-                  isFolderMenuOpen && 'rotate-180 text-[var(--ios-blue)]'
-                )}
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-
-            {isFolderMenuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-[100]"
-                  onClick={() => setIsFolderMenuOpen(false)}
-                />
-                <div
-                  className="absolute top-full mt-2 w-[190px] z-[101] p-1.5 bg-[var(--ios-card-solid,#ffffff)] dark:bg-[#1c1c1e] border border-[var(--ios-border)] rounded-[18px] flex flex-col gap-0.5 select-none"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      messagesInbox.setCurrentFolder('inbox')
-                      setIsFolderMenuOpen(false)
-                    }}
-                    className={cn(
-                      'w-full h-[38px] px-3 rounded-[12px] flex items-center justify-between text-[15px] font-normal transition-colors duration-100 cursor-pointer',
-                      messagesInbox.currentFolder === 'inbox'
-                        ? 'bg-[var(--ios-fill-tertiary)] font-medium text-[var(--ios-label)]'
-                        : 'text-[var(--ios-label)] hover:bg-[var(--ios-fill-quaternary)]'
-                    )}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ios-blue)]">
-                        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
-                        <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
-                      </svg>
-                      <span>{t.messagesInbox}</span>
-                    </div>
-                    {messagesInbox.currentFolder === 'inbox' && (
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ios-blue)]">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </button>
-
-                  <div className="h-[0.5px] bg-[var(--ios-separator)] my-0.5" />
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      messagesInbox.setCurrentFolder('sent')
-                      setIsFolderMenuOpen(false)
-                    }}
-                    className={cn(
-                      'w-full h-[38px] px-3 rounded-[12px] flex items-center justify-between text-[15px] font-normal transition-colors duration-100 cursor-pointer',
-                      messagesInbox.currentFolder === 'sent'
-                        ? 'bg-[var(--ios-fill-tertiary)] font-medium text-[var(--ios-label)]'
-                        : 'text-[var(--ios-label)] hover:bg-[var(--ios-fill-quaternary)]'
-                    )}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ios-blue)]">
-                        <line x1="22" y1="2" x2="11" y2="13" />
-                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                      </svg>
-                      <span>{lang === 'en' ? 'Sent' : 'Wysłane'}</span>
-                    </div>
-                    {messagesInbox.currentFolder === 'sent' && (
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ios-blue)]">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <IosSegmentedControl
+            options={[
+              { id: 'inbox', label: t.messagesInbox },
+              { id: 'sent', label: lang === 'en' ? 'Sent' : 'Wysłane' }
+            ]}
+            value={messagesInbox.currentFolder}
+            onChange={(val) => messagesInbox.setCurrentFolder(val as 'inbox' | 'sent')}
+            className="w-[200px]"
+          />
         }
         backLabel={t.backAction}
         isSubView={true}

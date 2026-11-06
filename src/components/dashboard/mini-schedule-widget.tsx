@@ -405,12 +405,16 @@ export function MiniScheduleWidget({
                       t={t}
                     />
 
-                    {!isLast && breakMinutes > 0 && (
-                      <IosBreakDivider
-                        minutes={breakMinutes}
-                        isCountdown={Boolean(isBreakActive && breakRemaining > 0)}
-                        countdownText={t.breakCountdownLabel(breakRemaining)}
-                      />
+                    {!isLast && (
+                      isBreakActive && breakRemaining > 0 ? (
+                        <IosBreakDivider
+                          minutes={breakMinutes}
+                          isCountdown={true}
+                          countdownText={t.breakCountdownLabel(breakRemaining)}
+                        />
+                      ) : (
+                        <div className="h-[0.5px] bg-[var(--ios-separator)] mx-1.5 my-0.5" />
+                      )
                     )}
                   </Fragment>
                 )

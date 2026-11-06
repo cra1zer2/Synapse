@@ -193,7 +193,7 @@ export function SettingsSheet({
         backLabel={t.backAction}
         isSubView={true}
         isReceded={showThemePicker || showAdvanced || showAddForm}
-        contentClassName="px-6 pt-5 max-w-xl mx-auto w-full pb-10"
+        contentClassName="px-6 pt-5 max-w-2xl mx-auto w-full pb-10"
       >
         <div className="flex flex-col gap-5 pb-12 select-none">
           <IosCard>
@@ -392,7 +392,8 @@ export function SettingsSheet({
         isOpen={showThemePicker}
         onClose={() => setShowThemePicker(false)}
         title={t.appTheme}
-        backLabel={t.backAction}
+        backLabel={t.settingsTitle || t.backAction}
+        showBackButton={true}
         isSubView={true}
         zIndex={60}
       >
@@ -427,7 +428,8 @@ export function SettingsSheet({
         isOpen={showLangPicker}
         onClose={() => setShowLangPicker(false)}
         title={t.appLanguage}
-        backLabel={t.backAction}
+        backLabel={t.settingsTitle || t.backAction}
+        showBackButton={true}
         isSubView={true}
         zIndex={60}
       >
@@ -461,7 +463,8 @@ export function SettingsSheet({
         isOpen={showAdvanced}
         onClose={() => setShowAdvanced(false)}
         title={t.advancedTitle}
-        backLabel={t.backAction}
+        backLabel={t.settingsTitle || t.backAction}
+        showBackButton={true}
         isSubView={true}
         zIndex={60}
       >

@@ -131,12 +131,13 @@ export function LegacyAttendanceScreen({
         isOpen={isOpen}
         onClose={onClose}
         title={lang === 'en' ? 'Attendance Table' : 'Tabela obecności'}
-        backLabel={t.backAction}
+        backLabel={t.attendance || t.backAction}
+        showBackButton={true}
         isSubView={true}
         isReceded={Boolean(activeDay)}
         className="z-[60]"
       >
-        <div className="flex flex-col gap-3.5 pb-16 select-none max-w-[402px] mx-auto w-full">
+        <div className="flex flex-col gap-3.5 pb-16 select-none max-w-2xl mx-auto w-full">
           {/* Сводная карточка со всеми кодами Librus */}
           <IosCard className="p-3 grid grid-cols-5 divide-x divide-[var(--ios-separator)] text-center">
             <div className="flex flex-col items-center justify-center px-1">

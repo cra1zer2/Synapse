@@ -17,9 +17,21 @@ interface MiniGradesWidgetProps {
 function getGradeBadgeStyle(gradeStr: string): string {
   const g = gradeStr.trim().toLowerCase()
   if (g.startsWith('1')) {
-    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border border-[var(--ios-red)]/20'
+    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border border-[var(--ios-red)]/25'
   }
-  return 'bg-[var(--ios-block-bg)] text-[var(--ios-label)] border border-[var(--ios-border)]'
+  if (g.startsWith('5') || g.startsWith('6')) {
+    return 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)] border border-[var(--ios-green)]/25'
+  }
+  if (g.startsWith('4')) {
+    return 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] border border-[var(--ios-blue)]/25'
+  }
+  if (g === 'nb') {
+    return 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] border border-[var(--ios-orange)]/25 font-semibold'
+  }
+  if (g === '+' || g === '-') {
+    return 'bg-[var(--ios-element)]/50 text-[var(--ios-secondary)] border border-[var(--ios-border)]'
+  }
+  return 'bg-[var(--ios-element)]/60 text-[var(--ios-label)] border border-[var(--ios-border)]'
 }
 
 export function MiniGradesWidget({

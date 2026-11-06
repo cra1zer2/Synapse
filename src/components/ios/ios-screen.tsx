@@ -28,6 +28,7 @@ export interface IosScreenProps {
   title?: string
   titleView?: ReactNode
   backLabel?: string
+  showBackButton?: boolean
   isSubView?: boolean
   largeTitle?: boolean
   isReceded?: boolean
@@ -45,6 +46,7 @@ export function IosScreen({
   title = '',
   titleView,
   backLabel = 'Wróć',
+  showBackButton = false,
   isSubView = false,
   largeTitle = false,
   isReceded = false,
@@ -158,8 +160,8 @@ export function IosScreen({
     if (panel) {
       panel.style.pointerEvents = 'none'
       if (isDesktop) {
-        panel.style.transition = 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.16s ease'
-        panel.style.transform = 'translate(-50%, -46%) scale(0.96)'
+        panel.style.transition = 'transform 0.18s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s ease'
+        panel.style.transform = 'scale(0.96)'
         panel.style.opacity = '0'
       } else {
         panel.style.transition = IOS_PANEL_TRANSITION
@@ -396,6 +398,18 @@ export function IosScreen({
   const desktopHeader = (
     <header className="sticky top-0 z-30 w-full bg-[var(--ios-card-solid)] border-b border-[var(--ios-separator)] px-6 py-3.5 flex items-center justify-between shrink-0">
       <div className="flex items-center gap-2 min-w-0">
+        {showBackButton && onClose && (
+          <button
+            type="button"
+            onClick={handleRequestClose}
+            className="flex items-center gap-1 text-[15px] font-normal text-[var(--ios-blue)] hover:text-[var(--ios-blue)]/80 tracking-[-0.3px] px-2 py-1 -ml-2 rounded-lg hover:bg-[var(--ios-element)]/50 active:opacity-60 transition-all select-none cursor-pointer shrink-0"
+          >
+            <svg className="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 13 22" fill="none">
+              <path d="M11 2L2 11L11 20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="max-w-[140px] truncate">{backLabel}</span>
+          </button>
+        )}
         {titleView ? titleView : (
           <h3 className="text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.3px] truncate">
             {title}
@@ -494,7 +508,7 @@ export function IosScreen({
               border: '1px solid var(--ios-border)',
               boxShadow: 'none',
               overflowY: 'auto',
-              transform: isVisible ? 'scale(1)' : 'scale(0.97)',
+              transform: isVisible ? 'none' : 'scale(0.97)',
               opacity: isVisible ? 1 : 0,
               transition: 'transform 0.18s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease',
               display: 'flex',
@@ -504,7 +518,7 @@ export function IosScreen({
             className={className}
           >
             {!hideHeader && desktopHeader}
-            <div className={contentClassName ?? "px-6 pt-5 pb-8 w-full max-w-4xl mx-auto flex-1"}>
+            <div className={contentClassName ?? "px-6 pt-5 pb-12 w-full max-w-4xl mx-auto flex-1"}>
               {children}
             </div>
           </div>

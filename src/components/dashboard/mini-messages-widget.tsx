@@ -3,6 +3,7 @@
 import { MessageItem, AnnouncementItem } from '@/models/message.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
+import { cleanSenderName } from '@/utils/text.util'
 
 interface MiniMessagesWidgetProps {
   unreadCount: number
@@ -130,25 +131,25 @@ export function MiniMessagesWidget({
                   onOpenMessages()
                 }
               }}
-              className="hidden md:flex flex-col gap-1 ml-[49px] mr-1 mt-1 mb-1 p-2.5 rounded-[12px] bg-[var(--ios-element)]/30 hover:bg-[var(--ios-element)]/50 active:bg-[var(--ios-element)]/70 border border-[var(--ios-border)] cursor-pointer transition-colors select-none"
+              className="hidden md:flex items-center justify-between gap-2 pl-[49px] pr-2 py-1.5 text-[12px] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] rounded-[8px] hover:bg-[var(--ios-element)]/30 active:bg-[var(--ios-element)]/50 transition-colors cursor-pointer select-none group"
               title={lang === 'en' ? 'Click to open message' : 'Kliknij, aby otworzyć wiadomość'}
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[12px] font-semibold text-[var(--ios-label)] truncate">
-                  {latestMessage.sender}
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <span className="font-semibold text-[var(--ios-label)] truncate max-w-[140px] shrink-0">
+                  {cleanSenderName(latestMessage.sender)}:
                 </span>
-                <span className="text-[11px] font-normal text-[var(--ios-secondary)] shrink-0 tabular-nums">
-                  {latestMessage.date}
+                <span className="truncate text-[var(--ios-secondary)] group-hover:text-[var(--ios-label)]">
+                  {latestMessage.subject || latestMessage.content || '—'}
                 </span>
               </div>
-              <p className="text-[12px] font-normal text-[var(--ios-secondary)] truncate">
-                {latestMessage.subject || latestMessage.content || '—'}
-              </p>
+              <span className="text-[11px] tabular-nums shrink-0 text-[var(--ios-tertiary)] ml-1">
+                {latestMessage.date}
+              </span>
             </div>
           )}
         </div>
 
-        <div className="h-[1px] bg-[var(--ios-separator)] ml-[54px] my-1 pointer-events-none" />
+        <div className="h-[0.5px] bg-[var(--ios-separator)] ml-[49px] my-0.5 pointer-events-none" />
 
         {/* Ogłoszenia Row */}
         <div className="flex flex-col py-1">
@@ -212,20 +213,20 @@ export function MiniMessagesWidget({
                   onOpenAnnouncements()
                 }
               }}
-              className="hidden md:flex flex-col gap-1 ml-[49px] mr-1 mt-1 mb-1 p-2.5 rounded-[12px] bg-[var(--ios-element)]/30 hover:bg-[var(--ios-element)]/50 active:bg-[var(--ios-element)]/70 border border-[var(--ios-border)] cursor-pointer transition-colors select-none"
+              className="hidden md:flex items-center justify-between gap-2 pl-[49px] pr-2 py-1.5 text-[12px] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] rounded-[8px] hover:bg-[var(--ios-element)]/30 active:bg-[var(--ios-element)]/50 transition-colors cursor-pointer select-none group"
               title={lang === 'en' ? 'Click to open announcement' : 'Kliknij, aby otworzyć ogłoszenie'}
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[12px] font-semibold text-[var(--ios-label)] truncate">
-                  {latestAnnouncement.author}
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <span className="font-semibold text-[var(--ios-purple)] truncate max-w-[140px] shrink-0">
+                  {cleanSenderName(latestAnnouncement.author)}:
                 </span>
-                <span className="text-[11px] font-normal text-[var(--ios-secondary)] shrink-0 tabular-nums">
-                  {latestAnnouncement.date}
+                <span className="truncate text-[var(--ios-secondary)] group-hover:text-[var(--ios-label)]">
+                  {latestAnnouncement.title || latestAnnouncement.content || '—'}
                 </span>
               </div>
-              <p className="text-[12px] font-normal text-[var(--ios-secondary)] truncate">
-                {latestAnnouncement.title || latestAnnouncement.content || '—'}
-              </p>
+              <span className="text-[11px] tabular-nums shrink-0 text-[var(--ios-tertiary)] ml-1">
+                {latestAnnouncement.date}
+              </span>
             </div>
           )}
         </div>

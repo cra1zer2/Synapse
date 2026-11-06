@@ -114,9 +114,9 @@ export function LessonDetailModal({
       style={{
         opacity: isVisible ? 1 : 0,
         pointerEvents: isVisible ? 'auto' : 'none',
-        transition: 'opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
+        transition: 'opacity 0.25s cubic-bezier(0.32, 0.72, 0, 1)'
       }}
-      className="fixed inset-0 z-[80] bg-black/40 flex items-end justify-center select-none"
+      className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-6 select-none"
     >
       <div
         ref={sheetRef}
@@ -124,28 +124,41 @@ export function LessonDetailModal({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{
-          transform: isVisible ? 'translate3d(0, 0, 0)' : 'translate3d(0, 100%, 0)',
-          transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
-          willChange: 'transform'
-        }}
-        className="w-full max-w-[402px] sm:max-w-lg bg-[var(--ios-card-solid)] rounded-t-[34px] sm:rounded-[26px] px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] border-t sm:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto"
+        className={cn(
+          "w-full max-w-[402px] md:max-w-[460px] bg-[var(--ios-card-solid)] rounded-t-[34px] md:rounded-[26px] p-5 md:p-6 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] md:pb-6 border-t md:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto transition-all duration-300",
+          isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-12 md:translate-y-0"
+        )}
       >
-        <div className="w-[36px] h-[5px] rounded-[2.5px] bg-[var(--ios-element)] mx-auto mb-1 shrink-0 opacity-60 sm:hidden" />
+        <div className="w-[36px] h-[5px] rounded-[2.5px] bg-[var(--ios-element)] mx-auto mb-1 shrink-0 opacity-60 md:hidden" />
 
-        <div className="flex flex-col gap-1 pb-1">
-          <div className="flex items-center gap-1.5">
-            {isActive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shrink-0" />
-            )}
-            <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight tabular-nums">
-              {activeData.number >= 0 ? `${t.lessonNumberLabel(activeData.number)} • ` : ''}{activeData.time || activeData.flag || ''}
-            </span>
+        <div className="flex items-start justify-between gap-3 pb-1">
+          <div className="flex flex-col gap-1 min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              {isActive && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shrink-0 animate-pulse" />
+              )}
+              <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight tabular-nums">
+                {activeData.number >= 0 ? `${t.lessonNumberLabel(activeData.number)} • ` : ''}{activeData.time || activeData.flag || ''}
+              </span>
+            </div>
+
+            <h3 className="text-[20px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] leading-snug break-words">
+              {activeData.subject}
+            </h3>
           </div>
 
-          <h3 className="text-[20px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] leading-snug break-words">
-            {activeData.subject}
-          </h3>
+          <button
+            type="button"
+            onClick={handleDismiss}
+            className="w-8 h-8 rounded-full bg-[var(--ios-element)] hover:bg-[var(--ios-element)]/80 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] cursor-pointer active:scale-95 transition-all flex items-center justify-center shrink-0 -mr-1 -mt-1 select-none"
+            title="Zamknij"
+            aria-label="Zamknij"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
 
         <div className="bg-[var(--ios-element)]/30 rounded-[16px] p-4 flex flex-col gap-1">
@@ -183,14 +196,6 @@ export function LessonDetailModal({
             </div>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={handleDismiss}
-          className="h-[50px] w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-[15px] font-medium rounded-[16px] active:scale-[0.985] active:opacity-75 transition-all flex items-center justify-center cursor-pointer select-none mt-1"
-        >
-          {t.close}
-        </button>
       </div>
     </div>
   )

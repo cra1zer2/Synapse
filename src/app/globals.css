@@ -167,8 +167,8 @@
   --ios-tertiary: #76767a;
   --ios-quaternary: #48484a;
 
-  --ios-separator: rgba(84, 84, 88, 0.42);
-  --ios-border: rgba(255, 255, 255, 0.10);
+  --ios-separator: rgba(84, 84, 88, 0.60);
+  --ios-border: rgba(255, 255, 255, 0.15);
 
   --ios-blue: #0091ff;
   --ios-blue-subtle: rgba(0, 145, 255, 0.18);

@@ -30,17 +30,25 @@ export function MessageReaderScreen({
   renderContent,
   t
 }: MessageReaderScreenProps) {
+  const isNoReply = Boolean(
+    message && (
+      /e-usprawiedliwienia|system|powiadomienie|no-reply|noreply|librus/i.test(message.sender) ||
+      /prosimy na nią nie odpowiadać|nie odpowiadaj/i.test(content)
+    )
+  )
+
   return (
     <IosScreen
       isOpen={isOpen}
       onClose={onClose}
       title={t.messages}
-      backLabel={t.backAction}
+      backLabel={t.messagesInbox || t.backAction}
+      showBackButton={true}
       isSubView={true}
       isReceded={isReceded}
       className="z-[60]"
       trailing={
-        message ? (
+        message && !isNoReply ? (
           <button
             type="button"
             onClick={() => onReply(message)}
@@ -55,7 +63,7 @@ export function MessageReaderScreen({
         ) : null
       }
     >
-      <div className="flex flex-col gap-4 pb-16 select-none max-w-[402px] mx-auto w-full">
+      <div className="flex flex-col gap-4 pb-16 select-none max-w-3xl mx-auto w-full">
         {message ? (
           <>
             <div className="flex flex-col gap-3 pb-3 border-b border-[var(--ios-separator)]">

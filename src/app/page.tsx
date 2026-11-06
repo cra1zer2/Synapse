@@ -602,45 +602,32 @@ export default function Home() {
 
           {/* DESKTOP LAYOUT (md:grid md:grid-cols-2) */}
           <div className="hidden md:grid md:grid-cols-2 gap-5 items-start w-full">
-            {/* Left Column: Full Schedule with Day Switcher */}
+            {/* Left Column: Clean Full-Day Schedule */}
             <div className="flex flex-col gap-5 w-full">
-              {timetable.timetableData || timetable.todayTimetableData ? (
-                <ScheduleWidget
-                  timetableData={timetable.timetableData || timetable.todayTimetableData}
-                  selectedDay={timetable.selectedDay}
-                  onSelectDay={(day) => timetable.setSelectedDay(day)}
-                  onSelectLesson={handleSelectLesson}
-                  onSelectEvent={handleSelectEvent}
-                  currentWeekPivot={timetable.currentWeekPivot}
-                  onShiftWeek={timetable.shiftWeek}
-                  onSelectDate={timetable.queueWeekChange}
-                  isLoadingWeek={timetable.isLoadingWeek}
-                  textClamp={textClamp}
-                  showFullSubjectNames={showFullSubjectNames}
-                  lang={lang}
-                  t={t}
-                />
-              ) : timetable.timetableError ? (
-                <IosCard className="p-8 flex flex-col items-center justify-center gap-3 text-center">
-                  <span className="text-[15px] font-normal text-[var(--ios-red)] tracking-tight">
-                    {timetable.timetableError}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleManualRefresh}
-                    className="text-[14px] font-medium text-[var(--ios-blue)] active:opacity-60 cursor-pointer"
-                  >
-                    {t.refresh}
-                  </button>
-                </IosCard>
-              ) : (
-                <IosCard className="p-12 flex flex-col items-center justify-center gap-3">
-                  <IosSpinner size="large" className="text-[var(--ios-blue)]" />
-                  <span className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-tight">
-                    {t.loadingTimetable}
-                  </span>
-                </IosCard>
-              )}
+              <MiniScheduleWidget
+                timetableData={isManualRefreshing ? null : activeTodayData}
+                isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
+                error={timetable.timetableError}
+                onRetry={handleManualRefresh}
+                textClamp={textClamp}
+                showFullSubjectNames={showFullSubjectNames}
+                lang={lang}
+                t={t}
+                showAllLessons={true}
+                onSelectLesson={handleSelectLesson}
+                onOpenFullSchedule={(targetDay, targetIsoDate) => {
+                  if (targetIsoDate) {
+                    const targetMonday = normalizeToMondayIso(targetIsoDate)
+                    if (targetMonday !== timetable.currentWeekPivot) {
+                      timetable.queueWeekChange(targetMonday)
+                    }
+                  }
+                  if (targetDay) {
+                    timetable.setSelectedDay(targetDay)
+                  }
+                  setShowFullSchedule(true)
+                }}
+              />
             </div>
 
             {/* Right Column: Grades -> Attendance (with today's grid) -> Messages (with direct previews) */}

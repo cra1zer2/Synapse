@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, Fragment } from 'react'
 import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
 import { parseLessonTimeRange, calculateBreakDuration, getCurrentTimeMinutes, getBreakRemainingMinutes } from '@/utils/time.util'
 import { formatSubjectName } from '@/utils/text.util'
@@ -19,6 +19,7 @@ export interface MiniScheduleWidgetProps {
   showFullSubjectNames?: boolean
   lang?: AppLanguage
   t: AppDictionary
+  showAllLessons?: boolean
   onSelectLesson?: (lesson: LessonItem) => void
   onOpenFullSchedule: (targetDay?: string, targetIsoDate?: string) => void
 }
@@ -39,12 +40,14 @@ function MiniLessonSkeleton() {
 function MiniLessonItem({
   lesson,
   isActive = false,
+  isPassed = false,
   showFull = false,
   onSelect,
   t
 }: {
   lesson: LessonItem
   isActive?: boolean
+  isPassed?: boolean
   showFull?: boolean
   onSelect?: (lesson: LessonItem) => void
   t: AppDictionary
@@ -62,21 +65,33 @@ function MiniLessonItem({
         }
       }}
       className={cn(
-        'w-full py-3 px-1 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]',
-        isCancelled && 'opacity-40'
+        'w-full py-2.5 px-1.5 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]',
+        isCancelled && 'opacity-40',
+        isPassed && !isCancelled && 'opacity-65'
       )}
     >
       <div className="flex-1 min-w-0 flex flex-col gap-0.5 justify-center">
         <div className="flex items-center gap-1.5">
           {isActive && !isCancelled && (
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shrink-0 animate-pulse" />
           )}
-          <span className={cn('text-[12px] font-normal tracking-[-0.1px] leading-[16px] tabular-nums', isCancelled ? 'line-through text-[var(--ios-secondary)]' : 'text-[var(--ios-secondary)]')}>
+          <span className={cn(
+            'text-[12px] font-normal tracking-[-0.1px] leading-[16px] tabular-nums',
+            isCancelled ? 'line-through text-[var(--ios-secondary)]' : isActive ? 'text-[var(--ios-blue)] font-semibold' : 'text-[var(--ios-secondary)]'
+          )}>
             {lesson.time}
           </span>
+          {lesson.number !== undefined && lesson.number !== null && (
+            <span className="text-[11px] font-medium text-[var(--ios-tertiary)] tabular-nums">
+              #{lesson.number}
+            </span>
+          )}
         </div>
 
-        <h4 className={cn('text-[15px] font-medium text-[var(--ios-label)] tracking-[-0.2px] leading-snug truncate', isCancelled && 'line-through text-[var(--ios-secondary)]')}>
+        <h4 className={cn(
+          'text-[15px] font-medium tracking-[-0.2px] leading-snug truncate',
+          isCancelled ? 'line-through text-[var(--ios-secondary)]' : isActive ? 'text-[var(--ios-label)] font-semibold' : 'text-[var(--ios-label)]'
+        )}>
           {displaySubject}
         </h4>
 
@@ -114,6 +129,7 @@ export function MiniScheduleWidget({
   showFullSubjectNames = false,
   lang = 'pl',
   t,
+  showAllLessons = true,
   onSelectLesson,
   onOpenFullSchedule
 }: MiniScheduleWidgetProps) {
@@ -259,13 +275,18 @@ export function MiniScheduleWidget({
 
   const shouldShowNextDay = scheduleState.mode === 'next_day' && activeNextDayLessons.length > 0
 
-  const nextDayBadgeLabel = useMemo(() => {
-    if (!nextUpcomingDaySchedule) return null
-    if (isWeekend || nextUpcomingDaySchedule.dayName === 'Monday') {
-      return lang === 'en' ? 'Monday' : 'Poniedziałek'
+  const badgeLabel = useMemo(() => {
+    if (shouldShowNextDay) {
+      if (isWeekend || nextUpcomingDaySchedule?.dayName === 'Monday') {
+        return lang === 'en' ? 'Monday' : 'Poniedziałek'
+      }
+      return lang === 'en' ? 'Tomorrow' : 'Jutro'
     }
-    return lang === 'en' ? 'Tomorrow' : 'Jutro'
-  }, [nextUpcomingDaySchedule, isWeekend, lang])
+    if (todaySchedule) {
+      return lang === 'en' ? 'Today' : 'Dzisiaj'
+    }
+    return null
+  }, [shouldShowNextDay, isWeekend, nextUpcomingDaySchedule, todaySchedule, lang])
 
   const handleCardClick = () => {
     if (shouldShowNextDay && nextUpcomingDaySchedule) {
@@ -279,23 +300,19 @@ export function MiniScheduleWidget({
     }
   }
 
-  const isCurrentLessonOngoing = useMemo(() => {
-    if (shouldShowNextDay || isWeekend || !scheduleState.currentLesson) return false
-    const r = parseLessonTimeRange(scheduleState.currentLesson.time)
-    return r.isValid && currentMinutes >= r.startMinutes && currentMinutes <= r.endMinutes
-  }, [shouldShowNextDay, isWeekend, scheduleState.currentLesson, currentMinutes])
-
-  const isMiniBreakActive = useMemo(() => {
-    if (shouldShowNextDay || isWeekend || !scheduleState.currentLesson || !scheduleState.nextLesson) return false
-    const r1 = parseLessonTimeRange(scheduleState.currentLesson.time)
-    const r2 = parseLessonTimeRange(scheduleState.nextLesson.time)
-    return r1.isValid && r2.isValid && currentMinutes > r1.endMinutes && currentMinutes < r2.startMinutes
-  }, [shouldShowNextDay, isWeekend, scheduleState.currentLesson, scheduleState.nextLesson, currentMinutes])
-
-  const miniBreakRemaining = useMemo(() => {
-    if (!isMiniBreakActive || !scheduleState.nextLesson) return 0
-    return getBreakRemainingMinutes(scheduleState.nextLesson.time)
-  }, [isMiniBreakActive, scheduleState.nextLesson])
+  const displayLessons = useMemo(() => {
+    const list = shouldShowNextDay ? nextDayLessons : todayLessons
+    if (showAllLessons) {
+      return list
+    }
+    if (scheduleState.currentLesson || scheduleState.nextLesson) {
+      const res: LessonItem[] = []
+      if (scheduleState.currentLesson) res.push(scheduleState.currentLesson)
+      if (scheduleState.nextLesson) res.push(scheduleState.nextLesson)
+      return res
+    }
+    return list.slice(0, 2)
+  }, [shouldShowNextDay, nextDayLessons, todayLessons, showAllLessons, scheduleState.currentLesson, scheduleState.nextLesson])
 
   return (
     <IosCard
@@ -303,9 +320,16 @@ export function MiniScheduleWidget({
       className="p-4 flex flex-col gap-3 select-none"
     >
       <div className="flex items-center justify-between pb-2.5 border-b border-[var(--ios-separator)]">
-        <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.2px]">
-          {t.schedule + (shouldShowNextDay && nextDayBadgeLabel ? (' • ' + nextDayBadgeLabel) : '')}
-        </span>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] truncate">
+            {t.schedule}
+          </span>
+          {badgeLabel && (
+            <span className="text-[12px] font-medium text-[var(--ios-secondary)] bg-[var(--ios-element)]/60 px-2 py-0.5 rounded-full shrink-0">
+              {badgeLabel}
+            </span>
+          )}
+        </div>
 
         <svg width="16" height="16" className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="9 18 15 12 9 6" />
@@ -342,78 +366,55 @@ export function MiniScheduleWidget({
         </div>
       ) : (
         <div className={cn('ios-reveal', isOffline && 'opacity-50 grayscale')}>
-          {shouldShowNextDay ? (
-            <div className="flex flex-col gap-2.5">
-              {activeNextDayLessons[0] && (
-                <MiniLessonItem
-                  lesson={activeNextDayLessons[0]}
-                  isActive={false}
-                  showFull={showFullSubjectNames}
-                  onSelect={onSelectLesson}
-                  t={t}
-                />
-              )}
-
-              {activeNextDayLessons[0] && activeNextDayLessons[1] && (
-                <IosBreakDivider minutes={calculateBreakDuration(activeNextDayLessons[0].time, activeNextDayLessons[1].time) || 10} />
-              )}
-
-              {activeNextDayLessons[1] && (
-                <MiniLessonItem
-                  lesson={activeNextDayLessons[1]}
-                  isActive={false}
-                  showFull={showFullSubjectNames}
-                  onSelect={onSelectLesson}
-                  t={t}
-                />
-              )}
-            </div>
-          ) : scheduleState.mode === 'all_ended_today' ? (
-            <div className="py-6 flex flex-col items-center justify-center gap-1.5 text-center">
-              <div className="w-9 h-9 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] border border-[var(--ios-green)]/20 flex items-center justify-center mb-1">
-                <svg className="w-4 h-4 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </div>
-              <span className="text-[15px] font-medium text-[var(--ios-label)] tracking-[-0.2px]">
-                {lang === 'en' ? 'All lessons for today completed' : 'Wszystkie lekcje na dziś zakończone'}
-              </span>
-              <span className="text-[12px] font-normal text-[var(--ios-secondary)]">
-                {lang === 'en' ? 'Rest before tomorrow' : 'Odpocznij przed kolejnym dniem'}
-              </span>
-            </div>
-          ) : activeTodayLessons.length === 0 ? (
+          {displayLessons.length === 0 ? (
             <div className="py-6 text-center text-[14px] font-normal text-[var(--ios-secondary)]">
               {t.noLessonsDay}
             </div>
           ) : (
             <div className="flex flex-col">
-              {scheduleState.currentLesson && (
-                <MiniLessonItem
-                  lesson={scheduleState.currentLesson}
-                  isActive={isCurrentLessonOngoing}
-                  showFull={showFullSubjectNames}
-                  onSelect={onSelectLesson}
-                  t={t}
-                />
+              {scheduleState.mode === 'all_ended_today' && !shouldShowNextDay && (
+                <div className="mb-2 py-1.5 px-3 rounded-[10px] bg-[var(--ios-green-subtle)] text-[var(--ios-green)] text-[12px] font-medium flex items-center justify-between select-none">
+                  <span>{lang === 'en' ? 'All lessons for today completed' : 'Lekcje na dziś zakończone'}</span>
+                  <span className="opacity-75">{lang === 'en' ? 'Done' : 'Koniec'}</span>
+                </div>
               )}
 
-              {scheduleState.currentLesson && scheduleState.nextLesson && (
-                <IosBreakDivider
-                  minutes={scheduleState.breakMinutes}
-                  isCountdown={isMiniBreakActive && miniBreakRemaining > 0}
-                  countdownText={t.breakCountdownLabel(miniBreakRemaining)}
-                />
-              )}
+              {displayLessons.map((lesson, idx) => {
+                const isLast = idx === displayLessons.length - 1
+                const nextLesson = !isLast ? displayLessons[idx + 1] : null
+                const breakMinutes = nextLesson ? calculateBreakDuration(lesson.time, nextLesson.time) : 0
 
-              {scheduleState.nextLesson && (
-                <MiniLessonItem
-                  lesson={scheduleState.nextLesson}
-                  showFull={showFullSubjectNames}
-                  onSelect={onSelectLesson}
-                  t={t}
-                />
-              )}
+                const r = parseLessonTimeRange(lesson.time)
+                const isOngoing = !shouldShowNextDay && !isWeekend && r.isValid && currentMinutes >= r.startMinutes && currentMinutes <= r.endMinutes
+                const isPassed = !shouldShowNextDay && !isWeekend && r.isValid && currentMinutes > r.endMinutes
+
+                const isBreakActive = Boolean(!shouldShowNextDay && !isWeekend && nextLesson && (() => {
+                  const rNext = parseLessonTimeRange(nextLesson.time)
+                  return r.isValid && rNext.isValid && currentMinutes > r.endMinutes && currentMinutes < rNext.startMinutes
+                })())
+                const breakRemaining = isBreakActive && nextLesson ? getBreakRemainingMinutes(nextLesson.time) : 0
+
+                return (
+                  <Fragment key={`${lesson.time}-${lesson.subject}-${lesson.number}-${idx}`}>
+                    <MiniLessonItem
+                      lesson={lesson}
+                      isActive={isOngoing}
+                      isPassed={isPassed}
+                      showFull={showFullSubjectNames}
+                      onSelect={onSelectLesson}
+                      t={t}
+                    />
+
+                    {!isLast && breakMinutes > 0 && (
+                      <IosBreakDivider
+                        minutes={breakMinutes}
+                        isCountdown={Boolean(isBreakActive && breakRemaining > 0)}
+                        countdownText={t.breakCountdownLabel(breakRemaining)}
+                      />
+                    )}
+                  </Fragment>
+                )
+              })}
             </div>
           )}
         </div>

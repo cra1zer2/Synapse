@@ -1,6 +1,7 @@
 'use client'
 
-import { AttendanceResult } from '@/models/attendance.model'
+import { useMemo } from 'react'
+import { AttendanceResult, LegacyAttendanceDay } from '@/models/attendance.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
 
@@ -12,7 +13,11 @@ interface MiniAttendanceWidgetProps {
   lang?: AppLanguage
   t: AppDictionary
   onOpenAttendance: () => void
+  onOpenLegacyAttendance?: (dateIso?: string) => void
+  isDesktop?: boolean
 }
+
+const lessonCols = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 export function MiniAttendanceWidget({
   attendanceData,
@@ -21,11 +26,30 @@ export function MiniAttendanceWidget({
   onRetry,
   lang = 'pl',
   t,
-  onOpenAttendance
+  onOpenAttendance,
+  onOpenLegacyAttendance,
+  isDesktop = false
 }: MiniAttendanceWidgetProps) {
   const isPending = isLoading || (!attendanceData && !error)
   const isDanger = attendanceData?.overallStatus === 'danger'
   const isWarning = attendanceData?.overallStatus === 'warning'
+
+  const todayIso = useMemo(() => {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = String(now.getMonth() + 1).padStart(2, '0')
+    const d = String(now.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }, [])
+
+  const todayLegacyDay = useMemo(() => {
+    if (!attendanceData?.legacyTable?.days) return null
+    return (
+      attendanceData.legacyTable.days.find((d) => d.isoDate === todayIso) ||
+      attendanceData.legacyTable.days[0] ||
+      null
+    )
+  }, [attendanceData, todayIso])
 
   const statusColor = isDanger
     ? 'text-[var(--ios-red)]'
@@ -123,6 +147,77 @@ export function MiniAttendanceWidget({
               className={`h-full rounded-full transition-[width] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${barBg}`}
               style={{ width: `${Math.min(Math.max(attendanceData.overallPercentage, 0), 100)}%` }}
             />
+          </div>
+
+          {/* Desktop-only Today Attendance 0-9 Cell Grid */}
+          <div className="hidden md:flex flex-col gap-2 pt-2.5 mt-1 border-t border-[var(--ios-separator)]">
+            <div className="flex items-center justify-between text-[12px] font-medium text-[var(--ios-secondary)]">
+              <span>{lang === 'en' ? 'Today\'s Attendance' : 'Dzisiejsza obecność'}</span>
+              {todayLegacyDay?.nuCount && todayLegacyDay.nuCount > 0 ? (
+                <span className="text-[11px] font-semibold text-[var(--ios-red)] bg-[var(--ios-red-subtle)] px-2 py-0.5 rounded-full">
+                  {todayLegacyDay.nuCount} {lang === 'en' ? 'absent' : 'nieobecności'}
+                </span>
+              ) : (
+                <span className="text-[11px] font-medium text-[var(--ios-secondary)]">
+                  {todayLegacyDay?.date || (lang === 'en' ? 'Lessons 0–9' : 'Lekcje 0–9')}
+                </span>
+              )}
+            </div>
+
+            <div
+              onClick={(e) => {
+                e.stopPropagation()
+                if (onOpenLegacyAttendance) {
+                  onOpenLegacyAttendance(todayLegacyDay?.isoDate || todayIso)
+                } else {
+                  onOpenAttendance()
+                }
+              }}
+              className="grid grid-cols-10 gap-1 p-2 rounded-[12px] bg-[var(--ios-element)]/30 hover:bg-[var(--ios-element)]/50 active:bg-[var(--ios-element)]/70 transition-colors cursor-pointer select-none"
+              title={lang === 'en' ? 'Click to open attendance history for today' : 'Kliknij, aby otworzyć historię obecności z tego dnia'}
+            >
+              {lessonCols.map((col) => {
+                const lesson = todayLegacyDay?.lessons?.[col]
+                if (!lesson) {
+                  return (
+                    <div
+                      key={col}
+                      className="w-full aspect-square max-h-[26px] rounded-[6px] bg-[var(--ios-element)]/25 flex items-center justify-center text-[10px] text-[var(--ios-secondary)]/40 font-normal"
+                    >
+                      ·
+                    </div>
+                  )
+                }
+
+                const tType = lesson.type
+                const isSl = tType === 'sl'
+                const isNu = tType === 'nb'
+                const isU = tType === 'u'
+                const isSp = tType === 'sp'
+                const isZw = tType === 'zw'
+
+                const badgeClass = isSl
+                  ? 'bg-[var(--ios-yellow)]/20 text-[var(--ios-yellow)] dark:text-[#ffd60a] border-[var(--ios-yellow)]/40 font-semibold'
+                  : isNu
+                    ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border-[var(--ios-red)]/40 font-semibold'
+                    : isU
+                      ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)] border-[var(--ios-green)]/40 font-semibold'
+                      : isSp
+                        ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] border-[var(--ios-orange)]/40 font-semibold'
+                        : isZw
+                          ? 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)] border-[var(--ios-purple)]/40 font-semibold'
+                          : 'bg-[var(--ios-element)] text-[var(--ios-label)] border-transparent font-medium'
+
+                return (
+                  <div
+                    key={col}
+                    className={"w-full aspect-square max-h-[26px] rounded-[6px] border flex items-center justify-center text-[10px] leading-none " + badgeClass}
+                  >
+                    {lesson.symbol}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}

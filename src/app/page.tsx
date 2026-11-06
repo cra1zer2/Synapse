@@ -5,6 +5,8 @@ import { createJustificationAction, getLiveJustificationsAction } from './action
 import { LiveJustificationItem } from '@/models/justification.model'
 import { LessonItem } from '@/models/timetable.model'
 import { SubjectAttendance } from '@/models/attendance.model'
+import { MessageItem, AnnouncementItem } from '@/models/message.model'
+import { GradeItem } from '@/models/grade.model'
 import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
 
 import { useAccountSession } from '@/hooks/account.hook'
@@ -142,6 +144,19 @@ export default function Home() {
   const [showFullGrades, setShowFullGrades] = useState(false)
   const [isManualRefreshing, setIsManualRefreshing] = useState(false)
 
+  const [directMessageToOpen, setDirectMessageToOpen] = useState<MessageItem | null>(null)
+  const [directAnnouncementToOpen, setDirectAnnouncementToOpen] = useState<AnnouncementItem | null>(null)
+
+  const handleOpenDirectMessage = (msg: MessageItem) => {
+    setDirectMessageToOpen(msg)
+    setShowMessagesScreen(true)
+  }
+
+  const handleOpenDirectAnnouncement = (ann: AnnouncementItem) => {
+    setDirectAnnouncementToOpen(ann)
+    setShowAnnouncementsScreen(true)
+  }
+
   const [isMessagesSubViewOpen, setIsMessagesSubViewOpen] = useState(false)
   const [showLiveJustifications, setShowLiveJustifications] = useState(false)
   const [liveJustifications, setLiveJustifications] = useState<LiveJustificationItem[]>([])
@@ -201,6 +216,8 @@ export default function Home() {
     setSelectedEvent(null)
     setSelectedSubjectDetail(null)
     setSelectedGradeDetail(null)
+    setDirectMessageToOpen(null)
+    setDirectAnnouncementToOpen(null)
     setIsMessagesSubViewOpen(false)
     setIsFolderMenuOpen(false)
   }, [account.username])
@@ -216,6 +233,20 @@ export default function Home() {
     lang,
     isConfigured: account.isConfigured
   })
+
+  const findSubjectForGrade = useCallback((grade: GradeItem): string => {
+    if (grade.subject) return grade.subject
+    if (!timetable.gradesData) return ''
+    for (const s of timetable.gradesData.subjects) {
+      if (s.semester1.some((g) => g.id === grade.id || (g.date === grade.date && g.category === grade.category && g.grade === grade.grade))) {
+        return s.subject
+      }
+      if (s.semester2.some((g) => g.id === grade.id || (g.date === grade.date && g.category === grade.category && g.grade === grade.grade))) {
+        return s.subject
+      }
+    }
+    return ''
+  }, [timetable.gradesData])
 
   const isLevel1Active = Boolean(
     showFullGrades ||
@@ -509,42 +540,6 @@ export default function Home() {
             )}
           </div>
 
-          <nav className="flex items-center gap-1 bg-[var(--ios-element)]/30 p-1 rounded-full border border-[var(--ios-border)]">
-            <button
-              type="button"
-              onClick={() => setShowFullSchedule(true)}
-              className="px-3.5 py-1.5 rounded-full text-[13px] font-medium text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60 active:scale-95 transition-all cursor-pointer"
-            >
-              {t.schedule}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowFullGrades(true)}
-              className="px-3.5 py-1.5 rounded-full text-[13px] font-medium text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60 active:scale-95 transition-all cursor-pointer"
-            >
-              {t.grades}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowMessagesScreen(true)}
-              className="px-3.5 py-1.5 rounded-full text-[13px] font-medium text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <span>{t.messages}</span>
-              {messagesInbox.messages.filter((m) => !m.isRead).length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-[var(--ios-blue)] text-white text-[10px] font-semibold tabular-nums">
-                  {messagesInbox.messages.filter((m) => !m.isRead).length}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowFullAttendance(true)}
-              className="px-3.5 py-1.5 rounded-full text-[13px] font-medium text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60 active:scale-95 transition-all cursor-pointer"
-            >
-              {t.attendance}
-            </button>
-          </nav>
-
           <div className="flex items-center gap-2.5">
             <div className="flex items-center gap-2 text-[12px] text-[var(--ios-secondary)] font-normal pr-1">
               <div className={"w-3.5 h-3.5 flex items-center justify-center transition-opacity duration-300 " + ((timetable.isUpdating || isManualRefreshing) ? "opacity-100" : "opacity-0")}>
@@ -605,9 +600,51 @@ export default function Home() {
             </div>
           )}
 
-          {/* Responsive Layout: Single Column on Mobile, 2-Column Grid on Desktop */}
-          <div className="w-full flex flex-col md:grid md:grid-cols-2 gap-3.5 md:gap-5 items-start">
-            <div className="flex flex-col gap-3.5 md:gap-5 w-full">
+          {/* DESKTOP LAYOUT (md:grid md:grid-cols-2) */}
+          <div className="hidden md:grid md:grid-cols-2 gap-5 items-start w-full">
+            {/* Left Column: Full Schedule with Day Switcher */}
+            <div className="flex flex-col gap-5 w-full">
+              {timetable.timetableData || timetable.todayTimetableData ? (
+                <ScheduleWidget
+                  timetableData={timetable.timetableData || timetable.todayTimetableData}
+                  selectedDay={timetable.selectedDay}
+                  onSelectDay={(day) => timetable.setSelectedDay(day)}
+                  onSelectLesson={handleSelectLesson}
+                  onSelectEvent={handleSelectEvent}
+                  currentWeekPivot={timetable.currentWeekPivot}
+                  onShiftWeek={timetable.shiftWeek}
+                  onSelectDate={timetable.queueWeekChange}
+                  isLoadingWeek={timetable.isLoadingWeek}
+                  textClamp={textClamp}
+                  showFullSubjectNames={showFullSubjectNames}
+                  lang={lang}
+                  t={t}
+                />
+              ) : timetable.timetableError ? (
+                <IosCard className="p-8 flex flex-col items-center justify-center gap-3 text-center">
+                  <span className="text-[15px] font-normal text-[var(--ios-red)] tracking-tight">
+                    {timetable.timetableError}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleManualRefresh}
+                    className="text-[14px] font-medium text-[var(--ios-blue)] active:opacity-60 cursor-pointer"
+                  >
+                    {t.refresh}
+                  </button>
+                </IosCard>
+              ) : (
+                <IosCard className="p-12 flex flex-col items-center justify-center gap-3">
+                  <IosSpinner size="large" className="text-[var(--ios-blue)]" />
+                  <span className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-tight">
+                    {t.loadingTimetable}
+                  </span>
+                </IosCard>
+              )}
+            </div>
+
+            {/* Right Column: Grades -> Attendance (with today's grid) -> Messages (with direct previews) */}
+            <div className="flex flex-col gap-5 w-full">
               <MiniGradesWidget
                 gradesData={isManualRefreshing ? null : timetable.gradesData}
                 isLoading={isManualRefreshing || (!timetable.gradesData && timetable.isUpdating && !timetable.gradesError)}
@@ -615,44 +652,7 @@ export default function Home() {
                 onRetry={handleManualRefresh}
                 t={t}
                 onOpenGrades={() => setShowFullGrades(true)}
-              />
-
-              <MiniScheduleWidget
-                timetableData={isManualRefreshing ? null : activeTodayData}
-                isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
-                error={timetable.timetableError}
-                onRetry={handleManualRefresh}
-                textClamp={textClamp}
-                showFullSubjectNames={showFullSubjectNames}
-                lang={lang}
-                t={t}
-                onSelectLesson={handleSelectLesson}
-                onOpenFullSchedule={(targetDay, targetIsoDate) => {
-                  if (targetIsoDate) {
-                    const targetMonday = normalizeToMondayIso(targetIsoDate)
-                    if (targetMonday !== timetable.currentWeekPivot) {
-                      timetable.queueWeekChange(targetMonday)
-                    }
-                  }
-                  if (targetDay) {
-                    timetable.setSelectedDay(targetDay)
-                  }
-                  setShowFullSchedule(true)
-                }}
-              />
-            </div>
-
-            <div className="flex flex-col gap-3.5 md:gap-5 w-full">
-              <MiniMessagesWidget
-                unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
-                announcementsCount={messagesInbox.announcements.length}
-                isLoading={isManualRefreshing || (messagesInbox.isLoadingMessages && messagesInbox.messages.length === 0 && messagesInbox.announcements.length === 0 && !messagesInbox.messagesError)}
-                error={messagesInbox.messagesError}
-                onRetry={messagesInbox.reloadMessages}
-                lang={lang}
-                t={t}
-                onOpenMessages={() => setShowMessagesScreen(true)}
-                onOpenAnnouncements={() => setShowAnnouncementsScreen(true)}
+                onSelectGrade={(g) => handleSelectGrade(g, findSubjectForGrade(g))}
               />
 
               <MiniAttendanceWidget
@@ -662,9 +662,91 @@ export default function Home() {
                 onRetry={handleManualRefresh}
                 lang={lang}
                 t={t}
+                isDesktop={true}
                 onOpenAttendance={() => setShowFullAttendance(true)}
+                onOpenLegacyAttendance={() => setShowLegacyAttendance(true)}
+              />
+
+              <MiniMessagesWidget
+                unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
+                announcementsCount={messagesInbox.announcements.length}
+                isLoading={isManualRefreshing || (messagesInbox.isLoadingMessages && messagesInbox.messages.length === 0 && messagesInbox.announcements.length === 0 && !messagesInbox.messagesError)}
+                error={messagesInbox.messagesError}
+                onRetry={messagesInbox.reloadMessages}
+                lang={lang}
+                t={t}
+                latestMessage={messagesInbox.messages[0] || null}
+                latestAnnouncement={messagesInbox.announcements[0] || null}
+                onOpenMessageDetail={handleOpenDirectMessage}
+                onOpenAnnouncementDetail={handleOpenDirectAnnouncement}
+                onOpenMessages={() => setShowMessagesScreen(true)}
+                onOpenAnnouncements={() => setShowAnnouncementsScreen(true)}
               />
             </div>
+          </div>
+
+          {/* MOBILE LAYOUT (md:hidden) */}
+          <div className="flex md:hidden flex-col gap-3.5 w-full">
+            <MiniGradesWidget
+              gradesData={isManualRefreshing ? null : timetable.gradesData}
+              isLoading={isManualRefreshing || (!timetable.gradesData && timetable.isUpdating && !timetable.gradesError)}
+              error={timetable.gradesError}
+              onRetry={handleManualRefresh}
+              t={t}
+              onOpenGrades={() => setShowFullGrades(true)}
+              onSelectGrade={(g) => handleSelectGrade(g, g.subject || '')}
+            />
+
+            <MiniScheduleWidget
+              timetableData={isManualRefreshing ? null : activeTodayData}
+              isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
+              error={timetable.timetableError}
+              onRetry={handleManualRefresh}
+              textClamp={textClamp}
+              showFullSubjectNames={showFullSubjectNames}
+              lang={lang}
+              t={t}
+              onSelectLesson={handleSelectLesson}
+              onOpenFullSchedule={(targetDay, targetIsoDate) => {
+                if (targetIsoDate) {
+                  const targetMonday = normalizeToMondayIso(targetIsoDate)
+                  if (targetMonday !== timetable.currentWeekPivot) {
+                    timetable.queueWeekChange(targetMonday)
+                  }
+                }
+                if (targetDay) {
+                  timetable.setSelectedDay(targetDay)
+                }
+                setShowFullSchedule(true)
+              }}
+            />
+
+            <MiniMessagesWidget
+              unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
+              announcementsCount={messagesInbox.announcements.length}
+              isLoading={isManualRefreshing || (messagesInbox.isLoadingMessages && messagesInbox.messages.length === 0 && messagesInbox.announcements.length === 0 && !messagesInbox.messagesError)}
+              error={messagesInbox.messagesError}
+              onRetry={messagesInbox.reloadMessages}
+              lang={lang}
+              t={t}
+              latestMessage={messagesInbox.messages[0] || null}
+              latestAnnouncement={messagesInbox.announcements[0] || null}
+              onOpenMessageDetail={handleOpenDirectMessage}
+              onOpenAnnouncementDetail={handleOpenDirectAnnouncement}
+              onOpenMessages={() => setShowMessagesScreen(true)}
+              onOpenAnnouncements={() => setShowAnnouncementsScreen(true)}
+            />
+
+            <MiniAttendanceWidget
+              attendanceData={isManualRefreshing ? null : timetable.attendanceData}
+              isLoading={isManualRefreshing || (!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError)}
+              error={timetable.attendanceError}
+              onRetry={handleManualRefresh}
+              lang={lang}
+              t={t}
+              onOpenAttendance={() => setShowFullAttendance(true)}
+              onOpenLegacyAttendance={() => setShowLegacyAttendance(true)}
+            />
           </div>
         </main>
       </div>
@@ -879,6 +961,7 @@ export default function Home() {
           setIsMessagesSubViewOpen(false)
           setShowComposeInHeader(false)
           setIsFolderMenuOpen(false)
+          setDirectMessageToOpen(null)
           if (typeof window !== 'undefined' && window.location.search.includes('tab=messages')) {
             window.history.replaceState({}, '', window.location.pathname)
           }
@@ -1013,6 +1096,7 @@ export default function Home() {
           isLoading={messagesInbox.isLoadingMessages}
           lang={lang}
           t={t}
+          initialSelectedMessage={directMessageToOpen}
           onSubViewChange={(isOpen) => {
             setIsMessagesSubViewOpen(isOpen)
             if (isOpen) setIsFolderMenuOpen(false)
@@ -1025,6 +1109,7 @@ export default function Home() {
         onClose={() => {
           setShowAnnouncementsScreen(false)
           setIsMessagesSubViewOpen(false)
+          setDirectAnnouncementToOpen(null)
         }}
         title={t.messagesAnnouncements}
         backLabel={t.backAction}
@@ -1041,6 +1126,7 @@ export default function Home() {
           isLoading={messagesInbox.isLoadingMessages}
           lang={lang}
           t={t}
+          initialSelectedAnnouncement={directAnnouncementToOpen}
           onSubViewChange={setIsMessagesSubViewOpen}
         />
       </IosScreen>

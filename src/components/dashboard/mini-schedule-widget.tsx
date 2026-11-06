@@ -334,9 +334,9 @@ export function MiniScheduleWidget({
         <div className="flex flex-col gap-2.5">
           <MiniLessonSkeleton />
           <div className="w-full flex items-center gap-3 px-2 py-0.5">
-            <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/70" />
+            <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
             <div className="w-16 h-[20px] rounded-full ios-skeleton" />
-            <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/70" />
+            <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
           </div>
           <MiniLessonSkeleton />
         </div>

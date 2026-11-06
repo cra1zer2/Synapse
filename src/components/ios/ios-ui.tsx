@@ -158,7 +158,7 @@ export function IosBreakDivider({
 }) {
   return (
     <div className="w-full flex items-center gap-3 px-2 py-1">
-      <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/70" />
+      <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
       <div
         className={cn(
           'flex items-center gap-1.5 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full',
@@ -175,7 +175,7 @@ export function IosBreakDivider({
           {isCountdown && countdownText ? countdownText : minutes > 0 ? minutes + ' min' : 'Przerwa'}
         </span>
       </div>
-      <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/70" />
+      <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
     </div>
   )
 }

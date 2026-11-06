@@ -11,14 +11,15 @@ interface MiniGradesWidgetProps {
   onRetry?: () => void
   t: AppDictionary
   onOpenGrades: () => void
+  onSelectGrade?: (grade: GradeItem) => void
 }
 
 function getGradeBadgeStyle(gradeStr: string): string {
   const g = gradeStr.trim().toLowerCase()
   if (g.startsWith('1')) {
-    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
+    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border border-[var(--ios-red)]/20'
   }
-  return 'bg-[var(--ios-block-bg)] text-[var(--ios-label)]'
+  return 'bg-[var(--ios-block-bg)] text-[var(--ios-label)] border border-[var(--ios-border)]'
 }
 
 export function MiniGradesWidget({
@@ -27,13 +28,14 @@ export function MiniGradesWidget({
   error = null,
   onRetry,
   t,
-  onOpenGrades
+  onOpenGrades,
+  onSelectGrade
 }: MiniGradesWidgetProps) {
   const isPending = isLoading || (!gradesData && !error)
   const avg = gradesData?.overallAverage
   const formattedAvg = avg !== null && avg !== undefined ? avg.toFixed(2) : '—'
   const isDanger = typeof avg === 'number' && avg < 2.0
-  const recentGrades: GradeItem[] = gradesData?.recentGrades?.slice(0, 4) || []
+  const recentGrades: GradeItem[] = gradesData?.recentGrades?.slice(0, 5) || []
 
   return (
     <IosCard
@@ -104,12 +106,18 @@ export function MiniGradesWidget({
           {recentGrades.length > 0 && (
             <div className="flex items-center gap-1.5 pb-0.5">
               {recentGrades.map((g, idx) => (
-                <span
+                <button
                   key={idx}
-                  className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] font-medium tabular-nums ${getGradeBadgeStyle(g.grade)}`}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSelectGrade?.(g)
+                  }}
+                  title={`${g.subject}: ${g.grade}${g.category ? ` (${g.category})` : ''}`}
+                  className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] font-medium tabular-nums cursor-pointer hover:opacity-80 active:scale-90 transition-all select-none ${getGradeBadgeStyle(g.grade)}`}
                 >
                   {g.grade}
-                </span>
+                </button>
               ))}
             </div>
           )}

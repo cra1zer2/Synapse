@@ -409,11 +409,11 @@ export function IosScreen({
           <button
             type="button"
             onClick={handleRequestClose}
-            className="px-3.5 py-1.5 rounded-full bg-[var(--ios-element)] hover:bg-[var(--ios-element)]/80 text-[14px] font-medium text-[var(--ios-label)] cursor-pointer active:scale-95 transition-all flex items-center gap-1.5 select-none"
-            aria-label="Close"
+            className="w-8 h-8 rounded-full bg-[var(--ios-element)] hover:bg-[var(--ios-element)]/80 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] cursor-pointer active:scale-95 transition-all flex items-center justify-center select-none"
+            title="Zamknij"
+            aria-label="Zamknij"
           >
-            <span>{backLabel === 'Wróć' ? 'Zamknij' : backLabel}</span>
-            <svg className="w-3.5 h-3.5 text-[var(--ios-secondary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -474,77 +474,89 @@ export function IosScreen({
         }}
       />
 
-      <div
-        ref={panelRef}
-        data-ios-subview-panel="true"
-        data-ios-open={isOpen ? 'true' : 'false'}
-        data-ios-z-index={String(resolvedZIndex)}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-        onScroll={handleScroll}
-        style={
-          isDesktop
-            ? {
-                position: 'fixed',
-                top: '50%',
-                left: '50%',
-                zIndex: resolvedZIndex,
-                width: 'min(860px, 94vw)',
-                maxHeight: '86vh',
-                backgroundColor: 'var(--ios-card-solid)',
-                borderRadius: '26px',
-                border: '1px solid var(--ios-border)',
-                boxShadow: 'none',
-                overflowY: 'auto',
-                transform: isVisible ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -46%) scale(0.96)',
-                opacity: isVisible ? 1 : 0,
-                transition: 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease',
-                willChange: 'transform, opacity',
-                display: 'flex',
-                flexDirection: 'column',
-                pointerEvents: isReceded ? 'none' : 'auto'
-              }
-            : {
-                position: 'fixed',
-                inset: 0,
-                width: '100vw',
-                height: '100dvh',
-                zIndex: resolvedZIndex,
-                backgroundColor: 'var(--ios-bg)',
-                boxShadow: 'none',
-                willChange: 'transform',
-                WebkitBackfaceVisibility: 'hidden',
-                backfaceVisibility: 'hidden',
-                touchAction: 'pan-y',
-                overflowY: 'auto',
-                transform: panelTransform,
-                transition: IOS_PANEL_TRANSITION,
-                pointerEvents: isReceded ? 'none' : 'auto'
-              }
-        }
-        className={className}
-      >
-        {!hideHeader && (
-          isDesktop ? desktopHeader : (
+      {isDesktop ? (
+        <div
+          className="fixed inset-0 flex items-center justify-center p-4 md:p-6 pointer-events-none"
+          style={{ zIndex: resolvedZIndex }}
+        >
+          <div
+            ref={panelRef}
+            data-ios-subview-panel="true"
+            data-ios-open={isOpen ? 'true' : 'false'}
+            data-ios-z-index={String(resolvedZIndex)}
+            onScroll={handleScroll}
+            style={{
+              position: 'relative',
+              width: 'min(860px, 100%)',
+              maxHeight: '88vh',
+              backgroundColor: 'var(--ios-card-solid)',
+              borderRadius: '26px',
+              border: '1px solid var(--ios-border)',
+              boxShadow: 'none',
+              overflowY: 'auto',
+              transform: isVisible ? 'scale(1)' : 'scale(0.97)',
+              opacity: isVisible ? 1 : 0,
+              transition: 'transform 0.18s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              pointerEvents: isReceded ? 'none' : 'auto'
+            }}
+            className={className}
+          >
+            {!hideHeader && desktopHeader}
+            <div className={contentClassName ?? "px-6 pt-5 pb-8 w-full max-w-4xl mx-auto flex-1"}>
+              {children}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          ref={panelRef}
+          data-ios-subview-panel="true"
+          data-ios-open={isOpen ? 'true' : 'false'}
+          data-ios-z-index={String(resolvedZIndex)}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+          onScroll={handleScroll}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100dvh',
+            zIndex: resolvedZIndex,
+            backgroundColor: 'var(--ios-bg)',
+            boxShadow: 'none',
+            willChange: 'transform',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden',
+            touchAction: 'pan-y',
+            overflowY: 'auto',
+            transform: panelTransform,
+            transition: IOS_PANEL_TRANSITION,
+            pointerEvents: isReceded ? 'none' : 'auto'
+          }}
+          className={className}
+        >
+          {!hideHeader && (
             <header className="ios-header">
               {headerContent}
             </header>
-          )
-        )}
-
-        <div className={contentClassName ?? (isDesktop ? "px-6 pt-5 pb-8 w-full max-w-4xl mx-auto flex-1" : "px-4 pt-5 max-w-[402px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]")}>
-          {!hideHeader && largeTitle && !isDesktop && (
-            <div className="pt-2 pb-3 select-none">
-              <h1 className="text-[34px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-[41px]">
-                {title}
-              </h1>
-            </div>
           )}
-          {children}
+
+          <div className={contentClassName ?? "px-4 pt-5 max-w-[402px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]"}>
+            {!hideHeader && largeTitle && (
+              <div className="pt-2 pb-3 select-none">
+                <h1 className="text-[34px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-[41px]">
+                  {title}
+                </h1>
+              </div>
+            )}
+            {children}
+          </div>
         </div>
-      </div>
+      )}
     </>
   )
 

@@ -17,7 +17,7 @@ import {
 import { cn } from '@/utils/cn.util'
 
 interface ScheduleWidgetProps {
-  timetableData: SmartTimetableResult
+  timetableData?: SmartTimetableResult | null
   selectedDay: string
   onSelectDay: (day: string) => void
   onSelectLesson: (lesson: LessonItem) => void
@@ -113,7 +113,7 @@ export function ScheduleWidget({
   const activeLessonRef = useRef<HTMLDivElement>(null)
   const hasAutoScrolledRef = useRef(false)
 
-  const currentDaySchedule: DaySchedule | undefined = timetableData.schedule.find(
+  const currentDaySchedule: DaySchedule | undefined = timetableData?.schedule?.find(
     (d) => d.dayName === selectedDay
   )
 
@@ -265,7 +265,7 @@ export function ScheduleWidget({
             </div>
 
             {liveWeek.days.map((daySlot) => {
-              const dayData = timetableData.schedule.find((d) => d.dayName === daySlot.dayName)
+              const dayData = timetableData?.schedule?.find((d) => d.dayName === daySlot.dayName)
               const dotColor = getDayIndicatorColor(dayData)
               const isSelected = selectedDay === daySlot.dayName
 

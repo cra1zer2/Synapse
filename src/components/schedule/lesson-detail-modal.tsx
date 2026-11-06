@@ -129,14 +129,14 @@ export function LessonDetailModal({
           transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
           willChange: 'transform'
         }}
-        className="w-full max-w-[402px] bg-[var(--ios-card-solid)] rounded-t-[34px] px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] shadow-2xl border-t border-[var(--ios-border)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto"
+        className="w-full max-w-[402px] sm:max-w-lg bg-[var(--ios-card-solid)] rounded-t-[34px] sm:rounded-[26px] px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] border-t sm:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto"
       >
-        <div className="w-[36px] h-[5px] rounded-[2.5px] bg-[var(--ios-element)] mx-auto mb-1 shrink-0 opacity-60" />
+        <div className="w-[36px] h-[5px] rounded-[2.5px] bg-[var(--ios-element)] mx-auto mb-1 shrink-0 opacity-60 sm:hidden" />
 
         <div className="flex flex-col gap-1 pb-1">
           <div className="flex items-center gap-1.5">
             {isActive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shadow-[0_0_6px_rgba(0,136,255,0.8)] shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shrink-0" />
             )}
             <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight tabular-nums">
               {activeData.number >= 0 ? `${t.lessonNumberLabel(activeData.number)} • ` : ''}{activeData.time || activeData.flag || ''}

@@ -52,7 +52,17 @@ function syncMetaThemeColor(isDark: boolean) {
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
   const [lang, setLang] = useState<AppLanguage>('pl')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(min-width: 768px)')
+    setIsDesktop(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
   const [theme, setTheme] = useState<AppTheme>('system')
   const [textClamp, setTextClamp] = useState<TextClampOption>('full')
   const [showFullSubjectNames, setShowFullSubjectNames] = useState<boolean>(false)
@@ -416,7 +426,7 @@ export default function Home() {
         data-ios-root-panel="true"
         className="w-full min-h-screen flex flex-col bg-[var(--ios-bg)]"
         style={{
-          transform: isAnyOverlayActive ? `translate3d(-${IOS_PARALLAX_PERCENT}%, 0, 0)` : 'translate3d(0, 0, 0)',
+          transform: (!isDesktop && isAnyOverlayActive) ? `translate3d(-${IOS_PARALLAX_PERCENT}%, 0, 0)` : 'translate3d(0, 0, 0)',
           WebkitBackfaceVisibility: 'hidden',
           backfaceVisibility: 'hidden',
           transition: IOS_PANEL_TRANSITION,
@@ -424,7 +434,8 @@ export default function Home() {
           willChange: 'transform'
         }}
       >
-        <header className="ios-header">
+        {/* Mobile Header */}
+        <header className="ios-header md:hidden">
           <div className="relative flex items-center justify-between w-full max-w-[402px] mx-auto h-[44px]">
             <div className="z-10 flex items-center min-w-[70px] h-full">
               <div className="relative w-9 h-9 flex items-center justify-center">
@@ -469,11 +480,117 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="w-full flex-1 pt-6 pb-32 px-4 max-w-[402px] mx-auto flex flex-col gap-3.5 box-border">
+        {/* Desktop Unified Toolbar */}
+        <header className="hidden md:flex items-center justify-between w-full max-w-5xl lg:max-w-6xl mx-auto px-6 pt-7 pb-4 select-none">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--ios-blue)] shrink-0" />
+              <h1 className="text-[20px] font-bold tracking-tight text-[var(--ios-label)]">
+                Synapse
+              </h1>
+            </div>
+
+            {account.profile?.fullName && account.profile.fullName !== 'Konto Librus' && (
+              <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-[var(--ios-separator)]">
+                <span className="text-[13px] font-medium text-[var(--ios-label)]">
+                  {account.profile.fullName}
+                </span>
+                {account.profile.className && (
+                  <span className="text-[12px] font-normal text-[var(--ios-secondary)]">
+                    ({account.profile.className})
+                  </span>
+                )}
+                {account.profile.luckyNumber !== null && account.profile.luckyNumber !== undefined && (
+                  <span className="ml-1 text-[11px] font-semibold text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] px-2 py-0.5 rounded-full" title={t.luckyNumber}>
+                    #{account.profile.luckyNumber}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <nav className="flex items-center gap-1 bg-[var(--ios-element)]/30 p-1 rounded-full border border-[var(--ios-border)]">
+            <button
+              type="button"
+              onClick={() => setShowFullSchedule(true)}
+              className="px-3.5 py-1.5 rounded-full text-[13px] font-medium text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60 active:scale-95 transition-all cursor-pointer"
+            >
+              {t.schedule}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowFullGrades(true)}
+              className="px-3.5 py-1.5 rounded-full text-[13px] font-medium text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60 active:scale-95 transition-all cursor-pointer"
+            >
+              {t.grades}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMessagesScreen(true)}
+              className="px-3.5 py-1.5 rounded-full text-[13px] font-medium text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <span>{t.messages}</span>
+              {messagesInbox.messages.filter((m) => !m.isRead).length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-[var(--ios-blue)] text-white text-[10px] font-semibold tabular-nums">
+                  {messagesInbox.messages.filter((m) => !m.isRead).length}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowFullAttendance(true)}
+              className="px-3.5 py-1.5 rounded-full text-[13px] font-medium text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60 active:scale-95 transition-all cursor-pointer"
+            >
+              {t.attendance}
+            </button>
+          </nav>
+
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2 text-[12px] text-[var(--ios-secondary)] font-normal pr-1">
+              <div className={"w-3.5 h-3.5 flex items-center justify-center transition-opacity duration-300 " + ((timetable.isUpdating || isManualRefreshing) ? "opacity-100" : "opacity-0")}>
+                <IosSpinner size="small" className="text-[var(--ios-secondary)]" />
+              </div>
+              <span className="tabular-nums hidden lg:inline">
+                {timetable.isUpdating || isManualRefreshing ? t.updatingStatus : t.syncedStatus}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              disabled={timetable.isUpdating || isManualRefreshing}
+              className="w-9 h-9 rounded-full bg-[var(--ios-element)]/40 hover:bg-[var(--ios-element)]/70 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-all flex items-center justify-center cursor-pointer select-none"
+              title={t.refresh}
+              aria-label="Refresh"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M3 21v-5h5" />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowSettings(true)}
+              className="w-9 h-9 rounded-full bg-[var(--ios-element)]/40 hover:bg-[var(--ios-element)]/70 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-95 transition-all flex items-center justify-center cursor-pointer select-none"
+              title={t.settingsTitle}
+              aria-label="Settings"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <main className="w-full flex-1 pt-6 md:pt-4 pb-32 px-4 md:px-6 max-w-[402px] md:max-w-5xl lg:max-w-6xl mx-auto flex flex-col gap-4 box-border">
           {timetable.hasNewUpdate && (
             <div
               onClick={timetable.applyPendingUpdates}
-              className="bg-[var(--ios-blue)] text-white p-3 rounded-[16px] flex items-center justify-between cursor-pointer active:scale-[0.985] active:opacity-90 transition-all shadow-xs"
+              className="bg-[var(--ios-blue)] text-white p-3 rounded-[16px] flex items-center justify-between cursor-pointer active:scale-[0.985] active:opacity-90 transition-all"
             >
               <div className="flex items-center gap-2">
                 <svg className="w-3.5 h-3.5 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -488,61 +605,66 @@ export default function Home() {
             </div>
           )}
 
-          <div className="w-full flex flex-col gap-3.5">
-            <MiniGradesWidget
-              gradesData={isManualRefreshing ? null : timetable.gradesData}
-              isLoading={isManualRefreshing || (!timetable.gradesData && timetable.isUpdating && !timetable.gradesError)}
-              error={timetable.gradesError}
-              onRetry={handleManualRefresh}
-              t={t}
-              onOpenGrades={() => setShowFullGrades(true)}
-            />
+          {/* Responsive Layout: Single Column on Mobile, 2-Column Grid on Desktop */}
+          <div className="w-full flex flex-col md:grid md:grid-cols-2 gap-3.5 md:gap-5 items-start">
+            <div className="flex flex-col gap-3.5 md:gap-5 w-full">
+              <MiniGradesWidget
+                gradesData={isManualRefreshing ? null : timetable.gradesData}
+                isLoading={isManualRefreshing || (!timetable.gradesData && timetable.isUpdating && !timetable.gradesError)}
+                error={timetable.gradesError}
+                onRetry={handleManualRefresh}
+                t={t}
+                onOpenGrades={() => setShowFullGrades(true)}
+              />
 
-            <MiniScheduleWidget
-              timetableData={isManualRefreshing ? null : activeTodayData}
-              isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
-              error={timetable.timetableError}
-              onRetry={handleManualRefresh}
-              textClamp={textClamp}
-              showFullSubjectNames={showFullSubjectNames}
-              lang={lang}
-              t={t}
-              onSelectLesson={handleSelectLesson}
-              onOpenFullSchedule={(targetDay, targetIsoDate) => {
-                if (targetIsoDate) {
-                  const targetMonday = normalizeToMondayIso(targetIsoDate)
-                  if (targetMonday !== timetable.currentWeekPivot) {
-                    timetable.queueWeekChange(targetMonday)
+              <MiniScheduleWidget
+                timetableData={isManualRefreshing ? null : activeTodayData}
+                isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
+                error={timetable.timetableError}
+                onRetry={handleManualRefresh}
+                textClamp={textClamp}
+                showFullSubjectNames={showFullSubjectNames}
+                lang={lang}
+                t={t}
+                onSelectLesson={handleSelectLesson}
+                onOpenFullSchedule={(targetDay, targetIsoDate) => {
+                  if (targetIsoDate) {
+                    const targetMonday = normalizeToMondayIso(targetIsoDate)
+                    if (targetMonday !== timetable.currentWeekPivot) {
+                      timetable.queueWeekChange(targetMonday)
+                    }
                   }
-                }
-                if (targetDay) {
-                  timetable.setSelectedDay(targetDay)
-                }
-                setShowFullSchedule(true)
-              }}
-            />
+                  if (targetDay) {
+                    timetable.setSelectedDay(targetDay)
+                  }
+                  setShowFullSchedule(true)
+                }}
+              />
+            </div>
 
-            <MiniMessagesWidget
-              unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
-              announcementsCount={messagesInbox.announcements.length}
-              isLoading={isManualRefreshing || (messagesInbox.isLoadingMessages && messagesInbox.messages.length === 0 && messagesInbox.announcements.length === 0 && !messagesInbox.messagesError)}
-              error={messagesInbox.messagesError}
-              onRetry={messagesInbox.reloadMessages}
-              lang={lang}
-              t={t}
-              onOpenMessages={() => setShowMessagesScreen(true)}
-              onOpenAnnouncements={() => setShowAnnouncementsScreen(true)}
-            />
+            <div className="flex flex-col gap-3.5 md:gap-5 w-full">
+              <MiniMessagesWidget
+                unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
+                announcementsCount={messagesInbox.announcements.length}
+                isLoading={isManualRefreshing || (messagesInbox.isLoadingMessages && messagesInbox.messages.length === 0 && messagesInbox.announcements.length === 0 && !messagesInbox.messagesError)}
+                error={messagesInbox.messagesError}
+                onRetry={messagesInbox.reloadMessages}
+                lang={lang}
+                t={t}
+                onOpenMessages={() => setShowMessagesScreen(true)}
+                onOpenAnnouncements={() => setShowAnnouncementsScreen(true)}
+              />
 
-            <MiniAttendanceWidget
-              attendanceData={isManualRefreshing ? null : timetable.attendanceData}
-              isLoading={isManualRefreshing || (!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError)}
-              error={timetable.attendanceError}
-              onRetry={handleManualRefresh}
-              lang={lang}
-              t={t}
-              onOpenAttendance={() => setShowFullAttendance(true)}
-            />
+              <MiniAttendanceWidget
+                attendanceData={isManualRefreshing ? null : timetable.attendanceData}
+                isLoading={isManualRefreshing || (!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError)}
+                error={timetable.attendanceError}
+                onRetry={handleManualRefresh}
+                lang={lang}
+                t={t}
+                onOpenAttendance={() => setShowFullAttendance(true)}
+              />
+            </div>
           </div>
         </main>
       </div>
@@ -799,7 +921,7 @@ export default function Home() {
                   onClick={() => setIsFolderMenuOpen(false)}
                 />
                 <div
-                  className="absolute top-full mt-2 w-[190px] z-[101] p-1.5 bg-[var(--ios-card-solid,#ffffff)] dark:bg-[#1c1c1e] border border-[var(--ios-border)] rounded-[18px] shadow-xl flex flex-col gap-0.5 select-none"
+                  className="absolute top-full mt-2 w-[190px] z-[101] p-1.5 bg-[var(--ios-card-solid,#ffffff)] dark:bg-[#1c1c1e] border border-[var(--ios-border)] rounded-[18px] flex flex-col gap-0.5 select-none"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button

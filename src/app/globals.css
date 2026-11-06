@@ -28,7 +28,7 @@
   --ios-glass-border: transparent;
   --ios-card-shadow: none;
 
-  --ios-subview-shadow: -8px 0 24px rgba(0, 0, 0, 0.10);
+  --ios-subview-shadow: none;
   --ios-subview-backdrop: rgba(0, 0, 0, 0.22);
 
   --ios-label: #000000;
@@ -95,7 +95,7 @@
     --ios-glass-border: transparent;
     --ios-card-shadow: none;
 
-    --ios-subview-shadow: -10px 0 28px rgba(0, 0, 0, 0.65);
+    --ios-subview-shadow: none;
     --ios-subview-backdrop: rgba(0, 0, 0, 0.48);
 
     --ios-label: #ffffff;
@@ -155,7 +155,7 @@
   --ios-glass-border: transparent;
   --ios-card-shadow: none;
 
-  --ios-subview-shadow: -10px 0 28px rgba(0, 0, 0, 0.65);
+  --ios-subview-shadow: none;
   --ios-subview-backdrop: rgba(0, 0, 0, 0.48);
 
   --ios-label: #ffffff;

@@ -284,10 +284,10 @@ export function AuthView({
           <div className="flex flex-col items-center gap-5 w-full">
             <div className="flex flex-col items-center text-center">
               <div className="relative mb-3.5">
-                <div className="w-20 h-20 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] border border-[var(--ios-blue)]/20 flex items-center justify-center font-semibold text-[26px] shadow-xs">
+                <div className="w-20 h-20 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] border border-[var(--ios-blue)]/20 flex items-center justify-center font-semibold text-[26px]">
                   {avatarLetter}
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[var(--ios-green)] text-white flex items-center justify-center shadow-xs border-2 border-[var(--ios-bg)]">
+                <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[var(--ios-green)] text-white flex items-center justify-center border-2 border-[var(--ios-bg)]">
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
@@ -352,7 +352,7 @@ export function AuthView({
               <button
                 type="button"
                 onClick={onConfirmLogin}
-                className="h-[52px] w-full bg-[var(--ios-blue)] text-white text-[17px] font-semibold tracking-[-0.3px] rounded-[16px] shadow-xs active:scale-[0.985] active:opacity-90 transition-[transform,opacity] duration-150 flex items-center justify-center cursor-pointer select-none"
+                className="h-[52px] w-full bg-[var(--ios-blue)] text-white text-[17px] font-semibold tracking-[-0.3px] rounded-[16px] active:scale-[0.985] active:opacity-90 transition-[transform,opacity] duration-150 flex items-center justify-center cursor-pointer select-none"
               >
                 {t.confirmAndEnter}
               </button>

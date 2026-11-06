@@ -254,7 +254,7 @@ export function LegacyAttendanceScreen({
                         return (
                           <div
                             key={col}
-                            className={"w-full aspect-square max-h-[22px] rounded-[4px] border flex items-center justify-center text-[9px] leading-none shadow-xs " + badgeClass}
+                            className={"w-full aspect-square max-h-[22px] rounded-[4px] border flex items-center justify-center text-[9px] leading-none " + badgeClass}
                           >
                             {lesson.symbol}
                           </div>

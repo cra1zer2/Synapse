@@ -193,6 +193,7 @@ export function SettingsSheet({
         backLabel={t.backAction}
         isSubView={true}
         isReceded={showThemePicker || showAdvanced || showAddForm}
+        contentClassName="px-6 pt-5 max-w-xl mx-auto w-full pb-10"
       >
         <div className="flex flex-col gap-5 pb-12 select-none">
           <IosCard>

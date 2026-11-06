@@ -1,5 +1,6 @@
 export interface GradeItem {
     id?: string | number
+    subject?: string
     grade: string
     numericValue: number | null
     weight: number

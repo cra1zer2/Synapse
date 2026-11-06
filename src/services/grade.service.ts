@@ -245,6 +245,7 @@ export async function fetchStudentGrades(
 
             const gradeItem: GradeItem = {
                 id: g.Id,
+                subject: subjectName,
                 grade: gradeStr,
                 numericValue: numeric,
                 weight: effectiveWeight,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, ReactNode } from 'react'
+import { useState, useMemo, useEffect, ReactNode } from 'react'
 import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { cleanSenderName } from '@/utils/text.util'
@@ -24,6 +24,8 @@ interface MessagesWidgetProps {
   lang?: AppLanguage
   t: AppDictionary
   onSubViewChange?: (isOpen: boolean) => void
+  initialSelectedMessage?: MessageItem | null
+  initialSelectedAnnouncement?: AnnouncementItem | null
 }
 
 function renderClickableText(text: string): ReactNode {
@@ -101,7 +103,9 @@ export function MessagesWidget({
   isLoading = false,
   lang = 'pl',
   t,
-  onSubViewChange
+  onSubViewChange,
+  initialSelectedMessage = null,
+  initialSelectedAnnouncement = null
 }: MessagesWidgetProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeMessage, setActiveMessage] = useState<MessageItem | null>(null)
@@ -170,6 +174,18 @@ export function MessagesWidget({
     setCachedAnnouncement(item)
     notifySubView(true)
   }
+
+  useEffect(() => {
+    if (initialSelectedMessage) {
+      handleReadMessage(initialSelectedMessage)
+    }
+  }, [initialSelectedMessage])
+
+  useEffect(() => {
+    if (initialSelectedAnnouncement) {
+      handleReadAnnouncement(initialSelectedAnnouncement)
+    }
+  }, [initialSelectedAnnouncement])
 
   const handleCloseAnnouncement = () => {
     setActiveAnnouncement(null)

@@ -207,10 +207,10 @@ export function MessagesWidget({
       />
 
       {mode === 'messages' ? (
-        <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
+        <IosCard className="overflow-hidden">
           {isLoading && messages.length === 0 ? (
             Array.from({ length: 6 }).map((_, idx) => (
-              <div key={idx} className="w-full p-3.5 px-4 flex items-center gap-3">
+              <div key={idx} className="relative w-full p-3.5 px-4 flex items-center gap-3">
                 <div className="w-3.5 flex items-center justify-center shrink-0 self-center">
                   <div className="w-2 h-2 rounded-full ios-skeleton" />
                 </div>
@@ -221,6 +221,9 @@ export function MessagesWidget({
                   </div>
                   <div className="w-52 h-[13px] rounded-full ios-skeleton" />
                 </div>
+                {idx < 5 && (
+                  <div className="absolute bottom-0 right-0 left-[38px] h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
+                )}
               </div>
             ))
           ) : filteredMessages.length > 0 ? (
@@ -228,7 +231,7 @@ export function MessagesWidget({
               <div
                 key={msg.id + '-' + idx}
                 onClick={() => handleReadMessage(msg)}
-                className="w-full p-3.5 px-4 flex items-center gap-3 transition-colors duration-100 cursor-pointer active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20"
+                className="relative w-full p-3.5 px-4 flex items-center gap-3 transition-colors duration-100 cursor-pointer active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20"
               >
                 <div className="w-3.5 flex items-center justify-center shrink-0 self-center">
                   {folder === 'sent' ? (
@@ -275,6 +278,10 @@ export function MessagesWidget({
                 <svg width="14" height="14" className="text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
+
+                {idx < filteredMessages.length - 1 && (
+                  <div className="absolute bottom-0 right-0 left-[38px] h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
+                )}
               </div>
             ))
           ) : (
@@ -284,16 +291,19 @@ export function MessagesWidget({
           )}
         </IosCard>
       ) : (
-        <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
+        <IosCard className="overflow-hidden">
           {isLoading && announcements.length === 0 ? (
             Array.from({ length: 4 }).map((_, idx) => (
-              <div key={idx} className="w-full p-3.5 px-4 flex flex-col gap-2">
+              <div key={idx} className="relative w-full p-3.5 px-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="w-24 h-[11px] rounded-full ios-skeleton" />
                   <div className="w-16 h-[11px] rounded-full ios-skeleton" />
                 </div>
                 <div className="w-48 h-[15px] rounded-full ios-skeleton" />
                 <div className="w-full h-[12px] rounded-full ios-skeleton" />
+                {idx < 3 && (
+                  <div className="absolute bottom-0 right-4 left-4 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
+                )}
               </div>
             ))
           ) : filteredAnnouncements.length > 0 ? (
@@ -301,7 +311,7 @@ export function MessagesWidget({
               <div
                 key={item.id + '-' + idx}
                 onClick={() => handleReadAnnouncement(item)}
-                className="w-full p-3.5 px-4 flex flex-col gap-1 transition-colors duration-100 cursor-pointer active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20"
+                className="relative w-full p-3.5 px-4 flex flex-col gap-1 transition-colors duration-100 cursor-pointer active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold text-[var(--ios-purple)] uppercase tracking-wider">
@@ -319,6 +329,10 @@ export function MessagesWidget({
                 <p className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] line-clamp-2 leading-relaxed">
                   {item.content}
                 </p>
+
+                {idx < filteredAnnouncements.length - 1 && (
+                  <div className="absolute bottom-0 right-4 left-4 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
+                )}
               </div>
             ))
           ) : (

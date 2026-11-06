@@ -58,6 +58,16 @@ export function IosScreen({
   const [isVisible, setIsVisible] = useState(false)
   const [isRendered, setIsRendered] = useState(isOpen)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(min-width: 768px)')
+    setIsDesktop(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
@@ -94,11 +104,13 @@ export function IosScreen({
       setIsRendered(true)
       raf1 = requestAnimationFrame(() => {
         if (panelRef.current) {
-          panelRef.current.style.transition = IOS_PANEL_TRANSITION
+          panelRef.current.style.transition = isDesktop
+            ? 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease'
+            : IOS_PANEL_TRANSITION
           void panelRef.current.offsetWidth
         }
         if (backdropRef.current) {
-          backdropRef.current.style.transition = IOS_BACKDROP_TRANSITION
+          backdropRef.current.style.transition = isDesktop ? 'opacity 0.2s ease' : IOS_BACKDROP_TRANSITION
         }
         setIsVisible(true)
       })
@@ -108,22 +120,24 @@ export function IosScreen({
       setIsRendered(false)
     } else {
       if (panelRef.current) {
-        panelRef.current.style.transition = IOS_PANEL_TRANSITION
+        panelRef.current.style.transition = isDesktop
+          ? 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.16s ease'
+          : IOS_PANEL_TRANSITION
       }
       if (backdropRef.current) {
-        backdropRef.current.style.transition = IOS_BACKDROP_TRANSITION
+        backdropRef.current.style.transition = isDesktop ? 'opacity 0.18s ease' : IOS_BACKDROP_TRANSITION
       }
       setIsVisible(false)
       timer = setTimeout(() => {
         setIsRendered(false)
-      }, IOS_TRANSITION_MS)
+      }, isDesktop ? 200 : IOS_TRANSITION_MS)
     }
 
     return () => {
       cancelAnimationFrame(raf1)
       if (timer) clearTimeout(timer)
     }
-  }, [isOpen])
+  }, [isOpen, isDesktop])
 
   useEffect(() => {
     return () => {
@@ -138,17 +152,23 @@ export function IosScreen({
 
     const panel = panelRef.current
     const backdrop = backdropRef.current
-    const underPanel = findUnderlyingPanel(panel)
+    const underPanel = isDesktop ? null : findUnderlyingPanel(panel)
     underPanelRef.current = underPanel
 
     if (panel) {
       panel.style.pointerEvents = 'none'
-      panel.style.transition = IOS_PANEL_TRANSITION
-      panel.style.transform = 'translate3d(100%, 0, 0)'
+      if (isDesktop) {
+        panel.style.transition = 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.16s ease'
+        panel.style.transform = 'translate(-50%, -46%) scale(0.96)'
+        panel.style.opacity = '0'
+      } else {
+        panel.style.transition = IOS_PANEL_TRANSITION
+        panel.style.transform = 'translate3d(100%, 0, 0)'
+      }
     }
     if (backdrop) {
       backdrop.style.pointerEvents = 'none'
-      backdrop.style.transition = IOS_BACKDROP_TRANSITION
+      backdrop.style.transition = isDesktop ? 'opacity 0.18s ease' : IOS_BACKDROP_TRANSITION
       backdrop.style.opacity = '0'
     }
     if (underPanel) {
@@ -166,11 +186,22 @@ export function IosScreen({
       setIsVisible(false)
       setIsRendered(false)
       onClose()
-    }, IOS_TRANSITION_MS)
-  }, [onClose])
+    }, isDesktop ? 200 : IOS_TRANSITION_MS)
+  }, [onClose, isDesktop])
+
+  useEffect(() => {
+    if (!isOpen || !onClose) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleRequestClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose, handleRequestClose])
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (!isSubView || !onClose || isReceded || !isOpen || isClosingRef.current) return
+    if (isDesktop || !isSubView || !onClose || isReceded || !isOpen || isClosingRef.current) return
     const touch = e.touches[0]
     if (touch.clientX > 48) return
 
@@ -362,17 +393,49 @@ export function IosScreen({
     </div>
   )
 
+  const desktopHeader = (
+    <header className="sticky top-0 z-30 w-full bg-[var(--ios-card-solid)] border-b border-[var(--ios-separator)] px-6 py-3.5 flex items-center justify-between shrink-0">
+      <div className="flex items-center gap-2 min-w-0">
+        {titleView ? titleView : (
+          <h3 className="text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.3px] truncate">
+            {title}
+          </h3>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 shrink-0">
+        {trailing}
+        {onClose && (
+          <button
+            type="button"
+            onClick={handleRequestClose}
+            className="px-3.5 py-1.5 rounded-full bg-[var(--ios-element)] hover:bg-[var(--ios-element)]/80 text-[14px] font-medium text-[var(--ios-label)] cursor-pointer active:scale-95 transition-all flex items-center gap-1.5 select-none"
+            aria-label="Close"
+          >
+            <span>{backLabel === 'Wróć' ? 'Zamknij' : backLabel}</span>
+            <svg className="w-3.5 h-3.5 text-[var(--ios-secondary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        )}
+      </div>
+    </header>
+  )
+
   if (!isSubView) {
     return (
       <div onScroll={handleScroll} className={"w-full min-h-[100dvh] bg-[var(--ios-bg-primary)] overflow-y-auto " + className}>
         {!hideHeader && (
-          <header className="ios-header">
-            {headerContent}
-          </header>
+          isDesktop ? desktopHeader : (
+            <header className="ios-header">
+              {headerContent}
+            </header>
+          )
         )}
 
-        <div className={contentClassName ?? "px-4 pt-5 max-w-[402px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]"}>
-          {!hideHeader && largeTitle && (
+        <div className={contentClassName ?? (isDesktop ? "px-6 pt-5 max-w-4xl mx-auto w-full pb-10" : "px-4 pt-5 max-w-[402px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]")}>
+          {!hideHeader && largeTitle && !isDesktop && (
             <div className="pt-2 pb-3 select-none">
               <h1 className="text-[34px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-[41px]">
                 {title}
@@ -401,10 +464,12 @@ export function IosScreen({
           position: 'fixed',
           inset: 0,
           zIndex: resolvedZIndex - 1,
-          backgroundColor: 'var(--ios-subview-backdrop)',
+          backgroundColor: isDesktop ? 'rgba(0, 0, 0, 0.45)' : 'var(--ios-subview-backdrop)',
+          backdropFilter: isDesktop ? 'blur(8px)' : undefined,
+          WebkitBackdropFilter: isDesktop ? 'blur(8px)' : undefined,
           opacity: isVisible && !isReceded ? 1 : 0,
           pointerEvents: isVisible && !isReceded ? 'auto' : 'none',
-          transition: IOS_BACKDROP_TRANSITION,
+          transition: isDesktop ? 'opacity 0.2s ease' : IOS_BACKDROP_TRANSITION,
           willChange: 'opacity'
         }}
       />
@@ -419,33 +484,58 @@ export function IosScreen({
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         onScroll={handleScroll}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          width: '100vw',
-          height: '100dvh',
-          zIndex: resolvedZIndex,
-          backgroundColor: 'var(--ios-bg)',
-          boxShadow: 'var(--ios-subview-shadow)',
-          willChange: 'transform',
-          WebkitBackfaceVisibility: 'hidden',
-          backfaceVisibility: 'hidden',
-          touchAction: 'pan-y',
-          overflowY: 'auto',
-          transform: panelTransform,
-          transition: IOS_PANEL_TRANSITION,
-          pointerEvents: isReceded ? 'none' : 'auto'
-        }}
+        style={
+          isDesktop
+            ? {
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                zIndex: resolvedZIndex,
+                width: 'min(860px, 94vw)',
+                maxHeight: '86vh',
+                backgroundColor: 'var(--ios-card-solid)',
+                borderRadius: '26px',
+                border: '1px solid var(--ios-border)',
+                boxShadow: 'none',
+                overflowY: 'auto',
+                transform: isVisible ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -46%) scale(0.96)',
+                opacity: isVisible ? 1 : 0,
+                transition: 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease',
+                willChange: 'transform, opacity',
+                display: 'flex',
+                flexDirection: 'column',
+                pointerEvents: isReceded ? 'none' : 'auto'
+              }
+            : {
+                position: 'fixed',
+                inset: 0,
+                width: '100vw',
+                height: '100dvh',
+                zIndex: resolvedZIndex,
+                backgroundColor: 'var(--ios-bg)',
+                boxShadow: 'none',
+                willChange: 'transform',
+                WebkitBackfaceVisibility: 'hidden',
+                backfaceVisibility: 'hidden',
+                touchAction: 'pan-y',
+                overflowY: 'auto',
+                transform: panelTransform,
+                transition: IOS_PANEL_TRANSITION,
+                pointerEvents: isReceded ? 'none' : 'auto'
+              }
+        }
         className={className}
       >
         {!hideHeader && (
-          <header className="ios-header">
-            {headerContent}
-          </header>
+          isDesktop ? desktopHeader : (
+            <header className="ios-header">
+              {headerContent}
+            </header>
+          )
         )}
 
-        <div className={contentClassName ?? "px-4 pt-5 max-w-[402px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]"}>
-          {!hideHeader && largeTitle && (
+        <div className={contentClassName ?? (isDesktop ? "px-6 pt-5 pb-8 w-full max-w-4xl mx-auto flex-1" : "px-4 pt-5 max-w-[402px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]")}>
+          {!hideHeader && largeTitle && !isDesktop && (
             <div className="pt-2 pb-3 select-none">
               <h1 className="text-[34px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-[41px]">
                 {title}

@@ -69,7 +69,7 @@ function MiniLessonItem({
       <div className="flex-1 min-w-0 flex flex-col gap-0.5 justify-center">
         <div className="flex items-center gap-1.5">
           {isActive && !isCancelled && (
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shadow-[0_0_6px_rgba(0,136,255,0.8)] shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shrink-0" />
           )}
           <span className={cn('text-[12px] font-normal tracking-[-0.1px] leading-[16px] tabular-nums', isCancelled ? 'line-through text-[var(--ios-secondary)]' : 'text-[var(--ios-secondary)]')}>
             {lesson.time}

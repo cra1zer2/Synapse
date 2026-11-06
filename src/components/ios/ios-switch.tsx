@@ -33,7 +33,7 @@ export function IosSwitch({
     >
       <span
         className={cn(
-          'pointer-events-none inline-block h-[24px] w-[38px] rounded-[13px] bg-white shadow-[0_2px_6px_rgba(0,0,0,0.16),0_0.5px_1px_rgba(0,0,0,0.14)] transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform',
+          'pointer-events-none inline-block h-[24px] w-[38px] rounded-[13px] bg-white transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform',
           checked ? 'translate-x-[22px]' : 'translate-x-0'
         )}
       />

@@ -206,7 +206,7 @@ export function JustificationModal({
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                className="ios-card bg-[var(--ios-card-solid)] rounded-t-[26px] sm:rounded-[26px] w-full max-w-lg p-6 shadow-2xl border-t sm:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[88vh] overflow-y-auto pb-[max(env(safe-area-inset-bottom,0px),1.5rem)]"
+                className="ios-card bg-[var(--ios-card-solid)] rounded-t-[26px] sm:rounded-[26px] w-full max-w-lg p-6 border-t sm:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[88vh] overflow-y-auto pb-[max(env(safe-area-inset-bottom,0px),1.5rem)]"
             >
                 <div className="w-9 h-1 rounded-full bg-[var(--ios-element)] mx-auto -mt-1 mb-0.5 sm:hidden opacity-60 shrink-0" />
 
@@ -274,7 +274,7 @@ export function JustificationModal({
                                                 <button
                                                     type="button"
                                                     onClick={() => selectAllNbInDay(group.date)}
-                                                    className="text-[11px] font-medium text-[var(--ios-blue)] bg-[var(--ios-card)] px-2.5 py-1 rounded-[8px] shadow-xs active:opacity-70 transition-opacity"
+                                                    className="text-[11px] font-medium text-[var(--ios-blue)] bg-[var(--ios-card)] px-2.5 py-1 rounded-[8px] border border-[var(--ios-border)] active:opacity-70 transition-opacity"
                                                 >
                                                     Zaznacz NB
                                                 </button>
@@ -295,7 +295,7 @@ export function JustificationModal({
                                                             : isLocked
                                                                 ? 'bg-[var(--ios-card)]/50 opacity-60 cursor-not-allowed'
                                                                 : lesson.isSelected
-                                                                    ? 'bg-[var(--ios-card)] shadow-xs cursor-pointer ring-1 ring-[var(--ios-blue)]'
+                                                                    ? 'bg-[var(--ios-card)] cursor-pointer ring-1 ring-[var(--ios-blue)]'
                                                                     : 'bg-[var(--ios-card)] cursor-pointer hover:bg-[var(--ios-card)]/80'
                                                             }`}
                                                     >

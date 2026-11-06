@@ -52,7 +52,7 @@ export function MiniMessagesWidget({
         </svg>
       </div>
 
-      <div className="flex flex-col divide-y divide-[var(--ios-separator)]">
+      <div className="flex flex-col">
         <div
           onClick={onOpenMessages}
           className="w-full py-3 px-1 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]"
@@ -100,6 +100,8 @@ export function MiniMessagesWidget({
             </svg>
           </div>
         </div>
+
+        <div className="h-[0.5px] bg-[var(--ios-separator)] ml-[54px] my-0 pointer-events-none" />
 
         <div
           onClick={onOpenAnnouncements}

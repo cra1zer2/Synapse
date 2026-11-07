@@ -103,7 +103,7 @@ export function IosSearchBar({
   return (
     <div
       className={cn(
-        'w-full h-[42px] bg-[var(--ios-card-solid)] rounded-full px-3.5 flex items-center gap-2.5 select-none border border-[var(--ios-border)] focus-within:border-[var(--ios-blue)]/50 transition-colors duration-150',
+        'w-full h-[42px] bg-[var(--ios-element)]/35 rounded-full px-3.5 flex items-center gap-2.5 select-none border border-[var(--ios-border)] focus-within:border-[var(--ios-blue)]/60 focus-within:bg-[var(--ios-element)]/50 transition-all duration-150',
         className
       )}
     >

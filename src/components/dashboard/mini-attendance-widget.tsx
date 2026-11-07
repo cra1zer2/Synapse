@@ -58,37 +58,55 @@ export function MiniAttendanceWidget({
     )
   }, [attendanceData, todayIso])
 
-  const todaySchedule = useMemo(() => {
-    if (!timetableData?.schedule) return null
-    return (
-      timetableData.schedule.find((d) => d.isoDate === todayIso) ||
-      timetableData.schedule.find((d) => d.dayName === todayDayName) ||
-      null
-    )
-  }, [timetableData, todayIso, todayDayName])
+  const relevantSchedule = useMemo(() => {
+    if (!timetableData?.schedule || timetableData.schedule.length === 0) return null
+    const targetIso = todayLegacyDay?.isoDate || todayIso
+    const targetDate = todayLegacyDay?.date
+    const targetWeekday = todayLegacyDay?.weekday
 
-  // Desktop lesson line: exact range of today's lessons (e.g. from 3rd to 8th lesson)
+    const byIso = timetableData.schedule.find((d) => d.isoDate === targetIso)
+    if (byIso && byIso.lessons && byIso.lessons.length > 0) return byIso
+
+    if (targetDate) {
+      const byDate = timetableData.schedule.find((d) => d.date === targetDate)
+      if (byDate && byDate.lessons && byDate.lessons.length > 0) return byDate
+    }
+
+    if (targetWeekday) {
+      const byWeekday = timetableData.schedule.find((d) => d.dayName === targetWeekday)
+      if (byWeekday && byWeekday.lessons && byWeekday.lessons.length > 0) return byWeekday
+    }
+
+    const currentToday = timetableData.schedule.find((d) => d.isToday)
+    if (currentToday && currentToday.lessons && currentToday.lessons.length > 0) return currentToday
+
+    const anySchoolDay = timetableData.schedule.find((d) => d.lessons && d.lessons.length > 0)
+    return anySchoolDay || null
+  }, [timetableData, todayLegacyDay, todayIso])
+
+  // Desktop lesson line: exact range of scheduled lessons as static square pills
   const scheduledLessonRange = useMemo(() => {
-    const lessons = todaySchedule?.lessons?.filter((l) => !l.isCancelled) || []
-    const numbers = lessons
-      .map((l) => l.number)
-      .filter((n): n is number => n !== undefined && n !== null && typeof n === 'number')
+    if (relevantSchedule?.lessons && relevantSchedule.lessons.length > 0) {
+      const numbers = relevantSchedule.lessons
+        .map((l) => l.number)
+        .filter((n): n is number => typeof n === 'number' && !isNaN(n))
 
-    if (numbers.length > 0) {
-      const minNum = Math.min(...numbers)
-      const maxNum = Math.max(...numbers)
-      const range: number[] = []
-      for (let i = minNum; i <= maxNum; i++) {
-        range.push(i)
+      if (numbers.length > 0) {
+        const minNum = Math.min(...numbers)
+        const maxNum = Math.max(...numbers)
+        const range: number[] = []
+        for (let i = minNum; i <= maxNum; i++) {
+          range.push(i)
+        }
+        return range
       }
-      return range
     }
 
     if (todayLegacyDay?.lessons) {
       const recorded = Object.keys(todayLegacyDay.lessons).map(Number).filter((n) => !isNaN(n))
       if (recorded.length > 0) {
-        const minNum = Math.min(...recorded)
-        const maxNum = Math.max(...recorded)
+        const minNum = Math.min(1, Math.min(...recorded))
+        const maxNum = Math.max(7, Math.max(...recorded))
         const range: number[] = []
         for (let i = minNum; i <= maxNum; i++) {
           range.push(i)
@@ -98,7 +116,7 @@ export function MiniAttendanceWidget({
     }
 
     return [1, 2, 3, 4, 5, 6, 7]
-  }, [todaySchedule, todayLegacyDay])
+  }, [relevantSchedule, todayLegacyDay])
 
   const statusColor = isDanger
     ? 'text-[var(--ios-red)]'
@@ -229,7 +247,7 @@ export function MiniAttendanceWidget({
                   onOpenAttendance()
                 }
               }}
-              className="flex items-center gap-1.5 p-2 rounded-[12px] bg-[var(--ios-element)]/25 hover:bg-[var(--ios-element)]/45 active:bg-[var(--ios-element)]/65 active:scale-[0.985] transition-all cursor-pointer select-none"
+              className="flex items-center justify-start flex-wrap gap-1.5 p-2 rounded-[12px] bg-[var(--ios-element)]/25 hover:bg-[var(--ios-element)]/45 active:bg-[var(--ios-element)]/65 active:scale-[0.985] transition-all cursor-pointer select-none"
               title={lang === 'en' ? 'Click to open attendance history for today' : 'Kliknij, aby otworzyć historię obecności z tego dnia'}
             >
               {scheduledLessonRange.map((num) => {
@@ -238,7 +256,7 @@ export function MiniAttendanceWidget({
                   return (
                     <div
                       key={num}
-                      className="flex-1 h-[28px] rounded-[6px] bg-[var(--ios-element)]/25 border border-transparent flex items-center justify-center text-[10px] text-[var(--ios-secondary)]/50 font-normal select-none"
+                      className="w-[28px] h-[28px] shrink-0 rounded-[7px] bg-[var(--ios-element)]/30 border border-transparent flex items-center justify-center text-[10px] text-[var(--ios-secondary)]/50 font-normal select-none"
                       title={`Lekcja #${num}: obecny / brak wpisu`}
                     >
                       ·
@@ -268,7 +286,7 @@ export function MiniAttendanceWidget({
                   <div
                     key={num}
                     className={cn(
-                      "flex-1 h-[28px] rounded-[6px] flex items-center justify-center text-[10px] leading-none select-none",
+                      "w-[28px] h-[28px] shrink-0 rounded-[7px] flex items-center justify-center text-[10px] leading-none select-none font-semibold",
                       badgeClass
                     )}
                     title={`Lekcja #${num}: ${record.symbol}`}

@@ -120,7 +120,7 @@ export function MiniMessagesWidget({
             </div>
           </div>
 
-          {/* Desktop Latest Message Snippet (2 rows: sender + date on top, subject below) */}
+          {/* Desktop Latest Message Snippet (2 rows: sender + date on top, subject below, left-aligned) */}
           {latestMessage && (
             <div
               onClick={(e) => {
@@ -131,7 +131,7 @@ export function MiniMessagesWidget({
                   onOpenMessages()
                 }
               }}
-              className="hidden md:flex flex-col gap-0.5 pl-[50px] pr-2 py-1.5 rounded-[10px] hover:bg-[var(--ios-element)]/25 active:bg-[var(--ios-element)]/45 active:scale-[0.985] transition-all cursor-pointer select-none group"
+              className="hidden md:flex flex-col gap-0.5 px-2.5 py-2 mt-1 rounded-[10px] bg-[var(--ios-element)]/15 hover:bg-[var(--ios-element)]/30 active:bg-[var(--ios-element)]/50 active:scale-[0.985] transition-all cursor-pointer select-none group"
               title={lang === 'en' ? 'Click to open message' : 'Kliknij, aby otworzyć wiadomość'}
             >
               <div className="flex items-center justify-between gap-2">
@@ -142,14 +142,14 @@ export function MiniMessagesWidget({
                   {latestMessage.date}
                 </span>
               </div>
-              <p className="text-[12px] font-normal text-[var(--ios-secondary)] group-hover:text-[var(--ios-label)] line-clamp-1 truncate leading-tight">
+              <p className="text-[12px] font-normal text-[var(--ios-secondary)] group-hover:text-[var(--ios-label)] line-clamp-1 truncate leading-tight mt-0.5">
                 {latestMessage.subject || latestMessage.content || '—'}
               </p>
             </div>
           )}
         </div>
 
-        <div className="h-[0.5px] bg-[var(--ios-separator)] ml-[49px] my-0.5 pointer-events-none" />
+        <div className="h-[1px] bg-[var(--ios-separator)] my-1 w-full pointer-events-none" />
 
         {/* Ogłoszenia Row */}
         <div className="flex flex-col py-1">
@@ -202,7 +202,7 @@ export function MiniMessagesWidget({
             </div>
           </div>
 
-          {/* Desktop Latest Announcement Snippet (2 rows: author + date on top, title below) */}
+          {/* Desktop Latest Announcement Snippet (2 rows: author + date on top, title below, left-aligned) */}
           {latestAnnouncement && (
             <div
               onClick={(e) => {
@@ -213,7 +213,7 @@ export function MiniMessagesWidget({
                   onOpenAnnouncements()
                 }
               }}
-              className="hidden md:flex flex-col gap-0.5 pl-[50px] pr-2 py-1.5 rounded-[10px] hover:bg-[var(--ios-element)]/25 active:bg-[var(--ios-element)]/45 active:scale-[0.985] transition-all cursor-pointer select-none group"
+              className="hidden md:flex flex-col gap-0.5 px-2.5 py-2 mt-1 rounded-[10px] bg-[var(--ios-element)]/15 hover:bg-[var(--ios-element)]/30 active:bg-[var(--ios-element)]/50 active:scale-[0.985] transition-all cursor-pointer select-none group"
               title={lang === 'en' ? 'Click to open announcement' : 'Kliknij, aby otworzyć ogłoszenie'}
             >
               <div className="flex items-center justify-between gap-2">
@@ -224,7 +224,7 @@ export function MiniMessagesWidget({
                   {latestAnnouncement.date}
                 </span>
               </div>
-              <p className="text-[12px] font-normal text-[var(--ios-secondary)] group-hover:text-[var(--ios-label)] line-clamp-1 truncate leading-tight">
+              <p className="text-[12px] font-normal text-[var(--ios-secondary)] group-hover:text-[var(--ios-label)] line-clamp-1 truncate leading-tight mt-0.5">
                 {latestAnnouncement.title || latestAnnouncement.content || '—'}
               </p>
             </div>

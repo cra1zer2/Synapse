@@ -512,7 +512,7 @@ export function IosScreen({
               position: 'relative',
               width: 'min(860px, 100%)',
               maxHeight: '88vh',
-              backgroundColor: 'var(--ios-bg-primary)',
+              backgroundColor: 'var(--ios-card-solid)',
               borderRadius: '26px',
               border: '1px solid var(--ios-border)',
               boxShadow: 'none',

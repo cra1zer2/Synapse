@@ -196,7 +196,7 @@ export function ScheduleWidget({
 
   return (
     <section className="w-full flex flex-col gap-3.5 pb-12 select-none">
-      <IosCard className="overflow-hidden">
+      <div className="rounded-[22px] bg-[var(--ios-element)]/20 border border-[var(--ios-border)] overflow-hidden">
         <div className="px-3.5 py-2.5 flex items-center justify-between border-b border-[var(--ios-separator)]">
           <button
             type="button"
@@ -298,9 +298,9 @@ export function ScheduleWidget({
             })}
           </div>
         </div>
-      </IosCard>
+      </div>
 
-      <IosCard className="p-4 flex flex-col gap-2.5 select-none">
+      <div className="flex flex-col gap-2.5 select-none">
         {isLoadingWeek ? (
           <div className="flex flex-col gap-2.5">
             {Array.from({ length: Math.min(Math.max(cachedLessonCount, 4), 7) }).map((_, i) => (
@@ -385,7 +385,7 @@ export function ScheduleWidget({
                         <div
                           onClick={() => onSelectLesson(lesson)}
                           className={cn(
-                            'w-full bg-[var(--ios-block-bg)] hover:bg-[var(--ios-block-bg-hover)] rounded-[16px] p-3.5 pr-4 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-block-bg-active)]',
+                            'w-full bg-[var(--ios-element)]/25 hover:bg-[var(--ios-element)]/40 border border-[var(--ios-border)]/50 rounded-[16px] p-3.5 pr-4 flex items-center justify-between gap-3 transition-all duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/50',
                             isCancelled && 'opacity-40'
                           )}
                         >
@@ -460,7 +460,7 @@ export function ScheduleWidget({
             )}
           </div>
         )}
-      </IosCard>
+      </div>
     </section>
   )
 }

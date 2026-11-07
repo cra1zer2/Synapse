@@ -271,7 +271,7 @@ html.is-iphone .ios-header {
 .ios-card {
   background-color: var(--ios-card-solid);
   border-radius: var(--ios-radius-card);
-  border: 1px solid var(--ios-border);
+  border: none;
   box-shadow: none;
   overflow: hidden;
 }

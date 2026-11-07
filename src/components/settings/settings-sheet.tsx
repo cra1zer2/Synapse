@@ -319,7 +319,7 @@ export function SettingsSheet({
                 transition: 'transform 0.26s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.22s cubic-bezier(0.32, 0.72, 0, 1)',
                 willChange: 'transform, opacity'
               }}
-              className="w-[308px] bg-[var(--ios-card-solid)] rounded-[34px] p-[14px] pt-[22px] border border-[var(--ios-border)] flex flex-col gap-5 text-center"
+              className="w-[308px] bg-[var(--ios-card-solid)] rounded-[34px] p-[14px] pt-[22px] border border-[var(--ios-border)] flex flex-col gap-5 text-center -mt-10 md:-mt-14"
             >
               <div className="px-3 flex flex-col items-center gap-1.5">
                 <div className="w-11 h-11 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] border border-[var(--ios-blue)]/20 flex items-center justify-center font-semibold text-[15px] mb-1">

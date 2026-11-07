@@ -196,7 +196,7 @@ export function ScheduleWidget({
 
   return (
     <section className="w-full flex flex-col gap-3.5 pb-12 select-none">
-      <div className="rounded-[22px] bg-[var(--ios-element)]/20 border border-[var(--ios-border)] overflow-hidden">
+      <IosCard className="overflow-hidden">
         <div className="px-3.5 py-2.5 flex items-center justify-between border-b border-[var(--ios-separator)]">
           <button
             type="button"
@@ -298,7 +298,7 @@ export function ScheduleWidget({
             })}
           </div>
         </div>
-      </div>
+      </IosCard>
 
       <div className="flex flex-col gap-2.5 select-none">
         {isLoadingWeek ? (
@@ -354,7 +354,7 @@ export function ScheduleWidget({
             )}
 
             {currentDaySchedule && currentDaySchedule.lessons && currentDaySchedule.lessons.length > 0 ? (
-              <div className="flex flex-col gap-2.5">
+              <IosCard className="overflow-hidden">
                 {currentDaySchedule.lessons.map((lesson, idx) => {
                   const nextLesson = currentDaySchedule.lessons[idx + 1]
                   const isToday = Boolean(currentDaySchedule.isToday)
@@ -366,18 +366,9 @@ export function ScheduleWidget({
 
                   const isCancelled = Boolean(lesson.isCancelled)
                   const isSub = Boolean(lesson.isSubstitution)
-                  const isNextCancelled = Boolean(nextLesson?.isCancelled)
                   const displayTitle = formatSubjectName(lesson.subject, showFullSubjectNames)
 
                   const shouldShowCountdown = breakActive && breakRemaining > 0
-                  const isNextBreakAfterActive = liveState === 'active' && breakMinutes > 0
-                  const shouldShowBreak = Boolean(
-                    nextLesson &&
-                    !isCancelled &&
-                    !isNextCancelled &&
-                    breakMinutes > 0 &&
-                    (shouldShowCountdown || isNextBreakAfterActive)
-                  )
 
                   return (
                     <Fragment key={lesson.number + '-' + lesson.subject + '-' + lesson.time + '-' + idx}>
@@ -385,18 +376,23 @@ export function ScheduleWidget({
                         <div
                           onClick={() => onSelectLesson(lesson)}
                           className={cn(
-                            'w-full bg-[var(--ios-element)]/25 hover:bg-[var(--ios-element)]/40 border border-[var(--ios-border)]/50 rounded-[16px] p-3.5 pr-4 flex items-center justify-between gap-3 transition-all duration-150 cursor-pointer active:scale-[0.985] active:bg-[var(--ios-element)]/50',
+                            'w-full p-3.5 px-4 flex items-center justify-between gap-3 transition-colors duration-100 cursor-pointer active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20',
                             isCancelled && 'opacity-40'
                           )}
                         >
                           <div className="flex-1 min-w-0 flex flex-col gap-0.5 justify-center">
                             <div className="flex items-center gap-1.5">
                               {liveState === 'active' && !isCancelled && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shrink-0" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shrink-0 animate-pulse" />
                               )}
                               <span className={cn('text-[12px] font-normal tracking-[-0.1px] leading-[16px] tabular-nums', isCancelled ? 'line-through text-[var(--ios-secondary)]' : 'text-[var(--ios-secondary)]')}>
                                 {lesson.time}
                               </span>
+                              {lesson.number !== undefined && lesson.number !== null && (
+                                <span className="text-[11px] font-medium text-[var(--ios-tertiary)] tabular-nums">
+                                  #{lesson.number}
+                                </span>
+                              )}
                             </div>
 
                             <h4 className={cn(
@@ -431,28 +427,29 @@ export function ScheduleWidget({
                         </div>
                       </div>
 
-                      {shouldShowBreak && (
-                        <div className="w-full flex items-center gap-3 px-2 py-0.5">
-                          <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/70" />
-                          <div className={cn(
-                            'flex items-center gap-1 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full',
-                            shouldShowCountdown ? 'text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] animate-pulse' : 'text-[var(--ios-secondary)] bg-[var(--ios-element)]/75'
-                          )}>
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <circle cx="12" cy="12" r="10" />
-                              <polyline points="12 6 12 12 16 14" />
-                            </svg>
-                            <span className="tabular-nums">
-                              {shouldShowCountdown ? t.breakCountdownLabel(breakRemaining) : breakMinutes + ' min'}
-                            </span>
+                      {idx < currentDaySchedule.lessons.length - 1 && (
+                        shouldShowCountdown ? (
+                          <div className="w-full flex items-center gap-3 px-4 py-1.5 bg-[var(--ios-element)]/10">
+                            <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
+                            <div className="flex items-center gap-1 text-[11px] font-medium text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] animate-pulse px-2.5 py-0.5 rounded-full shrink-0">
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                              </svg>
+                              <span className="tabular-nums">
+                                {t.breakCountdownLabel(breakRemaining)}
+                              </span>
+                            </div>
+                            <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
                           </div>
-                          <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]/70" />
-                        </div>
+                        ) : (
+                          <div className="h-[1px] bg-[var(--ios-separator)] mx-4" />
+                        )
                       )}
                     </Fragment>
                   )
                 })}
-              </div>
+              </IosCard>
             ) : (
               <div className="py-8 text-center text-[15px] font-normal text-[var(--ios-secondary)]">
                 {t.noLessonsDay}

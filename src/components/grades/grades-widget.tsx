@@ -85,7 +85,7 @@ export function GradesWidget({
   return (
     <div className="w-full flex flex-col gap-3.5 pb-16 select-none">
       <IosCard className="p-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-end justify-between gap-3">
           <div className="flex flex-col gap-0.5">
             <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight">
               {t.gpaTitle}
@@ -95,17 +95,35 @@ export function GradesWidget({
             </h2>
           </div>
 
-          <IosSegmentedControl<1 | 2>
-            value={selectedSemester}
-            onChange={setSelectedSemester}
-            options={[
-              { id: 1, label: lang === 'en' ? 'Term 1' : 'Semestr 1' },
-              { id: 2, label: lang === 'en' ? 'Term 2' : 'Semestr 2' }
-            ]}
-            className="w-[192px] shrink-0"
-          />
+          {gradesData.recentGrades && gradesData.recentGrades.length > 0 && (
+            <div className="flex items-center gap-1.5 pb-0.5">
+              {gradesData.recentGrades.slice(0, 5).map((g, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => onSelectGrade(g, g.subject || '')}
+                  title={`${g.subject || ''}: ${g.grade}${g.category ? ` (${g.category})` : ''}`}
+                  className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] font-medium tabular-nums cursor-pointer hover:opacity-80 active:scale-90 transition-all select-none ${getGradeBadgeStyle(g.grade)}`}
+                >
+                  {g.grade}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </IosCard>
+
+      <div className="w-full flex justify-center">
+        <IosSegmentedControl<1 | 2>
+          value={selectedSemester}
+          onChange={setSelectedSemester}
+          options={[
+            { id: 1, label: lang === 'en' ? 'Term 1' : 'Semestr 1' },
+            { id: 2, label: lang === 'en' ? 'Term 2' : 'Semestr 2' }
+          ]}
+          className="w-full max-w-sm"
+        />
+      </div>
 
       <IosCard className="overflow-hidden">
         {subjects.length > 0 ? (

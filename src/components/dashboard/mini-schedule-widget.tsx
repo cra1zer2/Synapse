@@ -129,7 +129,7 @@ export function MiniScheduleWidget({
   showFullSubjectNames = false,
   lang = 'pl',
   t,
-  showAllLessons = true,
+  showAllLessons = false,
   onSelectLesson,
   onOpenFullSchedule
 }: MiniScheduleWidgetProps) {
@@ -366,13 +366,27 @@ export function MiniScheduleWidget({
         </div>
       ) : (
         <div className={cn('ios-reveal', isOffline && 'opacity-50 grayscale')}>
-          {displayLessons.length === 0 ? (
+          {!showAllLessons && scheduleState.mode === 'all_ended_today' && !shouldShowNextDay ? (
+            <div className="py-6 flex flex-col items-center justify-center gap-1.5 text-center">
+              <div className="w-9 h-9 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] border border-[var(--ios-green)]/20 flex items-center justify-center mb-1">
+                <svg className="w-4 h-4 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+              <span className="text-[15px] font-medium text-[var(--ios-label)] tracking-[-0.2px]">
+                {lang === 'en' ? 'All lessons for today completed' : 'Wszystkie lekcje na dziś zakończone'}
+              </span>
+              <span className="text-[12px] font-normal text-[var(--ios-secondary)]">
+                {lang === 'en' ? 'Rest before tomorrow' : 'Odpocznij przed kolejnym dniem'}
+              </span>
+            </div>
+          ) : displayLessons.length === 0 ? (
             <div className="py-6 text-center text-[14px] font-normal text-[var(--ios-secondary)]">
               {t.noLessonsDay}
             </div>
           ) : (
             <div className="flex flex-col">
-              {scheduleState.mode === 'all_ended_today' && !shouldShowNextDay && (
+              {showAllLessons && scheduleState.mode === 'all_ended_today' && !shouldShowNextDay && (
                 <div className="mb-2 py-1.5 px-3 rounded-[10px] bg-[var(--ios-green-subtle)] text-[var(--ios-green)] text-[12px] font-medium flex items-center justify-between select-none">
                   <span>{lang === 'en' ? 'All lessons for today completed' : 'Lekcje na dziś zakończone'}</span>
                   <span className="opacity-75">{lang === 'en' ? 'Done' : 'Koniec'}</span>
@@ -406,14 +420,22 @@ export function MiniScheduleWidget({
                     />
 
                     {!isLast && (
-                      isBreakActive && breakRemaining > 0 ? (
+                      !showAllLessons ? (
                         <IosBreakDivider
-                          minutes={breakMinutes}
-                          isCountdown={true}
+                          minutes={breakMinutes || 10}
+                          isCountdown={Boolean(isBreakActive && breakRemaining > 0)}
                           countdownText={t.breakCountdownLabel(breakRemaining)}
                         />
                       ) : (
-                        <div className="h-[1px] bg-[var(--ios-separator)] mx-1.5 my-0.5" />
+                        isBreakActive && breakRemaining > 0 ? (
+                          <IosBreakDivider
+                            minutes={breakMinutes}
+                            isCountdown={true}
+                            countdownText={t.breakCountdownLabel(breakRemaining)}
+                          />
+                        ) : (
+                          <div className="h-[1px] bg-[var(--ios-separator)] mx-1.5 my-0.5" />
+                        )
                       )
                     )}
                   </Fragment>

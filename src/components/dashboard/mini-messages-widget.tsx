@@ -40,26 +40,10 @@ export function MiniMessagesWidget({
 
   return (
     <IosCard className="p-4 flex flex-col gap-3 select-none">
-      <div
-        onClick={onOpenMessages}
-        className="flex items-center gap-2 pb-2.5 border-b border-[var(--ios-separator)] cursor-pointer active:opacity-70 transition-opacity"
-      >
+      <div className="flex items-center gap-2 pb-2.5 border-b border-[var(--ios-separator)]">
         <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.2px]">
           {t.messages}
         </span>
-        <svg
-          width="16"
-          height="16"
-          className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0 ml-auto"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
       </div>
 
       <div className="flex flex-col">
@@ -135,9 +119,14 @@ export function MiniMessagesWidget({
               title={lang === 'en' ? 'Click to open message' : 'Kliknij, aby otworzyć wiadomość'}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[12px] font-semibold text-[var(--ios-label)] truncate">
-                  {cleanSenderName(latestMessage.sender)}
-                </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {!latestMessage.isRead && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shrink-0" />
+                  )}
+                  <span className="text-[12px] font-semibold text-[var(--ios-blue)] truncate">
+                    {cleanSenderName(latestMessage.sender)}
+                  </span>
+                </div>
                 <span className="text-[11px] tabular-nums shrink-0 text-[var(--ios-tertiary)]">
                   {latestMessage.date}
                 </span>

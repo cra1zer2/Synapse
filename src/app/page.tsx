@@ -694,6 +694,7 @@ export default function Home() {
               showFullSubjectNames={showFullSubjectNames}
               lang={lang}
               t={t}
+              showAllLessons={false}
               onSelectLesson={handleSelectLesson}
               onOpenFullSchedule={(targetDay, targetIsoDate) => {
                 if (targetIsoDate) {

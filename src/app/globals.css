@@ -39,10 +39,8 @@
   --ios-secondary: #5c5c60;
   --ios-tertiary: #8e8e93;
   --ios-quaternary: #c7c7cc;
-  --ios-tertiary: #c7c7cc;
-  --ios-quaternary: #d1d1d6;
 
-  --ios-separator: rgba(60, 60, 67, 0.24);
+  --ios-separator: rgba(60, 60, 67, 0.36);
   --ios-border: rgba(60, 60, 67, 0.14);
   --ios-hairline: 0.5px;
 

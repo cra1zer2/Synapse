@@ -395,9 +395,11 @@ export function IosScreen({
     </div>
   )
 
+  const isStackedOnDesktop = isDesktop && resolvedZIndex > 50
+
   const desktopHeader = (
-    <header className="sticky top-0 z-30 w-full bg-[var(--ios-card-solid)] border-b border-[var(--ios-separator)] px-6 py-3.5 flex items-center justify-between shrink-0">
-      <div className="flex items-center gap-2 min-w-0">
+    <header className="relative sticky top-0 z-30 w-full bg-[var(--ios-card-solid)] border-b border-[var(--ios-separator)] px-6 py-3.5 flex items-center justify-between shrink-0">
+      <div className="z-10 flex items-center gap-2 min-w-0">
         {showBackButton && onClose && (
           <button
             type="button"
@@ -410,14 +412,19 @@ export function IosScreen({
             <span className="max-w-[140px] truncate">{backLabel}</span>
           </button>
         )}
-        {titleView ? titleView : (
-          <h3 className="text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.3px] truncate">
-            {title}
-          </h3>
-        )}
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-20">
+        <div className="pointer-events-auto flex items-center justify-center max-w-full">
+          {titleView ? titleView : (
+            <h3 className="text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.3px] truncate text-center">
+              {title}
+            </h3>
+          )}
+        </div>
+      </div>
+
+      <div className="z-10 flex items-center gap-3 shrink-0">
         {trailing}
         {onClose && (
           <button
@@ -478,10 +485,12 @@ export function IosScreen({
           position: 'fixed',
           inset: 0,
           zIndex: resolvedZIndex - 1,
-          backgroundColor: isDesktop ? 'rgba(0, 0, 0, 0.45)' : 'var(--ios-subview-backdrop)',
-          backdropFilter: isDesktop ? 'blur(8px)' : undefined,
-          WebkitBackdropFilter: isDesktop ? 'blur(8px)' : undefined,
-          opacity: isVisible && !isReceded ? 1 : 0,
+          backgroundColor: isDesktop
+            ? (isStackedOnDesktop ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.45)')
+            : 'var(--ios-subview-backdrop)',
+          backdropFilter: isDesktop ? (isStackedOnDesktop ? undefined : 'blur(8px)') : undefined,
+          WebkitBackdropFilter: isDesktop ? (isStackedOnDesktop ? undefined : 'blur(8px)') : undefined,
+          opacity: isDesktop ? (isVisible ? 1 : 0) : (isVisible && !isReceded ? 1 : 0),
           pointerEvents: isVisible && !isReceded ? 'auto' : 'none',
           transition: isDesktop ? 'opacity 0.2s ease' : IOS_BACKDROP_TRANSITION,
           willChange: 'opacity'
@@ -503,7 +512,7 @@ export function IosScreen({
               position: 'relative',
               width: 'min(860px, 100%)',
               maxHeight: '88vh',
-              backgroundColor: 'var(--ios-card-solid)',
+              backgroundColor: 'var(--ios-bg-primary)',
               borderRadius: '26px',
               border: '1px solid var(--ios-border)',
               boxShadow: 'none',

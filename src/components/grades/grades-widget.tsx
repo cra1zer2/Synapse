@@ -17,8 +17,8 @@ interface GradesWidgetProps {
 
 function getGradeBadgeStyle(gradeStr: string): string {
   const g = gradeStr.trim().toLowerCase()
-  if (g.startsWith('1')) {
-    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
+  if (g.startsWith('0') || g.startsWith('1') || g === 'nb') {
+    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
   }
   return 'bg-[var(--ios-element)]/65 text-[var(--ios-label)]'
 }
@@ -119,7 +119,7 @@ export function GradesWidget({
             return (
               <div
                 key={sub.subject + '-' + idx}
-                className="relative p-3.5 px-4 flex items-center justify-between gap-3 after:absolute after:bottom-0 after:right-0 after:left-4 after:h-[0.5px] after:bg-[var(--ios-separator)] last:after:hidden"
+                className="relative p-3.5 px-4 flex items-center justify-between gap-3 after:absolute after:bottom-0 after:right-0 after:left-4 after:h-[1px] after:bg-[var(--ios-separator)] last:after:hidden"
               >
                 <div className="flex-1 min-w-0 pr-3">
                   <span className="text-[15px] font-medium leading-snug tracking-[-0.2px] text-[var(--ios-label)] truncate block">

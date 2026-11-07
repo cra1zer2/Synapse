@@ -236,6 +236,7 @@ export function QuickNbScreen({
       onClose={onClose}
       title={pageTitle}
       backLabel={t.backAction}
+      showBackButton={true}
       isSubView={true}
       className="z-[60]"
     >

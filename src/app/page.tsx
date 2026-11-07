@@ -644,6 +644,7 @@ export default function Home() {
 
               <MiniAttendanceWidget
                 attendanceData={isManualRefreshing ? null : timetable.attendanceData}
+                timetableData={isManualRefreshing ? null : activeTodayData}
                 isLoading={isManualRefreshing || (!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError)}
                 error={timetable.attendanceError}
                 onRetry={handleManualRefresh}
@@ -726,6 +727,7 @@ export default function Home() {
 
             <MiniAttendanceWidget
               attendanceData={isManualRefreshing ? null : timetable.attendanceData}
+              timetableData={isManualRefreshing ? null : activeTodayData}
               isLoading={isManualRefreshing || (!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError)}
               error={timetable.attendanceError}
               onRetry={handleManualRefresh}
@@ -1034,6 +1036,7 @@ export default function Home() {
         onClose={() => setShowLiveJustifications(false)}
         title={lang === 'en' ? 'Justification statuses' : 'Statusy usprawiedliwień'}
         backLabel={t.backAction}
+        showBackButton={true}
         isSubView={true}
         className="z-[75]"
         trailing={
@@ -1046,7 +1049,7 @@ export default function Home() {
           </button>
         }
       >
-        <div className="flex flex-col gap-3.5 pb-16 select-none max-w-[402px] mx-auto w-full">
+        <div className="flex flex-col gap-3.5 pb-16 select-none max-w-2xl mx-auto w-full">
           <IosSegmentedControl<'0' | '1' | '2' | '3'>
             value={liveJustFilter}
             onChange={(id) => handleOpenLiveJustifications(id)}

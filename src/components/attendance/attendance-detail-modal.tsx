@@ -42,6 +42,7 @@ export function AttendanceDetailModal({
       onClose={onClose}
       title={shortTitle}
       backLabel={t.backAction}
+      showBackButton={true}
       isSubView={true}
       className="z-[60]"
     >

@@ -15,8 +15,8 @@ interface GradeDetailModalProps {
 
 function getGradeBadgeStyle(gradeStr: string): string {
   const g = gradeStr.trim().toLowerCase()
-  if (g.startsWith('1')) {
-    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
+  if (g.startsWith('0') || g.startsWith('1') || g === 'nb') {
+    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
   }
   return 'bg-[var(--ios-element)]/65 text-[var(--ios-label)]'
 }

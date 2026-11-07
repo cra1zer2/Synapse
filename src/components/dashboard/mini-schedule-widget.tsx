@@ -65,7 +65,7 @@ function MiniLessonItem({
         }
       }}
       className={cn(
-        'w-full py-2.5 px-1.5 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]',
+        'w-full py-2.5 px-1.5 flex items-center justify-between gap-3 transition-all duration-150 cursor-pointer select-none rounded-[12px] hover:bg-[var(--ios-element)]/20 active:bg-[var(--ios-element)]/40 active:scale-[0.985]',
         isCancelled && 'opacity-40',
         isPassed && !isCancelled && 'opacity-65'
       )}
@@ -315,11 +315,11 @@ export function MiniScheduleWidget({
   }, [shouldShowNextDay, nextDayLessons, todayLessons, showAllLessons, scheduleState.currentLesson, scheduleState.nextLesson])
 
   return (
-    <IosCard
-      onClick={handleCardClick}
-      className="p-4 flex flex-col gap-3 select-none"
-    >
-      <div className="flex items-center justify-between pb-2.5 border-b border-[var(--ios-separator)]">
+    <IosCard className="p-4 flex flex-col gap-3 select-none">
+      <div
+        onClick={handleCardClick}
+        className="flex items-center justify-between pb-2.5 border-b border-[var(--ios-separator)] cursor-pointer active:opacity-70 transition-opacity"
+      >
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] truncate">
             {t.schedule}
@@ -413,7 +413,7 @@ export function MiniScheduleWidget({
                           countdownText={t.breakCountdownLabel(breakRemaining)}
                         />
                       ) : (
-                        <div className="h-[0.5px] bg-[var(--ios-separator)] mx-1.5 my-0.5" />
+                        <div className="h-[1px] bg-[var(--ios-separator)] mx-1.5 my-0.5" />
                       )
                     )}
                   </Fragment>

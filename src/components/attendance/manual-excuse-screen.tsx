@@ -285,6 +285,7 @@ export function ManualExcuseScreen({
       onClose={onClose}
       title={pageTitle}
       backLabel={t.backAction}
+      showBackButton={true}
       isSubView={true}
       className="z-[60]"
     >
@@ -323,7 +324,7 @@ export function ManualExcuseScreen({
                     />
                   </div>
 
-                  <div className="h-[0.5px] bg-[var(--ios-separator)]" />
+                  <div className="h-[1px] bg-[var(--ios-separator)]" />
 
                   <div className="flex items-center justify-between">
                     <span className="text-[15px] font-normal text-[var(--ios-label)]">

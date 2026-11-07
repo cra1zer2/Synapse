@@ -296,7 +296,7 @@ export function MessagesWidget({
                 </svg>
 
                 {idx < filteredMessages.length - 1 && (
-                  <div className="absolute bottom-0 right-0 left-[38px] h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
+                  <div className="absolute bottom-0 right-0 left-[38px] h-[1px] bg-[var(--ios-separator)] pointer-events-none" />
                 )}
               </div>
             ))
@@ -318,7 +318,7 @@ export function MessagesWidget({
                 <div className="w-48 h-[15px] rounded-full ios-skeleton" />
                 <div className="w-full h-[12px] rounded-full ios-skeleton" />
                 {idx < 3 && (
-                  <div className="absolute bottom-0 right-4 left-4 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
+                  <div className="absolute bottom-0 right-4 left-4 h-[1px] bg-[var(--ios-separator)] pointer-events-none" />
                 )}
               </div>
             ))
@@ -347,7 +347,7 @@ export function MessagesWidget({
                 </p>
 
                 {idx < filteredAnnouncements.length - 1 && (
-                  <div className="absolute bottom-0 right-4 left-4 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
+                  <div className="absolute bottom-0 right-4 left-4 h-[1px] bg-[var(--ios-separator)] pointer-events-none" />
                 )}
               </div>
             ))

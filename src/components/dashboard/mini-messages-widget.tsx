@@ -67,7 +67,7 @@ export function MiniMessagesWidget({
         <div className="flex flex-col py-1">
           <div
             onClick={onOpenMessages}
-            className="w-full py-2 px-1 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]"
+            className="w-full py-2 px-1 flex items-center justify-between gap-3 transition-all duration-150 cursor-pointer select-none rounded-[12px] hover:bg-[var(--ios-element)]/20 active:bg-[var(--ios-element)]/40 active:scale-[0.99]"
           >
             <div className="flex items-center gap-3.5 min-w-0 flex-1">
               <div
@@ -120,7 +120,7 @@ export function MiniMessagesWidget({
             </div>
           </div>
 
-          {/* Desktop Latest Message Snippet */}
+          {/* Desktop Latest Message Snippet (2 rows: sender + date on top, subject below) */}
           {latestMessage && (
             <div
               onClick={(e) => {
@@ -131,20 +131,20 @@ export function MiniMessagesWidget({
                   onOpenMessages()
                 }
               }}
-              className="hidden md:flex items-center justify-between gap-2 pl-[49px] pr-2 py-1.5 text-[12px] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] rounded-[8px] hover:bg-[var(--ios-element)]/30 active:bg-[var(--ios-element)]/50 transition-colors cursor-pointer select-none group"
+              className="hidden md:flex flex-col gap-0.5 pl-[50px] pr-2 py-1.5 rounded-[10px] hover:bg-[var(--ios-element)]/25 active:bg-[var(--ios-element)]/45 active:scale-[0.985] transition-all cursor-pointer select-none group"
               title={lang === 'en' ? 'Click to open message' : 'Kliknij, aby otworzyć wiadomość'}
             >
-              <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                <span className="font-semibold text-[var(--ios-label)] truncate max-w-[140px] shrink-0">
-                  {cleanSenderName(latestMessage.sender)}:
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[12px] font-semibold text-[var(--ios-label)] truncate">
+                  {cleanSenderName(latestMessage.sender)}
                 </span>
-                <span className="truncate text-[var(--ios-secondary)] group-hover:text-[var(--ios-label)]">
-                  {latestMessage.subject || latestMessage.content || '—'}
+                <span className="text-[11px] tabular-nums shrink-0 text-[var(--ios-tertiary)]">
+                  {latestMessage.date}
                 </span>
               </div>
-              <span className="text-[11px] tabular-nums shrink-0 text-[var(--ios-tertiary)] ml-1">
-                {latestMessage.date}
-              </span>
+              <p className="text-[12px] font-normal text-[var(--ios-secondary)] group-hover:text-[var(--ios-label)] line-clamp-1 truncate leading-tight">
+                {latestMessage.subject || latestMessage.content || '—'}
+              </p>
             </div>
           )}
         </div>
@@ -155,7 +155,7 @@ export function MiniMessagesWidget({
         <div className="flex flex-col py-1">
           <div
             onClick={onOpenAnnouncements}
-            className="w-full py-2 px-1 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/40 rounded-[12px]"
+            className="w-full py-2 px-1 flex items-center justify-between gap-3 transition-all duration-150 cursor-pointer select-none rounded-[12px] hover:bg-[var(--ios-element)]/20 active:bg-[var(--ios-element)]/40 active:scale-[0.99]"
           >
             <div className="flex items-center gap-3.5 min-w-0 flex-1">
               <div
@@ -202,7 +202,7 @@ export function MiniMessagesWidget({
             </div>
           </div>
 
-          {/* Desktop Latest Announcement Snippet */}
+          {/* Desktop Latest Announcement Snippet (2 rows: author + date on top, title below) */}
           {latestAnnouncement && (
             <div
               onClick={(e) => {
@@ -213,20 +213,20 @@ export function MiniMessagesWidget({
                   onOpenAnnouncements()
                 }
               }}
-              className="hidden md:flex items-center justify-between gap-2 pl-[49px] pr-2 py-1.5 text-[12px] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] rounded-[8px] hover:bg-[var(--ios-element)]/30 active:bg-[var(--ios-element)]/50 transition-colors cursor-pointer select-none group"
+              className="hidden md:flex flex-col gap-0.5 pl-[50px] pr-2 py-1.5 rounded-[10px] hover:bg-[var(--ios-element)]/25 active:bg-[var(--ios-element)]/45 active:scale-[0.985] transition-all cursor-pointer select-none group"
               title={lang === 'en' ? 'Click to open announcement' : 'Kliknij, aby otworzyć ogłoszenie'}
             >
-              <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                <span className="font-semibold text-[var(--ios-purple)] truncate max-w-[140px] shrink-0">
-                  {cleanSenderName(latestAnnouncement.author)}:
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[12px] font-semibold text-[var(--ios-purple)] truncate">
+                  {cleanSenderName(latestAnnouncement.author)}
                 </span>
-                <span className="truncate text-[var(--ios-secondary)] group-hover:text-[var(--ios-label)]">
-                  {latestAnnouncement.title || latestAnnouncement.content || '—'}
+                <span className="text-[11px] tabular-nums shrink-0 text-[var(--ios-tertiary)]">
+                  {latestAnnouncement.date}
                 </span>
               </div>
-              <span className="text-[11px] tabular-nums shrink-0 text-[var(--ios-tertiary)] ml-1">
-                {latestAnnouncement.date}
-              </span>
+              <p className="text-[12px] font-normal text-[var(--ios-secondary)] group-hover:text-[var(--ios-label)] line-clamp-1 truncate leading-tight">
+                {latestAnnouncement.title || latestAnnouncement.content || '—'}
+              </p>
             </div>
           )}
         </div>

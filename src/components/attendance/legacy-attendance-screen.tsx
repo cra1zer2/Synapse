@@ -282,6 +282,7 @@ export function LegacyAttendanceScreen({
         onClose={handleCloseDay}
         title={displayDay ? displayDay.date : ''}
         backLabel={lang === 'en' ? 'Table' : 'Tabela'}
+        showBackButton={true}
         isSubView={true}
         className="z-[70]"
       >

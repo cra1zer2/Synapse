@@ -3,6 +3,7 @@
 import { GradesResult, GradeItem } from '@/models/grade.model'
 import { AppDictionary } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
+import { cn } from '@/utils/cn.util'
 
 interface MiniGradesWidgetProps {
   gradesData: GradesResult | null
@@ -16,20 +17,8 @@ interface MiniGradesWidgetProps {
 
 function getGradeBadgeStyle(gradeStr: string): string {
   const g = gradeStr.trim().toLowerCase()
-  if (g.startsWith('1')) {
-    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border border-[var(--ios-red)]/25'
-  }
-  if (g.startsWith('5') || g.startsWith('6')) {
-    return 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)] border border-[var(--ios-green)]/25'
-  }
-  if (g.startsWith('4')) {
-    return 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] border border-[var(--ios-blue)]/25'
-  }
-  if (g === 'nb') {
-    return 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] border border-[var(--ios-orange)]/25 font-semibold'
-  }
-  if (g === '+' || g === '-') {
-    return 'bg-[var(--ios-element)]/50 text-[var(--ios-secondary)] border border-[var(--ios-border)]'
+  if (g.startsWith('0') || g.startsWith('1') || g === 'nb') {
+    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border border-[var(--ios-red)]/25 font-semibold'
   }
   return 'bg-[var(--ios-element)]/60 text-[var(--ios-label)] border border-[var(--ios-border)]'
 }
@@ -49,12 +38,17 @@ export function MiniGradesWidget({
   const isDanger = typeof avg === 'number' && avg < 2.0
   const recentGrades: GradeItem[] = gradesData?.recentGrades?.slice(0, 5) || []
 
+  const canOpenGrades = Boolean(gradesData && !isPending && !error)
+
   return (
-    <IosCard
-      onClick={!gradesData && (isPending || error) ? undefined : onOpenGrades}
-      className="p-4 flex flex-col gap-3 select-none"
-    >
-      <div className="flex items-center justify-between pb-2.5 border-b border-[var(--ios-separator)]">
+    <IosCard className="p-4 flex flex-col gap-3 select-none">
+      <div
+        onClick={canOpenGrades ? onOpenGrades : undefined}
+        className={cn(
+          "flex items-center justify-between pb-2.5 border-b border-[var(--ios-separator)] transition-opacity",
+          canOpenGrades && "cursor-pointer active:opacity-70"
+        )}
+      >
         <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.2px]">
           {t.grades}
         </span>
@@ -106,7 +100,13 @@ export function MiniGradesWidget({
         </div>
       ) : (
         <div className="flex items-end justify-between pt-0.5 min-h-[53px] ios-reveal">
-          <div className="flex flex-col">
+          <div
+            onClick={canOpenGrades ? onOpenGrades : undefined}
+            className={cn(
+              "flex flex-col rounded-[8px] p-0.5 -m-0.5 transition-transform",
+              canOpenGrades && "cursor-pointer active:scale-[0.98]"
+            )}
+          >
             <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight">
               {t.gpaTitle}
             </span>

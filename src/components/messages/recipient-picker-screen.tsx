@@ -69,6 +69,7 @@ export function RecipientPickerScreen({
       onClose={onClose}
       title={isEn ? 'Select Recipients' : 'Wybierz odbiorców'}
       backLabel={t.backAction}
+      showBackButton={true}
       isSubView={true}
       className="z-[80]"
       trailing={

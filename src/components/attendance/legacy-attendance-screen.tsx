@@ -183,7 +183,7 @@ export function LegacyAttendanceScreen({
 
             <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
               {/* Шапка таблицы с легкими номерами уроков */}
-              <div className="px-3 py-2 flex items-center justify-between gap-2 bg-[var(--ios-element)]/30 border-b border-[var(--ios-separator)] text-[11px] font-normal text-[var(--ios-secondary)]">
+              <div className="px-3 py-2 flex items-center justify-between gap-2 bg-[var(--ios-element)] border-b border-[var(--ios-separator)] text-[11px] font-medium text-[var(--ios-secondary)]">
                 <span className="w-[58px] shrink-0 text-left">Data</span>
 
                 <div className="grid grid-cols-11 gap-0.5 flex-1 text-center">
@@ -203,7 +203,7 @@ export function LegacyAttendanceScreen({
                   <div
                     key={day.date}
                     onClick={() => handleOpenDay(day)}
-                    className="px-3 py-2 flex items-center justify-between gap-2 hover:bg-[var(--ios-element)]/25 active:bg-[var(--ios-element)]/45 transition-colors cursor-pointer"
+                    className="px-3 py-2 flex items-center justify-between gap-2 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors cursor-pointer"
                   >
                     <div className="flex flex-col w-[58px] shrink-0">
                       <div className="flex items-baseline gap-1">
@@ -226,7 +226,7 @@ export function LegacyAttendanceScreen({
                           return (
                             <div
                               key={col}
-                              className="w-full aspect-square max-h-[22px] rounded-[4px] bg-[var(--ios-element)]/20 flex items-center justify-center text-[11px] text-[var(--ios-secondary)]/30 font-normal"
+                              className="w-full aspect-square max-h-[22px] rounded-[5px] bg-[var(--ios-element)] flex items-center justify-center text-[10px] text-[var(--ios-tertiary)] font-normal"
                             >
                               ·
                             </div>
@@ -241,21 +241,21 @@ export function LegacyAttendanceScreen({
                         const isZw = t === 'zw'
 
                         const badgeClass = isSl
-                          ? 'bg-[var(--ios-yellow)]/15 text-[var(--ios-yellow)] dark:text-[#ffd60a] border-[var(--ios-yellow)]/35 font-medium'
+                          ? 'bg-[var(--ios-yellow)]/20 text-[var(--ios-yellow)] dark:text-[#ffd60a] font-semibold'
                           : isNu
-                            ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border-[var(--ios-red)]/35 font-medium'
+                            ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
                             : isU
-                              ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)] border-[var(--ios-green)]/35 font-medium'
+                              ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)] font-semibold'
                               : isSp
-                                ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] border-[var(--ios-orange)]/35 font-medium'
+                                ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] font-semibold'
                                 : isZw
-                                  ? 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)] border-[var(--ios-purple)]/35 font-medium'
-                                  : 'bg-[var(--ios-element)] text-[var(--ios-label)] border-transparent font-medium'
+                                  ? 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)] font-semibold'
+                                  : 'bg-[var(--ios-element)] text-[var(--ios-label)] font-medium'
 
                         return (
                           <div
                             key={col}
-                            className={"w-full aspect-square max-h-[22px] rounded-[4px] border flex items-center justify-center text-[9px] leading-none " + badgeClass}
+                            className={"w-full aspect-square max-h-[22px] rounded-[5px] flex items-center justify-center text-[9px] leading-none " + badgeClass}
                           >
                             {lesson.symbol}
                           </div>

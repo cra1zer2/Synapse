@@ -18,9 +18,9 @@ interface MiniGradesWidgetProps {
 function getGradeBadgeStyle(gradeStr: string): string {
   const g = gradeStr.trim().toLowerCase()
   if (g.startsWith('0') || g.startsWith('1') || g === 'nb' || g === 'np') {
-    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border border-[var(--ios-red)]/25 font-semibold'
+    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
   }
-  return 'bg-[var(--ios-element)]/60 text-[var(--ios-label)] border border-[var(--ios-border)]'
+  return 'bg-[var(--ios-element)] text-[var(--ios-label)] font-medium'
 }
 
 export function MiniGradesWidget({
@@ -41,12 +41,12 @@ export function MiniGradesWidget({
   const canOpenGrades = Boolean(gradesData && !isPending && !error)
 
   return (
-    <IosCard className="p-4 flex flex-col gap-3 select-none">
+    <IosCard className="overflow-hidden flex flex-col select-none">
       <div
         onClick={canOpenGrades ? onOpenGrades : undefined}
         className={cn(
-          "flex items-center justify-between pb-2.5 border-b border-[var(--ios-separator)] transition-opacity",
-          canOpenGrades && "cursor-pointer active:opacity-70"
+          "px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-[var(--ios-separator)] transition-colors duration-150",
+          canOpenGrades && "cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
         )}
       >
         <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.2px]">
@@ -69,7 +69,7 @@ export function MiniGradesWidget({
       </div>
 
       {error && !gradesData ? (
-        <div className="py-4 flex flex-col items-center justify-center gap-2 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="px-4 py-5 flex flex-col items-center justify-center gap-2 text-center" onClick={(e) => e.stopPropagation()}>
           <span className="text-[13px] font-normal text-[var(--ios-label)] px-2">
             {error}
           </span>
@@ -84,7 +84,7 @@ export function MiniGradesWidget({
           )}
         </div>
       ) : isPending ? (
-        <div className="flex items-end justify-between pt-0.5 min-h-[53px]">
+        <div className="px-4 py-3.5 flex items-end justify-between min-h-[76px]">
           <div className="flex flex-col">
             <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight leading-tight">
               {t.gpaTitle}
@@ -99,14 +99,14 @@ export function MiniGradesWidget({
           </div>
         </div>
       ) : (
-        <div className="flex items-end justify-between pt-0.5 min-h-[53px] ios-reveal">
-          <div
-            onClick={canOpenGrades ? onOpenGrades : undefined}
-            className={cn(
-              "flex flex-col rounded-[8px] p-0.5 -m-0.5 transition-transform",
-              canOpenGrades && "cursor-pointer active:scale-[0.98]"
-            )}
-          >
+        <div
+          onClick={canOpenGrades ? onOpenGrades : undefined}
+          className={cn(
+            "px-4 py-3.5 flex items-end justify-between min-h-[76px] ios-reveal transition-colors duration-150",
+            canOpenGrades && "cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
+          )}
+        >
+          <div className="flex flex-col">
             <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight">
               {t.gpaTitle}
             </span>
@@ -126,7 +126,7 @@ export function MiniGradesWidget({
                     onSelectGrade?.(g)
                   }}
                   title={`${g.subject}: ${g.grade}${g.category ? ` (${g.category})` : ''}`}
-                  className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] font-medium tabular-nums cursor-pointer hover:opacity-80 active:scale-90 transition-all select-none ${getGradeBadgeStyle(g.grade)}`}
+                  className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] tabular-nums cursor-pointer hover:opacity-80 active:scale-[0.92] transition-all select-none ${getGradeBadgeStyle(g.grade)}`}
                 >
                   {g.grade}
                 </button>

@@ -14,34 +14,36 @@
   --ios-card: #ffffff;
   --ios-card-solid: #ffffff;
   --ios-card-secondary: #f2f2f7;
-  --ios-element: rgba(118, 118, 128, 0.16);
+  --ios-element: rgba(118, 118, 128, 0.12);
+  --ios-row-hover: rgba(118, 118, 128, 0.06);
+  --ios-row-active: rgba(118, 118, 128, 0.12);
   --ios-block-bg: rgba(118, 118, 128, 0.08);
   --ios-block-bg-hover: rgba(118, 118, 128, 0.12);
   --ios-block-bg-active: rgba(118, 118, 128, 0.16);
-  --ios-input: rgba(118, 118, 128, 0.14);
+  --ios-input: rgba(118, 118, 128, 0.12);
   --ios-switch-off: #e5e5ea;
 
   --ios-segmented-track: rgba(118, 118, 128, 0.12);
-  --ios-segmented-thumb: rgba(255, 255, 255, 0.85);
+  --ios-segmented-thumb: #ffffff;
   --ios-segmented-shadow: none;
 
   --ios-glass-border: transparent;
   --ios-card-shadow: none;
 
   --ios-subview-shadow: none;
-  --ios-subview-backdrop: rgba(0, 0, 0, 0.22);
+  --ios-subview-backdrop: rgba(0, 0, 0, 0.25);
 
   --ios-label: #000000;
-  --ios-label-secondary: #5c5c60;
-  --ios-label-tertiary: #8e8e93;
-  --ios-label-quaternary: #c7c7cc;
+  --ios-label-secondary: rgba(60, 60, 67, 0.60);
+  --ios-label-tertiary: rgba(60, 60, 67, 0.30);
+  --ios-label-quaternary: rgba(60, 60, 67, 0.18);
 
-  --ios-secondary: #5c5c60;
-  --ios-tertiary: #8e8e93;
-  --ios-quaternary: #c7c7cc;
+  --ios-secondary: rgba(60, 60, 67, 0.60);
+  --ios-tertiary: rgba(60, 60, 67, 0.30);
+  --ios-quaternary: rgba(60, 60, 67, 0.18);
 
-  --ios-separator: rgba(60, 60, 67, 0.36);
-  --ios-border: rgba(60, 60, 67, 0.14);
+  --ios-separator: rgba(60, 60, 67, 0.12);
+  --ios-border: rgba(60, 60, 67, 0.12);
   --ios-hairline: 0.5px;
 
   --ios-blue: #0088ff;
@@ -57,7 +59,7 @@
   --ios-teal: #00c8b3;
   --ios-yellow: #ffcc00;
 
-  --ios-room-bg: rgba(0, 136, 255, 0.08);
+  --ios-room-bg: rgba(0, 136, 255, 0.10);
   --ios-room-text: #0088ff;
 
   --ios-radius-card: 26px;
@@ -81,50 +83,52 @@
     --ios-card: #1c1c1e;
     --ios-card-solid: #1c1c1e;
     --ios-card-secondary: #2c2c2e;
-    --ios-element: rgba(255, 255, 255, 0.10);
-    --ios-block-bg: rgba(255, 255, 255, 0.08);
-    --ios-block-bg-hover: rgba(255, 255, 255, 0.12);
-    --ios-block-bg-active: rgba(255, 255, 255, 0.16);
-    --ios-input: rgba(118, 118, 128, 0.24);
-    --ios-switch-off: #38383a;
+    --ios-element: #2c2c2e;
+    --ios-row-hover: rgba(255, 255, 255, 0.04);
+    --ios-row-active: rgba(255, 255, 255, 0.09);
+    --ios-block-bg: rgba(255, 255, 255, 0.06);
+    --ios-block-bg-hover: rgba(255, 255, 255, 0.09);
+    --ios-block-bg-active: rgba(255, 255, 255, 0.12);
+    --ios-input: #2c2c2e;
+    --ios-switch-off: #39393d;
 
     --ios-segmented-track: rgba(118, 118, 128, 0.24);
-    --ios-segmented-thumb: rgba(255, 255, 255, 0.17);
+    --ios-segmented-thumb: #636366;
     --ios-segmented-shadow: none;
 
     --ios-glass-border: transparent;
     --ios-card-shadow: none;
 
     --ios-subview-shadow: none;
-    --ios-subview-backdrop: rgba(0, 0, 0, 0.48);
+    --ios-subview-backdrop: rgba(0, 0, 0, 0.55);
 
     --ios-label: #ffffff;
-    --ios-label-secondary: #a1a1a6;
-    --ios-label-tertiary: #76767a;
-    --ios-label-quaternary: #48484a;
+    --ios-label-secondary: rgba(235, 235, 245, 0.60);
+    --ios-label-tertiary: rgba(235, 235, 245, 0.30);
+    --ios-label-quaternary: rgba(235, 235, 245, 0.18);
 
-    --ios-secondary: #a1a1a6;
-    --ios-tertiary: #76767a;
-    --ios-quaternary: #48484a;
+    --ios-secondary: rgba(235, 235, 245, 0.60);
+    --ios-tertiary: rgba(235, 235, 245, 0.30);
+    --ios-quaternary: rgba(235, 235, 245, 0.18);
 
-    --ios-separator: rgba(255, 255, 255, 0.12);
-    --ios-border: rgba(255, 255, 255, 0.15);
+    --ios-separator: rgba(255, 255, 255, 0.10);
+    --ios-border: rgba(255, 255, 255, 0.14);
 
     --ios-blue: #0091ff;
-    --ios-blue-subtle: rgba(0, 145, 255, 0.18);
+    --ios-blue-subtle: rgba(0, 145, 255, 0.16);
     --ios-green: #30d158;
-    --ios-green-subtle: rgba(48, 209, 88, 0.18);
+    --ios-green-subtle: rgba(48, 209, 88, 0.16);
     --ios-orange: #ff9230;
-    --ios-orange-subtle: rgba(255, 146, 48, 0.18);
+    --ios-orange-subtle: rgba(255, 146, 48, 0.16);
     --ios-red: #ff4245;
-    --ios-red-subtle: rgba(255, 66, 69, 0.18);
+    --ios-red-subtle: rgba(255, 66, 69, 0.16);
     --ios-purple: #db34f2;
-    --ios-purple-subtle: rgba(219, 52, 242, 0.18);
+    --ios-purple-subtle: rgba(219, 52, 242, 0.16);
     --ios-teal: #00d2e0;
     --ios-yellow: #ffd600;
 
-    --ios-room-bg: rgba(0, 145, 255, 0.15);
-    --ios-room-text: #3cd3fe;
+    --ios-room-bg: rgba(0, 145, 255, 0.16);
+    --ios-room-text: #40aeff;
     --ios-nav-bg: #000000;
 
     --ios-ambient-bg: var(--ios-bg);
@@ -141,50 +145,52 @@
   --ios-card: #1c1c1e;
   --ios-card-solid: #1c1c1e;
   --ios-card-secondary: #2c2c2e;
-  --ios-element: rgba(255, 255, 255, 0.10);
-  --ios-block-bg: rgba(255, 255, 255, 0.08);
-  --ios-block-bg-hover: rgba(255, 255, 255, 0.12);
-  --ios-block-bg-active: rgba(255, 255, 255, 0.16);
-  --ios-input: rgba(118, 118, 128, 0.24);
-  --ios-switch-off: #38383a;
+  --ios-element: #2c2c2e;
+  --ios-row-hover: rgba(255, 255, 255, 0.04);
+  --ios-row-active: rgba(255, 255, 255, 0.09);
+  --ios-block-bg: rgba(255, 255, 255, 0.06);
+  --ios-block-bg-hover: rgba(255, 255, 255, 0.09);
+  --ios-block-bg-active: rgba(255, 255, 255, 0.12);
+  --ios-input: #2c2c2e;
+  --ios-switch-off: #39393d;
 
   --ios-segmented-track: rgba(118, 118, 128, 0.24);
-  --ios-segmented-thumb: rgba(255, 255, 255, 0.17);
+  --ios-segmented-thumb: #636366;
   --ios-segmented-shadow: none;
 
   --ios-glass-border: transparent;
   --ios-card-shadow: none;
 
   --ios-subview-shadow: none;
-  --ios-subview-backdrop: rgba(0, 0, 0, 0.48);
+  --ios-subview-backdrop: rgba(0, 0, 0, 0.55);
 
   --ios-label: #ffffff;
-  --ios-label-secondary: #a1a1a6;
-  --ios-label-tertiary: #76767a;
-  --ios-label-quaternary: #48484a;
+  --ios-label-secondary: rgba(235, 235, 245, 0.60);
+  --ios-label-tertiary: rgba(235, 235, 245, 0.30);
+  --ios-label-quaternary: rgba(235, 235, 245, 0.18);
 
-  --ios-secondary: #a1a1a6;
-  --ios-tertiary: #76767a;
-  --ios-quaternary: #48484a;
+  --ios-secondary: rgba(235, 235, 245, 0.60);
+  --ios-tertiary: rgba(235, 235, 245, 0.30);
+  --ios-quaternary: rgba(235, 235, 245, 0.18);
 
-  --ios-separator: rgba(84, 84, 88, 0.60);
-  --ios-border: rgba(255, 255, 255, 0.15);
+  --ios-separator: rgba(255, 255, 255, 0.10);
+  --ios-border: rgba(255, 255, 255, 0.14);
 
   --ios-blue: #0091ff;
-  --ios-blue-subtle: rgba(0, 145, 255, 0.18);
+  --ios-blue-subtle: rgba(0, 145, 255, 0.16);
   --ios-green: #30d158;
-  --ios-green-subtle: rgba(48, 209, 88, 0.18);
+  --ios-green-subtle: rgba(48, 209, 88, 0.16);
   --ios-orange: #ff9230;
-  --ios-orange-subtle: rgba(255, 146, 48, 0.18);
+  --ios-orange-subtle: rgba(255, 146, 48, 0.16);
   --ios-red: #ff4245;
-  --ios-red-subtle: rgba(255, 66, 69, 0.18);
+  --ios-red-subtle: rgba(255, 66, 69, 0.16);
   --ios-purple: #db34f2;
-  --ios-purple-subtle: rgba(219, 52, 242, 0.18);
+  --ios-purple-subtle: rgba(219, 52, 242, 0.16);
   --ios-teal: #00d2e0;
   --ios-yellow: #ffd600;
 
-  --ios-room-bg: rgba(0, 145, 255, 0.15);
-  --ios-room-text: #3cd3fe;
+  --ios-room-bg: rgba(0, 145, 255, 0.16);
+  --ios-room-text: #40aeff;
   --ios-nav-bg: #000000;
 
   --ios-ambient-bg: var(--ios-bg);

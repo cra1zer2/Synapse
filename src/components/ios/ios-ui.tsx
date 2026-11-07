@@ -103,7 +103,7 @@ export function IosSearchBar({
   return (
     <div
       className={cn(
-        'w-full h-[42px] bg-[var(--ios-element)]/35 rounded-full px-3.5 flex items-center gap-2.5 select-none border border-[var(--ios-border)] focus-within:border-[var(--ios-blue)]/60 focus-within:bg-[var(--ios-element)]/50 transition-all duration-150',
+        'w-full h-[40px] bg-[var(--ios-card-solid)] rounded-full px-3.5 flex items-center gap-2.5 select-none transition-all duration-150',
         className
       )}
     >
@@ -134,7 +134,7 @@ export function IosSearchBar({
         <button
           type="button"
           onClick={() => onChange('')}
-          className="w-[19px] h-[19px] rounded-full bg-[var(--ios-secondary)]/75 text-[var(--ios-card-solid)] flex items-center justify-center shrink-0 active:scale-90 active:opacity-75 transition-all cursor-pointer mr-0.5"
+          className="w-[19px] h-[19px] rounded-full bg-[var(--ios-tertiary)] text-[var(--ios-card-solid)] flex items-center justify-center shrink-0 active:scale-90 active:opacity-75 transition-all cursor-pointer mr-0.5"
           aria-label="Clear search"
         >
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round">
@@ -157,14 +157,14 @@ export function IosBreakDivider({
   countdownText?: string
 }) {
   return (
-    <div className="w-full flex items-center gap-3 px-2 py-1">
-      <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
+    <div className="w-full flex items-center gap-3 px-4 py-1.5">
+      <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
       <div
         className={cn(
           'flex items-center gap-1.5 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full',
           isCountdown
             ? 'text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] animate-pulse'
-            : 'text-[var(--ios-secondary)] bg-[var(--ios-element)]/75'
+            : 'text-[var(--ios-secondary)] bg-[var(--ios-element)]'
         )}
       >
         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -175,7 +175,7 @@ export function IosBreakDivider({
           {isCountdown && countdownText ? countdownText : minutes > 0 ? minutes + ' min' : 'Przerwa'}
         </span>
       </div>
-      <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
+      <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
     </div>
   )
 }

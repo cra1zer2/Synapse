@@ -524,7 +524,7 @@ export function ManualExcuseScreen({
             <button
               type="button"
               onClick={handleClose}
-              className="h-[50px] px-8 bg-[var(--ios-element)] text-[var(--ios-label)] text-[15px] font-medium tracking-tight rounded-[16px] active:scale-[0.98] active:opacity-75 transition-[transform,opacity] duration-150 mt-2 cursor-pointer"
+              className="h-[48px] px-8 bg-[var(--ios-element)] text-[var(--ios-label)] text-[16px] font-medium tracking-tight rounded-full active:scale-[0.96] active:opacity-75 transition-[transform,opacity] duration-150 mt-2 cursor-pointer"
             >
               {t.done}
             </button>
@@ -533,7 +533,7 @@ export function ManualExcuseScreen({
 
         {status === 'completed' && failures.length === 0 && (
           <IosCard className="p-8 flex flex-col items-center justify-center gap-4 text-center my-auto min-h-[300px]">
-            <div className="w-14 h-14 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] border border-[var(--ios-green)]/20 flex items-center justify-center text-[26px]">
+            <div className="w-14 h-14 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center text-[26px]">
               ✓
             </div>
             <div className="flex flex-col gap-1">
@@ -548,7 +548,7 @@ export function ManualExcuseScreen({
             <button
               type="button"
               onClick={handleClose}
-              className="h-[50px] px-8 bg-[var(--ios-element)] text-[var(--ios-label)] text-[15px] font-medium tracking-tight rounded-[16px] active:scale-[0.98] active:opacity-75 transition-[transform,opacity] duration-150 mt-2 cursor-pointer"
+              className="h-[48px] px-8 bg-[var(--ios-element)] text-[var(--ios-label)] text-[16px] font-medium tracking-tight rounded-full active:scale-[0.96] active:opacity-75 transition-[transform,opacity] duration-150 mt-2 cursor-pointer"
             >
               {t.done}
             </button>

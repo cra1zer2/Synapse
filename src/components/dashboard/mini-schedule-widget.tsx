@@ -26,7 +26,7 @@ export interface MiniScheduleWidgetProps {
 
 function MiniLessonSkeleton() {
   return (
-    <div className="w-full bg-[var(--ios-block-bg)] rounded-[16px] p-3.5 flex items-center justify-between gap-3">
+    <div className="w-full px-4 py-3 flex items-center justify-between gap-3">
       <div className="flex-1 min-w-0 flex flex-col gap-1.5 justify-center py-0.5">
         <div className="w-20 h-[12px] rounded-full ios-skeleton" />
         <div className="w-40 h-[16px] rounded-full ios-skeleton" />
@@ -65,9 +65,9 @@ function MiniLessonItem({
         }
       }}
       className={cn(
-        'w-full py-2.5 px-1.5 flex items-center justify-between gap-3 transition-all duration-150 cursor-pointer select-none rounded-[12px] hover:bg-[var(--ios-element)]/20 active:bg-[var(--ios-element)]/40 active:scale-[0.985]',
+        'w-full py-3 px-4 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]',
         isCancelled && 'opacity-40',
-        isPassed && !isCancelled && 'opacity-65'
+        isPassed && !isCancelled && 'opacity-60'
       )}
     >
       <div className="flex-1 min-w-0 flex flex-col gap-0.5 justify-center">
@@ -100,18 +100,18 @@ function MiniLessonItem({
         </p>
       </div>
 
-      <div className="shrink-0 flex items-center gap-2 self-center pr-1">
+      <div className="shrink-0 flex items-center gap-2 self-center">
         {lesson.room ? (
           <span className={cn(
             'text-[13px] tracking-tight font-medium',
-            isCancelled ? 'text-[var(--ios-secondary)] line-through' : isSub ? 'text-[var(--ios-purple)] font-semibold' : 'text-[var(--ios-label)]'
+            isCancelled ? 'text-[var(--ios-secondary)] line-through' : isSub ? 'text-[var(--ios-purple)] font-semibold' : 'text-[var(--ios-secondary)]'
           )}>
             {lesson.room}
           </span>
         ) : null}
 
         {lesson.isShortened && !isCancelled && (
-          <span className="text-[11px] font-medium text-[var(--ios-orange)] bg-[var(--ios-orange-subtle)] border border-[var(--ios-orange)]/20 px-2 py-0.5 rounded-full whitespace-nowrap">
+          <span className="text-[11px] font-medium text-[var(--ios-orange)] bg-[var(--ios-orange-subtle)] px-2 py-0.5 rounded-full whitespace-nowrap">
             {lesson.durationMinutes} min
           </span>
         )}
@@ -315,17 +315,17 @@ export function MiniScheduleWidget({
   }, [shouldShowNextDay, nextDayLessons, todayLessons, showAllLessons, scheduleState.currentLesson, scheduleState.nextLesson])
 
   return (
-    <IosCard className="p-4 flex flex-col gap-3 select-none">
+    <IosCard className="overflow-hidden flex flex-col select-none">
       <div
         onClick={handleCardClick}
-        className="flex items-center justify-between pb-2.5 border-b border-[var(--ios-separator)] cursor-pointer active:opacity-70 transition-opacity"
+        className="px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-[var(--ios-separator)] cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150"
       >
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] truncate">
             {t.schedule}
           </span>
           {badgeLabel && (
-            <span className="text-[12px] font-medium text-[var(--ios-secondary)] bg-[var(--ios-element)]/60 px-2 py-0.5 rounded-full shrink-0">
+            <span className="text-[12px] font-medium text-[var(--ios-secondary)] bg-[var(--ios-element)] px-2.5 py-0.5 rounded-full shrink-0">
               {badgeLabel}
             </span>
           )}
@@ -337,7 +337,7 @@ export function MiniScheduleWidget({
       </div>
 
       {error && !timetableData ? (
-        <div className="py-5 flex flex-col items-center justify-center gap-2 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="px-4 py-6 flex flex-col items-center justify-center gap-2 text-center" onClick={(e) => e.stopPropagation()}>
           <div className="w-8 h-8 rounded-full bg-[var(--ios-red-subtle)] text-[var(--ios-red)] flex items-center justify-center text-[15px] font-bold">
             !
           </div>
@@ -355,20 +355,20 @@ export function MiniScheduleWidget({
           )}
         </div>
       ) : isLoading || !timetableData ? (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col py-1">
           <MiniLessonSkeleton />
-          <div className="w-full flex items-center gap-3 px-2 py-0.5">
-            <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
+          <div className="w-full flex items-center gap-3 px-4 py-1">
+            <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
             <div className="w-16 h-[20px] rounded-full ios-skeleton" />
-            <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
+            <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
           </div>
           <MiniLessonSkeleton />
         </div>
       ) : (
         <div className={cn('ios-reveal', isOffline && 'opacity-50 grayscale')}>
           {!showAllLessons && scheduleState.mode === 'all_ended_today' && !shouldShowNextDay ? (
-            <div className="py-6 flex flex-col items-center justify-center gap-1.5 text-center">
-              <div className="w-9 h-9 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] border border-[var(--ios-green)]/20 flex items-center justify-center mb-1">
+            <div className="px-4 py-7 flex flex-col items-center justify-center gap-1.5 text-center">
+              <div className="w-9 h-9 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center mb-1">
                 <svg className="w-4 h-4 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
@@ -381,13 +381,13 @@ export function MiniScheduleWidget({
               </span>
             </div>
           ) : displayLessons.length === 0 ? (
-            <div className="py-6 text-center text-[14px] font-normal text-[var(--ios-secondary)]">
+            <div className="px-4 py-7 text-center text-[14px] font-normal text-[var(--ios-secondary)]">
               {t.noLessonsDay}
             </div>
           ) : (
             <div className="flex flex-col">
               {showAllLessons && scheduleState.mode === 'all_ended_today' && !shouldShowNextDay && (
-                <div className="mb-2 py-1.5 px-3 rounded-[10px] bg-[var(--ios-green-subtle)] text-[var(--ios-green)] text-[12px] font-medium flex items-center justify-between select-none">
+                <div className="mx-4 mt-3 mb-1 py-1.5 px-3 rounded-[10px] bg-[var(--ios-green-subtle)] text-[var(--ios-green)] text-[12px] font-medium flex items-center justify-between select-none">
                   <span>{lang === 'en' ? 'All lessons for today completed' : 'Lekcje na dziś zakończone'}</span>
                   <span className="opacity-75">{lang === 'en' ? 'Done' : 'Koniec'}</span>
                 </div>
@@ -434,7 +434,7 @@ export function MiniScheduleWidget({
                             countdownText={t.breakCountdownLabel(breakRemaining)}
                           />
                         ) : (
-                          <div className="h-[1px] bg-[var(--ios-separator)] mx-1.5 my-0.5" />
+                          <div className="h-[0.5px] bg-[var(--ios-separator)] ml-4" />
                         )
                       )
                     )}

@@ -59,9 +59,9 @@ export function IosCell({
     <div
       onClick={isInteractive ? onClick : undefined}
       className={cn(
-        'relative px-4 flex items-center justify-between gap-3 select-none transition-colors duration-100',
+        'relative px-4 flex items-center justify-between gap-3 select-none transition-colors duration-150',
         heightClasses,
-        isInteractive && 'cursor-pointer active:bg-[var(--ios-element)]/55',
+        isInteractive && 'cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]',
         disabled && 'opacity-40 pointer-events-none',
         className
       )}

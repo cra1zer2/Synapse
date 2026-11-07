@@ -376,7 +376,7 @@ export function ScheduleWidget({
                         <div
                           onClick={() => onSelectLesson(lesson)}
                           className={cn(
-                            'w-full p-3.5 px-4 flex items-center justify-between gap-3 transition-colors duration-100 cursor-pointer active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20',
+                            'w-full p-3.5 px-4 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20 active:scale-[0.985]',
                             isCancelled && 'opacity-40'
                           )}
                         >

@@ -206,7 +206,7 @@ export function JustificationModal({
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                className="ios-card bg-[var(--ios-card-solid)] rounded-t-[26px] sm:rounded-[26px] w-full max-w-lg p-6 border-t sm:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[88vh] overflow-y-auto pb-[max(env(safe-area-inset-bottom,0px),1.5rem)]"
+                className="ios-card bg-[var(--ios-card-solid)] rounded-t-[34px] sm:rounded-[34px] w-full max-w-lg p-6 border-t sm:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[88vh] overflow-y-auto pb-[max(env(safe-area-inset-bottom,0px),1.5rem)]"
             >
                 <div className="w-9 h-1 rounded-full bg-[var(--ios-element)] mx-auto -mt-1 mb-0.5 sm:hidden opacity-60 shrink-0" />
 
@@ -236,11 +236,15 @@ export function JustificationModal({
                             )
                         )}
                         <button
+                            type="button"
                             onClick={onClose}
-                            className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] text-xs font-medium flex items-center justify-center active:opacity-70 transition-opacity"
+                            className="w-8 h-8 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
                             aria-label="Close"
                         >
-                            ✕
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -353,14 +357,14 @@ export function JustificationModal({
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="flex-1 bg-[var(--ios-element)] text-[var(--ios-label)] text-xs font-medium py-3 rounded-[12px] active:opacity-70 transition-opacity"
+                                className="flex-1 h-[48px] bg-[var(--ios-element)] text-[var(--ios-label)] text-[16px] font-medium rounded-full active:scale-[0.96] active:opacity-70 transition-all flex items-center justify-center cursor-pointer"
                             >
                                 {t.cancel}
                             </button>
                             <button
                                 type="submit"
                                 disabled={isSubmitting || selectedCount === 0 || !canSubmitExcuse}
-                                className="flex-1 bg-[var(--ios-blue)] text-white text-xs font-semibold py-3 rounded-[12px] active:opacity-85 disabled:opacity-40 transition-opacity"
+                                className="flex-1 h-[48px] bg-[var(--ios-blue)] text-white text-[16px] font-semibold rounded-full active:scale-[0.96] active:opacity-85 disabled:opacity-40 transition-all flex items-center justify-center cursor-pointer"
                             >
                                 {isSubmitting ? t.sending : `Usprawiedliw (${selectedCount})`}
                             </button>

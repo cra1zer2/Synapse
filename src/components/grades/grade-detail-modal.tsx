@@ -15,7 +15,7 @@ interface GradeDetailModalProps {
 
 function getGradeBadgeStyle(gradeStr: string): string {
   const g = gradeStr.trim().toLowerCase()
-  if (g.startsWith('0') || g.startsWith('1') || g === 'nb') {
+  if (g.startsWith('0') || g.startsWith('1') || g === 'nb' || g === 'np') {
     return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
   }
   return 'bg-[var(--ios-element)]/65 text-[var(--ios-label)]'
@@ -120,7 +120,7 @@ export function GradeDetailModal({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={cn(
-          "w-full max-w-[402px] md:max-w-[460px] bg-[var(--ios-card-solid)] rounded-t-[34px] md:rounded-[26px] p-5 md:p-6 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] md:pb-6 border-t md:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto transition-all duration-300",
+          "w-full max-w-[402px] md:max-w-[360px] bg-[var(--ios-card-solid)] rounded-t-[34px] md:rounded-[34px] p-5 md:p-6 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] md:pb-6 border-t md:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto transition-all duration-300",
           isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-12 md:translate-y-0"
         )}
       >

@@ -53,11 +53,11 @@ const config: Config = {
         }
       },
       borderRadius: {
-        'ios-sheet': '26px',
+        'ios-sheet': '34px',
         'ios-card': '26px',
-        'ios-inner': '14px',
+        'ios-inner': '16px',
         'ios-input': '12px',
-        'ios-button': '50px',
+        'ios-button': '9999px',
         'ios-badge': '8px'
       },
       boxShadow: {

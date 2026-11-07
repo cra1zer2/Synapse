@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 
 export const IOS_PARALLAX_PERCENT = 21
 export const IOS_TRANSITION_MS = 380
-export const IOS_TRANSITION_EASING = 'cubic-bezier(0.33, 1, 0.68, 1)'
+export const IOS_TRANSITION_EASING = 'cubic-bezier(0.32, 0.72, 0, 1)'
 export const IOS_PANEL_TRANSITION = `transform ${IOS_TRANSITION_MS}ms ${IOS_TRANSITION_EASING}`
 export const IOS_BACKDROP_TRANSITION = `opacity ${IOS_TRANSITION_MS}ms ${IOS_TRANSITION_EASING}`
 
@@ -510,16 +510,16 @@ export function IosScreen({
             onScroll={handleScroll}
             style={{
               position: 'relative',
-              width: 'min(860px, 100%)',
+              width: 'min(580px, 100%)',
               maxHeight: '88vh',
               backgroundColor: 'var(--ios-card-solid)',
-              borderRadius: '26px',
+              borderRadius: '34px',
               border: '1px solid var(--ios-border)',
-              boxShadow: 'none',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
               overflowY: 'auto',
               transform: isVisible ? 'none' : 'scale(0.97)',
               opacity: isVisible ? 1 : 0,
-              transition: 'transform 0.18s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease',
+              transition: 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.2s cubic-bezier(0.32, 0.72, 0, 1)',
               display: 'flex',
               flexDirection: 'column',
               pointerEvents: isReceded ? 'none' : 'auto'

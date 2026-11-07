@@ -17,7 +17,7 @@ interface GradesWidgetProps {
 
 function getGradeBadgeStyle(gradeStr: string): string {
   const g = gradeStr.trim().toLowerCase()
-  if (g.startsWith('0') || g.startsWith('1') || g === 'nb') {
+  if (g.startsWith('0') || g.startsWith('1') || g === 'nb' || g === 'np') {
     return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
   }
   return 'bg-[var(--ios-element)]/65 text-[var(--ios-label)]'
@@ -101,9 +101,12 @@ export function GradesWidget({
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => onSelectGrade(g, g.subject || '')}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSelectGrade(g, g.subject || '')
+                  }}
                   title={`${g.subject || ''}: ${g.grade}${g.category ? ` (${g.category})` : ''}`}
-                  className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] font-medium tabular-nums cursor-pointer hover:opacity-80 active:scale-90 transition-all select-none ${getGradeBadgeStyle(g.grade)}`}
+                  className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] font-medium tabular-nums cursor-pointer hover:opacity-80 active:scale-[0.94] transition-all select-none ${getGradeBadgeStyle(g.grade)}`}
                 >
                   {g.grade}
                 </button>
@@ -150,7 +153,10 @@ export function GradesWidget({
                         <button
                           key={gIdx}
                           type="button"
-                          onClick={() => onSelectGrade(g, sub.subject)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onSelectGrade(g, sub.subject)
+                          }}
                           className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] font-medium tabular-nums active:scale-[0.94] active:opacity-70 transition-[transform,opacity] duration-150 cursor-pointer ${getGradeBadgeStyle(g.grade)}`}
                         >
                           {g.grade}

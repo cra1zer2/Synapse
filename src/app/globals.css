@@ -61,9 +61,11 @@
   --ios-room-text: #0088ff;
 
   --ios-radius-card: 26px;
+  --ios-radius-sheet: 34px;
+  --ios-radius-alert: 34px;
   --ios-radius-inner: 16px;
-  --ios-radius-full: 50px;
-  --ios-spring: cubic-bezier(0.33, 1, 0.68, 1);
+  --ios-radius-full: 9999px;
+  --ios-spring: cubic-bezier(0.32, 0.72, 0, 1);
 
   --ios-nav-bg: #f2f2f7;
   --ios-ambient-bg: var(--ios-bg);
@@ -105,7 +107,7 @@
     --ios-tertiary: #76767a;
     --ios-quaternary: #48484a;
 
-    --ios-separator: rgba(84, 84, 88, 0.60);
+    --ios-separator: rgba(255, 255, 255, 0.12);
     --ios-border: rgba(255, 255, 255, 0.15);
 
     --ios-blue: #0091ff;

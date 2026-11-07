@@ -14,6 +14,8 @@
   --ios-card: #ffffff;
   --ios-card-solid: #ffffff;
   --ios-card-secondary: #f2f2f7;
+  --ios-modal-bg: #f2f2f7;
+  --ios-modal-card: #ffffff;
   --ios-element: rgba(118, 118, 128, 0.12);
   --ios-row-hover: rgba(118, 118, 128, 0.06);
   --ios-row-active: rgba(118, 118, 128, 0.12);
@@ -83,6 +85,8 @@
     --ios-card: #1c1c1e;
     --ios-card-solid: #1c1c1e;
     --ios-card-secondary: #2c2c2e;
+    --ios-modal-bg: #141416;
+    --ios-modal-card: #222225;
     --ios-element: #2c2c2e;
     --ios-row-hover: rgba(255, 255, 255, 0.04);
     --ios-row-active: rgba(255, 255, 255, 0.09);
@@ -145,6 +149,8 @@
   --ios-card: #1c1c1e;
   --ios-card-solid: #1c1c1e;
   --ios-card-secondary: #2c2c2e;
+  --ios-modal-bg: #141416;
+  --ios-modal-card: #222225;
   --ios-element: #2c2c2e;
   --ios-row-hover: rgba(255, 255, 255, 0.04);
   --ios-row-active: rgba(255, 255, 255, 0.09);
@@ -282,6 +288,17 @@ html.is-iphone .ios-header {
   border: none;
   box-shadow: none;
   overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  [data-ios-subview-panel="true"] {
+    --ios-card: var(--ios-modal-card);
+    --ios-card-solid: var(--ios-modal-card);
+  }
+  html.dark [data-ios-subview-panel="true"] {
+    --ios-element: #323236;
+    --ios-input: #323236;
+  }
 }
 
 .ios-subview-panel {

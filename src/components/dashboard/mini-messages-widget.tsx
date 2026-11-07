@@ -96,40 +96,6 @@ export function MiniMessagesWidget({
           </div>
         </div>
 
-        {/* Desktop Latest Message Sub-Row */}
-        {latestMessage && (
-          <div
-            onClick={(e) => {
-              e.stopPropagation()
-              if (onOpenMessageDetail) {
-                onOpenMessageDetail(latestMessage)
-              } else {
-                onOpenMessages()
-              }
-            }}
-            className="hidden md:flex flex-col gap-0.5 pl-[62px] pr-4 py-2.5 relative transition-colors duration-150 cursor-pointer select-none hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
-            title={lang === 'en' ? 'Click to open message' : 'Kliknij, aby otworzyć wiadomość'}
-          >
-            <div className="absolute top-0 left-[62px] right-0 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                {!latestMessage.isRead && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--ios-blue)] shrink-0" />
-                )}
-                <span className="text-[12px] font-semibold text-[var(--ios-blue)] truncate">
-                  {cleanSenderName(latestMessage.sender)}
-                </span>
-              </div>
-              <span className="text-[11px] tabular-nums shrink-0 text-[var(--ios-tertiary)]">
-                {latestMessage.date}
-              </span>
-            </div>
-            <p className="text-[12px] font-normal text-[var(--ios-secondary)] line-clamp-1 truncate leading-tight mt-0.5">
-              {latestMessage.subject || latestMessage.content || '—'}
-            </p>
-          </div>
-        )}
-
         <div className="h-[0.5px] bg-[var(--ios-separator)] ml-4 pointer-events-none" />
 
         {/* Ogłoszenia Row */}
@@ -174,35 +140,6 @@ export function MiniMessagesWidget({
             </svg>
           </div>
         </div>
-
-        {/* Desktop Latest Announcement Sub-Row */}
-        {latestAnnouncement && (
-          <div
-            onClick={(e) => {
-              e.stopPropagation()
-              if (onOpenAnnouncementDetail) {
-                onOpenAnnouncementDetail(latestAnnouncement)
-              } else {
-                onOpenAnnouncements()
-              }
-            }}
-            className="hidden md:flex flex-col gap-0.5 pl-[62px] pr-4 py-2.5 relative transition-colors duration-150 cursor-pointer select-none hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
-            title={lang === 'en' ? 'Click to open announcement' : 'Kliknij, aby otworzyć ogłoszenie'}
-          >
-            <div className="absolute top-0 left-[62px] right-0 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[12px] font-semibold text-[var(--ios-purple)] truncate">
-                {cleanSenderName(latestAnnouncement.author)}
-              </span>
-              <span className="text-[11px] tabular-nums shrink-0 text-[var(--ios-tertiary)]">
-                {latestAnnouncement.date}
-              </span>
-            </div>
-            <p className="text-[12px] font-normal text-[var(--ios-secondary)] line-clamp-1 truncate leading-tight mt-0.5">
-              {latestAnnouncement.title || latestAnnouncement.content || '—'}
-            </p>
-          </div>
-        )}
       </div>
 
       {!isLoading && error && unreadCount === 0 && announcementsCount === 0 && (

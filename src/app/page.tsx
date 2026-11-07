@@ -515,27 +515,28 @@ export default function Home() {
         <header className="hidden md:block sticky top-0 z-30 w-full bg-[var(--ios-nav-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] select-none">
           <div className="relative flex items-center justify-between w-full max-w-[860px] mx-auto px-5 h-[52px]">
             <div className="flex items-center gap-2 min-w-0 z-10">
-              {account.profile?.fullName && account.profile.fullName !== 'Konto Librus' && (
-                <button
-                  type="button"
-                  onClick={() => setShowSettings(true)}
-                  className="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--ios-card-solid)] hover:opacity-85 active:scale-[0.97] transition-all cursor-pointer"
-                >
-                  <span className="text-[13px] font-medium text-[var(--ios-label)] truncate max-w-[180px]">
-                    {account.profile.fullName}
+              <button
+                type="button"
+                onClick={() => setShowSettings(true)}
+                className="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--ios-card-solid)] hover:opacity-85 active:scale-[0.97] transition-all cursor-pointer"
+                title={t.settingsTitle}
+              >
+                <span className="text-[13px] font-medium text-[var(--ios-label)] truncate max-w-[180px]">
+                  {account.profile?.fullName && account.profile.fullName !== 'Konto Librus'
+                    ? account.profile.fullName
+                    : (account.username || t.settingsTitle)}
+                </span>
+                {account.profile?.className && (
+                  <span className="text-[12px] font-normal text-[var(--ios-secondary)]">
+                    {account.profile.className}
                   </span>
-                  {account.profile.className && (
-                    <span className="text-[12px] font-normal text-[var(--ios-secondary)]">
-                      {account.profile.className}
-                    </span>
-                  )}
-                  {account.profile.luckyNumber !== null && account.profile.luckyNumber !== undefined && (
-                    <span className="text-[11px] font-semibold text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] px-2 py-0.5 rounded-full tabular-nums" title={t.luckyNumber}>
-                      #{account.profile.luckyNumber}
-                    </span>
-                  )}
-                </button>
-              )}
+                )}
+                {account.profile?.luckyNumber !== null && account.profile?.luckyNumber !== undefined && (
+                  <span className="text-[11px] font-semibold text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] px-2 py-0.5 rounded-full tabular-nums" title={t.luckyNumber}>
+                    #{account.profile.luckyNumber}
+                  </span>
+                )}
+              </button>
             </div>
 
             <h1 className="absolute inset-0 flex items-center justify-center text-[17px] font-semibold tracking-[-0.4px] text-[var(--ios-label)] pointer-events-none">
@@ -565,19 +566,6 @@ export default function Home() {
                   <path d="M21 3v5h-5" />
                   <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
                   <path d="M3 21v-5h5" />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowSettings(true)}
-                className="w-8 h-8 rounded-full bg-[var(--ios-element)] hover:opacity-80 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-[0.94] transition-all flex items-center justify-center cursor-pointer select-none"
-                title={t.settingsTitle}
-                aria-label="Settings"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                  <circle cx="12" cy="12" r="3" />
                 </svg>
               </button>
             </div>
@@ -641,6 +629,7 @@ export default function Home() {
                 error={timetable.gradesError}
                 onRetry={handleManualRefresh}
                 t={t}
+                isDesktop={true}
                 onOpenGrades={() => setShowFullGrades(true)}
                 onSelectGrade={(g) => handleSelectGrade(g, findSubjectForGrade(g))}
               />
@@ -755,7 +744,7 @@ export default function Home() {
         title={t.grades}
         backLabel={t.backAction}
         isSubView={true}
-        isReceded={false}
+        isReceded={Boolean(selectedGradeDetail)}
       >
         {timetable.gradesData ? (
           <GradesWidget
@@ -795,7 +784,7 @@ export default function Home() {
         title={t.schedule}
         backLabel={t.backAction}
         isSubView={true}
-        isReceded={false}
+        isReceded={Boolean(selectedLesson || selectedEvent)}
       >
         {timetable.timetableData ? (
           <ScheduleWidget

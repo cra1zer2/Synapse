@@ -398,23 +398,23 @@ export function IosScreen({
   const isStackedOnDesktop = isDesktop && resolvedZIndex > 50
 
   const desktopHeader = (
-    <header className="relative sticky top-0 z-30 w-full bg-[var(--ios-bg)]/90 backdrop-blur-xl border-b border-[var(--ios-separator)] px-5 h-[52px] flex items-center justify-between shrink-0">
-      <div className="z-10 flex items-center gap-2 min-w-[70px]">
-        {showBackButton && onClose && (
+    <header className="relative sticky top-0 z-30 w-full bg-[var(--ios-modal-bg)]/90 backdrop-blur-xl border-b border-[var(--ios-separator)] px-5 h-[52px] flex items-center justify-between shrink-0">
+      <div className="z-10 flex items-center gap-2 min-w-[80px] h-full">
+        {onClose && (
           <button
             type="button"
             onClick={handleRequestClose}
-            className="flex items-center gap-1 text-[16px] font-normal text-[var(--ios-blue)] hover:opacity-80 tracking-[-0.3px] pr-2 py-1 -ml-1 active:opacity-55 active:scale-[0.97] transition-[opacity,transform] duration-150 select-none cursor-pointer shrink-0"
+            className="flex items-center gap-1 text-[17px] font-normal text-[var(--ios-blue)] hover:opacity-80 tracking-[-0.3px] pr-2 h-full -ml-1 active:opacity-55 active:scale-[0.97] transition-[opacity,transform] duration-150 select-none cursor-pointer shrink-0"
           >
-            <svg className="w-4 h-4 stroke-[2.5]" viewBox="0 0 13 22" fill="none">
-              <path d="M11 2L2 11L11 20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
             </svg>
-            <span className="max-w-[140px] truncate">{backLabel}</span>
+            <span className="max-w-[120px] truncate">{backLabel}</span>
           </button>
         )}
       </div>
 
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-20">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-24">
         <div className="pointer-events-auto flex items-center justify-center max-w-full">
           {titleView ? titleView : (
             <h3 className="text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px] truncate text-center">
@@ -424,22 +424,8 @@ export function IosScreen({
         </div>
       </div>
 
-      <div className="z-10 flex items-center justify-end gap-2.5 min-w-[70px] shrink-0">
+      <div className="z-10 flex items-center justify-end gap-2.5 min-w-[80px] h-full shrink-0">
         {trailing}
-        {onClose && (
-          <button
-            type="button"
-            onClick={handleRequestClose}
-            className="w-8 h-8 rounded-full bg-[var(--ios-element)] hover:opacity-80 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] cursor-pointer active:scale-[0.94] transition-all flex items-center justify-center select-none"
-            title="Zamknij"
-            aria-label="Zamknij"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        )}
       </div>
     </header>
   )
@@ -486,11 +472,11 @@ export function IosScreen({
           inset: 0,
           zIndex: resolvedZIndex - 1,
           backgroundColor: isDesktop
-            ? (isStackedOnDesktop ? 'rgba(0, 0, 0, 0.30)' : 'rgba(0, 0, 0, 0.52)')
+            ? 'rgba(0, 0, 0, 0.52)'
             : 'var(--ios-subview-backdrop)',
-          backdropFilter: isDesktop ? (isStackedOnDesktop ? undefined : 'blur(6px)') : undefined,
-          WebkitBackdropFilter: isDesktop ? (isStackedOnDesktop ? undefined : 'blur(6px)') : undefined,
-          opacity: isDesktop ? (isVisible ? 1 : 0) : (isVisible && !isReceded ? 1 : 0),
+          backdropFilter: isDesktop ? 'blur(6px)' : undefined,
+          WebkitBackdropFilter: isDesktop ? 'blur(6px)' : undefined,
+          opacity: isVisible && !isReceded ? 1 : 0,
           pointerEvents: isVisible && !isReceded ? 'auto' : 'none',
           transition: isDesktop ? 'opacity 0.2s ease' : IOS_BACKDROP_TRANSITION,
           willChange: 'opacity'
@@ -512,22 +498,24 @@ export function IosScreen({
               position: 'relative',
               width: 'min(480px, 100%)',
               maxHeight: '86vh',
-              backgroundColor: 'var(--ios-bg)',
+              backgroundColor: 'var(--ios-modal-bg)',
               borderRadius: '34px',
               border: '1px solid var(--ios-border)',
               boxShadow: 'none',
               overflowY: 'auto',
-              transform: isVisible ? 'scale3d(1, 1, 1)' : 'scale3d(0.94, 0.94, 1)',
-              opacity: isVisible ? 1 : 0,
+              transform: isVisible
+                ? (isReceded ? 'scale3d(0.95, 0.95, 1)' : 'scale3d(1, 1, 1)')
+                : 'scale3d(0.94, 0.94, 1)',
+              opacity: isVisible && !isReceded ? 1 : 0,
               transition: 'transform 0.24s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.2s cubic-bezier(0.32, 0.72, 0, 1)',
               display: 'flex',
               flexDirection: 'column',
-              pointerEvents: isReceded ? 'none' : 'auto'
+              pointerEvents: isVisible && !isReceded ? 'auto' : 'none'
             }}
             className={className}
           >
             {!hideHeader && desktopHeader}
-            <div className={contentClassName ?? "px-4 pt-4 pb-10 w-full flex-1"}>
+            <div className={contentClassName ?? "px-4 pt-4 pb-6 w-full flex-1"}>
               {children}
             </div>
           </div>

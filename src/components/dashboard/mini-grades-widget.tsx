@@ -13,6 +13,7 @@ interface MiniGradesWidgetProps {
   t: AppDictionary
   onOpenGrades: () => void
   onSelectGrade?: (grade: GradeItem) => void
+  isDesktop?: boolean
 }
 
 function getGradeBadgeStyle(gradeStr: string): string {
@@ -30,7 +31,8 @@ export function MiniGradesWidget({
   onRetry,
   t,
   onOpenGrades,
-  onSelectGrade
+  onSelectGrade,
+  isDesktop = false
 }: MiniGradesWidgetProps) {
   const isPending = isLoading || (!gradesData && !error)
   const avg = gradesData?.overallAverage
@@ -41,12 +43,18 @@ export function MiniGradesWidget({
   const canOpenGrades = Boolean(gradesData && !isPending && !error)
 
   return (
-    <IosCard className="overflow-hidden flex flex-col select-none">
+    <IosCard
+      onClick={!isDesktop && canOpenGrades ? onOpenGrades : undefined}
+      className={cn(
+        "overflow-hidden flex flex-col select-none",
+        !isDesktop && canOpenGrades && "active:bg-[var(--ios-row-active)]"
+      )}
+    >
       <div
-        onClick={canOpenGrades ? onOpenGrades : undefined}
+        onClick={isDesktop && canOpenGrades ? onOpenGrades : undefined}
         className={cn(
           "px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-[var(--ios-separator)] transition-colors duration-150",
-          canOpenGrades && "cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
+          isDesktop && canOpenGrades && "cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
         )}
       >
         <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.2px]">
@@ -99,13 +107,7 @@ export function MiniGradesWidget({
           </div>
         </div>
       ) : (
-        <div
-          onClick={canOpenGrades ? onOpenGrades : undefined}
-          className={cn(
-            "px-4 py-3.5 flex items-end justify-between min-h-[76px] ios-reveal transition-colors duration-150",
-            canOpenGrades && "cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
-          )}
-        >
+        <div className="px-4 py-3.5 flex items-end justify-between min-h-[76px] ios-reveal">
           <div className="flex flex-col">
             <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight">
               {t.gpaTitle}

@@ -192,7 +192,7 @@ export function SettingsSheet({
         title={t.settingsTitle}
         backLabel={t.backAction}
         isSubView={true}
-        isReceded={showThemePicker || showAdvanced || showAddForm}
+        isReceded={showThemePicker || showLangPicker || showAdvanced || showAddForm}
         contentClassName="px-6 pt-5 pb-12 w-full max-w-4xl mx-auto flex-1"
       >
         <div className="flex flex-col gap-5 pb-12 select-none">
@@ -360,13 +360,12 @@ export function SettingsSheet({
 
       <IosScreen
         isOpen={showAddForm}
-        onClose={handleCloseAddForm}
-        title="Synapse"
-        backLabel={t.backAction}
+        onClose={addAccountStep === 'preview' ? () => setAddAccountStep?.('input') : handleCloseAddForm}
+        title={t.addAccount}
+        backLabel={t.settingsTitle || t.backAction}
+        showBackButton={true}
         isSubView={true}
         zIndex={70}
-        hideHeader={true}
-        contentClassName="w-full h-full p-0 max-w-none"
       >
         <AuthView
           authStep={addAccountStep}

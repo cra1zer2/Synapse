@@ -133,12 +133,18 @@ export function MiniAttendanceWidget({
   const canOpenAttendance = Boolean(attendanceData && !isPending && !error)
 
   return (
-    <IosCard className="overflow-hidden flex flex-col select-none">
+    <IosCard
+      onClick={!isDesktop && canOpenAttendance ? onOpenAttendance : undefined}
+      className={cn(
+        "overflow-hidden flex flex-col select-none",
+        !isDesktop && canOpenAttendance && "active:bg-[var(--ios-row-active)]"
+      )}
+    >
       <div
-        onClick={canOpenAttendance ? onOpenAttendance : undefined}
+        onClick={isDesktop && canOpenAttendance ? onOpenAttendance : undefined}
         className={cn(
           "px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-[var(--ios-separator)] transition-colors duration-150",
-          canOpenAttendance && "cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
+          isDesktop && canOpenAttendance && "cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
         )}
       >
         <div className="flex items-center gap-2">
@@ -197,13 +203,7 @@ export function MiniAttendanceWidget({
         </div>
       ) : (
         <div className="flex flex-col ios-reveal">
-          <div
-            onClick={canOpenAttendance ? onOpenAttendance : undefined}
-            className={cn(
-              "px-4 py-3.5 flex flex-col gap-2.5 transition-colors duration-150",
-              canOpenAttendance && "cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
-            )}
-          >
+          <div className="px-4 py-3.5 flex flex-col gap-2.5">
             <div className="flex items-end justify-between min-h-[52px]">
               <div className="flex flex-col">
                 <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight">

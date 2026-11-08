@@ -3,6 +3,7 @@ export interface StudentProfile {
     className: string
     schoolName: string
     luckyNumber: number | null
+    classNumber?: number | null
     role: 'student' | 'parent'
 }
 

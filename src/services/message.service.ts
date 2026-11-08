@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio'
-import { MessageItem, AnnouncementItem, ReceiverItem, MessagesActionResult } from '@/models/message.model'
+import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem, MessagesActionResult } from '@/models/message.model'
 import { getNativeLibrusSession, invalidateNativeSession, NativeLibrusSession } from '@/services/session.service'
 import { getAuthenticatedClient, invalidateClientSession } from '@/services/librus.service'
 
@@ -554,12 +554,46 @@ function extractMessageBodyFromHtml(html: string): string {
     return ''
 }
 
+function extractMessageAttachmentsFromHtml(html: string): MessageAttachment[] {
+    if (!html) return []
+    const $ = cheerio.load(html)
+    const attachments: MessageAttachment[] = []
+
+    const names: string[] = []
+    $('img[src*="filetype"]').each((_, elem) => {
+        const text = $(elem).parent().text().replace(/\s+/g, ' ').trim()
+        if (text) names.push(text)
+    })
+
+    const paths: string[] = []
+    $('img[src*="download"], a[href*="pobierz_zalacznik"], [onclick*="pobierz_zalacznik"]').each((_, elem) => {
+        const onclick = $(elem).attr('onclick') || $(elem).attr('href') || ''
+        const match = onclick.match(/wiadomosci\/pobierz_zalacznik\/[^\s"'\\)]+/i)
+        if (match && match[0]) {
+            const cleanPath = match[0].replace(/\\/g, '').replace(/^\//, '')
+            if (!paths.includes(cleanPath)) {
+                paths.push(cleanPath)
+            }
+        }
+    })
+
+    const count = Math.max(names.length, paths.length)
+    for (let i = 0; i < count; i++) {
+        const path = paths[i] || ''
+        if (!path) continue
+        const name = names[i] || `Załącznik ${i + 1}`
+        attachments.push({ name, path })
+    }
+
+    return attachments
+}
+
 export async function fetchMessageContent(
     username: string,
     pass: string,
     messageId: number,
     folderId: number = 5
-): Promise<{ success: boolean; content?: string; error?: string }> {
+): Promise<{ success: boolean; content?: string; attachments?: MessageAttachment[]; error?: string }> {
     try {
         const cleanUser = String(username || '').trim()
         const cleanPass = String(pass || '').trim()
@@ -572,8 +606,9 @@ export async function fetchMessageContent(
         )
 
         let body = extractMessageBodyFromHtml(primary.html)
-        if (body) {
-            return { success: true, content: body }
+        let attachments = extractMessageAttachmentsFromHtml(primary.html)
+        if (body || attachments.length > 0) {
+            return { success: true, content: body, attachments }
         }
 
         const secondary = await fetchHtmlWithRetry(
@@ -584,8 +619,9 @@ export async function fetchMessageContent(
         )
 
         body = extractMessageBodyFromHtml(secondary.html)
-        if (body) {
-            return { success: true, content: body }
+        attachments = extractMessageAttachmentsFromHtml(secondary.html)
+        if (body || attachments.length > 0) {
+            return { success: true, content: body, attachments }
         }
 
         const altFolder = folderId === 5 ? 6 : 5
@@ -596,8 +632,9 @@ export async function fetchMessageContent(
             `https://synergia.librus.pl/wiadomosci/${altFolder}`
         )
         body = extractMessageBodyFromHtml(alt.html)
-        if (body) {
-            return { success: true, content: body }
+        attachments = extractMessageAttachmentsFromHtml(alt.html)
+        if (body || attachments.length > 0) {
+            return { success: true, content: body, attachments }
         }
 
         // Fallback to librus-api getMessage
@@ -605,14 +642,79 @@ export async function fetchMessageContent(
             const client = await getAuthenticatedClient(cleanUser, cleanPass)
             const msgData: any = await client.inbox.getMessage(folderId, messageId)
             const rawContent = typeof msgData === 'string' ? msgData : String(msgData?.content || '')
-            if (rawContent) {
-                return { success: true, content: tryDecodeBase64Content(rawContent) }
+            const rawFiles = Array.isArray(msgData?.files)
+                ? msgData.files.map((f: any, idx: number) => ({
+                    name: String(f?.name || `Załącznik ${idx + 1}`),
+                    path: String(f?.path || '')
+                })).filter((f: MessageAttachment) => Boolean(f.path))
+                : []
+            if (rawContent || rawFiles.length > 0) {
+                return {
+                    success: true,
+                    content: tryDecodeBase64Content(rawContent),
+                    attachments: rawFiles
+                }
             }
         } catch {}
 
-        return { success: true, content: '' }
+        return { success: true, content: '', attachments: [] }
     } catch (error: any) {
         return { success: false, error: String(error?.message || error) }
+    }
+}
+
+export async function downloadMessageAttachment(
+    username: string,
+    pass: string,
+    path: string,
+    fileName: string
+): Promise<{ success: boolean; base64?: string; mimeType?: string; fileName?: string; error?: string }> {
+    try {
+        const cleanUser = String(username || '').trim()
+        const cleanPass = String(pass || '').trim()
+        const client = await getAuthenticatedClient(cleanUser, cleanPass)
+        const stream: any = await client.inbox.getFile(path)
+
+        const chunks: Buffer[] = []
+        await new Promise<void>((resolve, reject) => {
+            stream.on('data', (chunk: Buffer | Uint8Array | string) => {
+                chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+            })
+            stream.on('end', () => resolve())
+            stream.on('error', (err: any) => reject(err))
+        })
+
+        const fullBuffer = Buffer.concat(chunks)
+        const ext = (fileName.split('.').pop() || '').toLowerCase()
+        const mimeMap: Record<string, string> = {
+            pdf: 'application/pdf',
+            png: 'image/png',
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            gif: 'image/gif',
+            webp: 'image/webp',
+            doc: 'application/msword',
+            docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            xls: 'application/vnd.ms-excel',
+            xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ppt: 'application/vnd.ms-powerpoint',
+            pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            txt: 'text/plain',
+            zip: 'application/zip'
+        }
+        const mimeType = mimeMap[ext] || 'application/octet-stream'
+
+        return {
+            success: true,
+            base64: fullBuffer.toString('base64'),
+            mimeType,
+            fileName
+        }
+    } catch (error: any) {
+        return {
+            success: false,
+            error: String(error?.message || 'Błąd pobierania załącznika')
+        }
     }
 }
 

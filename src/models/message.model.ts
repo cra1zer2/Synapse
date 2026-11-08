@@ -1,3 +1,8 @@
+export interface MessageAttachment {
+    name: string
+    path: string
+}
+
 export interface MessageItem {
     id: number | string
     sender: string
@@ -6,6 +11,7 @@ export interface MessageItem {
     content?: string
     isRead: boolean
     hasAttachments: boolean
+    attachments?: MessageAttachment[]
     folder?: 'inbox' | 'sent'
 }
 

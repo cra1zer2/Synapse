@@ -40,6 +40,14 @@ interface SettingsSheetProps {
   onToggleShowFullSubjectNames: (val: boolean) => void
   ignoreGradeModifiers: boolean
   onToggleIgnoreGradeModifiers: (val: boolean) => void
+  enableGradeSimulator?: boolean
+  onToggleEnableGradeSimulator?: (val: boolean) => void
+  showHomeworks?: boolean
+  onToggleShowHomeworks?: (val: boolean) => void
+  showUpcomingEventsWidget?: boolean
+  onToggleShowUpcomingEventsWidget?: (val: boolean) => void
+  showLuckyNumberBanner?: boolean
+  onToggleShowLuckyNumberBanner?: (val: boolean) => void
   isStudent?: boolean
   allowStudentJustifications?: boolean
   onToggleAllowStudentJustifications?: (val: boolean) => void
@@ -91,6 +99,14 @@ export function SettingsSheet({
   onToggleShowFullSubjectNames,
   ignoreGradeModifiers,
   onToggleIgnoreGradeModifiers,
+  enableGradeSimulator = false,
+  onToggleEnableGradeSimulator,
+  showHomeworks = false,
+  onToggleShowHomeworks,
+  showUpcomingEventsWidget = true,
+  onToggleShowUpcomingEventsWidget,
+  showLuckyNumberBanner = true,
+  onToggleShowLuckyNumberBanner,
   isStudent,
   allowStudentJustifications = false,
   onToggleAllowStudentJustifications,
@@ -480,6 +496,45 @@ export function SettingsSheet({
                 />
               }
             />
+            {onToggleShowUpcomingEventsWidget && (
+              <IosCell
+                title={currentLang === 'en' ? 'Upcoming tests widget' : 'Widżet sprawdzianów i terminów'}
+                subtitle={currentLang === 'en' ? 'Show upcoming exams and quizzes on dashboard' : 'Pokazuj najbliższe sprawdziany i kartkówki na pulpicie'}
+                size="tall"
+                trailing={
+                  <IosSwitch
+                    checked={Boolean(showUpcomingEventsWidget)}
+                    onChange={() => onToggleShowUpcomingEventsWidget(!showUpcomingEventsWidget)}
+                  />
+                }
+              />
+            )}
+            {onToggleShowHomeworks && (
+              <IosCell
+                title={currentLang === 'en' ? 'Show homework assignments' : 'Pokazuj zadania domowe'}
+                subtitle={currentLang === 'en' ? 'Include homework tasks in schedule and upcoming events' : 'Uwzględniaj zadania domowe w terminarzu i planie'}
+                size="tall"
+                trailing={
+                  <IosSwitch
+                    checked={Boolean(showHomeworks)}
+                    onChange={() => onToggleShowHomeworks(!showHomeworks)}
+                  />
+                }
+              />
+            )}
+            {onToggleShowLuckyNumberBanner && (
+              <IosCell
+                title={currentLang === 'en' ? 'Lucky number banner' : 'Powiadomienie o szczęśliwym numerku'}
+                subtitle={currentLang === 'en' ? 'Highlight at the top of the day when lucky number matches yours' : 'Pokazuj pasek na górze ekranu w dniu Twojego szczęśliwego numerka'}
+                size="tall"
+                trailing={
+                  <IosSwitch
+                    checked={Boolean(showLuckyNumberBanner)}
+                    onChange={() => onToggleShowLuckyNumberBanner(!showLuckyNumberBanner)}
+                  />
+                }
+              />
+            )}
           </IosListSection>
 
           <IosListSection header={t.gradesCalcSectionTitle}>
@@ -494,6 +549,19 @@ export function SettingsSheet({
                 />
               }
             />
+            {onToggleEnableGradeSimulator && (
+              <IosCell
+                title={currentLang === 'en' ? 'Grade simulator (What-if)' : 'Symulator ocen (Co jeśli?)'}
+                subtitle={currentLang === 'en' ? 'Add virtual grades inside subjects to test average changes' : 'Dodawaj wirtualne oceny i sprawdzaj, jak zmieni się średnia'}
+                size="tall"
+                trailing={
+                  <IosSwitch
+                    checked={Boolean(enableGradeSimulator)}
+                    onChange={() => onToggleEnableGradeSimulator(!enableGradeSimulator)}
+                  />
+                }
+              />
+            )}
           </IosListSection>
 
           {isStudentUser && onToggleAllowStudentJustifications && (

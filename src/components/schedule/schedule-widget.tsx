@@ -28,6 +28,7 @@ interface ScheduleWidgetProps {
   isLoadingWeek?: boolean
   textClamp?: TextClampOption
   showFullSubjectNames?: boolean
+  showHomeworks?: boolean
   lang?: AppLanguage
   t: AppDictionary
 }
@@ -105,6 +106,7 @@ export function ScheduleWidget({
   isLoadingWeek = false,
   textClamp = 'full',
   showFullSubjectNames = false,
+  showHomeworks = false,
   lang = 'pl',
   t
 }: ScheduleWidgetProps) {
@@ -186,13 +188,14 @@ export function ScheduleWidget({
   const displayEvents = useMemo(() => {
     if (!currentDaySchedule?.events) return []
     return currentDaySchedule.events.filter((ev) => {
+      if (!showHomeworks && ev.category === 'homework') return false
       const lower = (ev.title || '').toLowerCase()
       if (lower.includes('zastępstw') || lower.includes('zastepstw') || lower.includes('nieobecn')) {
         return false
       }
       return true
     })
-  }, [currentDaySchedule])
+  }, [currentDaySchedule, showHomeworks])
 
   return (
     <section className="w-full flex flex-col gap-3.5 pb-12 select-none">

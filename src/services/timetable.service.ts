@@ -441,6 +441,10 @@ export async function fetchSmartTimetable(
             })
         })
 
+        const allCalendarEvents = Object.values(eventsByDate)
+            .flat()
+            .sort((a, b) => a.isoDate.localeCompare(b.isoDate))
+
         if (translate) {
             const textsToTranslate = new Set<string>()
             schedule.forEach((day) => {
@@ -453,6 +457,10 @@ export async function fetchSmartTimetable(
                     if (e.subjectName) textsToTranslate.add(e.subjectName)
                 })
             })
+            allCalendarEvents.forEach((e) => {
+                if (e.title) textsToTranslate.add(e.title)
+                if (e.subjectName) textsToTranslate.add(e.subjectName)
+            })
             const translatedMap = await translateBatch(Array.from(textsToTranslate))
             schedule.forEach((day) => {
                 day.lessons.forEach((l) => {
@@ -464,6 +472,10 @@ export async function fetchSmartTimetable(
                     if (e.subjectName && translatedMap[e.subjectName]) e.subjectName = translatedMap[e.subjectName]
                 })
             })
+            allCalendarEvents.forEach((e) => {
+                if (translatedMap[e.title]) e.title = translatedMap[e.title]
+                if (e.subjectName && translatedMap[e.subjectName]) e.subjectName = translatedMap[e.subjectName]
+            })
         }
 
         return {
@@ -473,7 +485,7 @@ export async function fetchSmartTimetable(
                 weekEnd: fridayIso,
                 schedule,
                 allAbsentTeachers: [],
-                calendarEvents: schedule.flatMap((d) => d.events)
+                calendarEvents: allCalendarEvents.length > 0 ? allCalendarEvents : schedule.flatMap((d) => d.events)
             }
         }
     } catch (error: any) {

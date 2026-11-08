@@ -13,7 +13,7 @@ import { useAccountSession } from '@/hooks/account.hook'
 import { useTimetableSync } from '@/hooks/timetable-sync.hook'
 import { useBodyScrollLock } from '@/hooks/scroll-lock.hook'
 import { useMessagesInbox } from '@/hooks/messages.hook'
-import { normalizeToMondayIso } from '@/utils/date.util'
+import { getTodayIsoString, normalizeToMondayIso } from '@/utils/date.util'
 
 import { AuthView } from '@/components/auth/auth-view'
 import { ScheduleWidget } from '@/components/schedule/schedule-widget'
@@ -22,7 +22,7 @@ import { EventDetailModal } from '@/components/schedule/event-detail-modal'
 import { AttendanceWidget } from '@/components/attendance/attendance-widget'
 import { AttendanceDetailModal } from '@/components/attendance/attendance-detail-modal'
 import { QuickNbScreen } from '@/components/attendance/quick-nb-screen'
-import { LegacyAttendanceScreen } from '@/components/attendance/legacy-attendance-screen'
+import { LegacyAttendanceScreen, LegacyAttendanceView } from '@/components/attendance/legacy-attendance-screen'
 import { ManualExcuseScreen } from '@/components/attendance/manual-excuse-screen'
 import { JustificationModal } from '@/components/attendance/justification-modal'
 import { GradesWidget } from '@/components/grades/grades-widget'
@@ -33,6 +33,7 @@ import { MiniGradesWidget } from '@/components/dashboard/mini-grades-widget'
 import { MiniScheduleWidget } from '@/components/dashboard/mini-schedule-widget'
 import { MiniAttendanceWidget } from '@/components/dashboard/mini-attendance-widget'
 import { MiniMessagesWidget } from '@/components/dashboard/mini-messages-widget'
+import { MiniUpcomingEventsWidget } from '@/components/dashboard/mini-upcoming-events-widget'
 import { IosScreen, IOS_PARALLAX_PERCENT, IOS_PANEL_TRANSITION } from '@/components/ios/ios-screen'
 import { IosSpinner } from '@/components/ios/ios-spinner'
 import { IosCard, IosSegmentedControl } from '@/components/ios/ios-ui'
@@ -70,6 +71,14 @@ export default function Home() {
   const [showFullSubjectNames, setShowFullSubjectNames] = useState<boolean>(false)
   const [ignoreGradeModifiers, setIgnoreGradeModifiers] = useState<boolean>(false)
   const [allowStudentJustifications, setAllowStudentJustifications] = useState<boolean>(false)
+  const [enableGradeSimulator, setEnableGradeSimulator] = useState<boolean>(false)
+  const [showHomeworks, setShowHomeworks] = useState<boolean>(false)
+  const [showUpcomingEventsWidget, setShowUpcomingEventsWidget] = useState<boolean>(true)
+  const [showLuckyNumberBanner, setShowLuckyNumberBanner] = useState<boolean>(true)
+  const [luckyDismissedDate, setLuckyDismissedDate] = useState<string>('')
+  const [attendanceViewTab, setAttendanceViewTab] = useState<'summary' | 'table'>('summary')
+  const [isLegacyDaySubViewOpen, setIsLegacyDaySubViewOpen] = useState<boolean>(false)
+  const [manualExcuseInitialTab, setManualExcuseInitialTab] = useState<'nb' | 'range' | 'hours'>('range')
 
   const [selectedLesson, setSelectedLesson] = useState<LessonItem | null>(null)
   const [cachedLesson, setCachedLesson] = useState<LessonItem | null>(null)
@@ -279,6 +288,11 @@ export default function Home() {
     const savedFull = localStorage.getItem('synapse_full_names') === 'true'
     const savedIgnore = localStorage.getItem('synapse_ignore_modifiers') === 'true'
     const savedStudentJust = localStorage.getItem('synapse_allow_student_justifications') === 'true'
+    const savedSim = localStorage.getItem('synapse_grade_simulator') === 'true'
+    const savedHw = localStorage.getItem('synapse_show_homeworks') === 'true'
+    const savedEvents = localStorage.getItem('synapse_show_upcoming_events') !== 'false'
+    const savedLuckyBanner = localStorage.getItem('synapse_show_lucky_banner') !== 'false'
+    const savedLuckyDismissed = localStorage.getItem('synapse_lucky_dismissed_date') || ''
 
     setLang(savedLang)
     setTheme(savedTheme)
@@ -286,6 +300,11 @@ export default function Home() {
     setShowFullSubjectNames(savedFull)
     setIgnoreGradeModifiers(savedIgnore)
     setAllowStudentJustifications(savedStudentJust)
+    setEnableGradeSimulator(savedSim)
+    setShowHomeworks(savedHw)
+    setShowUpcomingEventsWidget(savedEvents)
+    setShowLuckyNumberBanner(savedLuckyBanner)
+    setLuckyDismissedDate(savedLuckyDismissed)
     applyTheme(savedTheme)
   }, [applyTheme])
 
@@ -359,6 +378,32 @@ export default function Home() {
   const handleToggleAllowStudentJustifications = (val: boolean) => {
     setAllowStudentJustifications(val)
     localStorage.setItem('synapse_allow_student_justifications', String(val))
+  }
+
+  const handleToggleEnableGradeSimulator = (val: boolean) => {
+    setEnableGradeSimulator(val)
+    localStorage.setItem('synapse_grade_simulator', String(val))
+  }
+
+  const handleToggleShowHomeworks = (val: boolean) => {
+    setShowHomeworks(val)
+    localStorage.setItem('synapse_show_homeworks', String(val))
+  }
+
+  const handleToggleShowUpcomingEventsWidget = (val: boolean) => {
+    setShowUpcomingEventsWidget(val)
+    localStorage.setItem('synapse_show_upcoming_events', String(val))
+  }
+
+  const handleToggleShowLuckyNumberBanner = (val: boolean) => {
+    setShowLuckyNumberBanner(val)
+    localStorage.setItem('synapse_show_lucky_banner', String(val))
+  }
+
+  const todayIsoStr = getTodayIsoString()
+  const handleDismissLuckyBanner = () => {
+    setLuckyDismissedDate(todayIsoStr)
+    localStorage.setItem('synapse_lucky_dismissed_date', todayIsoStr)
   }
 
   const handleManualRefresh = async () => {
@@ -573,6 +618,49 @@ export default function Home() {
         </header>
 
         <main className="w-full flex-1 pt-4 md:pt-5 pb-32 px-4 md:px-5 max-w-[402px] md:max-w-[860px] mx-auto flex flex-col gap-4 box-border">
+          {showLuckyNumberBanner &&
+            account.profile?.luckyNumber !== null &&
+            account.profile?.luckyNumber !== undefined &&
+            luckyDismissedDate !== todayIsoStr && (
+              <div className="bg-[var(--ios-card-solid)] px-4 py-3 rounded-[22px] flex items-center justify-between gap-3 select-none">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={
+                      'w-8 h-8 rounded-full flex items-center justify-center font-semibold text-[13px] shrink-0 tabular-nums ' +
+                      (account.profile.classNumber && account.profile.classNumber === account.profile.luckyNumber
+                        ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
+                        : 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)]')
+                    }
+                  >
+                    #{account.profile.luckyNumber}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[14px] font-semibold text-[var(--ios-label)] tracking-[-0.15px] truncate leading-tight">
+                      {account.profile.classNumber && account.profile.classNumber === account.profile.luckyNumber
+                        ? (lang === 'en' ? 'Your lucky number today!' : 'Twój szczęśliwy numerek dzisiaj!')
+                        : `${t.luckyNumber}: #${account.profile.luckyNumber}`}
+                    </span>
+                    <span className="text-[12px] font-normal text-[var(--ios-secondary)] truncate leading-tight mt-0.5">
+                      {account.profile.classNumber && account.profile.classNumber === account.profile.luckyNumber
+                        ? (lang === 'en' ? 'You are exempt from unannounced quizzes' : 'Zwolnienie z niezapowiedzianych odpowiedzi')
+                        : (lang === 'en' ? 'Active for today' : 'Obowiązuje w dzisiejszym dniu')}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDismissLuckyBanner}
+                  className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer"
+                  aria-label="Zamknij"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
           {timetable.hasNewUpdate && (
             <div
               onClick={timetable.applyPendingUpdates}
@@ -619,6 +707,19 @@ export default function Home() {
                   setShowFullSchedule(true)
                 }}
               />
+
+              {showUpcomingEventsWidget && (
+                <MiniUpcomingEventsWidget
+                  timetableData={isManualRefreshing ? null : (activeTodayData || timetable.timetableData)}
+                  showHomeworks={showHomeworks}
+                  showFullSubjectNames={showFullSubjectNames}
+                  lang={lang}
+                  t={t}
+                  isDesktop={true}
+                  onSelectEvent={handleSelectEvent}
+                  onOpenCalendar={() => setShowFullSchedule(true)}
+                />
+              )}
             </div>
 
             {/* Right Column: Grades -> Attendance (with today's grid) -> Messages (with direct previews) */}
@@ -702,6 +803,19 @@ export default function Home() {
               }}
             />
 
+            {showUpcomingEventsWidget && (
+              <MiniUpcomingEventsWidget
+                timetableData={isManualRefreshing ? null : (activeTodayData || timetable.timetableData)}
+                showHomeworks={showHomeworks}
+                showFullSubjectNames={showFullSubjectNames}
+                lang={lang}
+                t={t}
+                isDesktop={false}
+                onSelectEvent={handleSelectEvent}
+                onOpenCalendar={() => setShowFullSchedule(true)}
+              />
+            )}
+
             <MiniMessagesWidget
               unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
               announcementsCount={messagesInbox.announcements.length}
@@ -751,6 +865,7 @@ export default function Home() {
             gradesData={timetable.gradesData}
             showFullSubjectNames={showFullSubjectNames}
             ignoreGradeModifiers={ignoreGradeModifiers}
+            enableGradeSimulator={enableGradeSimulator}
             lang={lang}
             t={t}
             onSelectGrade={handleSelectGrade}
@@ -799,6 +914,7 @@ export default function Home() {
             isLoadingWeek={timetable.isLoadingWeek}
             textClamp={textClamp}
             showFullSubjectNames={showFullSubjectNames}
+            showHomeworks={showHomeworks}
             lang={lang}
             t={t}
           />
@@ -827,34 +943,56 @@ export default function Home() {
 
       <IosScreen
         isOpen={showFullAttendance}
-        onClose={() => setShowFullAttendance(false)}
+        onClose={() => {
+          setShowFullAttendance(false)
+          setAttendanceViewTab('summary')
+          setIsLegacyDaySubViewOpen(false)
+        }}
         title={t.attendance}
+        titleView={
+          <IosSegmentedControl<'summary' | 'table'>
+            value={attendanceViewTab}
+            onChange={(val) => setAttendanceViewTab(val)}
+            options={[
+              { id: 'summary', label: lang === 'en' ? 'Summary' : 'Podsumowanie' },
+              { id: 'table', label: lang === 'en' ? 'Table' : 'Dziennik' }
+            ]}
+            className="w-[210px]"
+          />
+        }
         backLabel={t.backAction}
         isSubView={true}
-        trailing={
-          <button
-            type="button"
-            onClick={() => setShowLegacyAttendance(true)}
-            className="text-[var(--ios-blue)] text-[17px] font-normal leading-none active:opacity-60 select-none h-full flex items-center pl-2 cursor-pointer"
-          >
-            Legacy
-          </button>
-        }
-        isReceded={Boolean(selectedSubjectDetail || showQuickNb || showManualExcuse || showLegacyAttendance || showLiveJustifications)}
+        isReceded={Boolean(selectedSubjectDetail || showQuickNb || showManualExcuse || showLegacyAttendance || showLiveJustifications || isLegacyDaySubViewOpen)}
       >
         {timetable.attendanceData && (
-          <AttendanceWidget
-            attendanceData={timetable.attendanceData}
-            lang={lang}
-            showFullSubjectNames={showFullSubjectNames}
-            onSelectSubject={handleOpenSubjectDetail}
-            isStudent={isCurrentStudent}
-            canSubmitExcuse={canSubmitExcuse}
-            onOpenManualExcuse={() => setShowManualExcuse(true)}
-            onOpenQuickNb={() => setShowQuickNb(true)}
-            onOpenLiveJustifications={() => handleOpenLiveJustifications('0')}
-            t={t}
-          />
+          attendanceViewTab === 'summary' ? (
+            <AttendanceWidget
+              attendanceData={timetable.attendanceData}
+              lang={lang}
+              showFullSubjectNames={showFullSubjectNames}
+              onSelectSubject={handleOpenSubjectDetail}
+              isStudent={isCurrentStudent}
+              canSubmitExcuse={canSubmitExcuse}
+              onOpenManualExcuse={() => {
+                setManualExcuseInitialTab('range')
+                setShowManualExcuse(true)
+              }}
+              onOpenQuickNb={() => {
+                setManualExcuseInitialTab('nb')
+                setShowManualExcuse(true)
+              }}
+              onOpenLiveJustifications={() => handleOpenLiveJustifications('0')}
+              t={t}
+            />
+          ) : (
+            <LegacyAttendanceView
+              attendanceData={timetable.attendanceData}
+              showFullSubjectNames={showFullSubjectNames}
+              lang={lang}
+              t={t}
+              onSubViewChange={setIsLegacyDaySubViewOpen}
+            />
+          )
         )}
       </IosScreen>
 
@@ -901,6 +1039,7 @@ export default function Home() {
           canSubmitExcuse={canSubmitExcuse}
           showFullSubjectNames={showFullSubjectNames}
           onSubmitJustification={handleSubmitJustifications}
+          initialModeTab={manualExcuseInitialTab}
           lang={lang}
           t={t}
         />
@@ -985,6 +1124,7 @@ export default function Home() {
           isComposeOpen={showComposeInHeader}
           onCloseCompose={() => setShowComposeInHeader(false)}
           onOpenMessage={messagesInbox.handleOpenMessage}
+          onDownloadAttachment={messagesInbox.handleDownloadAttachment}
           onSendMessage={messagesInbox.handleSendMessage}
           isLoading={messagesInbox.isLoadingMessages}
           lang={lang}
@@ -1137,6 +1277,14 @@ export default function Home() {
         onToggleShowFullSubjectNames={handleToggleShowFullSubjectNames}
         ignoreGradeModifiers={ignoreGradeModifiers}
         onToggleIgnoreGradeModifiers={handleToggleIgnoreGradeModifiers}
+        enableGradeSimulator={enableGradeSimulator}
+        onToggleEnableGradeSimulator={handleToggleEnableGradeSimulator}
+        showHomeworks={showHomeworks}
+        onToggleShowHomeworks={handleToggleShowHomeworks}
+        showUpcomingEventsWidget={showUpcomingEventsWidget}
+        onToggleShowUpcomingEventsWidget={handleToggleShowUpcomingEventsWidget}
+        showLuckyNumberBanner={showLuckyNumberBanner}
+        onToggleShowLuckyNumberBanner={handleToggleShowLuckyNumberBanner}
         isStudent={isCurrentStudent}
         allowStudentJustifications={allowStudentJustifications}
         onToggleAllowStudentJustifications={handleToggleAllowStudentJustifications}

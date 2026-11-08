@@ -9,7 +9,8 @@ import {
     fetchMessagesBundle,
     fetchUnreadCounters,
     fetchMessageContent,
-    sendMessageToUser
+    sendMessageToUser,
+    downloadMessageAttachment
 } from '@/services/message.service'
 import { runLibrusBenchmark } from '@/services/benchmark.service'
 import { JustificationPayload } from '@/models/justification.model'
@@ -156,12 +157,22 @@ export async function getStudentProfileAction(username: string, pass: string): P
         const rawLucky = luckyRes?.LuckyNumber?.LuckyNumber
         const lucky = typeof rawLucky === 'number' ? rawLucky : null
 
+        const rawClassNum =
+            userInfo.ClassNumber ??
+            me.ClassNumber ??
+            accountInfo.ClassNumber ??
+            userInfo.Number ??
+            null
+        const classNumber = rawClassNum !== null && !isNaN(Number(rawClassNum)) && Number(rawClassNum) > 0
+            ? Number(rawClassNum)
+            : null
+
         const isStudent = cleanUser.toLowerCase().includes('u')
         const role: 'student' | 'parent' = isStudent ? 'student' : 'parent'
 
         return {
             success: true,
-            data: { fullName, className, schoolName, luckyNumber: lucky, role }
+            data: { fullName, className, schoolName, luckyNumber: lucky, classNumber, role }
         }
     } catch (error: any) {
         const msg = String(error?.message || error)
@@ -183,6 +194,14 @@ export async function readMessageAction(username: string, pass: string, messageI
     try {
         const res = await fetchMessageContent(username, pass, messageId, folderId)
         return res
+    } catch (error) {
+        return { success: false, error: String(error) }
+    }
+}
+
+export async function downloadAttachmentAction(username: string, pass: string, path: string, fileName: string) {
+    try {
+        return await downloadMessageAttachment(username, pass, path, fileName)
     } catch (error) {
         return { success: false, error: String(error) }
     }

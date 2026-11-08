@@ -29,7 +29,7 @@ interface ManualExcuseScreenProps {
   t: AppDictionary
 }
 
-type ModeTab = 'range' | 'hours'
+type ModeTab = 'nb' | 'range' | 'hours'
 type ScreenStatus = 'form' | 'submitting' | 'completed'
 
 export function ManualExcuseScreen({
@@ -41,11 +41,18 @@ export function ManualExcuseScreen({
   showFullSubjectNames = false,
   onSubmitJustification,
   lang = 'pl',
-  t
-}: ManualExcuseScreenProps) {
-  const [modeTab, setModeTab] = useState<ModeTab>('range')
+  t,
+  initialModeTab = 'range'
+}: ManualExcuseScreenProps & { initialModeTab?: ModeTab }) {
+  const [modeTab, setModeTab] = useState<ModeTab>(initialModeTab)
   const [status, setStatus] = useState<ScreenStatus>('form')
   const [parentMessage, setParentMessage] = useState('')
+
+  useEffect(() => {
+    if (isOpen && initialModeTab) {
+      setModeTab(initialModeTab)
+    }
+  }, [isOpen, initialModeTab])
 
   const [pendingList, setPendingList] = useState<PendingJustificationRecord[]>(() => {
     return reconcilePendingJustifications(attendanceData.subjects)
@@ -63,6 +70,86 @@ export function ManualExcuseScreen({
   const [dateTo, setDateTo] = useState(todayIso)
   const [selectedDayIso, setSelectedDayIso] = useState(todayIso)
   const [selectedHoursMap, setSelectedHoursMap] = useState<Record<number, boolean>>({})
+  const [selectedNbMap, setSelectedNbMap] = useState<Record<string, boolean>>({})
+
+  const groupedNbDays = useMemo(() => {
+    const map: Record<string, { date: string; isoDate: string; lessons: AbsenceDetail[] }> = {}
+    attendanceData.unexcusedAbsences.forEach((abs) => {
+      const key = abs.date
+      if (!map[key]) {
+        const iso = abs.date.includes('.') ? abs.date.split('.').reverse().join('-') : abs.date
+        map[key] = { date: abs.date, isoDate: iso, lessons: [] }
+      }
+      map[key].lessons.push(abs)
+    })
+
+    return Object.values(map).map((group) => {
+      group.lessons.sort((a, b) => a.lessonNumber - b.lessonNumber)
+      const pendingCount = group.lessons.filter((l) =>
+        isLessonJustificationPending(pendingList, group.isoDate, group.date, l.lessonNumber)
+      ).length
+      return {
+        ...group,
+        allPending: pendingCount === group.lessons.length,
+        hasSelectable: pendingCount < group.lessons.length
+      }
+    })
+  }, [attendanceData.unexcusedAbsences, pendingList])
+
+  useEffect(() => {
+    const initialSelected: Record<string, boolean> = {}
+    groupedNbDays.forEach((group) => {
+      group.lessons.forEach((abs) => {
+        const isPending = isLessonJustificationPending(pendingList, group.isoDate, abs.date, abs.lessonNumber)
+        if (!isPending) {
+          initialSelected[abs.date + '_' + abs.lessonNumber] = true
+        }
+      })
+    })
+    setSelectedNbMap(initialSelected)
+  }, [groupedNbDays, pendingList])
+
+  const selectableNbCount = useMemo(() => {
+    return groupedNbDays.flatMap((g) =>
+      g.lessons.filter((l) => !isLessonJustificationPending(pendingList, g.isoDate, g.date, l.lessonNumber))
+    ).length
+  }, [groupedNbDays, pendingList])
+
+  const selectedNbCount = useMemo(() => {
+    return Object.entries(selectedNbMap).filter(([key, checked]) => {
+      if (!checked) return false
+      const parts = key.split('_')
+      const date = parts[0]
+      const num = Number(parts[1])
+      const group = groupedNbDays.find((g) => g.date === date)
+      if (!group) return false
+      return !isLessonJustificationPending(pendingList, group.isoDate, date, num)
+    }).length
+  }, [selectedNbMap, groupedNbDays, pendingList])
+
+  const isAllNbSelected = selectableNbCount > 0 && selectedNbCount === selectableNbCount
+
+  const toggleSelectAllNb = () => {
+    const nextState = !isAllNbSelected
+    const updated: Record<string, boolean> = {}
+    groupedNbDays.forEach((group) => {
+      group.lessons.forEach((l) => {
+        const isPending = isLessonJustificationPending(pendingList, group.isoDate, group.date, l.lessonNumber)
+        if (!isPending) {
+          updated[group.date + '_' + l.lessonNumber] = nextState
+        }
+      })
+    })
+    setSelectedNbMap(updated)
+  }
+
+  const toggleNbLesson = (date: string, lessonNumber: number) => {
+    const group = groupedNbDays.find((g) => g.date === date)
+    if (!group) return
+    if (isLessonJustificationPending(pendingList, group.isoDate, date, lessonNumber)) return
+    const key = date + '_' + lessonNumber
+    setSelectedNbMap((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
 
   const [progressCurrent, setProgressCurrent] = useState(0)
   const [progressTotal, setProgressTotal] = useState(0)
@@ -206,10 +293,17 @@ export function ManualExcuseScreen({
     e.preventDefault()
     if (!canSubmitExcuse || status !== 'form') return
 
+    if (modeTab === 'nb' && selectedNbCount === 0) return
     if (modeTab === 'range' && rangePlan.totalLessons === 0) return
     if (modeTab === 'hours' && selectedLessonsArray.length === 0) return
 
-    const totalToSubmit = modeTab === 'range' ? rangePlan.totalLessons : selectedLessonsArray.length
+    const totalToSubmit =
+      modeTab === 'nb'
+        ? selectedNbCount
+        : modeTab === 'range'
+          ? rangePlan.totalLessons
+          : selectedLessonsArray.length
+
     setProgressTotal(totalToSubmit)
     setProgressCurrent(0)
     setStatus('submitting')
@@ -218,7 +312,42 @@ export function ManualExcuseScreen({
     const failed: Array<{ date: string; lessons: number[]; error: string }> = []
     setFailures([])
 
-    if (modeTab === 'range') {
+    if (modeTab === 'nb') {
+      for (const group of groupedNbDays) {
+        const selectedLessons = group.lessons
+          .filter((l) => {
+            const isPending = isLessonJustificationPending(pendingList, group.isoDate, group.date, l.lessonNumber)
+            return !isPending && selectedNbMap[group.date + '_' + l.lessonNumber]
+          })
+          .map((l) => l.lessonNumber)
+
+        if (selectedLessons.length > 0) {
+          const { ok, error } = await onSubmitJustification({
+            dateFrom: group.isoDate,
+            dateTo: group.isoDate,
+            lessons: selectedLessons,
+            message: parentMessage
+          })
+
+          if (ok) {
+            savePendingJustification({
+              dateIso: group.isoDate,
+              dateDisplay: group.date,
+              lessons: selectedLessons,
+              message: parentMessage
+            })
+          } else {
+            failed.push({ date: group.date, lessons: selectedLessons, error: error || 'Nieznany błąd' })
+          }
+
+          for (let i = 0; i < selectedLessons.length; i++) {
+            progressCount++
+            setProgressCurrent(progressCount)
+            await new Promise((r) => setTimeout(r, 60))
+          }
+        }
+      }
+    } else if (modeTab === 'range') {
       for (const day of rangePlan.days) {
         const { ok, error } = await onSubmitJustification({
           dateFrom: day.dateIso,
@@ -277,7 +406,7 @@ export function ManualExcuseScreen({
     setStatus('completed')
   }
 
-  const pageTitle = lang === 'en' ? 'Manual Justification' : 'Ręczne usprawiedliwienie'
+  const pageTitle = lang === 'en' ? 'Justifications' : 'Usprawiedliwienia'
 
   return (
     <IosScreen
@@ -296,8 +425,9 @@ export function ManualExcuseScreen({
               value={modeTab}
               onChange={setModeTab}
               options={[
+                { id: 'nb', label: lang === 'en' ? 'Unexcused nb' : 'Zaległe nb' },
                 { id: 'range', label: lang === 'en' ? 'Date Range' : 'Okres dni' },
-                { id: 'hours', label: lang === 'en' ? 'Specific Hours' : 'Wybrane godziny' }
+                { id: 'hours', label: lang === 'en' ? 'Specific Hours' : 'Godziny' }
               ]}
               className="w-full"
             />
@@ -309,7 +439,127 @@ export function ManualExcuseScreen({
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {modeTab === 'range' ? (
+              {modeTab === 'nb' ? (
+                <div className="flex flex-col gap-3.5">
+                  <IosCard className="p-4 flex items-center justify-between">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight">
+                        {lang === 'en' ? 'Unexcused Lessons' : 'Nieusprawiedliwione godziny'}
+                      </span>
+                      <h2 className="text-[28px] font-semibold text-[var(--ios-red)] tracking-tight leading-none mt-0.5 tabular-nums">
+                        {attendanceData.unexcusedAbsences.length} nb
+                      </h2>
+                    </div>
+
+                    {selectableNbCount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={toggleSelectAllNb}
+                        className="flex items-center gap-2 py-1.5 px-3 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] active:scale-[0.96] active:opacity-75 transition-all cursor-pointer"
+                      >
+                        <span className="text-[13px] font-medium tracking-tight">
+                          {lang === 'en' ? 'Select all' : 'Zaznacz wszystkie'}
+                        </span>
+                        <div className={
+                          "w-5 h-5 rounded-full flex items-center justify-center transition-colors shrink-0 " +
+                          (isAllNbSelected
+                            ? "bg-[var(--ios-blue)] text-white"
+                            : "border border-[var(--ios-separator)] bg-[var(--ios-card-solid)]")
+                        }>
+                          {isAllNbSelected && (
+                            <svg className="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </div>
+                      </button>
+                    ) : (
+                      <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-[var(--ios-yellow)]/15 text-[var(--ios-yellow)] dark:text-[#ffd60a]">
+                        {t.pendingJustification}
+                      </span>
+                    )}
+                  </IosCard>
+
+                  {groupedNbDays.length > 0 ? (
+                    groupedNbDays.map((group) => (
+                      <div key={group.date} className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between px-4 text-[13px] text-[var(--ios-secondary)]">
+                          <span className="font-semibold tracking-tight text-[var(--ios-label)]">
+                            {group.date}
+                          </span>
+                          <span className="tabular-nums">
+                            {group.lessons.length} {lang === 'en' ? 'periods' : 'lekcji'}
+                          </span>
+                        </div>
+
+                        <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
+                          {group.lessons.map((lesson) => {
+                            const isPending = isLessonJustificationPending(
+                              pendingList,
+                              group.isoDate,
+                              group.date,
+                              lesson.lessonNumber
+                            )
+                            const key = group.date + '_' + lesson.lessonNumber
+                            const isChecked = Boolean(selectedNbMap[key]) && !isPending
+
+                            return (
+                              <div
+                                key={lesson.lessonNumber}
+                                onClick={() => !isPending && canSubmitExcuse && toggleNbLesson(group.date, lesson.lessonNumber)}
+                                className={
+                                  "px-4 py-3 flex items-center justify-between gap-3 transition-colors duration-100 " +
+                                  (isPending
+                                    ? "opacity-50 cursor-not-allowed bg-transparent"
+                                    : "cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]")
+                                }
+                              >
+                                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                  {isPending ? (
+                                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[12px] text-[var(--ios-yellow)] dark:text-[#ffd60a]">
+                                      ⏳
+                                    </div>
+                                  ) : (
+                                    <div className={
+                                      "w-[22px] h-[22px] rounded-full flex items-center justify-center transition-colors shrink-0 " +
+                                      (isChecked
+                                        ? "bg-[var(--ios-blue)] text-white"
+                                        : "border border-[var(--ios-separator)] bg-[var(--ios-element)]/30")
+                                    }>
+                                      {isChecked && (
+                                        <svg className="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                          <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  <div className="min-w-0 flex-1">
+                                    <h4 className="text-[15px] font-medium text-[var(--ios-label)] tracking-[-0.2px] truncate leading-snug">
+                                      {formatSubjectName(lesson.subject, showFullSubjectNames)}
+                                    </h4>
+                                    <p className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-[16px] tabular-nums mt-0.5">
+                                      {t.lessonNumberLabel(lesson.lessonNumber)} {lesson.time ? '• ' + lesson.time : ''}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <span className="text-[12px] font-medium text-[var(--ios-red)] tracking-tight tabular-nums">
+                                  {isPending ? t.pendingJustification : 'NB'}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </IosCard>
+                      </div>
+                    ))
+                  ) : (
+                    <IosCard className="p-8 text-center text-[15px] font-normal text-[var(--ios-secondary)]">
+                      {lang === 'en' ? 'All absences are excused' : 'Wszystkie nieobecności są usprawiedliwione'}
+                    </IosCard>
+                  )}
+                </div>
+              ) : modeTab === 'range' ? (
                 <IosCard className="p-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[15px] font-normal text-[var(--ios-label)]">
@@ -463,14 +713,17 @@ export function ManualExcuseScreen({
                 type="submit"
                 disabled={
                   !canSubmitExcuse ||
+                  (modeTab === 'nb' && selectedNbCount === 0) ||
                   (modeTab === 'range' && rangePlan.totalLessons === 0) ||
                   (modeTab === 'hours' && selectedLessonsArray.length === 0)
                 }
-                className="h-[50px] w-full bg-[var(--ios-blue)] text-white text-[15px] font-medium tracking-tight rounded-[16px] active:scale-[0.98] active:opacity-85 disabled:opacity-40 transition-[transform,opacity] duration-150 flex items-center justify-center gap-2 mt-1 cursor-pointer"
+                className="h-[48px] w-full bg-[var(--ios-blue)] text-white text-[16px] font-semibold tracking-[-0.3px] rounded-full active:scale-[0.98] active:opacity-85 disabled:opacity-40 transition-[transform,opacity] duration-150 flex items-center justify-center gap-2 mt-1 cursor-pointer"
               >
-                {modeTab === 'range'
-                  ? (lang === 'en' ? (`Excuse range (${rangePlan.totalLessons} periods)`) : (`Usprawiedliw okres (${rangePlan.totalLessons} lekcji)`))
-                  : (lang === 'en' ? (`Excuse selected (${selectedLessonsArray.length})`) : (`Usprawiedliw zaznaczone (${selectedLessonsArray.length})`))}
+                {modeTab === 'nb'
+                  ? (lang === 'en' ? (`Excuse selected (${selectedNbCount})`) : (`Usprawiedliw zaznaczone (${selectedNbCount})`))
+                  : modeTab === 'range'
+                    ? (lang === 'en' ? (`Excuse range (${rangePlan.totalLessons} periods)`) : (`Usprawiedliw okres (${rangePlan.totalLessons} lekcji)`))
+                    : (lang === 'en' ? (`Excuse selected (${selectedLessonsArray.length})`) : (`Usprawiedliw zaznaczone (${selectedLessonsArray.length})`))}
               </button>
             </form>
           </>

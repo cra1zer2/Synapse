@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
-import { getMessagesAndAnnouncementsAction, readMessageAction, sendMessageAction } from '@/app/actions'
+import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem } from '@/models/message.model'
+import { getMessagesAndAnnouncementsAction, readMessageAction, sendMessageAction, downloadAttachmentAction } from '@/app/actions'
 
 export function useMessagesInbox({ username, password }: { username: string; password: string }) {
     const [messages, setMessages] = useState<MessageItem[]>([])
@@ -75,7 +75,10 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         }
     }, [username, password])
 
-    const handleOpenMessage = async (msgId: number | string, folder: 'inbox' | 'sent' = 'inbox'): Promise<string> => {
+    const handleOpenMessage = async (
+        msgId: number | string,
+        folder: 'inbox' | 'sent' = 'inbox'
+    ): Promise<{ content: string; attachments: MessageAttachment[] }> => {
         const idNum = Number(msgId)
 
         if (folder === 'inbox') {
@@ -97,7 +100,40 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         }
 
         const res = await readMessageAction(username, password, idNum, folder === 'sent' ? 6 : 5)
-        return res.content || ''
+        return {
+            content: res.content || '',
+            attachments: res.attachments || []
+        }
+    }
+
+    const handleDownloadAttachment = async (att: MessageAttachment): Promise<boolean> => {
+        if (!username || !password || !att.path) return false
+        const res = await downloadAttachmentAction(username, password, att.path, att.name)
+        if (!res.success || !res.base64) return false
+
+        try {
+            const byteCharacters = atob(res.base64)
+            const byteNumbers = new Array(byteCharacters.length)
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i)
+            }
+            const byteArray = new Uint8Array(byteNumbers)
+            const blob = new Blob([byteArray], { type: res.mimeType || 'application/octet-stream' })
+            const url = URL.createObjectURL(blob)
+
+            const a = document.createElement('a')
+            a.href = url
+            a.download = res.fileName || att.name
+            a.target = '_blank'
+            a.rel = 'noopener noreferrer'
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            setTimeout(() => URL.revokeObjectURL(url), 10000)
+            return true
+        } catch {
+            return false
+        }
     }
 
     const handleSendMessage = async (receiverId: number | number[], title: string, body: string): Promise<boolean> => {
@@ -142,6 +178,7 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         isLoadingMessages,
         messagesError,
         handleOpenMessage,
+        handleDownloadAttachment,
         handleSendMessage,
         reloadMessages
     }

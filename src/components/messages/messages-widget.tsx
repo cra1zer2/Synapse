@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, ReactNode } from 'react'
-import { MessageItem, AnnouncementItem, ReceiverItem } from '@/models/message.model'
+import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { cleanSenderName } from '@/utils/text.util'
 import { IosCard, IosSearchBar } from '@/components/ios/ios-ui'
@@ -18,7 +18,8 @@ interface MessagesWidgetProps {
   receivers: ReceiverItem[]
   isComposeOpen?: boolean
   onCloseCompose?: () => void
-  onOpenMessage: (id: number | string, folder?: 'inbox' | 'sent') => Promise<string>
+  onOpenMessage: (id: number | string, folder?: 'inbox' | 'sent') => Promise<{ content: string; attachments: MessageAttachment[] }>
+  onDownloadAttachment?: (att: MessageAttachment) => Promise<boolean>
   onSendMessage: (receiverId: number | number[], title: string, body: string) => Promise<boolean>
   isLoading?: boolean
   lang?: AppLanguage
@@ -26,6 +27,15 @@ interface MessagesWidgetProps {
   onSubViewChange?: (isOpen: boolean) => void
   initialSelectedMessage?: MessageItem | null
   initialSelectedAnnouncement?: AnnouncementItem | null
+}
+
+function openExternalSafe(url: string, e: React.MouseEvent) {
+  e.preventDefault()
+  e.stopPropagation()
+  if (typeof window !== 'undefined') {
+    const win = window.open(url, '_blank', 'noopener,noreferrer')
+    if (win) win.opener = null
+  }
 }
 
 function renderClickableText(text: string): ReactNode {
@@ -42,24 +52,25 @@ function renderClickableText(text: string): ReactNode {
           href={part}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[var(--ios-blue)] underline break-all active:opacity-60"
-          onClick={(e) => e.stopPropagation()}
+          className="text-[var(--ios-blue)] underline break-all active:opacity-60 inline-flex items-center gap-0.5"
+          onClick={(e) => openExternalSafe(part, e)}
         >
-          {part}
+          <span>{part}</span>
         </a>
       )
     }
     if (/^www\./i.test(part)) {
+      const targetUrl = 'https://' + part
       return (
         <a
           key={i}
-          href={'https://' + part}
+          href={targetUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[var(--ios-blue)] underline break-all active:opacity-60"
-          onClick={(e) => e.stopPropagation()}
+          className="text-[var(--ios-blue)] underline break-all active:opacity-60 inline-flex items-center gap-0.5"
+          onClick={(e) => openExternalSafe(targetUrl, e)}
         >
-          {part}
+          <span>{part}</span>
         </a>
       )
     }
@@ -99,6 +110,7 @@ export function MessagesWidget({
   isComposeOpen = false,
   onCloseCompose,
   onOpenMessage,
+  onDownloadAttachment,
   onSendMessage,
   isLoading = false,
   lang = 'pl',
@@ -108,9 +120,11 @@ export function MessagesWidget({
   initialSelectedAnnouncement = null
 }: MessagesWidgetProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [onlyUnread, setOnlyUnread] = useState(false)
   const [activeMessage, setActiveMessage] = useState<MessageItem | null>(null)
   const [cachedMessage, setCachedMessage] = useState<MessageItem | null>(null)
   const [readerContent, setReaderContent] = useState('')
+  const [readerAttachments, setReaderAttachments] = useState<MessageAttachment[]>([])
   const [isLoadingContent, setIsLoadingContent] = useState(false)
 
   const [activeAnnouncement, setActiveAnnouncement] = useState<AnnouncementItem | null>(null)
@@ -126,20 +140,27 @@ export function MessagesWidget({
   const uniqueReceivers = useMemo(() => deduplicateReceivers(receivers), [receivers])
 
   const filteredMessages = useMemo(() => {
-    return messages.filter(
-      (m) =>
-        searchQuery === '' ||
-        m.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.sender.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  }, [messages, searchQuery])
+    const q = searchQuery.trim().toLowerCase()
+    return messages.filter((m) => {
+      if (folder !== 'sent' && onlyUnread && m.isRead) return false
+      if (!q) return true
+      return (
+        m.subject.toLowerCase().includes(q) ||
+        m.sender.toLowerCase().includes(q) ||
+        (m.content && m.content.toLowerCase().includes(q)) ||
+        m.date.toLowerCase().includes(q)
+      )
+    })
+  }, [messages, searchQuery, onlyUnread, folder])
 
   const filteredAnnouncements = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
     return announcements.filter(
       (a) =>
-        searchQuery === '' ||
-        a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        a.author.toLowerCase().includes(searchQuery.toLowerCase())
+        !q ||
+        a.title.toLowerCase().includes(q) ||
+        a.author.toLowerCase().includes(q) ||
+        (a.content && a.content.toLowerCase().includes(q))
     )
   }, [announcements, searchQuery])
 
@@ -152,11 +173,13 @@ export function MessagesWidget({
     setActiveMessage(msg)
     setCachedMessage(msg)
     setReaderContent('')
+    setReaderAttachments([])
     setIsLoadingContent(true)
     notifySubView(true)
 
-    const content = await onOpenMessage(msg.id, folder)
-    setReaderContent(content)
+    const res = await onOpenMessage(msg.id, folder)
+    setReaderContent(res.content)
+    setReaderAttachments(res.attachments || [])
     setIsLoadingContent(false)
   }
 
@@ -166,6 +189,7 @@ export function MessagesWidget({
     setTimeout(() => {
       setCachedMessage(null)
       setReaderContent('')
+      setReaderAttachments([])
     }, 350)
   }
 
@@ -216,11 +240,29 @@ export function MessagesWidget({
 
   return (
     <div className="w-full flex flex-col gap-3.5 pb-16 select-none">
-      <IosSearchBar
-        value={searchQuery}
-        onChange={setSearchQuery}
-        placeholder={mode === 'messages' ? (folder === 'sent' ? (isEn ? 'Search sent messages...' : 'Szukaj w wysłanych...') : t.searchMessagesPlaceholder) : (isEn ? 'Search notices...' : 'Szukaj w ogłoszeniach...')}
-      />
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <IosSearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={mode === 'messages' ? (folder === 'sent' ? (isEn ? 'Search sent messages...' : 'Szukaj w wysłanych...') : t.searchMessagesPlaceholder) : (isEn ? 'Search notices...' : 'Szukaj w ogłoszeniach...')}
+          />
+        </div>
+        {mode === 'messages' && folder !== 'sent' && (
+          <button
+            type="button"
+            onClick={() => setOnlyUnread((prev) => !prev)}
+            className={cn(
+              'h-[40px] px-3.5 rounded-full text-[13px] font-medium tracking-[-0.1px] shrink-0 transition-colors cursor-pointer select-none',
+              onlyUnread
+                ? 'bg-[var(--ios-blue)] text-white'
+                : 'bg-[var(--ios-card-solid)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
+            )}
+          >
+            {isEn ? 'Unread' : 'Nieprzeczytane'}
+          </button>
+        )}
+      </div>
 
       {mode === 'messages' ? (
         <IosCard className="overflow-hidden">
@@ -275,9 +317,26 @@ export function MessagesWidget({
                       {cleanSenderName(msg.sender)}
                     </span>
                   </div>
-                  <span className="text-[11px] font-normal text-[var(--ios-secondary)] tabular-nums shrink-0">
-                    {msg.date}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {msg.hasAttachments && (
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-[var(--ios-secondary)]"
+                      >
+                        <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                      </svg>
+                    )}
+                    <span className="text-[11px] font-normal text-[var(--ios-secondary)] tabular-nums">
+                      {msg.date}
+                    </span>
+                  </div>
                 </div>
 
                 <h3 className={cn(
@@ -363,6 +422,8 @@ export function MessagesWidget({
         isReceded={isComposeActive}
         isLoadingContent={isLoadingContent}
         content={readerContent}
+        attachments={readerAttachments}
+        onDownloadAttachment={onDownloadAttachment}
         onClose={handleCloseMessage}
         onReply={handleInitiateReply}
         renderContent={renderClickableText}

@@ -40,6 +40,23 @@ import { IosCard, IosSegmentedControl } from '@/components/ios/ios-ui'
 import { cn } from '@/utils/cn.util'
 
 export type TextClampOption = 'full' | '1' | '2'
+export type DashboardWidgetId = 'grades' | 'schedule' | 'upcoming' | 'messages' | 'attendance'
+
+const DEFAULT_DASHBOARD_ORDER: DashboardWidgetId[] = [
+  'grades',
+  'schedule',
+  'upcoming',
+  'messages',
+  'attendance'
+]
+
+const DEFAULT_DASHBOARD_VISIBLE: Record<DashboardWidgetId, boolean> = {
+  grades: true,
+  schedule: true,
+  upcoming: false,
+  messages: true,
+  attendance: true
+}
 
 function syncMetaThemeColor(isDark: boolean) {
   if (typeof document === 'undefined') return
@@ -73,8 +90,10 @@ export default function Home() {
   const [allowStudentJustifications, setAllowStudentJustifications] = useState<boolean>(false)
   const [enableGradeSimulator, setEnableGradeSimulator] = useState<boolean>(false)
   const [showHomeworks, setShowHomeworks] = useState<boolean>(false)
-  const [showUpcomingEventsWidget, setShowUpcomingEventsWidget] = useState<boolean>(true)
-  const [showLuckyNumberBanner, setShowLuckyNumberBanner] = useState<boolean>(true)
+  const [showUpcomingEventsWidget, setShowUpcomingEventsWidget] = useState<boolean>(false)
+  const [dashboardOrder, setDashboardOrder] = useState<DashboardWidgetId[]>(DEFAULT_DASHBOARD_ORDER)
+  const [dashboardVisible, setDashboardVisible] = useState<Record<DashboardWidgetId, boolean>>(DEFAULT_DASHBOARD_VISIBLE)
+  const [showLuckyNumberBanner, setShowLuckyNumberBanner] = useState<boolean>(false)
   const [luckyDismissedDate, setLuckyDismissedDate] = useState<string>('')
   const [attendanceViewTab, setAttendanceViewTab] = useState<'summary' | 'table'>('summary')
   const [isLegacyDaySubViewOpen, setIsLegacyDaySubViewOpen] = useState<boolean>(false)
@@ -290,8 +309,8 @@ export default function Home() {
     const savedStudentJust = localStorage.getItem('synapse_allow_student_justifications') === 'true'
     const savedSim = localStorage.getItem('synapse_grade_simulator') === 'true'
     const savedHw = localStorage.getItem('synapse_show_homeworks') === 'true'
-    const savedEvents = localStorage.getItem('synapse_show_upcoming_events') !== 'false'
-    const savedLuckyBanner = localStorage.getItem('synapse_show_lucky_banner') !== 'false'
+    const savedEvents = localStorage.getItem('synapse_show_upcoming_events') === 'true'
+    const savedLuckyBanner = localStorage.getItem('synapse_show_lucky_banner') === 'true'
     const savedLuckyDismissed = localStorage.getItem('synapse_lucky_dismissed_date') || ''
 
     setLang(savedLang)
@@ -305,6 +324,35 @@ export default function Home() {
     setShowUpcomingEventsWidget(savedEvents)
     setShowLuckyNumberBanner(savedLuckyBanner)
     setLuckyDismissedDate(savedLuckyDismissed)
+
+    try {
+      const rawOrder = localStorage.getItem('synapse_dashboard_order_v1')
+      if (rawOrder) {
+        const parsed = JSON.parse(rawOrder) as DashboardWidgetId[]
+        if (Array.isArray(parsed) && DEFAULT_DASHBOARD_ORDER.every((k) => parsed.includes(k))) {
+          setDashboardOrder(parsed)
+        }
+      }
+    } catch {}
+
+    try {
+      const rawVis = localStorage.getItem('synapse_dashboard_visible_v1')
+      if (rawVis) {
+        const parsed = JSON.parse(rawVis) as Partial<Record<DashboardWidgetId, boolean>>
+        const merged: Record<DashboardWidgetId, boolean> = {
+          ...DEFAULT_DASHBOARD_VISIBLE,
+          ...parsed
+        }
+        setDashboardVisible(merged)
+        setShowUpcomingEventsWidget(Boolean(merged.upcoming))
+      } else {
+        setDashboardVisible({
+          ...DEFAULT_DASHBOARD_VISIBLE,
+          upcoming: savedEvents
+        })
+      }
+    } catch {}
+
     applyTheme(savedTheme)
   }, [applyTheme])
 
@@ -393,6 +441,28 @@ export default function Home() {
   const handleToggleShowUpcomingEventsWidget = (val: boolean) => {
     setShowUpcomingEventsWidget(val)
     localStorage.setItem('synapse_show_upcoming_events', String(val))
+    setDashboardVisible((prev) => {
+      const next = { ...prev, upcoming: val }
+      localStorage.setItem('synapse_dashboard_visible_v1', JSON.stringify(next))
+      return next
+    })
+  }
+
+  const handleChangeDashboardOrder = (newOrder: DashboardWidgetId[]) => {
+    setDashboardOrder(newOrder)
+    localStorage.setItem('synapse_dashboard_order_v1', JSON.stringify(newOrder))
+  }
+
+  const handleToggleDashboardWidget = (id: DashboardWidgetId, val: boolean) => {
+    setDashboardVisible((prev) => {
+      const next = { ...prev, [id]: val }
+      localStorage.setItem('synapse_dashboard_visible_v1', JSON.stringify(next))
+      return next
+    })
+    if (id === 'upcoming') {
+      setShowUpcomingEventsWidget(val)
+      localStorage.setItem('synapse_show_upcoming_events', String(val))
+    }
   }
 
   const handleToggleShowLuckyNumberBanner = (val: boolean) => {
@@ -621,29 +691,21 @@ export default function Home() {
           {showLuckyNumberBanner &&
             account.profile?.luckyNumber !== null &&
             account.profile?.luckyNumber !== undefined &&
+            account.profile?.classNumber !== null &&
+            account.profile?.classNumber !== undefined &&
+            account.profile.classNumber === account.profile.luckyNumber &&
             luckyDismissedDate !== todayIsoStr && (
               <div className="bg-[var(--ios-card-solid)] px-4 py-3 rounded-[22px] flex items-center justify-between gap-3 select-none">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={
-                      'w-8 h-8 rounded-full flex items-center justify-center font-semibold text-[13px] shrink-0 tabular-nums ' +
-                      (account.profile.classNumber && account.profile.classNumber === account.profile.luckyNumber
-                        ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
-                        : 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)]')
-                    }
-                  >
+                  <div className="w-8 h-8 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center font-semibold text-[13px] shrink-0 tabular-nums">
                     #{account.profile.luckyNumber}
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="text-[14px] font-semibold text-[var(--ios-label)] tracking-[-0.15px] truncate leading-tight">
-                      {account.profile.classNumber && account.profile.classNumber === account.profile.luckyNumber
-                        ? (lang === 'en' ? 'Your lucky number today!' : 'Twój szczęśliwy numerek dzisiaj!')
-                        : `${t.luckyNumber}: #${account.profile.luckyNumber}`}
+                      {lang === 'en' ? 'Your lucky number today!' : 'Twój szczęśliwy numerek dzisiaj!'}
                     </span>
                     <span className="text-[12px] font-normal text-[var(--ios-secondary)] truncate leading-tight mt-0.5">
-                      {account.profile.classNumber && account.profile.classNumber === account.profile.luckyNumber
-                        ? (lang === 'en' ? 'You are exempt from unannounced quizzes' : 'Zwolnienie z niezapowiedzianych odpowiedzi')
-                        : (lang === 'en' ? 'Active for today' : 'Obowiązuje w dzisiejszym dniu')}
+                      {lang === 'en' ? 'You are exempt from unannounced quizzes' : 'Zwolnienie z niezapowiedzianych odpowiedzi'}
                     </span>
                   </div>
                 </div>
@@ -680,170 +742,131 @@ export default function Home() {
           )}
 
           {/* DESKTOP LAYOUT (md:grid md:grid-cols-2) */}
-          <div className="hidden md:grid md:grid-cols-2 gap-4 items-start w-full">
-            {/* Left Column: Clean Full-Day Schedule */}
-            <div className="flex flex-col gap-4 w-full">
-              <MiniScheduleWidget
-                timetableData={isManualRefreshing ? null : activeTodayData}
-                isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
-                error={timetable.timetableError}
-                onRetry={handleManualRefresh}
-                textClamp={textClamp}
-                showFullSubjectNames={showFullSubjectNames}
-                lang={lang}
-                t={t}
-                showAllLessons={true}
-                onSelectLesson={handleSelectLesson}
-                onOpenFullSchedule={(targetDay, targetIsoDate) => {
-                  if (targetIsoDate) {
-                    const targetMonday = normalizeToMondayIso(targetIsoDate)
-                    if (targetMonday !== timetable.currentWeekPivot) {
-                      timetable.queueWeekChange(targetMonday)
-                    }
-                  }
-                  if (targetDay) {
-                    timetable.setSelectedDay(targetDay)
-                  }
-                  setShowFullSchedule(true)
-                }}
-              />
+          {(() => {
+            const renderWidget = (id: DashboardWidgetId, desktopMode: boolean) => {
+              switch (id) {
+                case 'schedule':
+                  return (
+                    <MiniScheduleWidget
+                      key="schedule"
+                      timetableData={isManualRefreshing ? null : activeTodayData}
+                      isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
+                      error={timetable.timetableError}
+                      onRetry={handleManualRefresh}
+                      textClamp={textClamp}
+                      showFullSubjectNames={showFullSubjectNames}
+                      lang={lang}
+                      t={t}
+                      showAllLessons={desktopMode}
+                      onSelectLesson={handleSelectLesson}
+                      onOpenFullSchedule={(targetDay, targetIsoDate) => {
+                        if (targetIsoDate) {
+                          const targetMonday = normalizeToMondayIso(targetIsoDate)
+                          if (targetMonday !== timetable.currentWeekPivot) {
+                            timetable.queueWeekChange(targetMonday)
+                          }
+                        }
+                        if (targetDay) {
+                          timetable.setSelectedDay(targetDay)
+                        }
+                        setShowFullSchedule(true)
+                      }}
+                    />
+                  )
+                case 'grades':
+                  return (
+                    <MiniGradesWidget
+                      key="grades"
+                      gradesData={isManualRefreshing ? null : timetable.gradesData}
+                      isLoading={isManualRefreshing || (!timetable.gradesData && timetable.isUpdating && !timetable.gradesError)}
+                      error={timetable.gradesError}
+                      onRetry={handleManualRefresh}
+                      t={t}
+                      isDesktop={desktopMode}
+                      onOpenGrades={() => setShowFullGrades(true)}
+                      onSelectGrade={(g) => handleSelectGrade(g, desktopMode ? findSubjectForGrade(g) : (g.subject || ''))}
+                    />
+                  )
+                case 'upcoming':
+                  return (
+                    <MiniUpcomingEventsWidget
+                      key="upcoming"
+                      timetableData={isManualRefreshing ? null : (activeTodayData || timetable.timetableData)}
+                      isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
+                      showHomeworks={showHomeworks}
+                      showFullSubjectNames={showFullSubjectNames}
+                      lang={lang}
+                      t={t}
+                      isDesktop={desktopMode}
+                      onSelectEvent={handleSelectEvent}
+                      onOpenCalendar={() => setShowFullSchedule(true)}
+                    />
+                  )
+                case 'attendance':
+                  return (
+                    <MiniAttendanceWidget
+                      key="attendance"
+                      attendanceData={isManualRefreshing ? null : timetable.attendanceData}
+                      timetableData={isManualRefreshing ? null : activeTodayData}
+                      isLoading={isManualRefreshing || (!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError)}
+                      error={timetable.attendanceError}
+                      onRetry={handleManualRefresh}
+                      lang={lang}
+                      t={t}
+                      isDesktop={desktopMode}
+                      onOpenAttendance={() => setShowFullAttendance(true)}
+                      onOpenLegacyAttendance={() => setShowLegacyAttendance(true)}
+                    />
+                  )
+                case 'messages':
+                  return (
+                    <MiniMessagesWidget
+                      key="messages"
+                      unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
+                      announcementsCount={messagesInbox.announcements.length}
+                      isLoading={isManualRefreshing || (messagesInbox.isLoadingMessages && messagesInbox.messages.length === 0 && messagesInbox.announcements.length === 0 && !messagesInbox.messagesError)}
+                      error={messagesInbox.messagesError}
+                      onRetry={messagesInbox.reloadMessages}
+                      lang={lang}
+                      t={t}
+                      latestMessage={messagesInbox.messages[0] || null}
+                      latestAnnouncement={messagesInbox.announcements[0] || null}
+                      onOpenMessageDetail={handleOpenDirectMessage}
+                      onOpenAnnouncementDetail={handleOpenDirectAnnouncement}
+                      onOpenMessages={() => setShowMessagesScreen(true)}
+                      onOpenAnnouncements={() => setShowAnnouncementsScreen(true)}
+                    />
+                  )
+              }
+            }
 
-              {showUpcomingEventsWidget && (
-                <MiniUpcomingEventsWidget
-                  timetableData={isManualRefreshing ? null : (activeTodayData || timetable.timetableData)}
-                  showHomeworks={showHomeworks}
-                  showFullSubjectNames={showFullSubjectNames}
-                  lang={lang}
-                  t={t}
-                  isDesktop={true}
-                  onSelectEvent={handleSelectEvent}
-                  onOpenCalendar={() => setShowFullSchedule(true)}
-                />
-              )}
-            </div>
+            const visibleMobileIds = dashboardOrder.filter((id) => dashboardVisible[id])
+            const nonScheduleDesktopIds = dashboardOrder.filter((id) => id !== 'schedule' && dashboardVisible[id])
+            const leftDesktopIds: DashboardWidgetId[] = dashboardVisible.schedule
+              ? ['schedule']
+              : nonScheduleDesktopIds.filter((_, idx) => idx % 2 === 0)
+            const rightDesktopIds: DashboardWidgetId[] = dashboardVisible.schedule
+              ? nonScheduleDesktopIds
+              : nonScheduleDesktopIds.filter((_, idx) => idx % 2 === 1)
 
-            {/* Right Column: Grades -> Attendance (with today's grid) -> Messages (with direct previews) */}
-            <div className="flex flex-col gap-4 w-full">
-              <MiniGradesWidget
-                gradesData={isManualRefreshing ? null : timetable.gradesData}
-                isLoading={isManualRefreshing || (!timetable.gradesData && timetable.isUpdating && !timetable.gradesError)}
-                error={timetable.gradesError}
-                onRetry={handleManualRefresh}
-                t={t}
-                isDesktop={true}
-                onOpenGrades={() => setShowFullGrades(true)}
-                onSelectGrade={(g) => handleSelectGrade(g, findSubjectForGrade(g))}
-              />
+            return (
+              <>
+                <div className="hidden md:grid md:grid-cols-2 gap-4 items-start w-full">
+                  <div className="flex flex-col gap-4 w-full">
+                    {leftDesktopIds.map((id) => renderWidget(id, true))}
+                  </div>
+                  <div className="flex flex-col gap-4 w-full">
+                    {rightDesktopIds.map((id) => renderWidget(id, true))}
+                  </div>
+                </div>
 
-              <MiniAttendanceWidget
-                attendanceData={isManualRefreshing ? null : timetable.attendanceData}
-                timetableData={isManualRefreshing ? null : activeTodayData}
-                isLoading={isManualRefreshing || (!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError)}
-                error={timetable.attendanceError}
-                onRetry={handleManualRefresh}
-                lang={lang}
-                t={t}
-                isDesktop={true}
-                onOpenAttendance={() => setShowFullAttendance(true)}
-                onOpenLegacyAttendance={() => setShowLegacyAttendance(true)}
-              />
-
-              <MiniMessagesWidget
-                unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
-                announcementsCount={messagesInbox.announcements.length}
-                isLoading={isManualRefreshing || (messagesInbox.isLoadingMessages && messagesInbox.messages.length === 0 && messagesInbox.announcements.length === 0 && !messagesInbox.messagesError)}
-                error={messagesInbox.messagesError}
-                onRetry={messagesInbox.reloadMessages}
-                lang={lang}
-                t={t}
-                latestMessage={messagesInbox.messages[0] || null}
-                latestAnnouncement={messagesInbox.announcements[0] || null}
-                onOpenMessageDetail={handleOpenDirectMessage}
-                onOpenAnnouncementDetail={handleOpenDirectAnnouncement}
-                onOpenMessages={() => setShowMessagesScreen(true)}
-                onOpenAnnouncements={() => setShowAnnouncementsScreen(true)}
-              />
-            </div>
-          </div>
-
-          {/* MOBILE LAYOUT (md:hidden) */}
-          <div className="flex md:hidden flex-col gap-3.5 w-full">
-            <MiniGradesWidget
-              gradesData={isManualRefreshing ? null : timetable.gradesData}
-              isLoading={isManualRefreshing || (!timetable.gradesData && timetable.isUpdating && !timetable.gradesError)}
-              error={timetable.gradesError}
-              onRetry={handleManualRefresh}
-              t={t}
-              onOpenGrades={() => setShowFullGrades(true)}
-              onSelectGrade={(g) => handleSelectGrade(g, g.subject || '')}
-            />
-
-            <MiniScheduleWidget
-              timetableData={isManualRefreshing ? null : activeTodayData}
-              isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
-              error={timetable.timetableError}
-              onRetry={handleManualRefresh}
-              textClamp={textClamp}
-              showFullSubjectNames={showFullSubjectNames}
-              lang={lang}
-              t={t}
-              showAllLessons={false}
-              onSelectLesson={handleSelectLesson}
-              onOpenFullSchedule={(targetDay, targetIsoDate) => {
-                if (targetIsoDate) {
-                  const targetMonday = normalizeToMondayIso(targetIsoDate)
-                  if (targetMonday !== timetable.currentWeekPivot) {
-                    timetable.queueWeekChange(targetMonday)
-                  }
-                }
-                if (targetDay) {
-                  timetable.setSelectedDay(targetDay)
-                }
-                setShowFullSchedule(true)
-              }}
-            />
-
-            {showUpcomingEventsWidget && (
-              <MiniUpcomingEventsWidget
-                timetableData={isManualRefreshing ? null : (activeTodayData || timetable.timetableData)}
-                showHomeworks={showHomeworks}
-                showFullSubjectNames={showFullSubjectNames}
-                lang={lang}
-                t={t}
-                isDesktop={false}
-                onSelectEvent={handleSelectEvent}
-                onOpenCalendar={() => setShowFullSchedule(true)}
-              />
-            )}
-
-            <MiniMessagesWidget
-              unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
-              announcementsCount={messagesInbox.announcements.length}
-              isLoading={isManualRefreshing || (messagesInbox.isLoadingMessages && messagesInbox.messages.length === 0 && messagesInbox.announcements.length === 0 && !messagesInbox.messagesError)}
-              error={messagesInbox.messagesError}
-              onRetry={messagesInbox.reloadMessages}
-              lang={lang}
-              t={t}
-              latestMessage={messagesInbox.messages[0] || null}
-              latestAnnouncement={messagesInbox.announcements[0] || null}
-              onOpenMessageDetail={handleOpenDirectMessage}
-              onOpenAnnouncementDetail={handleOpenDirectAnnouncement}
-              onOpenMessages={() => setShowMessagesScreen(true)}
-              onOpenAnnouncements={() => setShowAnnouncementsScreen(true)}
-            />
-
-            <MiniAttendanceWidget
-              attendanceData={isManualRefreshing ? null : timetable.attendanceData}
-              timetableData={isManualRefreshing ? null : activeTodayData}
-              isLoading={isManualRefreshing || (!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError)}
-              error={timetable.attendanceError}
-              onRetry={handleManualRefresh}
-              lang={lang}
-              t={t}
-              onOpenAttendance={() => setShowFullAttendance(true)}
-              onOpenLegacyAttendance={() => setShowLegacyAttendance(true)}
-            />
-          </div>
+                {/* MOBILE LAYOUT (md:hidden) */}
+                <div className="flex md:hidden flex-col gap-3.5 w-full">
+                  {visibleMobileIds.map((id) => renderWidget(id, false))}
+                </div>
+              </>
+            )
+          })()}
         </main>
       </div>
 
@@ -949,50 +972,53 @@ export default function Home() {
           setIsLegacyDaySubViewOpen(false)
         }}
         title={t.attendance}
-        titleView={
-          <IosSegmentedControl<'summary' | 'table'>
-            value={attendanceViewTab}
-            onChange={(val) => setAttendanceViewTab(val)}
-            options={[
-              { id: 'summary', label: lang === 'en' ? 'Summary' : 'Podsumowanie' },
-              { id: 'table', label: lang === 'en' ? 'Table' : 'Dziennik' }
-            ]}
-            className="w-[210px]"
-          />
-        }
         backLabel={t.backAction}
         isSubView={true}
         isReceded={Boolean(selectedSubjectDetail || showQuickNb || showManualExcuse || showLegacyAttendance || showLiveJustifications || isLegacyDaySubViewOpen)}
       >
         {timetable.attendanceData && (
-          attendanceViewTab === 'summary' ? (
-            <AttendanceWidget
-              attendanceData={timetable.attendanceData}
-              lang={lang}
-              showFullSubjectNames={showFullSubjectNames}
-              onSelectSubject={handleOpenSubjectDetail}
-              isStudent={isCurrentStudent}
-              canSubmitExcuse={canSubmitExcuse}
-              onOpenManualExcuse={() => {
-                setManualExcuseInitialTab('range')
-                setShowManualExcuse(true)
-              }}
-              onOpenQuickNb={() => {
-                setManualExcuseInitialTab('nb')
-                setShowManualExcuse(true)
-              }}
-              onOpenLiveJustifications={() => handleOpenLiveJustifications('0')}
-              t={t}
-            />
-          ) : (
-            <LegacyAttendanceView
-              attendanceData={timetable.attendanceData}
-              showFullSubjectNames={showFullSubjectNames}
-              lang={lang}
-              t={t}
-              onSubViewChange={setIsLegacyDaySubViewOpen}
-            />
-          )
+          <div className="w-full flex flex-col gap-3.5">
+            <div className="w-full flex justify-center">
+              <IosSegmentedControl<'summary' | 'table'>
+                value={attendanceViewTab}
+                onChange={(val) => setAttendanceViewTab(val)}
+                options={[
+                  { id: 'summary', label: lang === 'en' ? 'Subjects' : 'Przedmioty' },
+                  { id: 'table', label: lang === 'en' ? 'Journal' : 'Dziennik' }
+                ]}
+                className="w-full max-w-sm"
+              />
+            </div>
+
+            {attendanceViewTab === 'summary' ? (
+              <AttendanceWidget
+                attendanceData={timetable.attendanceData}
+                lang={lang}
+                showFullSubjectNames={showFullSubjectNames}
+                onSelectSubject={handleOpenSubjectDetail}
+                isStudent={isCurrentStudent}
+                canSubmitExcuse={canSubmitExcuse}
+                onOpenManualExcuse={() => {
+                  setManualExcuseInitialTab('range')
+                  setShowManualExcuse(true)
+                }}
+                onOpenQuickNb={() => {
+                  setManualExcuseInitialTab('nb')
+                  setShowManualExcuse(true)
+                }}
+                onOpenLiveJustifications={() => handleOpenLiveJustifications('0')}
+                t={t}
+              />
+            ) : (
+              <LegacyAttendanceView
+                attendanceData={timetable.attendanceData}
+                showFullSubjectNames={showFullSubjectNames}
+                lang={lang}
+                t={t}
+                onSubViewChange={setIsLegacyDaySubViewOpen}
+              />
+            )}
+          </div>
         )}
       </IosScreen>
 
@@ -1283,6 +1309,10 @@ export default function Home() {
         onToggleShowHomeworks={handleToggleShowHomeworks}
         showUpcomingEventsWidget={showUpcomingEventsWidget}
         onToggleShowUpcomingEventsWidget={handleToggleShowUpcomingEventsWidget}
+        dashboardOrder={dashboardOrder}
+        onChangeDashboardOrder={handleChangeDashboardOrder}
+        dashboardVisible={dashboardVisible}
+        onToggleDashboardWidget={handleToggleDashboardWidget}
         showLuckyNumberBanner={showLuckyNumberBanner}
         onToggleShowLuckyNumberBanner={handleToggleShowLuckyNumberBanner}
         isStudent={isCurrentStudent}

@@ -305,62 +305,46 @@ export function GradesWidget({
                 </div>
 
                 {isSimExpanded && (
-                  <div className="p-3 rounded-[16px] bg-[var(--ios-element)]/40 flex flex-col gap-2.5 mt-0.5">
-                    <div className="flex items-center justify-between text-[12px] text-[var(--ios-secondary)]">
-                      <span className="font-medium text-[var(--ios-label)]">
-                        {lang === 'en' ? 'Add virtual grade' : 'Dodaj wirtualną ocenę'}
-                      </span>
-                      <span>{lang === 'en' ? 'Tap badge to remove' : 'Kliknij ocenę, aby usunąć'}</span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-1">
-                      {gradeOptions.map((opt) => (
-                        <button
-                          key={opt.label}
-                          type="button"
-                          onClick={() => setSimGradeVal(opt.label)}
-                          className={
-                            'min-w-[30px] h-[28px] px-1.5 rounded-[8px] text-[12px] font-semibold tabular-nums transition-colors cursor-pointer ' +
-                            (simGradeVal === opt.label
-                              ? 'bg-[var(--ios-blue)] text-white'
-                              : 'bg-[var(--ios-card-solid)] text-[var(--ios-label)]')
-                          }
+                  <div className="p-2.5 rounded-[14px] bg-[var(--ios-element)]/45 flex flex-wrap items-center justify-between gap-2 mt-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label className="flex items-center gap-1.5 text-[12px] text-[var(--ios-secondary)]">
+                        <span>{lang === 'en' ? 'Grade:' : 'Ocena:'}</span>
+                        <select
+                          value={simGradeVal}
+                          onChange={(e) => setSimGradeVal(e.target.value)}
+                          className="h-[30px] px-2.5 rounded-[10px] bg-[var(--ios-card-solid)] text-[13px] font-semibold text-[var(--ios-label)] outline-none border border-[var(--ios-separator)] cursor-pointer tabular-nums"
                         >
-                          {opt.label}
-                        </button>
-                      ))}
+                          {gradeOptions.map((opt) => (
+                            <option key={opt.label} value={opt.label}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="flex items-center gap-1.5 text-[12px] text-[var(--ios-secondary)]">
+                        <span>{lang === 'en' ? 'Weight:' : 'Waga:'}</span>
+                        <select
+                          value={simWeightVal}
+                          onChange={(e) => setSimWeightVal(Number(e.target.value))}
+                          className="h-[30px] px-2.5 rounded-[10px] bg-[var(--ios-card-solid)] text-[13px] font-semibold text-[var(--ios-label)] outline-none border border-[var(--ios-separator)] cursor-pointer tabular-nums"
+                        >
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((w) => (
+                            <option key={w} value={w}>
+                              {w}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[12px] text-[var(--ios-secondary)]">
-                          {lang === 'en' ? 'Weight:' : 'Waga:'}
-                        </span>
-                        {[1, 2, 3, 4, 5, 6].map((w) => (
-                          <button
-                            key={w}
-                            type="button"
-                            onClick={() => setSimWeightVal(w)}
-                            className={
-                              'w-[26px] h-[26px] rounded-full text-[12px] font-semibold tabular-nums transition-colors cursor-pointer ' +
-                              (simWeightVal === w
-                                ? 'bg-[var(--ios-blue)] text-white'
-                                : 'bg-[var(--ios-card-solid)] text-[var(--ios-secondary)]')
-                            }
-                          >
-                            {w}
-                          </button>
-                        ))}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => addSimulatedGrade(sub.subject)}
-                        className="h-[30px] px-3.5 rounded-full bg-[var(--ios-blue)] text-white text-[12px] font-semibold active:scale-[0.96] transition-transform cursor-pointer"
-                      >
-                        {lang === 'en' ? '+ Add' : '+ Dodaj'}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addSimulatedGrade(sub.subject)}
+                      className="h-[30px] px-3.5 rounded-full bg-[var(--ios-blue)] text-white text-[12px] font-semibold active:scale-[0.96] transition-transform cursor-pointer shrink-0 ml-auto"
+                    >
+                      {lang === 'en' ? '+ Add' : '+ Dodaj'}
+                    </button>
                   </div>
                 )}
               </div>

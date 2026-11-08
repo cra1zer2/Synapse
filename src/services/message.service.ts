@@ -3,6 +3,8 @@ import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem, Message
 import { getNativeLibrusSession, invalidateNativeSession, NativeLibrusSession } from '@/services/session.service'
 import { getAuthenticatedClient, invalidateClientSession } from '@/services/librus.service'
 
+const messageBodyCache = new Map<string, { content: string; attachments: MessageAttachment[] }>()
+
 function getDefaultReferer(username: string): string {
     return String(username || '').trim().toLowerCase().endsWith('u')
         ? 'https://synergia.librus.pl/uczen/index'
@@ -440,6 +442,42 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
             const sentMessages = parseSentMessagesHtml(sentFetch.html)
             const announcements = parseAnnouncementsHtml(annFetch.html)
 
+            // Populate cached or prefetched content previews for already-read inbox messages and sent messages
+            const previewCandidates = [
+                ...inboxMessages.filter((m) => m.isRead && Number(m.id) > 0).slice(0, 10).map((m) => ({ msg: m, folderId: 5 })),
+                ...sentMessages.filter((m) => Number(m.id) > 0).slice(0, 6).map((m) => ({ msg: m, folderId: 6 }))
+            ]
+
+            await Promise.all(
+                previewCandidates.map(async ({ msg, folderId }) => {
+                    const cacheKey = `${cleanUser}:${folderId}:${msg.id}`
+                    const cached = messageBodyCache.get(cacheKey)
+                    if (cached) {
+                        msg.content = cached.content
+                        if (cached.attachments.length > 0) msg.attachments = cached.attachments
+                        return
+                    }
+                    try {
+                        const res = await session.fetch(`https://synergia.librus.pl/wiadomosci/1/${folderId}/${msg.id}/f0`, {
+                            headers: {
+                                'Referer': `https://synergia.librus.pl/wiadomosci/${folderId}`,
+                                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                            }
+                        })
+                        if (res.ok) {
+                            const html = await res.text()
+                            const body = extractMessageBodyFromHtml(html)
+                            const attachments = extractMessageAttachmentsFromHtml(html)
+                            if (body) {
+                                msg.content = body
+                                if (attachments.length > 0) msg.attachments = attachments
+                                messageBodyCache.set(cacheKey, { content: body, attachments })
+                            }
+                        }
+                    } catch {}
+                })
+            )
+
             return {
                 success: true,
                 messages: inboxMessages,
@@ -597,6 +635,11 @@ export async function fetchMessageContent(
     try {
         const cleanUser = String(username || '').trim()
         const cleanPass = String(pass || '').trim()
+        const cacheKey = `${cleanUser}:${folderId}:${messageId}`
+        const cached = messageBodyCache.get(cacheKey)
+        if (cached && cached.content) {
+            return { success: true, content: cached.content, attachments: cached.attachments }
+        }
 
         const primary = await fetchHtmlWithRetry(
             cleanUser,
@@ -608,6 +651,7 @@ export async function fetchMessageContent(
         let body = extractMessageBodyFromHtml(primary.html)
         let attachments = extractMessageAttachmentsFromHtml(primary.html)
         if (body || attachments.length > 0) {
+            if (body) messageBodyCache.set(cacheKey, { content: body, attachments })
             return { success: true, content: body, attachments }
         }
 

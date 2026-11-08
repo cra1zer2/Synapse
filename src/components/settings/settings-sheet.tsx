@@ -4,13 +4,29 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { AppDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
-import { TextClampOption } from '@/app/page'
+import { TextClampOption, DashboardWidgetId } from '@/app/page'
 import { IosScreen, IOS_PANEL_TRANSITION, IOS_BACKDROP_TRANSITION, IOS_PARALLAX_PERCENT } from '@/components/ios/ios-screen'
 import { IosListSection, IosCell } from '@/components/ios/ios-list'
 import { IosCard } from '@/components/ios/ios-ui'
 import { IosSwitch } from '@/components/ios/ios-switch'
 import { IosSpinner } from '@/components/ios/ios-spinner'
 import { AuthView } from '@/components/auth/auth-view'
+
+const DEFAULT_DASHBOARD_ORDER: DashboardWidgetId[] = [
+  'grades',
+  'schedule',
+  'upcoming',
+  'messages',
+  'attendance'
+]
+
+const DEFAULT_DASHBOARD_VISIBLE: Record<DashboardWidgetId, boolean> = {
+  grades: true,
+  schedule: true,
+  upcoming: false,
+  messages: true,
+  attendance: true
+}
 
 interface SettingsSheetProps {
   isOpen: boolean
@@ -46,6 +62,10 @@ interface SettingsSheetProps {
   onToggleShowHomeworks?: (val: boolean) => void
   showUpcomingEventsWidget?: boolean
   onToggleShowUpcomingEventsWidget?: (val: boolean) => void
+  dashboardOrder?: DashboardWidgetId[]
+  onChangeDashboardOrder?: (newOrder: DashboardWidgetId[]) => void
+  dashboardVisible?: Record<DashboardWidgetId, boolean>
+  onToggleDashboardWidget?: (id: DashboardWidgetId, val: boolean) => void
   showLuckyNumberBanner?: boolean
   onToggleShowLuckyNumberBanner?: (val: boolean) => void
   isStudent?: boolean
@@ -103,9 +123,13 @@ export function SettingsSheet({
   onToggleEnableGradeSimulator,
   showHomeworks = false,
   onToggleShowHomeworks,
-  showUpcomingEventsWidget = true,
+  showUpcomingEventsWidget = false,
   onToggleShowUpcomingEventsWidget,
-  showLuckyNumberBanner = true,
+  dashboardOrder = DEFAULT_DASHBOARD_ORDER,
+  onChangeDashboardOrder,
+  dashboardVisible = DEFAULT_DASHBOARD_VISIBLE,
+  onToggleDashboardWidget,
+  showLuckyNumberBanner = false,
   onToggleShowLuckyNumberBanner,
   isStudent,
   allowStudentJustifications = false,
@@ -117,6 +141,9 @@ export function SettingsSheet({
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [showLangPicker, setShowLangPicker] = useState(false)
+  const [showHomeCustomizer, setShowHomeCustomizer] = useState(false)
+  const [isEditingHome, setIsEditingHome] = useState(false)
+  const [movingWidgetId, setMovingWidgetId] = useState<DashboardWidgetId | null>(null)
   const [accountToSwitch, setAccountToSwitch] = useState<SavedAccount | null>(null)
   const [cachedSwitchAccount, setCachedSwitchAccount] = useState<SavedAccount | null>(null)
   const [isSwitchModalRendered, setIsSwitchModalRendered] = useState(false)
@@ -208,7 +235,7 @@ export function SettingsSheet({
         title={t.settingsTitle}
         backLabel={t.backAction}
         isSubView={true}
-        isReceded={showThemePicker || showLangPicker || showAdvanced || showAddForm}
+        isReceded={showThemePicker || showLangPicker || showAdvanced || showAddForm || showHomeCustomizer}
         contentClassName="px-6 pt-5 pb-12 w-full max-w-4xl mx-auto flex-1"
       >
         <div className="flex flex-col gap-5 pb-12 select-none">
@@ -285,6 +312,16 @@ export function SettingsSheet({
               chevron={true}
               size="standard"
               onClick={() => setShowThemePicker(true)}
+            />
+            <IosCell
+              title={currentLang === 'en' ? 'Home Screen' : 'Ekran główny'}
+              subtitle={currentLang === 'en' ? 'Customize visible widgets and their order' : 'Wybierz widoczne karty i ich kolejność'}
+              chevron={true}
+              size="tall"
+              onClick={() => {
+                setIsEditingHome(false)
+                setShowHomeCustomizer(true)
+              }}
             />
           </IosListSection>
 
@@ -380,6 +417,7 @@ export function SettingsSheet({
         title={t.addAccount}
         backLabel={t.settingsTitle || t.backAction}
         showBackButton={true}
+        hideHeader={true}
         isSubView={true}
         zIndex={70}
       >
@@ -580,6 +618,301 @@ export function SettingsSheet({
             </IosListSection>
           )}
         </div>
+      </IosScreen>
+
+      <IosScreen
+        isOpen={showHomeCustomizer}
+        onClose={() => {
+          setShowHomeCustomizer(false)
+          setIsEditingHome(false)
+        }}
+        title={currentLang === 'en' ? 'Home Screen' : 'Ekran główny'}
+        backLabel={t.settingsTitle || t.backAction}
+        showBackButton={true}
+        isSubView={true}
+        zIndex={60}
+        trailing={
+          <button
+            type="button"
+            onClick={() => setIsEditingHome((prev) => !prev)}
+            className={
+              'w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer select-none active:scale-90 ' +
+              (isEditingHome
+                ? 'bg-[var(--ios-blue)] text-white'
+                : 'bg-[var(--ios-element)] text-[var(--ios-blue)] hover:opacity-80')
+            }
+            aria-label={isEditingHome ? 'Gotowe' : 'Edytuj'}
+            title={isEditingHome ? (currentLang === 'en' ? 'Done' : 'Gotowe') : (currentLang === 'en' ? 'Edit' : 'Edytuj')}
+          >
+            {isEditingHome ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                <path d="m15 5 4 4" />
+              </svg>
+            )}
+          </button>
+        }
+      >
+        {(() => {
+          const isEn = currentLang === 'en'
+          const widgetMeta: Record<DashboardWidgetId, { title: string; subtitle: string; color: string; icon: React.ReactNode }> = {
+            grades: {
+              title: t.grades,
+              subtitle: isEn ? 'Recent grades and average' : 'Ostatnie oceny i średnia',
+              color: 'bg-[var(--ios-blue)]',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              )
+            },
+            schedule: {
+              title: isEn ? 'Lesson Plan' : 'Plan lekcji',
+              subtitle: isEn ? 'Daily classes and rooms' : 'Dzisiejsze lekcje i sale',
+              color: 'bg-[var(--ios-green)]',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                  <line x1="16" x2="16" y1="2" y2="6" />
+                  <line x1="8" x2="8" y1="2" y2="6" />
+                  <line x1="3" x2="21" y1="10" y2="10" />
+                </svg>
+              )
+            },
+            upcoming: {
+              title: isEn ? 'Tests & Deadlines' : 'Sprawdziany i terminy',
+              subtitle: isEn ? 'Upcoming exams and quizzes' : 'Nadchodzące sprawdziany i kartkówki',
+              color: 'bg-[var(--ios-orange)]',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              )
+            },
+            attendance: {
+              title: t.attendance,
+              subtitle: isEn ? 'Attendance percentage and today grid' : 'Frekwencja ogólna i dzisiejsze obecności',
+              color: 'bg-[var(--ios-purple)]',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <polyline points="16 11 18 13 22 9" />
+                </svg>
+              )
+            },
+            messages: {
+              title: t.messages,
+              subtitle: isEn ? 'Inbox and school announcements' : 'Odebrane wiadomości i ogłoszenia',
+              color: 'bg-[var(--ios-blue)]',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="20" height="16" x="2" y="4" rx="3" />
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                </svg>
+              )
+            }
+          }
+
+          const enabledList = dashboardOrder.filter((id) => dashboardVisible[id])
+          const disabledList = dashboardOrder.filter((id) => !dashboardVisible[id])
+
+          const ROW_HEIGHT = 64
+          const GAP = 10
+          const STEP = ROW_HEIGHT + GAP
+          const HIDDEN_HEADER_OFFSET = enabledList.length > 0 ? 44 : 28
+
+          const totalHeight =
+            enabledList.length * STEP +
+            (disabledList.length > 0
+              ? HIDDEN_HEADER_OFFSET + disabledList.length * STEP
+              : 0)
+
+          const triggerMoveAnimation = (id: DashboardWidgetId) => {
+            setMovingWidgetId(id)
+            setTimeout(() => {
+              setMovingWidgetId((curr) => (curr === id ? null : curr))
+            }, 520)
+          }
+
+          const handleMoveWidget = (id: DashboardWidgetId, direction: -1 | 1) => {
+            if (!onChangeDashboardOrder) return
+            const activeIds = dashboardOrder.filter((item) => dashboardVisible[item])
+            const inactiveIds = dashboardOrder.filter((item) => !dashboardVisible[item])
+            const idx = activeIds.indexOf(id)
+            const targetIdx = idx + direction
+            if (idx < 0 || targetIdx < 0 || targetIdx >= activeIds.length) return
+
+            triggerMoveAnimation(id)
+            const nextActive = [...activeIds]
+            const temp = nextActive[idx]
+            nextActive[idx] = nextActive[targetIdx]
+            nextActive[targetIdx] = temp
+            onChangeDashboardOrder([...nextActive, ...inactiveIds])
+          }
+
+          const handleToggleWidget = (id: DashboardWidgetId) => {
+            if (!onToggleDashboardWidget || !onChangeDashboardOrder) return
+            const currentlyVisible = Boolean(dashboardVisible[id])
+            const nextVisible = !currentlyVisible
+
+            triggerMoveAnimation(id)
+            const activeIds = dashboardOrder.filter((item) => item !== id && dashboardVisible[item])
+            const inactiveIds = dashboardOrder.filter((item) => item !== id && !dashboardVisible[item])
+
+            if (nextVisible) {
+              onChangeDashboardOrder([...activeIds, id, ...inactiveIds])
+            } else {
+              onChangeDashboardOrder([...activeIds, id, ...inactiveIds])
+            }
+            onToggleDashboardWidget(id, nextVisible)
+          }
+
+          return (
+            <div className="flex flex-col gap-4 pb-16 select-none max-w-xl mx-auto w-full">
+              <div className="px-1 flex items-center justify-between">
+                <span className="text-[12px] font-normal uppercase text-[var(--ios-secondary)] tracking-wider">
+                  {isEn ? 'Active widgets on home screen' : 'Aktywne widżety na ekranie głównym'}
+                </span>
+                {!isEditingHome && (
+                  <span className="text-[12px] font-normal text-[var(--ios-secondary)]">
+                    {isEn ? 'Tap pencil to edit' : 'Kliknij ołówek, aby edytować'}
+                  </span>
+                )}
+              </div>
+
+              <div
+                style={{
+                  height: `${Math.max(totalHeight, 64)}px`,
+                  transition: 'height 520ms cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
+                className="relative w-full"
+              >
+                {/* Hidden Widgets Section Header */}
+                <div
+                  style={{
+                    transform: `translate3d(0, ${enabledList.length * STEP + (enabledList.length > 0 ? 14 : 0)}px, 0)`,
+                    opacity: disabledList.length > 0 ? 1 : 0,
+                    transition:
+                      'transform 520ms cubic-bezier(0.16, 1, 0.3, 1), opacity 380ms cubic-bezier(0.16, 1, 0.3, 1)'
+                  }}
+                  className="absolute top-0 left-1 right-1 pointer-events-none z-0 flex items-center justify-between"
+                >
+                  <span className="text-[12px] font-normal uppercase text-[var(--ios-secondary)] tracking-wider">
+                    {isEn ? 'Hidden widgets' : 'Wyłączone widżety'}
+                  </span>
+                </div>
+
+                {/* All 5 Widgets rendered in stable DOM order so CSS transitions always fire smoothly */}
+                {DEFAULT_DASHBOARD_ORDER.map((id) => {
+                  const meta = widgetMeta[id]
+                  const isVisible = Boolean(dashboardVisible[id])
+                  const activeIdx = enabledList.indexOf(id)
+                  const hiddenIdx = disabledList.indexOf(id)
+
+                  const yPos = isVisible
+                    ? activeIdx * STEP
+                    : enabledList.length * STEP + HIDDEN_HEADER_OFFSET + Math.max(0, hiddenIdx) * STEP
+
+                  const isMoving = movingWidgetId === id
+                  const canMoveUp = isVisible && activeIdx > 0
+                  const canMoveDown = isVisible && activeIdx < enabledList.length - 1
+
+                  return (
+                    <div
+                      key={id}
+                      style={{
+                        height: `${ROW_HEIGHT}px`,
+                        transform: `translate3d(0, ${yPos}px, 0) scale(${isMoving ? 1.022 : 1})`,
+                        transition:
+                          'transform 520ms cubic-bezier(0.16, 1, 0.3, 1), opacity 380ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1)',
+                        zIndex: isMoving ? 30 : isVisible ? 15 : 10,
+                        boxShadow: isMoving ? '0 14px 32px rgba(0, 0, 0, 0.18)' : 'none'
+                      }}
+                      className={
+                        'absolute top-0 left-0 right-0 rounded-[20px] bg-[var(--ios-card-solid)] px-3.5 flex items-center justify-between gap-3 border border-[var(--ios-border)] ' +
+                        (!isVisible ? 'opacity-65' : 'opacity-100')
+                      }
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className={`w-9 h-9 rounded-[11px] ${meta.color} text-white flex items-center justify-center shrink-0`}>
+                          {meta.icon}
+                        </div>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-[15px] font-medium text-[var(--ios-label)] tracking-[-0.2px] truncate leading-tight">
+                            {meta.title}
+                          </span>
+                          <span className="text-[12px] font-normal text-[var(--ios-secondary)] truncate leading-tight mt-0.5">
+                            {meta.subtitle}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Edit controls: Up/Down arrows + Switch appear smoothly when pencil is active */}
+                      <div
+                        style={{
+                          opacity: isEditingHome ? 1 : 0,
+                          transform: isEditingHome ? 'translate3d(0, 0, 0) scale(1)' : 'translate3d(8px, 0, 0) scale(0.92)',
+                          pointerEvents: isEditingHome ? 'auto' : 'none',
+                          transition:
+                            'opacity 320ms cubic-bezier(0.16, 1, 0.3, 1), transform 380ms cubic-bezier(0.16, 1, 0.3, 1)'
+                        }}
+                        className="flex items-center gap-2 shrink-0"
+                      >
+                        {isVisible && (
+                          <div className="flex items-center gap-1 mr-1">
+                            <button
+                              type="button"
+                              disabled={!canMoveUp}
+                              onClick={() => handleMoveWidget(id, -1)}
+                              className={
+                                'w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ' +
+                                (canMoveUp
+                                  ? 'bg-[var(--ios-element)] text-[var(--ios-label)] active:scale-90 hover:bg-[var(--ios-blue-subtle)] hover:text-[var(--ios-blue)]'
+                                  : 'bg-[var(--ios-element)]/40 text-[var(--ios-tertiary)] opacity-40 cursor-not-allowed')
+                              }
+                              aria-label="Move up"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="18 15 12 9 6 15" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!canMoveDown}
+                              onClick={() => handleMoveWidget(id, 1)}
+                              className={
+                                'w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ' +
+                                (canMoveDown
+                                  ? 'bg-[var(--ios-element)] text-[var(--ios-label)] active:scale-90 hover:bg-[var(--ios-blue-subtle)] hover:text-[var(--ios-blue)]'
+                                  : 'bg-[var(--ios-element)]/40 text-[var(--ios-tertiary)] opacity-40 cursor-not-allowed')
+                              }
+                              aria-label="Move down"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+
+                        <IosSwitch
+                          checked={isVisible}
+                          onChange={() => handleToggleWidget(id)}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
       </IosScreen>
     </>
   )

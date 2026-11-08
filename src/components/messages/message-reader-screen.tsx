@@ -83,21 +83,14 @@ export function MessageReaderScreen({
       <div className="flex flex-col gap-4 pb-16 select-none max-w-3xl mx-auto w-full">
         {message ? (
           <>
-            <div className="flex flex-col gap-3 pb-3 border-b border-[var(--ios-separator)]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[var(--ios-blue)] text-white flex items-center justify-center font-semibold text-[15px] shrink-0">
-                  {cleanSenderName(message.sender).slice(0, 2).toUpperCase()}
-                </div>
-
-                <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-[16px] font-semibold text-[var(--ios-label)] truncate leading-tight">
-                    {cleanSenderName(message.sender)}
-                  </span>
-                  <div className="flex items-center justify-between text-[12px] text-[var(--ios-secondary)] mt-0.5">
-                    <span>Do: Mnie</span>
-                    <span className="tabular-nums">{message.date}</span>
-                  </div>
-                </div>
+            <div className="flex flex-col gap-2 pb-3 border-b border-[var(--ios-separator)]">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[12px] font-semibold text-[var(--ios-blue)] uppercase tracking-wider truncate">
+                  {cleanSenderName(message.sender)}
+                </span>
+                <span className="text-[11px] font-normal text-[var(--ios-secondary)] tabular-nums shrink-0">
+                  {message.date}
+                </span>
               </div>
 
               <h2 className="text-[20px] font-bold text-[var(--ios-label)] tracking-tight leading-snug break-words mt-1">
@@ -106,11 +99,30 @@ export function MessageReaderScreen({
             </div>
 
             {isLoadingContent ? (
-              <div className="py-24 flex flex-col items-center justify-center gap-3">
-                <IosSpinner size="large" className="text-[var(--ios-blue)]" />
-                <span className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-tight">
-                  {t.loadingMessages}
-                </span>
+              <div className="flex flex-col gap-5 pt-2 select-none" aria-busy="true" aria-label={t.loadingMessages}>
+                {/* Greeting skeleton */}
+                <div className="w-36 h-[13px] rounded-full ios-skeleton" />
+
+                {/* First paragraph skeleton */}
+                <div className="flex flex-col gap-2.5">
+                  <div className="w-full h-[13px] rounded-full ios-skeleton" />
+                  <div className="w-[94%] h-[13px] rounded-full ios-skeleton" />
+                  <div className="w-[89%] h-[13px] rounded-full ios-skeleton" />
+                  <div className="w-[64%] h-[13px] rounded-full ios-skeleton" />
+                </div>
+
+                {/* Second paragraph skeleton */}
+                <div className="flex flex-col gap-2.5">
+                  <div className="w-[96%] h-[13px] rounded-full ios-skeleton" />
+                  <div className="w-[84%] h-[13px] rounded-full ios-skeleton" />
+                  <div className="w-[48%] h-[13px] rounded-full ios-skeleton" />
+                </div>
+
+                {/* Sign-off / Signature skeleton */}
+                <div className="flex flex-col gap-2 pt-2">
+                  <div className="w-28 h-[12px] rounded-full ios-skeleton" />
+                  <div className="w-44 h-[13px] rounded-full ios-skeleton" />
+                </div>
               </div>
             ) : (
               <>

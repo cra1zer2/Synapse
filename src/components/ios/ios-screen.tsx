@@ -107,7 +107,7 @@ export function IosScreen({
       raf1 = requestAnimationFrame(() => {
         if (panelRef.current) {
           panelRef.current.style.transition = isDesktop
-            ? 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease'
+            ? (isStackedOnDesktop ? 'opacity 0.16s ease' : 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease')
             : IOS_PANEL_TRANSITION
           void panelRef.current.offsetWidth
         }
@@ -123,7 +123,7 @@ export function IosScreen({
     } else {
       if (panelRef.current) {
         panelRef.current.style.transition = isDesktop
-          ? 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.16s ease'
+          ? (isStackedOnDesktop ? 'opacity 0.14s ease' : 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.16s ease')
           : IOS_PANEL_TRANSITION
       }
       if (backdropRef.current) {
@@ -132,7 +132,7 @@ export function IosScreen({
       setIsVisible(false)
       timer = setTimeout(() => {
         setIsRendered(false)
-      }, isDesktop ? 200 : IOS_TRANSITION_MS)
+      }, isDesktop ? (isStackedOnDesktop ? 150 : 200) : IOS_TRANSITION_MS)
     }
 
     return () => {
@@ -160,9 +160,14 @@ export function IosScreen({
     if (panel) {
       panel.style.pointerEvents = 'none'
       if (isDesktop) {
-        panel.style.transition = 'transform 0.18s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s ease'
-        panel.style.transform = 'scale(0.96)'
-        panel.style.opacity = '0'
+        if (resolvedZIndex > 50) {
+          panel.style.transition = 'opacity 0.14s ease'
+          panel.style.opacity = '0'
+        } else {
+          panel.style.transition = 'transform 0.18s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s ease'
+          panel.style.transform = 'scale(0.96)'
+          panel.style.opacity = '0'
+        }
       } else {
         panel.style.transition = IOS_PANEL_TRANSITION
         panel.style.transform = 'translate3d(100%, 0, 0)'
@@ -472,11 +477,11 @@ export function IosScreen({
           inset: 0,
           zIndex: resolvedZIndex - 1,
           backgroundColor: isDesktop
-            ? 'rgba(0, 0, 0, 0.52)'
+            ? (isStackedOnDesktop ? 'transparent' : 'rgba(0, 0, 0, 0.52)')
             : 'var(--ios-subview-backdrop)',
-          backdropFilter: isDesktop ? 'blur(6px)' : undefined,
-          WebkitBackdropFilter: isDesktop ? 'blur(6px)' : undefined,
-          opacity: isVisible && !isReceded ? 1 : 0,
+          backdropFilter: isDesktop && !isStackedOnDesktop ? 'blur(6px)' : undefined,
+          WebkitBackdropFilter: isDesktop && !isStackedOnDesktop ? 'blur(6px)' : undefined,
+          opacity: isVisible && (isDesktop ? !isStackedOnDesktop : !isReceded) ? 1 : 0,
           pointerEvents: isVisible && !isReceded ? 'auto' : 'none',
           transition: isDesktop ? 'opacity 0.2s ease' : IOS_BACKDROP_TRANSITION,
           willChange: 'opacity'
@@ -496,18 +501,21 @@ export function IosScreen({
             onScroll={handleScroll}
             style={{
               position: 'relative',
-              width: 'min(480px, 100%)',
+              width: 'min(620px, 100%)',
+              height: 'min(760px, 86vh)',
               maxHeight: '86vh',
               backgroundColor: 'var(--ios-modal-bg)',
               borderRadius: '34px',
               border: '1px solid var(--ios-border)',
               boxShadow: 'none',
               overflowY: 'auto',
-              transform: isVisible
-                ? (isReceded ? 'scale3d(0.95, 0.95, 1)' : 'scale3d(1, 1, 1)')
-                : 'scale3d(0.94, 0.94, 1)',
-              opacity: isVisible && !isReceded ? 1 : 0,
-              transition: 'transform 0.24s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.2s cubic-bezier(0.32, 0.72, 0, 1)',
+              transform: isStackedOnDesktop
+                ? 'scale3d(1, 1, 1)'
+                : (isVisible ? 'scale3d(1, 1, 1)' : 'scale3d(0.95, 0.95, 1)'),
+              opacity: isVisible ? 1 : 0,
+              transition: isStackedOnDesktop
+                ? 'opacity 0.16s ease'
+                : 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease',
               display: 'flex',
               flexDirection: 'column',
               pointerEvents: isVisible && !isReceded ? 'auto' : 'none'
@@ -515,7 +523,13 @@ export function IosScreen({
             className={className}
           >
             {!hideHeader && desktopHeader}
-            <div className={contentClassName ?? "px-4 pt-4 pb-6 w-full flex-1"}>
+            <div
+              className={
+                (contentClassName ?? "px-5 pt-4 pb-6 w-full flex-1") +
+                " ios-modal-content-transition transition-opacity duration-150 " +
+                (isReceded ? "opacity-0 pointer-events-none" : "opacity-100")
+              }
+            >
               {children}
             </div>
           </div>

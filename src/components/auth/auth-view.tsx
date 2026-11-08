@@ -74,64 +74,66 @@ export function AuthView({
     : ''
 
   const isFormValid = username.trim().length > 0 && password.trim().length > 0
+  const isUsernameFloating = isUsernameFocused || username.length > 0
+  const isPasswordFloating = isPasswordFocused || password.length > 0
 
   return (
     <main className={`w-full flex flex-col justify-between max-w-[402px] mx-auto box-border select-none ${
       isSubView
-        ? 'pt-2 pb-6'
+        ? 'pt-1 pb-6 min-h-full'
         : 'min-h-screen bg-[var(--ios-bg)] px-5 sm:px-6 pt-[max(calc(env(safe-area-inset-top,0px)+1rem),1.75rem)] pb-[max(calc(env(safe-area-inset-bottom,0px)+1rem),1.75rem)]'
     }`}>
-      {!isSubView && (
-        <header className="w-full h-[44px] flex items-center justify-between relative shrink-0">
-          {authStep === 'preview' ? (
-            <button
-              type="button"
-              onClick={onBackToInput}
-              className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
+      <header className="w-full h-[44px] flex items-center justify-between relative shrink-0">
+        {authStep === 'preview' ? (
+          <button
+            type="button"
+            onClick={onBackToInput}
+            className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
+          >
+            <svg
+              className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <svg
-                className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-              <span>{t.backAction}</span>
-            </button>
-          ) : onCancel ? (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            <span>{t.backAction}</span>
+          </button>
+        ) : onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
+          >
+            <svg
+              className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <svg
-                className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-              <span>{t.backAction}</span>
-            </button>
-          ) : (
-            <div className="w-[70px] z-10" />
-          )}
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            <span>{isSubView ? (t.settingsTitle || t.backAction) : t.backAction}</span>
+          </button>
+        ) : (
+          <div className="w-[70px] z-10" />
+        )}
 
+        {!isSubView && (
           <span className="absolute inset-0 flex items-center justify-center text-[17px] font-semibold tracking-[-0.4px] leading-none text-[var(--ios-label)] pointer-events-none">
             Synapse
           </span>
+        )}
 
-          <div className="w-[70px] z-10" />
-        </header>
-      )}
+        <div className="w-[70px] z-10" />
+      </header>
 
       <section className={`w-full flex-1 flex flex-col justify-center ${isSubView ? 'py-2' : 'py-4'}`}>
         {authStep === 'input' && (
@@ -153,23 +155,29 @@ export function AuthView({
 
         {authStep === 'input' && (
           <form onSubmit={onStartVerification} className="flex flex-col gap-4 w-full">
-            <div className="w-full rounded-[26px] bg-[var(--ios-card-solid)] relative flex flex-col overflow-hidden">
+            <div className="w-full rounded-[26px] bg-[var(--ios-card-solid)] relative flex flex-col">
               {/* Login / Username field */}
               <div
                 onClick={() => {
                   document.getElementById('username-input')?.focus()
                 }}
-                className="relative h-[60px] w-full flex flex-col justify-center px-4 cursor-text border-b border-[var(--ios-separator)] select-none"
+                className={`relative h-[62px] w-full flex items-center px-4 cursor-text rounded-t-[26px] border-2 transition-colors duration-200 select-none ${
+                  isUsernameFocused
+                    ? 'border-[var(--ios-blue)] z-20'
+                    : 'border-transparent z-10'
+                }`}
               >
                 <label
                   htmlFor="username-input"
-                  className={`text-[12px] font-normal pointer-events-none select-none leading-none tracking-tight mb-1 transition-colors ${
-                    isUsernameFocused ? 'text-[var(--ios-blue)]' : 'text-[var(--ios-secondary)]'
+                  className={`absolute left-4 pointer-events-none select-none origin-left transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] text-[var(--ios-secondary)] ${
+                    isUsernameFloating
+                      ? 'top-[9px] translate-y-0 text-[11px] font-medium tracking-tight leading-none'
+                      : 'top-1/2 -translate-y-1/2 text-[16px] font-normal tracking-[-0.2px] leading-none'
                   }`}
                 >
                   {t.loginPlaceholder}
                 </label>
-                <div className="relative w-full flex items-center">
+                <div className="relative w-full flex items-center pt-3.5">
                   <input
                     id="username-input"
                     type="text"
@@ -192,7 +200,7 @@ export function AuthView({
                         setUsername('')
                         document.getElementById('username-input')?.focus()
                       }}
-                      className="absolute right-0 w-5 h-5 rounded-full bg-[var(--ios-tertiary)] text-[var(--ios-card-solid)] flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer z-30"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-[var(--ios-tertiary)] text-[var(--ios-card-solid)] flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer z-30"
                       tabIndex={-1}
                       aria-label="Clear username"
                     >
@@ -205,22 +213,35 @@ export function AuthView({
                 </div>
               </div>
 
+              {/* Divider between fields when neither is focused */}
+              <div
+                className={`h-[1px] mx-4 bg-[var(--ios-separator)] transition-opacity duration-150 ${
+                  isUsernameFocused || isPasswordFocused ? 'opacity-0' : 'opacity-100'
+                }`}
+              />
+
               {/* Password field */}
               <div
                 onClick={() => {
                   document.getElementById('password-input')?.focus()
                 }}
-                className="relative h-[60px] w-full flex flex-col justify-center px-4 cursor-text select-none"
+                className={`relative h-[62px] w-full flex items-center px-4 cursor-text rounded-b-[26px] border-2 transition-colors duration-200 select-none ${
+                  isPasswordFocused
+                    ? 'border-[var(--ios-blue)] z-20'
+                    : 'border-transparent z-10'
+                }`}
               >
                 <label
                   htmlFor="password-input"
-                  className={`text-[12px] font-normal pointer-events-none select-none leading-none tracking-tight mb-1 transition-colors ${
-                    isPasswordFocused ? 'text-[var(--ios-blue)]' : 'text-[var(--ios-secondary)]'
+                  className={`absolute left-4 pointer-events-none select-none origin-left transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] text-[var(--ios-secondary)] ${
+                    isPasswordFloating
+                      ? 'top-[9px] translate-y-0 text-[11px] font-medium tracking-tight leading-none'
+                      : 'top-1/2 -translate-y-1/2 text-[16px] font-normal tracking-[-0.2px] leading-none'
                   }`}
                 >
                   {t.passwordPlaceholder}
                 </label>
-                <div className="relative w-full flex items-center">
+                <div className="relative w-full flex items-center pt-3.5">
                   <input
                     id="password-input"
                     type={showPassword ? 'text' : 'password'}
@@ -239,7 +260,7 @@ export function AuthView({
                         e.stopPropagation()
                         setShowPassword(!showPassword)
                       }}
-                      className="absolute right-0 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:opacity-60 transition-opacity p-0.5 cursor-pointer shrink-0 z-30"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:opacity-60 transition-opacity p-0.5 cursor-pointer shrink-0 z-30"
                       tabIndex={-1}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >

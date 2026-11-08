@@ -172,12 +172,34 @@ export function MessagesWidget({
     msg.isRead = true
     setActiveMessage(msg)
     setCachedMessage(msg)
+    if (msg.content) {
+      setReaderContent(msg.content)
+      setReaderAttachments(msg.attachments || [])
+      setIsLoadingContent(false)
+      notifySubView(true)
+      const res = await onOpenMessage(msg.id, folder)
+      if (res.content) {
+        msg.content = res.content
+        setReaderContent(res.content)
+      }
+      if (res.attachments && res.attachments.length > 0) {
+        msg.attachments = res.attachments
+        setReaderAttachments(res.attachments)
+      }
+      return
+    }
     setReaderContent('')
     setReaderAttachments([])
     setIsLoadingContent(true)
     notifySubView(true)
 
     const res = await onOpenMessage(msg.id, folder)
+    if (res.content) {
+      msg.content = res.content
+    }
+    if (res.attachments) {
+      msg.attachments = res.attachments
+    }
     setReaderContent(res.content)
     setReaderAttachments(res.attachments || [])
     setIsLoadingContent(false)
@@ -308,12 +330,7 @@ export function MessagesWidget({
                         <circle cx="12" cy="12" r="3" />
                       </svg>
                     )}
-                    <span className={cn(
-                      'text-[11px] uppercase tracking-wider truncate',
-                      folder === 'sent'
-                        ? 'font-medium text-[var(--ios-secondary)]'
-                        : (!msg.isRead ? 'font-semibold text-[var(--ios-blue)]' : 'font-medium text-[var(--ios-secondary)]')
-                    )}>
+                    <span className="text-[11px] font-semibold text-[var(--ios-blue)] uppercase tracking-wider truncate">
                       {cleanSenderName(msg.sender)}
                     </span>
                   </div>
@@ -339,10 +356,7 @@ export function MessagesWidget({
                   </div>
                 </div>
 
-                <h3 className={cn(
-                  'text-[15px] tracking-[-0.2px] leading-snug',
-                  !msg.isRead && folder !== 'sent' ? 'font-semibold text-[var(--ios-label)]' : 'font-medium text-[var(--ios-label)]'
-                )}>
+                <h3 className="text-[15px] font-medium text-[var(--ios-label)] tracking-[-0.2px] leading-snug">
                   {msg.subject}
                 </h3>
 

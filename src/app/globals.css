@@ -348,6 +348,21 @@ html.is-iphone .ios-header {
   animation: ios-reveal 0.2s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 
+@keyframes ios-modal-content-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.ios-modal-content-transition {
+  animation: ios-modal-content-enter 0.22s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
 @keyframes ios-spinner-spin {
   from {
     transform: rotate(0deg);

@@ -631,31 +631,6 @@ export function SettingsSheet({
         showBackButton={true}
         isSubView={true}
         zIndex={60}
-        trailing={
-          <button
-            type="button"
-            onClick={() => setIsEditingHome((prev) => !prev)}
-            className={
-              'w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer select-none active:scale-90 ' +
-              (isEditingHome
-                ? 'bg-[var(--ios-blue)] text-white'
-                : 'bg-[var(--ios-element)] text-[var(--ios-blue)] hover:opacity-80')
-            }
-            aria-label={isEditingHome ? 'Gotowe' : 'Edytuj'}
-            title={isEditingHome ? (currentLang === 'en' ? 'Done' : 'Gotowe') : (currentLang === 'en' ? 'Edit' : 'Edytuj')}
-          >
-            {isEditingHome ? (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            ) : (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                <path d="m15 5 4 4" />
-              </svg>
-            )}
-          </button>
-        }
       >
         {(() => {
           const isEn = currentLang === 'en'
@@ -756,6 +731,18 @@ export function SettingsSheet({
             onChangeDashboardOrder([...nextActive, ...inactiveIds])
           }
 
+          const handleMoveToTop = (id: DashboardWidgetId) => {
+            if (!onChangeDashboardOrder) return
+            const activeIds = dashboardOrder.filter((item) => dashboardVisible[item])
+            const inactiveIds = dashboardOrder.filter((item) => !dashboardVisible[item])
+            const idx = activeIds.indexOf(id)
+            if (idx <= 0) return
+
+            triggerMoveAnimation(id)
+            const nextActive = [id, ...activeIds.filter((item) => item !== id)]
+            onChangeDashboardOrder([...nextActive, ...inactiveIds])
+          }
+
           const handleToggleWidget = (id: DashboardWidgetId) => {
             if (!onToggleDashboardWidget || !onChangeDashboardOrder) return
             const currentlyVisible = Boolean(dashboardVisible[id])
@@ -779,11 +766,6 @@ export function SettingsSheet({
                 <span className="text-[12px] font-normal uppercase text-[var(--ios-secondary)] tracking-wider">
                   {isEn ? 'Active widgets on home screen' : 'Aktywne widżety na ekranie głównym'}
                 </span>
-                {!isEditingHome && (
-                  <span className="text-[12px] font-normal text-[var(--ios-secondary)]">
-                    {isEn ? 'Tap pencil to edit' : 'Kliknij ołówek, aby edytować'}
-                  </span>
-                )}
               </div>
 
               <div
@@ -853,23 +835,34 @@ export function SettingsSheet({
                         </div>
                       </div>
 
-                      {/* Edit controls: Up/Down arrows + Switch appear smoothly when pencil is active */}
-                      <div
-                        style={{
-                          opacity: isEditingHome ? 1 : 0,
-                          transform: isEditingHome ? 'translate3d(0, 0, 0) scale(1)' : 'translate3d(8px, 0, 0) scale(0.92)',
-                          pointerEvents: isEditingHome ? 'auto' : 'none',
-                          transition:
-                            'opacity 320ms cubic-bezier(0.16, 1, 0.3, 1), transform 380ms cubic-bezier(0.16, 1, 0.3, 1)'
-                        }}
-                        className="flex items-center gap-2 shrink-0"
-                      >
+                      {/* Controls always visible: Move to Top, Move Up, Move Down + Switch */}
+                      <div className="flex items-center gap-2 shrink-0">
                         {isVisible && (
                           <div className="flex items-center gap-1 mr-1">
                             <button
                               type="button"
                               disabled={!canMoveUp}
+                              onClick={() => handleMoveToTop(id)}
+                              title={isEn ? 'Move to top' : 'Na samą górę'}
+                              className={
+                                'w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ' +
+                                (canMoveUp
+                                  ? 'bg-[var(--ios-element)] text-[var(--ios-label)] active:scale-90 hover:bg-[var(--ios-blue-subtle)] hover:text-[var(--ios-blue)]'
+                                  : 'bg-[var(--ios-element)]/40 text-[var(--ios-tertiary)] opacity-40 cursor-not-allowed')
+                              }
+                              aria-label="Move to top"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="5" y1="4" x2="19" y2="4" />
+                                <polyline points="17 14 12 9 7 14" />
+                                <line x1="12" y1="9" x2="12" y2="20" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!canMoveUp}
                               onClick={() => handleMoveWidget(id, -1)}
+                              title={isEn ? 'Move up' : 'Wyżej'}
                               className={
                                 'w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ' +
                                 (canMoveUp
@@ -886,6 +879,7 @@ export function SettingsSheet({
                               type="button"
                               disabled={!canMoveDown}
                               onClick={() => handleMoveWidget(id, 1)}
+                              title={isEn ? 'Move down' : 'Niżej'}
                               className={
                                 'w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ' +
                                 (canMoveDown

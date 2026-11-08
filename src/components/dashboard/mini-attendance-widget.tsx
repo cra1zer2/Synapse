@@ -189,17 +189,31 @@ export function MiniAttendanceWidget({
           )}
         </div>
       ) : !attendanceData || isPending ? (
-        <div className="px-4 py-3.5 flex flex-col gap-2.5">
-          <div className="flex items-end justify-between min-h-[52px]">
-            <div className="flex flex-col">
-              <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight leading-tight">
-                {t.attendanceRate}
-              </span>
-              <div className="w-[88px] h-[34px] rounded-[10px] ios-skeleton mt-1" />
+        <div className="flex flex-col">
+          <div className="px-4 py-3.5 flex flex-col gap-2.5">
+            <div className="flex items-end justify-between min-h-[52px]">
+              <div className="flex flex-col">
+                <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight leading-tight">
+                  {t.attendanceRate}
+                </span>
+                <div className="w-[88px] h-[34px] rounded-[10px] ios-skeleton mt-1" />
+              </div>
+              <div className="w-[104px] h-[16px] rounded-full ios-skeleton mb-0.5" />
             </div>
-            <div className="w-[104px] h-[16px] rounded-full ios-skeleton mb-0.5" />
+            <div className="w-full h-[6px] rounded-full ios-skeleton" />
           </div>
-          <div className="w-full h-[6px] rounded-full ios-skeleton" />
+
+          <div className="hidden md:flex flex-col gap-2 px-4 py-3 border-t border-[var(--ios-separator)]">
+            <div className="flex items-center justify-between">
+              <div className="w-28 h-[12px] rounded-full ios-skeleton" />
+              <div className="w-16 h-[11px] rounded-full ios-skeleton" />
+            </div>
+            <div className="grid grid-cols-7 gap-1.5 w-full">
+              {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                <div key={num} className="h-[40px] rounded-[10px] ios-skeleton" />
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col ios-reveal">

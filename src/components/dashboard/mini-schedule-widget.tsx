@@ -24,13 +24,22 @@ export interface MiniScheduleWidgetProps {
   onOpenFullSchedule: (targetDay?: string, targetIsoDate?: string) => void
 }
 
-function MiniLessonSkeleton() {
+function MiniLessonSkeleton({
+  subjectWidth = 'w-40',
+  teacherWidth = 'w-28'
+}: {
+  subjectWidth?: string
+  teacherWidth?: string
+}) {
   return (
     <div className="w-full px-4 py-3 flex items-center justify-between gap-3">
       <div className="flex-1 min-w-0 flex flex-col gap-1.5 justify-center py-0.5">
-        <div className="w-20 h-[12px] rounded-full ios-skeleton" />
-        <div className="w-40 h-[16px] rounded-full ios-skeleton" />
-        <div className="w-28 h-[12px] rounded-full ios-skeleton" />
+        <div className="flex items-center gap-1.5">
+          <div className="w-20 h-[12px] rounded-full ios-skeleton" />
+          <div className="w-5 h-[11px] rounded-full ios-skeleton" />
+        </div>
+        <div className={cn('h-[16px] rounded-full ios-skeleton', subjectWidth)} />
+        <div className={cn('h-[12px] rounded-full ios-skeleton', teacherWidth)} />
       </div>
       <div className="w-9 h-[16px] rounded-full ios-skeleton shrink-0" />
     </div>
@@ -324,11 +333,13 @@ export function MiniScheduleWidget({
           <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] truncate">
             {t.schedule}
           </span>
-          {badgeLabel && (
+          {(isLoading || !timetableData) ? (
+            <div className="w-16 h-[20px] rounded-full ios-skeleton shrink-0" />
+          ) : badgeLabel ? (
             <span className="text-[12px] font-medium text-[var(--ios-secondary)] bg-[var(--ios-element)] px-2.5 py-0.5 rounded-full shrink-0">
               {badgeLabel}
             </span>
-          )}
+          ) : null}
         </div>
 
         <svg width="16" height="16" className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -355,15 +366,36 @@ export function MiniScheduleWidget({
           )}
         </div>
       ) : isLoading || !timetableData ? (
-        <div className="flex flex-col py-1">
-          <MiniLessonSkeleton />
-          <div className="w-full flex items-center gap-3 px-4 py-1">
-            <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
-            <div className="w-16 h-[20px] rounded-full ios-skeleton" />
-            <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
+        showAllLessons ? (
+          <div className="flex flex-col">
+            {[
+              { subjectWidth: 'w-44', teacherWidth: 'w-32' },
+              { subjectWidth: 'w-36', teacherWidth: 'w-28' },
+              { subjectWidth: 'w-52', teacherWidth: 'w-36' },
+              { subjectWidth: 'w-40', teacherWidth: 'w-28' },
+              { subjectWidth: 'w-48', teacherWidth: 'w-32' },
+              { subjectWidth: 'w-32', teacherWidth: 'w-24' },
+              { subjectWidth: 'w-44', teacherWidth: 'w-28' }
+            ].map((row, idx, arr) => (
+              <Fragment key={idx}>
+                <MiniLessonSkeleton subjectWidth={row.subjectWidth} teacherWidth={row.teacherWidth} />
+                {idx < arr.length - 1 && (
+                  <div className="h-[0.5px] bg-[var(--ios-separator)] ml-4" />
+                )}
+              </Fragment>
+            ))}
           </div>
-          <MiniLessonSkeleton />
-        </div>
+        ) : (
+          <div className="flex flex-col py-1">
+            <MiniLessonSkeleton />
+            <div className="w-full flex items-center gap-3 px-4 py-1">
+              <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
+              <div className="w-16 h-[20px] rounded-full ios-skeleton" />
+              <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
+            </div>
+            <MiniLessonSkeleton />
+          </div>
+        )
       ) : (
         <div className={cn('ios-reveal', isOffline && 'opacity-50 grayscale')}>
           {!showAllLessons && scheduleState.mode === 'all_ended_today' && !shouldShowNextDay ? (

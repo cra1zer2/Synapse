@@ -144,7 +144,6 @@ export function SettingsSheet({
   const [showLangPicker, setShowLangPicker] = useState(false)
   const [showHomeCustomizer, setShowHomeCustomizer] = useState(false)
   const [showTimingsDebug, setShowTimingsDebug] = useState(false)
-  const [isEditingHome, setIsEditingHome] = useState(false)
   const [movingWidgetId, setMovingWidgetId] = useState<DashboardWidgetId | null>(null)
   const [accountToSwitch, setAccountToSwitch] = useState<SavedAccount | null>(null)
   const [cachedSwitchAccount, setCachedSwitchAccount] = useState<SavedAccount | null>(null)
@@ -321,7 +320,6 @@ export function SettingsSheet({
               chevron={true}
               size="tall"
               onClick={() => {
-                setIsEditingHome(false)
                 setShowHomeCustomizer(true)
               }}
             />
@@ -344,11 +342,11 @@ export function SettingsSheet({
             />
           </IosListSection>
 
-          <IosCard>
+          <IosCard className="rounded-[26px] overflow-hidden">
             <button
               type="button"
               onClick={onLogout}
-              className="w-full text-center p-3.5 text-[15px] font-medium text-[var(--ios-red)] tracking-[-0.2px] active:bg-[var(--ios-element)]/30 transition-colors cursor-pointer"
+              className="w-full text-center h-[52px] text-[16px] font-medium text-[#FF453A] dark:text-[#ff453a] tracking-[-0.2px] active:bg-[var(--ios-element)]/30 transition-colors cursor-pointer flex items-center justify-center"
             >
               {t.logout}
             </button>
@@ -643,7 +641,6 @@ export function SettingsSheet({
         isOpen={showHomeCustomizer}
         onClose={() => {
           setShowHomeCustomizer(false)
-          setIsEditingHome(false)
         }}
         title={currentLang === 'en' ? 'Home Screen' : 'Ekran główny'}
         backLabel={t.settingsTitle || t.backAction}
@@ -836,12 +833,12 @@ export function SettingsSheet({
                         boxShadow: isMoving ? '0 14px 32px rgba(0, 0, 0, 0.18)' : 'none'
                       }}
                       className={
-                        'absolute top-0 left-0 right-0 rounded-[20px] bg-[var(--ios-card-solid)] px-3.5 flex items-center justify-between gap-3 border border-[var(--ios-border)] ' +
+                        'absolute top-0 left-0 right-0 rounded-[20px] bg-[var(--ios-card-solid)] px-3.5 flex items-center justify-between gap-3 ' +
                         (!isVisible ? 'opacity-65' : 'opacity-100')
                       }
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className={`w-9 h-9 rounded-[11px] ${meta.color} text-white flex items-center justify-center shrink-0`}>
+                        <div className={`w-[32px] h-[32px] rounded-[8px] ${meta.color} text-white flex items-center justify-center shrink-0`}>
                           {meta.icon}
                         </div>
                         <div className="flex flex-col min-w-0 flex-1">
@@ -854,24 +851,24 @@ export function SettingsSheet({
                         </div>
                       </div>
 
-                      {/* Controls always visible: Move to Top, Move Up, Move Down + Switch */}
+                      {/* Controls: compact chevrons + Switch */}
                       <div className="flex items-center gap-2 shrink-0">
                         {isVisible && (
-                          <div className="flex items-center gap-1 mr-1">
+                          <div className="flex items-center gap-0.5 mr-0.5">
                             <button
                               type="button"
                               disabled={!canMoveUp}
                               onClick={() => handleMoveToTop(id)}
                               title={isEn ? 'Move to top' : 'Na samą górę'}
                               className={
-                                'w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ' +
+                                'w-6 h-6 flex items-center justify-center transition-all cursor-pointer ' +
                                 (canMoveUp
-                                  ? 'bg-[var(--ios-element)] text-[var(--ios-label)] active:scale-90 hover:bg-[var(--ios-blue-subtle)] hover:text-[var(--ios-blue)]'
-                                  : 'bg-[var(--ios-element)]/40 text-[var(--ios-tertiary)] opacity-40 cursor-not-allowed')
+                                  ? 'text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] active:scale-90'
+                                  : 'text-[var(--ios-tertiary)] opacity-25 cursor-not-allowed')
                               }
                               aria-label="Move to top"
                             >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                                 <line x1="5" y1="4" x2="19" y2="4" />
                                 <polyline points="17 14 12 9 7 14" />
                                 <line x1="12" y1="9" x2="12" y2="20" />
@@ -883,14 +880,14 @@ export function SettingsSheet({
                               onClick={() => handleMoveWidget(id, -1)}
                               title={isEn ? 'Move up' : 'Wyżej'}
                               className={
-                                'w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ' +
+                                'w-6 h-6 flex items-center justify-center transition-all cursor-pointer ' +
                                 (canMoveUp
-                                  ? 'bg-[var(--ios-element)] text-[var(--ios-label)] active:scale-90 hover:bg-[var(--ios-blue-subtle)] hover:text-[var(--ios-blue)]'
-                                  : 'bg-[var(--ios-element)]/40 text-[var(--ios-tertiary)] opacity-40 cursor-not-allowed')
+                                  ? 'text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] active:scale-90'
+                                  : 'text-[var(--ios-tertiary)] opacity-25 cursor-not-allowed')
                               }
                               aria-label="Move up"
                             >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="18 15 12 9 6 15" />
                               </svg>
                             </button>
@@ -900,14 +897,14 @@ export function SettingsSheet({
                               onClick={() => handleMoveWidget(id, 1)}
                               title={isEn ? 'Move down' : 'Niżej'}
                               className={
-                                'w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ' +
+                                'w-6 h-6 flex items-center justify-center transition-all cursor-pointer ' +
                                 (canMoveDown
-                                  ? 'bg-[var(--ios-element)] text-[var(--ios-label)] active:scale-90 hover:bg-[var(--ios-blue-subtle)] hover:text-[var(--ios-blue)]'
-                                  : 'bg-[var(--ios-element)]/40 text-[var(--ios-tertiary)] opacity-40 cursor-not-allowed')
+                                  ? 'text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] active:scale-90'
+                                  : 'text-[var(--ios-tertiary)] opacity-25 cursor-not-allowed')
                               }
                               aria-label="Move down"
                             >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="6 9 12 15 18 9" />
                               </svg>
                             </button>

@@ -380,7 +380,7 @@ export function MiniScheduleWidget({
               <Fragment key={idx}>
                 <MiniLessonSkeleton subjectWidth={row.subjectWidth} teacherWidth={row.teacherWidth} />
                 {idx < arr.length - 1 && (
-                  <div className="h-[0.5px] bg-[var(--ios-separator)] ml-4" />
+                  <div className="h-[0.5px] bg-[var(--ios-separator)] mx-4" />
                 )}
               </Fragment>
             ))}
@@ -466,7 +466,7 @@ export function MiniScheduleWidget({
                             countdownText={t.breakCountdownLabel(breakRemaining)}
                           />
                         ) : (
-                          <div className="h-[0.5px] bg-[var(--ios-separator)] ml-4" />
+                          <div className="h-[0.5px] bg-[var(--ios-separator)] mx-4" />
                         )
                       )
                     )}

@@ -138,15 +138,15 @@ export function RequestTimingsModal({
 
   // Timing badge helper
   const renderTimingBadge = (ms: number) => {
-    let colorClass = 'bg-[var(--ios-green-subtle,#e8f8ee)] text-[var(--ios-green,#34c759)] border-[var(--ios-green,#34c759)]/20'
+    let colorClass = 'bg-[var(--ios-green-subtle,#e8f8ee)] text-[var(--ios-green,#34c759)]'
     if (ms >= 3000) {
-      colorClass = 'bg-[var(--ios-red-subtle,#fdeeed)] text-[var(--ios-red,#ff3b30)] border-[var(--ios-red,#ff3b30)]/20'
+      colorClass = 'bg-[var(--ios-red-subtle,#fdeeed)] text-[var(--ios-red,#ff3b30)]'
     } else if (ms >= 1200) {
-      colorClass = 'bg-[var(--ios-orange-subtle,#fef5e7)] text-[var(--ios-orange,#ff9500)] border-[var(--ios-orange,#ff9500)]/20'
+      colorClass = 'bg-[var(--ios-orange-subtle,#fef5e7)] text-[var(--ios-orange,#ff9500)]'
     }
 
     return (
-      <span className={cn('text-[12px] font-semibold px-2 py-0.5 rounded-full border tracking-tight shrink-0', colorClass)}>
+      <span className={cn('text-[12px] font-semibold px-2.5 py-0.5 rounded-full tracking-tight shrink-0', colorClass)}>
         {ms} ms
       </span>
     )

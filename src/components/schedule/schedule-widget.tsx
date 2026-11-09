@@ -330,10 +330,10 @@ export function ScheduleWidget({
                         isHoliday
                           ? 'bg-[var(--ios-teal)]/15 text-[var(--ios-teal)]'
                           : isQuiz
-                          ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] border border-[var(--ios-orange)]/25'
+                          ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
                           : ev.category === 'exam'
-                          ? 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)] border border-[var(--ios-purple)]/20'
-                          : 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] border border-[var(--ios-blue)]/20'
+                          ? 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)]'
+                          : 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)]'
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -422,7 +422,7 @@ export function ScheduleWidget({
                             ) : null}
 
                             {lesson.isShortened && !isCancelled && (
-                              <span className="text-[11px] font-medium text-[var(--ios-orange)] bg-[var(--ios-orange-subtle)] border border-[var(--ios-orange)]/20 px-2 py-0.5 rounded-full whitespace-nowrap">
+                              <span className="text-[11px] font-medium text-[var(--ios-orange)] bg-[var(--ios-orange-subtle)] px-2.5 py-0.5 rounded-full whitespace-nowrap">
                                 {lesson.durationMinutes} min
                               </span>
                             )}

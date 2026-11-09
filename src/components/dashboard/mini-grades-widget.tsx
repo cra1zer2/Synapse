@@ -1,7 +1,7 @@
 'use client'
 
 import { GradesResult, GradeItem } from '@/models/grade.model'
-import { AppDictionary } from '@/config/dictionary.config'
+import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
 import { cn } from '@/utils/cn.util'
 
@@ -10,6 +10,7 @@ interface MiniGradesWidgetProps {
   isLoading?: boolean
   error?: string | null
   onRetry?: () => void
+  lang?: AppLanguage
   t: AppDictionary
   onOpenGrades: () => void
   onSelectGrade?: (grade: GradeItem) => void
@@ -29,6 +30,7 @@ export function MiniGradesWidget({
   isLoading = false,
   error = null,
   onRetry,
+  lang = 'pl',
   t,
   onOpenGrades,
   onSelectGrade,
@@ -92,47 +94,57 @@ export function MiniGradesWidget({
           )}
         </div>
       ) : isPending ? (
-        <div className="px-4 py-3.5 flex items-end justify-between min-h-[76px]">
+        <div className="px-4 py-3.5 flex items-start justify-between min-h-[76px]">
           <div className="flex flex-col">
             <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight leading-tight">
               {t.gpaTitle}
             </span>
-            <div className="w-[74px] h-[34px] rounded-[10px] ios-skeleton mt-1" />
+            <div className="w-[74px] h-[34px] rounded-[10px] ios-skeleton mt-1.5" />
           </div>
-          <div className="flex items-center gap-1.5 pb-0.5">
-            <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
-            <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
-            <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
-            <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
+          <div className="flex flex-col items-end">
+            <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight leading-tight mb-1.5 text-right">
+              {lang === 'en' ? 'Recent' : 'Ostatnie'}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
+              <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
+              <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
+              <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
+            </div>
           </div>
         </div>
       ) : (
-        <div className="px-4 py-3.5 flex items-end justify-between min-h-[76px] ios-reveal">
+        <div className="px-4 py-3.5 flex items-start justify-between min-h-[76px] ios-reveal">
           <div className="flex flex-col">
             <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight">
               {t.gpaTitle}
             </span>
-            <span className={`text-[34px] font-semibold tracking-[-0.8px] leading-none mt-1 tabular-nums ${isDanger ? 'text-[var(--ios-red)]' : 'text-[var(--ios-label)]'}`}>
+            <span className={`text-[34px] font-semibold tracking-[-0.8px] leading-none mt-1.5 tabular-nums ${isDanger ? 'text-[var(--ios-red)]' : 'text-[var(--ios-label)]'}`}>
               {formattedAvg}
             </span>
           </div>
 
           {recentGrades.length > 0 && (
-            <div className="flex items-center gap-1.5 pb-0.5">
-              {recentGrades.map((g, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onSelectGrade?.(g)
-                  }}
-                  title={`${g.subject}: ${g.grade}${g.category ? ` (${g.category})` : ''}`}
-                  className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] tabular-nums cursor-pointer hover:opacity-80 active:scale-[0.92] transition-all select-none ${getGradeBadgeStyle(g.grade)}`}
-                >
-                  {g.grade}
-                </button>
-              ))}
+            <div className="flex flex-col items-end">
+              <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight mb-1.5 text-right">
+                {lang === 'en' ? 'Recent' : 'Ostatnie'}
+              </span>
+              <div className="flex items-center gap-1.5">
+                {recentGrades.map((g, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSelectGrade?.(g)
+                    }}
+                    title={`${g.subject}: ${g.grade}${g.category ? ` (${g.category})` : ''}`}
+                    className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] tabular-nums cursor-pointer hover:opacity-80 active:scale-[0.92] transition-all select-none ${getGradeBadgeStyle(g.grade)}`}
+                  >
+                    {g.grade}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

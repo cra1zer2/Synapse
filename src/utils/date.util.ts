@@ -188,3 +188,60 @@ export function computeLiveWeekDays(pivotIso: string) {
         rangeLabel: `${mD}.${mM} — ${fD}.${fM}`
     }
 }
+
+export function formatHumanPolishDate(
+    raw: string | number | Date | undefined,
+    includeTime: boolean = false,
+    lang: 'pl' | 'en' = 'pl'
+): string {
+    if (!raw) return ''
+
+    let date: Date | null = null
+
+    if (raw instanceof Date) {
+        date = raw
+    } else if (typeof raw === 'number') {
+        date = new Date(raw > 1e11 ? raw : raw * 1000)
+    } else if (typeof raw === 'string') {
+        const str = raw.trim()
+        const dotMatch = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2}))?/)
+        if (dotMatch) {
+            const d = parseInt(dotMatch[1], 10)
+            const m = parseInt(dotMatch[2], 10) - 1
+            const y = parseInt(dotMatch[3], 10)
+            const hh = dotMatch[4] ? parseInt(dotMatch[4], 10) : 0
+            const mm = dotMatch[5] ? parseInt(dotMatch[5], 10) : 0
+            date = new Date(y, m, d, hh, mm)
+        } else {
+            const parsed = new Date(str)
+            if (!isNaN(parsed.getTime())) {
+                date = parsed
+            }
+        }
+    }
+
+    if (!date || isNaN(date.getTime())) {
+        return String(raw)
+    }
+
+    const monthsPl = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru']
+    const monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const mArr = lang === 'en' ? monthsEn : monthsPl
+
+    const day = date.getDate()
+    const month = mArr[date.getMonth()]
+    const year = date.getFullYear()
+    const currentYear = new Date().getFullYear()
+
+    const yearPart = year !== currentYear ? ` ${year}` : ''
+    const dateStr = `${day} ${month}${yearPart}`
+
+    if (includeTime) {
+        const hours = String(date.getHours()).padStart(2, '0')
+        const mins = String(date.getMinutes()).padStart(2, '0')
+        return `${dateStr}, ${hours}:${mins}`
+    }
+
+    return dateStr
+}
+

@@ -305,14 +305,14 @@ export function LegacyAttendanceView({
                         )}
                       </div>
 
-                      <span className={"text-[12px] font-medium px-2.5 py-0.5 rounded-full border shrink-0 tabular-nums " + (
+                      <span className={"text-[12px] font-medium px-2.5 py-0.5 rounded-full shrink-0 tabular-nums " + (
                         item.type === 'sl'
-                          ? "bg-[var(--ios-yellow)]/15 text-[var(--ios-yellow)] dark:text-[#ffd60a] border-[var(--ios-yellow)]/30"
+                          ? "bg-[var(--ios-yellow)]/15 text-[var(--ios-yellow)] dark:text-[#ffd60a]"
                           : item.type === 'sp'
-                            ? "bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] border-[var(--ios-orange)]/30"
+                            ? "bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]"
                             : item.isUnexcused
-                              ? "bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border-[var(--ios-red)]/30"
-                              : "bg-[var(--ios-green-subtle)] text-[var(--ios-green)] border-[var(--ios-green)]/30"
+                              ? "bg-[var(--ios-red-subtle)] text-[var(--ios-red)]"
+                              : "bg-[var(--ios-green-subtle)] text-[var(--ios-green)]"
                       )}>
                         {item.type === 'sl' ? 'sL' : item.type.toUpperCase()}
                       </span>

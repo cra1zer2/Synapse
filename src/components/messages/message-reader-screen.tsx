@@ -4,6 +4,7 @@ import { ReactNode, useState } from 'react'
 import { MessageItem, MessageAttachment } from '@/models/message.model'
 import { AppDictionary } from '@/config/dictionary.config'
 import { cleanSenderName } from '@/utils/text.util'
+import { formatHumanPolishDate } from '@/utils/date.util'
 import { IosScreen } from '@/components/ios/ios-screen'
 import { IosCard } from '@/components/ios/ios-ui'
 import { IosSpinner } from '@/components/ios/ios-spinner'
@@ -83,20 +84,20 @@ export function MessageReaderScreen({
       <div className="flex flex-col gap-4 pb-16 select-none max-w-3xl mx-auto w-full">
         {message ? (
           <>
-            <div className="flex flex-col gap-2 pb-3 border-b border-[var(--ios-separator)]">
+            <IosCard className="p-4 sm:p-5 rounded-[20px] flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[12px] font-semibold text-[var(--ios-blue)] uppercase tracking-wider truncate">
                   {cleanSenderName(message.sender)}
                 </span>
                 <span className="text-[11px] font-normal text-[var(--ios-secondary)] tabular-nums shrink-0">
-                  {message.date}
+                  {formatHumanPolishDate(message.date, true)}
                 </span>
               </div>
 
-              <h2 className="text-[20px] font-bold text-[var(--ios-label)] tracking-tight leading-snug break-words mt-1">
+              <h2 className="text-[19px] sm:text-[20px] font-bold text-[var(--ios-label)] tracking-tight leading-snug break-words mt-0.5">
                 {message.subject}
               </h2>
-            </div>
+            </IosCard>
 
             {isLoadingContent ? (
               <div className="flex flex-col gap-5 pt-2 select-none" aria-busy="true" aria-label={t.loadingMessages}>
@@ -173,9 +174,11 @@ export function MessageReaderScreen({
                   </div>
                 )}
 
-                <div className="text-[15px] font-normal text-[var(--ios-label)] leading-[1.65] whitespace-pre-wrap select-text pt-1">
-                  {renderContent(content || t.emptyMessageContent)}
-                </div>
+                <IosCard className="p-4 sm:p-5 rounded-[20px]">
+                  <div className="text-[15px] font-normal text-[var(--ios-label)] leading-[1.65] whitespace-pre-wrap select-text">
+                    {renderContent(content || t.emptyMessageContent)}
+                  </div>
+                </IosCard>
               </>
             )}
           </>

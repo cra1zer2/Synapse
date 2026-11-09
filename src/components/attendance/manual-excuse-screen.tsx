@@ -433,7 +433,7 @@ export function ManualExcuseScreen({
             />
 
             {!canSubmitExcuse && (
-              <div className="p-3.5 rounded-[16px] bg-[var(--ios-orange-subtle)] border border-[var(--ios-orange)]/25 text-[var(--ios-orange)] text-[12px] font-normal leading-relaxed">
+              <div className="p-3.5 rounded-[16px] bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] text-[12px] font-normal leading-relaxed">
                 {t.onlyParentCanExcuse}
               </div>
             )}
@@ -613,9 +613,9 @@ export function ManualExcuseScreen({
                   </IosCard>
 
                   <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between px-4 text-[13px] text-[var(--ios-secondary)]">
+                    <div className="flex items-center justify-between px-4 pb-1.5 text-[12px] font-medium uppercase tracking-[0.02em] text-[var(--ios-secondary)]">
                       <span>{lang === 'en' ? 'Select lesson periods' : 'Wybierz godziny lekcyjne'}</span>
-                      <span className="tabular-nums">
+                      <span className="tabular-nums normal-case">
                         {selectedLessonsArray.length} {lang === 'en' ? 'selected' : 'zaznaczonych'}
                       </span>
                     </div>
@@ -705,7 +705,7 @@ export function ManualExcuseScreen({
                   disabled={!canSubmitExcuse}
                   onChange={(e) => setParentMessage(e.target.value)}
                   placeholder={t.commentPlaceholder}
-                  className="w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-[15px] font-normal rounded-[16px] p-3 outline-none placeholder-[var(--ios-secondary)]/60 resize-none h-20 border border-transparent focus:border-[var(--ios-blue)]/40 transition-colors"
+                  className="w-full bg-[var(--bg-card-secondary)] text-[var(--ios-label)] text-[15px] font-normal rounded-[16px] p-3 outline-none placeholder-[var(--ios-secondary)]/60 resize-none h-20 border-none transition-colors"
                 />
               </IosCard>
 

@@ -6,6 +6,12 @@
 .light {
   --ios-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
 
+  /* Surface Hierarchy (Opaque Depth) */
+  --bg-canvas: #f2f2f7;
+  --bg-card-primary: #ffffff;
+  --bg-card-secondary: #f2f2f7;
+  --bg-card-tertiary: #e5e5ea;
+
   --ios-bg: #f2f2f7;
   --ios-bg-primary: #f2f2f7;
   --ios-bg-secondary: #ffffff;
@@ -16,13 +22,13 @@
   --ios-card-secondary: #f2f2f7;
   --ios-modal-bg: #f2f2f7;
   --ios-modal-card: #ffffff;
-  --ios-element: rgba(118, 118, 128, 0.12);
+  --ios-element: #e5e5ea;
   --ios-row-hover: rgba(118, 118, 128, 0.06);
   --ios-row-active: rgba(118, 118, 128, 0.12);
   --ios-block-bg: rgba(118, 118, 128, 0.08);
   --ios-block-bg-hover: rgba(118, 118, 128, 0.12);
   --ios-block-bg-active: rgba(118, 118, 128, 0.16);
-  --ios-input: rgba(118, 118, 128, 0.12);
+  --ios-input: #e5e5ea;
   --ios-switch-off: #e5e5ea;
 
   --ios-segmented-track: rgba(118, 118, 128, 0.12);
@@ -45,7 +51,8 @@
   --ios-quaternary: rgba(60, 60, 67, 0.18);
 
   --ios-separator: rgba(60, 60, 67, 0.12);
-  --ios-border: rgba(60, 60, 67, 0.12);
+  --border-hairline: rgba(60, 60, 67, 0.12);
+  --ios-border: transparent;
   --ios-hairline: 0.5px;
 
   --ios-blue: #0088ff;
@@ -77,6 +84,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
+    /* Surface Hierarchy (Opaque Depth) */
+    --bg-canvas: #000000;
+    --bg-card-primary: #1c1c1e;
+    --bg-card-secondary: #2c2c2e;
+    --bg-card-tertiary: #3a3a3c;
+
     --ios-bg: #000000;
     --ios-bg-primary: #000000;
     --ios-bg-secondary: #1c1c1e;
@@ -85,8 +98,8 @@
     --ios-card: #1c1c1e;
     --ios-card-solid: #1c1c1e;
     --ios-card-secondary: #2c2c2e;
-    --ios-modal-bg: #141416;
-    --ios-modal-card: #222225;
+    --ios-modal-bg: #1c1c1e;
+    --ios-modal-card: #2c2c2e;
     --ios-element: #2c2c2e;
     --ios-row-hover: rgba(255, 255, 255, 0.04);
     --ios-row-active: rgba(255, 255, 255, 0.09);
@@ -96,7 +109,7 @@
     --ios-input: #2c2c2e;
     --ios-switch-off: #39393d;
 
-    --ios-segmented-track: rgba(118, 118, 128, 0.24);
+    --ios-segmented-track: #2c2c2e;
     --ios-segmented-thumb: #636366;
     --ios-segmented-shadow: none;
 
@@ -115,8 +128,9 @@
     --ios-tertiary: rgba(235, 235, 245, 0.30);
     --ios-quaternary: rgba(235, 235, 245, 0.18);
 
-    --ios-separator: rgba(255, 255, 255, 0.10);
-    --ios-border: rgba(255, 255, 255, 0.14);
+    --ios-separator: rgba(255, 255, 255, 0.08);
+    --border-hairline: rgba(255, 255, 255, 0.08);
+    --ios-border: transparent;
 
     --ios-blue: #0091ff;
     --ios-blue-subtle: rgba(0, 145, 255, 0.16);
@@ -141,6 +155,12 @@
 
 :root.dark,
 .dark {
+  /* Surface Hierarchy (Opaque Depth) */
+  --bg-canvas: #000000;
+  --bg-card-primary: #1c1c1e;
+  --bg-card-secondary: #2c2c2e;
+  --bg-card-tertiary: #3a3a3c;
+
   --ios-bg: #000000;
   --ios-bg-primary: #000000;
   --ios-bg-secondary: #1c1c1e;
@@ -149,8 +169,8 @@
   --ios-card: #1c1c1e;
   --ios-card-solid: #1c1c1e;
   --ios-card-secondary: #2c2c2e;
-  --ios-modal-bg: #141416;
-  --ios-modal-card: #222225;
+  --ios-modal-bg: #1c1c1e;
+  --ios-modal-card: #2c2c2e;
   --ios-element: #2c2c2e;
   --ios-row-hover: rgba(255, 255, 255, 0.04);
   --ios-row-active: rgba(255, 255, 255, 0.09);
@@ -160,7 +180,7 @@
   --ios-input: #2c2c2e;
   --ios-switch-off: #39393d;
 
-  --ios-segmented-track: rgba(118, 118, 128, 0.24);
+  --ios-segmented-track: #2c2c2e;
   --ios-segmented-thumb: #636366;
   --ios-segmented-shadow: none;
 
@@ -179,8 +199,9 @@
   --ios-tertiary: rgba(235, 235, 245, 0.30);
   --ios-quaternary: rgba(235, 235, 245, 0.18);
 
-  --ios-separator: rgba(255, 255, 255, 0.10);
-  --ios-border: rgba(255, 255, 255, 0.14);
+  --ios-separator: rgba(255, 255, 255, 0.08);
+  --border-hairline: rgba(255, 255, 255, 0.08);
+  --ios-border: transparent;
 
   --ios-blue: #0091ff;
   --ios-blue-subtle: rgba(0, 145, 255, 0.16);
@@ -264,7 +285,7 @@ body {
   background-color: var(--ios-nav-bg);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
-  border-bottom: var(--ios-hairline) solid var(--ios-separator);
+  border-bottom: var(--ios-hairline) solid transparent;
 }
 
 /* Extra top inset specifically for iPhone so Safari/iOS status bar blur doesn't clip title or back button */

@@ -53,8 +53,8 @@ export function MiniMessagesWidget({
           className="w-full py-3 px-4 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
         >
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
-            <div className="w-[34px] h-[34px] rounded-[9px] bg-[var(--ios-blue)] text-white flex items-center justify-center shrink-0">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-[32px] h-[32px] rounded-[8px] bg-[var(--ios-blue)] text-white flex items-center justify-center shrink-0">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect width="20" height="16" x="2" y="4" rx="3" />
                 <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
               </svg>
@@ -96,7 +96,7 @@ export function MiniMessagesWidget({
           </div>
         </div>
 
-        <div className="h-[0.5px] bg-[var(--ios-separator)] ml-4 pointer-events-none" />
+        <div className="h-[0.5px] bg-[var(--ios-separator)] ml-[60px] mr-4 pointer-events-none" />
 
         {/* Ogłoszenia Row */}
         <div
@@ -104,8 +104,8 @@ export function MiniMessagesWidget({
           className="w-full py-3 px-4 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
         >
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
-            <div className="w-[34px] h-[34px] rounded-[9px] bg-[var(--ios-purple)] text-white flex items-center justify-center shrink-0">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-[32px] h-[32px] rounded-[8px] bg-[var(--ios-purple)] text-white flex items-center justify-center shrink-0">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m3 11 18-5v12L3 14v-3z" />
                 <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
               </svg>

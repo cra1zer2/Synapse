@@ -110,7 +110,7 @@ export function IosCell({
       </div>
 
       {!isLast && !hideSeparator && (
-        <div className={cn('absolute bottom-0 right-0 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none', separatorLeft)} />
+        <div className={cn('absolute bottom-0 right-4 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none', separatorLeft)} />
       )}
     </div>
   )
@@ -129,7 +129,7 @@ export function IosListSection({
   return (
     <section className={cn('flex flex-col w-full', className)}>
       {header && (
-        <div className="text-[13px] font-normal uppercase text-[var(--ios-secondary)] tracking-[-0.08px] px-4 pt-4 pb-1.5 select-none">
+        <div className="text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-[0.02em] px-4 pt-3 pb-1.5 select-none">
           {header}
         </div>
       )}

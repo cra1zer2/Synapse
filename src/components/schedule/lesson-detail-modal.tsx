@@ -125,11 +125,11 @@ export function LessonDetailModal({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={cn(
-          "w-full max-w-[402px] md:max-w-[420px] bg-[var(--ios-card-solid)] rounded-t-[34px] md:rounded-[34px] p-5 md:p-6 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] md:pb-6 border-t md:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto transition-all duration-300",
+          "w-full max-w-[402px] md:max-w-[420px] bg-[var(--ios-card-solid)] rounded-t-[34px] md:rounded-[34px] p-5 md:p-6 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] md:pb-6 border-none flex flex-col gap-4 max-h-[85vh] overflow-y-auto transition-all duration-300",
           isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-12 md:translate-y-0"
         )}
       >
-        <div className="w-[36px] h-[5px] rounded-[2.5px] bg-[var(--ios-element)] mx-auto mb-1 shrink-0 opacity-60 md:hidden" />
+        <div className="w-[36px] h-[5px] rounded-full bg-[rgba(60,60,67,0.3)] dark:bg-[rgba(255,255,255,0.28)] mx-auto mb-2 shrink-0 md:hidden" />
 
         <div className="flex items-start justify-between gap-3 pb-1">
           <div className="flex flex-col gap-1 min-w-0 flex-1">
@@ -161,7 +161,7 @@ export function LessonDetailModal({
           </button>
         </div>
 
-        <div className="bg-[var(--ios-element)]/30 rounded-[16px] p-4 flex flex-col gap-1">
+        <div className="bg-[var(--bg-card-secondary)] rounded-[18px] p-4 flex flex-col gap-1 border-none">
           <span className="text-[11px] font-medium text-[var(--ios-secondary)] uppercase tracking-wider block">
             {t.lessonTopic}
           </span>
@@ -170,7 +170,7 @@ export function LessonDetailModal({
           </p>
         </div>
 
-        <div className="bg-[var(--ios-element)]/30 rounded-[16px] overflow-hidden divide-y divide-[var(--ios-separator)]">
+        <div className="bg-[var(--bg-card-secondary)] rounded-[18px] overflow-hidden divide-y divide-[var(--ios-separator)] border-none">
           <div className="p-3.5 px-4 flex items-center justify-between text-[15px]">
             <span className="text-[var(--ios-secondary)] font-normal text-[13px]">{t.teacherLabel}</span>
             <span className="text-[var(--ios-label)] font-medium text-[15px] text-right truncate max-w-[200px]">

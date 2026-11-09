@@ -6,6 +6,7 @@ import { SmartTimetableResult } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
 import { cn } from '@/utils/cn.util'
+import { formatHumanPolishDate } from '@/utils/date.util'
 
 interface MiniAttendanceWidgetProps {
   attendanceData: AttendanceResult | null
@@ -259,7 +260,7 @@ export function MiniAttendanceWidget({
             <div className="flex items-center justify-between text-[12px] font-normal text-[var(--ios-secondary)]">
               <span>{lang === 'en' ? "Today's Attendance" : 'Dzisiejsza obecność'}</span>
               <span className="text-[11px] tabular-nums text-[var(--ios-tertiary)]">
-                {todayLegacyDay?.date || todayIso}
+                {formatHumanPolishDate(todayLegacyDay?.date || todayIso, false, lang)}
               </span>
             </div>
 

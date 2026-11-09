@@ -107,7 +107,7 @@ export function AttendanceWidget({
               className="p-3.5 rounded-[22px] flex flex-col justify-between min-h-[86px]"
             >
               <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-secondary)] flex items-center justify-center">
+                <span className="w-8 h-8 rounded-[8px] bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] flex items-center justify-center">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                     <path d="m15 5 4 4"/>
@@ -132,16 +132,16 @@ export function AttendanceWidget({
               className="p-3.5 rounded-[22px] flex flex-col justify-between min-h-[86px]"
             >
               <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-secondary)] flex items-center justify-center">
+                <span className="w-8 h-8 rounded-[8px] bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] flex items-center justify-center">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/>
                     <polyline points="12 6 12 12 16 14"/>
                   </svg>
                 </span>
-                <span className={"text-[12px] font-medium px-2 py-0.5 rounded-full border tabular-nums " + (
+                <span className={"text-[12px] font-semibold px-2 py-0.5 rounded-full tabular-nums " + (
                   nbCount > 0
-                    ? "bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border-[var(--ios-red)]/20"
-                    : "bg-[var(--ios-element)] text-[var(--ios-secondary)] border-transparent"
+                    ? "bg-[var(--ios-red-subtle)] text-[var(--ios-red)]"
+                    : "bg-[var(--ios-element)] text-[var(--ios-secondary)]"
                 )}>
                   {nbCount} nb
                 </span>
@@ -164,7 +164,7 @@ export function AttendanceWidget({
             className="p-3.5 px-4 rounded-[26px] flex items-center justify-between gap-3"
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-secondary)] flex items-center justify-center shrink-0">
+              <span className="w-8 h-8 rounded-[8px] bg-[var(--ios-teal)]/15 text-[var(--ios-teal)] flex items-center justify-center shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 11l3 3L22 4" />
                   <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />

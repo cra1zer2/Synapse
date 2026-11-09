@@ -225,7 +225,7 @@ export function GradesWidget({
             return (
               <div
                 key={sub.subject + '-' + idx}
-                className="relative p-3.5 px-4 flex flex-col gap-2.5 after:absolute after:bottom-0 after:right-0 after:left-4 after:h-[1px] after:bg-[var(--ios-separator)] last:after:hidden"
+                className="relative p-3.5 px-4 flex flex-col gap-2.5 after:absolute after:bottom-0 after:right-4 after:left-4 after:h-[0.5px] after:bg-[var(--ios-separator)] last:after:hidden"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0 pr-3">

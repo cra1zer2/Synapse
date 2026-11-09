@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, ReactNode } from 'react'
 import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { cleanSenderName } from '@/utils/text.util'
+import { formatHumanPolishDate } from '@/utils/date.util'
 import { IosCard, IosSearchBar } from '@/components/ios/ios-ui'
 import { MessageReaderScreen } from './message-reader-screen'
 import { AnnouncementReaderScreen } from './announcement-reader-screen'
@@ -353,7 +354,7 @@ export function MessagesWidget({
                       </svg>
                     )}
                     <span className="text-[11px] font-normal text-[var(--ios-secondary)] tabular-nums">
-                      {msg.date}
+                      {formatHumanPolishDate(msg.date, true)}
                     </span>
                   </div>
                 </div>
@@ -369,7 +370,7 @@ export function MessagesWidget({
                 )}
 
                 {idx < filteredMessages.length - 1 && (
-                  <div className="absolute bottom-0 right-4 left-4 h-[1px] bg-[var(--ios-separator)] pointer-events-none" />
+                  <div className="absolute bottom-0 right-4 left-4 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
                 )}
               </div>
             ))
@@ -407,7 +408,7 @@ export function MessagesWidget({
                     {cleanSenderName(item.author)}
                   </span>
                   <span className="text-[11px] font-normal text-[var(--ios-secondary)] tabular-nums">
-                    {item.date}
+                    {formatHumanPolishDate(item.date, true)}
                   </span>
                 </div>
 
@@ -420,7 +421,7 @@ export function MessagesWidget({
                 </p>
 
                 {idx < filteredAnnouncements.length - 1 && (
-                  <div className="absolute bottom-0 right-4 left-4 h-[1px] bg-[var(--ios-separator)] pointer-events-none" />
+                  <div className="absolute bottom-0 right-4 left-4 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
                 )}
               </div>
             ))

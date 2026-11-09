@@ -13,7 +13,7 @@ import { useAccountSession } from '@/hooks/account.hook'
 import { useTimetableSync } from '@/hooks/timetable-sync.hook'
 import { useBodyScrollLock } from '@/hooks/scroll-lock.hook'
 import { useMessagesInbox } from '@/hooks/messages.hook'
-import { getTodayIsoString, normalizeToMondayIso } from '@/utils/date.util'
+import { getTodayIsoString, normalizeToMondayIso, formatHumanPolishDate } from '@/utils/date.util'
 import { addRequestLog } from '@/utils/request-logger.util'
 
 import { AuthView } from '@/components/auth/auth-view'
@@ -1139,18 +1139,7 @@ export default function Home() {
             window.history.replaceState({}, '', window.location.pathname)
           }
         }}
-        title={messagesInbox.currentFolder === 'sent' ? (lang === 'en' ? 'Sent' : 'Wysłane') : t.messagesInbox}
-        titleView={
-          <IosSegmentedControl
-            options={[
-              { id: 'inbox', label: t.messagesInbox },
-              { id: 'sent', label: lang === 'en' ? 'Sent' : 'Wysłane' }
-            ]}
-            value={messagesInbox.currentFolder}
-            onChange={(val) => messagesInbox.setCurrentFolder(val as 'inbox' | 'sent')}
-            className="w-[200px]"
-          />
-        }
+        title={t.messages}
         backLabel={t.backAction}
         isSubView={true}
         isReceded={isMessagesSubViewOpen || showComposeInHeader}
@@ -1167,7 +1156,20 @@ export default function Home() {
           </button>
         }
       >
-        <MessagesWidget
+        <div className="w-full flex flex-col gap-3.5">
+          <div className="w-full flex justify-center">
+            <IosSegmentedControl
+              options={[
+                { id: 'inbox', label: t.messagesInbox },
+                { id: 'sent', label: lang === 'en' ? 'Sent' : 'Wysłane' }
+              ]}
+              value={messagesInbox.currentFolder}
+              onChange={(val) => messagesInbox.setCurrentFolder(val as 'inbox' | 'sent')}
+              className="w-full max-w-sm"
+            />
+          </div>
+
+          <MessagesWidget
           mode="messages"
           folder={messagesInbox.currentFolder}
           messages={messagesInbox.currentFolder === 'sent' ? messagesInbox.sentMessages : messagesInbox.messages}
@@ -1188,6 +1190,7 @@ export default function Home() {
             if (isOpen) setIsFolderMenuOpen(false)
           }}
         />
+        </div>
       </IosScreen>
 
       <IosScreen
@@ -1262,23 +1265,23 @@ export default function Home() {
                         {item.periodStr}
                       </span>
                       <span className="text-[12px] font-normal text-[var(--ios-secondary)] mt-0.5">
-                        {item.count} {item.count === 1 ? 'nieobecność' : 'nieobecności'} • Wysłano: {item.sentAt}
+                        {item.count} {item.count === 1 ? 'nieobecność' : 'nieobecności'} • Wysłano: {formatHumanPolishDate(item.sentAt, true)}
                       </span>
                     </div>
 
-                    <span className={"text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shrink-0 " + (
+                    <span className={"text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 " + (
                       item.statusCode === 'accepted'
-                        ? "bg-[var(--ios-green-subtle)] text-[var(--ios-green)] border-[var(--ios-green)]/30"
+                        ? "bg-[var(--ios-green-subtle)] text-[var(--ios-green)]"
                         : item.statusCode === 'rejected'
-                        ? "bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border-[var(--ios-red)]/30"
-                        : "bg-[var(--ios-yellow)]/15 text-[var(--ios-yellow)] dark:text-[#ffd60a] border-[var(--ios-yellow)]/30"
+                        ? "bg-[var(--ios-red-subtle)] text-[var(--ios-red)]"
+                        : "bg-[var(--ios-yellow)]/15 text-[var(--ios-yellow)] dark:text-[#ffd60a]"
                     )}>
                       {item.statusCode === 'accepted' ? 'Przyjęte' : item.statusCode === 'rejected' ? 'Odrzucone' : 'Oczekuje'}
                     </span>
                   </div>
 
                   {item.comment && (
-                    <div className="bg-[var(--ios-element)]/30 p-3 rounded-[14px] text-[13px] text-[var(--ios-label)]">
+                    <div className="bg-[var(--bg-card-secondary)] p-3 rounded-[14px] text-[13px] text-[var(--ios-label)] border-none">
                       <span className="text-[var(--ios-secondary)]">Uzasadnienie: </span>{item.comment}
                     </div>
                   )}

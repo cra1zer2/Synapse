@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { GradeItem } from '@/models/grade.model'
 import { AppDictionary } from '@/config/dictionary.config'
 import { cn } from '@/utils/cn.util'
+import { formatHumanPolishDate } from '@/utils/date.util'
 
 interface GradeDetailModalProps {
   gradeDetail: { grade: GradeItem; subject: string } | null
@@ -120,11 +121,11 @@ export function GradeDetailModal({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={cn(
-          "w-full max-w-[402px] md:max-w-[360px] bg-[var(--ios-card-solid)] rounded-t-[34px] md:rounded-[34px] p-5 md:p-6 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] md:pb-6 border-t md:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[85vh] overflow-y-auto transition-all duration-300",
+          "w-full max-w-[402px] md:max-w-[360px] bg-[var(--ios-card-solid)] rounded-t-[34px] md:rounded-[34px] p-5 md:p-6 pb-[max(env(safe-area-inset-bottom,0px),1.5rem)] md:pb-6 border-none flex flex-col gap-4 max-h-[85vh] overflow-y-auto transition-all duration-300",
           isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-12 md:translate-y-0"
         )}
       >
-        <div className="w-[36px] h-[5px] rounded-[2.5px] bg-[var(--ios-element)] mx-auto mb-1 shrink-0 opacity-60 md:hidden" />
+        <div className="w-[36px] h-[5px] rounded-full bg-[rgba(60,60,67,0.3)] dark:bg-[rgba(255,255,255,0.28)] mx-auto mb-2 shrink-0 md:hidden" />
 
         <div className="flex items-center justify-between pb-1">
           <span className="text-[14px] font-semibold text-[var(--ios-secondary)] tracking-tight truncate pr-2">
@@ -160,7 +161,7 @@ export function GradeDetailModal({
         </div>
 
         {activeData.grade.description ? (
-          <div className="bg-[var(--ios-element)]/30 rounded-[16px] p-4 flex flex-col gap-1">
+          <div className="bg-[var(--bg-card-secondary)] rounded-[18px] p-4 flex flex-col gap-1 border-none">
             <span className="text-[11px] font-medium text-[var(--ios-secondary)] uppercase tracking-wider block">
               Temat / Komentarz
             </span>
@@ -170,7 +171,7 @@ export function GradeDetailModal({
           </div>
         ) : null}
 
-        <div className="bg-[var(--ios-element)]/30 rounded-[16px] p-4 flex flex-col gap-1">
+        <div className="bg-[var(--bg-card-secondary)] rounded-[18px] p-4 flex flex-col gap-1 border-none">
           <span className="text-[11px] font-semibold text-[var(--ios-secondary)] uppercase tracking-wider block">
             {t.partialGradesTitle}
           </span>
@@ -183,7 +184,7 @@ export function GradeDetailModal({
           {activeData.grade.date && (
             <div className="flex items-center justify-between">
               <span>{t.dateLabel}</span>
-              <span className="text-[var(--ios-label)] tabular-nums">{activeData.grade.date}</span>
+              <span className="text-[var(--ios-label)] tabular-nums">{formatHumanPolishDate(activeData.grade.date)}</span>
             </div>
           )}
           {activeData.grade.teacher && (

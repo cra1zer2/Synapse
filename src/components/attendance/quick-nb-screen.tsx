@@ -7,6 +7,7 @@ import { IosScreen } from '@/components/ios/ios-screen'
 import { IosCard } from '@/components/ios/ios-ui'
 import { IosSpinner } from '@/components/ios/ios-spinner'
 import { formatSubjectName } from '@/utils/text.util'
+import { formatHumanPolishDate } from '@/utils/date.util'
 import {
   getPendingJustifications,
   savePendingJustification,
@@ -257,23 +258,11 @@ export function QuickNbScreen({
                 <button
                   type="button"
                   onClick={toggleSelectAll}
-                  className="flex items-center gap-2.5 py-1.5 px-2.5 rounded-full bg-[var(--ios-element)]/50 text-[var(--ios-label)] active:scale-[0.96] active:opacity-75 transition-[transform,opacity] duration-150 cursor-pointer"
+                  className="px-3 py-1.5 rounded-full bg-[var(--ios-element)] text-[var(--ios-blue)] text-[13px] font-medium active:opacity-70 transition-opacity cursor-pointer"
                 >
-                  <span className="text-[13px] font-medium tracking-tight">
-                    {lang === 'en' ? 'Select all' : 'Zaznacz wszystkie'}
-                  </span>
-                  <div className={
-                    "w-5 h-5 rounded-full flex items-center justify-center transition-colors shrink-0 " +
-                    (isAllSelected
-                      ? "bg-[var(--ios-blue)] text-white"
-                      : "border border-[var(--ios-separator)] bg-[var(--ios-card-solid)]")
-                  }>
-                    {isAllSelected && (
-                      <svg className="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </div>
+                  {isAllSelected
+                    ? (lang === 'en' ? 'Deselect all' : 'Odznacz wszystkie')
+                    : (lang === 'en' ? 'Select all' : 'Zaznacz wszystkie')}
                 </button>
               ) : (
                 <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-[var(--ios-yellow)]/15 text-[var(--ios-yellow)] dark:text-[#ffd60a]">
@@ -283,7 +272,7 @@ export function QuickNbScreen({
             </IosCard>
 
             {!canSubmitExcuse && (
-              <div className="p-3.5 rounded-[16px] bg-[var(--ios-orange-subtle)] border border-[var(--ios-orange)]/25 text-[var(--ios-orange)] text-[13px] font-normal leading-relaxed">
+              <div className="p-3.5 rounded-[16px] bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] text-[13px] font-normal leading-relaxed">
                 {t.onlyParentCanExcuse}
               </div>
             )}
@@ -293,17 +282,17 @@ export function QuickNbScreen({
                 <div className="flex flex-col gap-4">
                   {groupedDays.map((group) => (
                     <div key={group.date} className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between px-4 text-[13px] text-[var(--ios-secondary)]">
-                        <span className="font-semibold tracking-tight text-[var(--ios-label)]">
-                          {group.date}
+                      <div className="flex items-center justify-between px-4 pb-1.5 text-[12px] font-medium uppercase tracking-[0.02em] text-[var(--ios-secondary)]">
+                        <span className="font-semibold tracking-tight text-[var(--ios-label)] normal-case">
+                          {formatHumanPolishDate(group.date, false, lang)}
                         </span>
                         <div className="flex items-center gap-2">
                           {group.allPending && (
-                            <span className="text-[11px] font-medium text-[var(--ios-yellow)] dark:text-[#ffd60a]">
+                            <span className="text-[11px] font-medium text-[var(--ios-yellow)] dark:text-[#ffd60a] capitalize">
                               {t.pendingJustification}
                             </span>
                           )}
-                          <span className="tabular-nums">
+                          <span className="tabular-nums normal-case">
                             {group.lessons.length} {lang === 'en' ? 'periods' : 'lekcji'}
                           </span>
                         </div>
@@ -389,7 +378,7 @@ export function QuickNbScreen({
                     disabled={!canSubmitExcuse || totalSelectableCount === 0}
                     onChange={(e) => setParentMessage(e.target.value)}
                     placeholder={t.commentPlaceholder}
-                    className="w-full bg-[var(--ios-input)] text-[var(--ios-label)] text-[15px] font-normal rounded-[16px] p-3 outline-none placeholder-[var(--ios-secondary)]/60 resize-none h-20 border border-transparent focus:border-[var(--ios-blue)]/40 transition-colors disabled:opacity-50"
+                    className="w-full bg-[var(--bg-card-secondary)] text-[var(--ios-label)] text-[15px] font-normal rounded-[16px] p-3 outline-none placeholder-[var(--ios-secondary)]/60 resize-none h-20 border-none transition-colors disabled:opacity-50"
                   />
                 </IosCard>
 

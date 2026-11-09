@@ -364,11 +364,10 @@ export function IosScreen({
   }
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (!largeTitle) return
     const top = e.currentTarget.scrollTop
-    if (top > 32 && !isScrolled) {
+    if (top > 4 && !isScrolled) {
       setIsScrolled(true)
-    } else if (top <= 32 && isScrolled) {
+    } else if (top <= 4 && isScrolled) {
       setIsScrolled(false)
     }
   }
@@ -403,7 +402,7 @@ export function IosScreen({
   const isStackedOnDesktop = isDesktop && resolvedZIndex > 50
 
   const desktopHeader = (
-    <header className="relative sticky top-0 z-30 w-full bg-[var(--ios-modal-bg)]/90 backdrop-blur-xl border-b border-[var(--ios-separator)] px-5 h-[52px] flex items-center justify-between shrink-0">
+    <header className={"relative sticky top-0 z-30 w-full bg-[var(--ios-modal-bg)] px-5 h-[52px] flex items-center justify-between shrink-0 transition-[border-color] duration-150 " + (isScrolled ? "border-b border-[var(--ios-separator)]" : "border-b border-transparent")}>
       <div className="z-10 flex items-center gap-2 min-w-[80px] h-full">
         {onClose && (
           <button
@@ -440,7 +439,7 @@ export function IosScreen({
       <div onScroll={handleScroll} className={"w-full min-h-[100dvh] bg-[var(--ios-bg-primary)] overflow-y-auto " + className}>
         {!hideHeader && (
           isDesktop ? desktopHeader : (
-            <header className="ios-header">
+            <header className={"ios-header transition-[border-color] duration-150 " + (isScrolled ? "border-b border-[var(--ios-separator)]" : "border-b border-transparent")}>
               {headerContent}
             </header>
           )
@@ -565,7 +564,7 @@ export function IosScreen({
           className={className}
         >
           {!hideHeader && (
-            <header className="ios-header">
+            <header className={"ios-header transition-[border-color] duration-150 " + (isScrolled ? "border-b border-[var(--ios-separator)]" : "border-b border-transparent")}>
               {headerContent}
             </header>
           )}

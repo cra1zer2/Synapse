@@ -206,9 +206,9 @@ export function JustificationModal({
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                className="ios-card bg-[var(--ios-card-solid)] rounded-t-[34px] sm:rounded-[34px] w-full max-w-lg p-6 border-t sm:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[88vh] overflow-y-auto pb-[max(env(safe-area-inset-bottom,0px),1.5rem)]"
+                className="ios-card bg-[var(--ios-card-solid)] rounded-t-[34px] sm:rounded-[34px] w-full max-w-lg p-6 border-none flex flex-col gap-4 max-h-[88vh] overflow-y-auto pb-[max(env(safe-area-inset-bottom,0px),1.5rem)]"
             >
-                <div className="w-9 h-1 rounded-full bg-[var(--ios-element)] mx-auto -mt-1 mb-0.5 sm:hidden opacity-60 shrink-0" />
+                <div className="w-[36px] h-[5px] rounded-full bg-[rgba(60,60,67,0.3)] dark:bg-[rgba(255,255,255,0.28)] mx-auto mb-2 shrink-0 sm:hidden" />
 
                 <div className="flex items-center justify-between border-b border-[var(--ios-separator)] pb-3">
                     <div>
@@ -278,7 +278,7 @@ export function JustificationModal({
                                                 <button
                                                     type="button"
                                                     onClick={() => selectAllNbInDay(group.date)}
-                                                    className="text-[11px] font-medium text-[var(--ios-blue)] bg-[var(--ios-card)] px-2.5 py-1 rounded-[8px] border border-[var(--ios-border)] active:opacity-70 transition-opacity"
+                                                    className="text-[11px] font-medium text-[var(--ios-blue)] bg-[var(--ios-card)] px-2.5 py-1 rounded-[8px] active:opacity-70 transition-opacity"
                                                 >
                                                     Zaznacz NB
                                                 </button>
@@ -350,7 +350,7 @@ export function JustificationModal({
                             value={parentMessage}
                             disabled={!canSubmitExcuse}
                             onChange={(e) => setParentMessage(e.target.value)}
-                            className="w-full bg-[var(--ios-input)] text-[var(--ios-label)] placeholder-[var(--ios-secondary)] text-xs rounded-[12px] p-3 outline-none  transition-all resize-none h-20 disabled:opacity-50"
+                            className="w-full bg-[var(--bg-card-secondary)] text-[var(--ios-label)] placeholder-[var(--ios-secondary)] text-xs rounded-[12px] p-3 outline-none border-none transition-all resize-none h-20 disabled:opacity-50"
                         />
 
                         <div className="flex gap-2.5">

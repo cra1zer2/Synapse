@@ -384,6 +384,39 @@ html.is-iphone .ios-header {
   animation: ios-modal-content-enter 0.22s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 
+@keyframes ios-content-swap {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.ios-content-swap {
+  animation: ios-content-swap 0.24s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  will-change: opacity, transform;
+}
+
+@keyframes ios-popover-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translate3d(0, -6px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+.ios-popover-transition {
+  animation: ios-popover-enter 0.2s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  transform-origin: top right;
+  will-change: opacity, transform;
+}
+
 @keyframes ios-spinner-spin {
   from {
     transform: rotate(0deg);

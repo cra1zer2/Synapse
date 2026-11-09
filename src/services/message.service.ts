@@ -399,6 +399,7 @@ async function fetchReceiversList(session: NativeLibrusSession): Promise<Receive
 }
 
 export async function fetchMessagesBundle(username: string, pass: string): Promise<MessagesActionResult> {
+    const bundleStart = performance.now()
     try {
         const cleanUser = String(username || '').trim()
         const cleanPass = String(pass || '').trim()
@@ -437,15 +438,18 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
             ).catch(() => ({ session, html: '', ok: false }))
         ])
 
+        const initialFetchMs = Math.round(performance.now() - bundleStart)
+
         if (inboxFetch.ok || annFetch.ok || sentFetch.ok) {
             const inboxMessages = parseInboxHtml(inboxFetch.html)
             const sentMessages = parseSentMessagesHtml(sentFetch.html)
             const announcements = parseAnnouncementsHtml(annFetch.html)
 
-            // Populate cached or prefetched content previews for already-read inbox messages and sent messages
+            const previewsStart = performance.now()
+            // Populate cached or prefetched content previews for up to 4 most recent messages (keeps mobile fast)
             const previewCandidates = [
-                ...inboxMessages.filter((m) => m.isRead && Number(m.id) > 0).slice(0, 10).map((m) => ({ msg: m, folderId: 5 })),
-                ...sentMessages.filter((m) => Number(m.id) > 0).slice(0, 6).map((m) => ({ msg: m, folderId: 6 }))
+                ...inboxMessages.filter((m) => m.isRead && Number(m.id) > 0).slice(0, 4).map((m) => ({ msg: m, folderId: 5 })),
+                ...sentMessages.filter((m) => Number(m.id) > 0).slice(0, 2).map((m) => ({ msg: m, folderId: 6 }))
             ]
 
             await Promise.all(
@@ -458,12 +462,16 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
                         return
                     }
                     try {
+                        const controller = new AbortController()
+                        const timeoutId = setTimeout(() => controller.abort(), 2500)
                         const res = await session.fetch(`https://synergia.librus.pl/wiadomosci/1/${folderId}/${msg.id}/f0`, {
                             headers: {
                                 'Referer': `https://synergia.librus.pl/wiadomosci/${folderId}`,
                                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-                            }
-                        })
+                            },
+                            signal: controller.signal
+                        }).finally(() => clearTimeout(timeoutId))
+
                         if (res.ok) {
                             const html = await res.text()
                             const body = extractMessageBodyFromHtml(html)
@@ -477,13 +485,20 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
                     } catch {}
                 })
             )
+            const previewsMs = Math.round(performance.now() - previewsStart)
+            const totalMs = Math.round(performance.now() - bundleStart)
 
             return {
                 success: true,
                 messages: inboxMessages,
                 sentMessages,
                 announcements,
-                receivers: receiversList
+                receivers: receiversList,
+                serverTimings: {
+                    totalMs,
+                    inboxMs: initialFetchMs,
+                    previewsMs
+                }
             }
         }
 

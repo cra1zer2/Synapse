@@ -14,6 +14,7 @@ import { useTimetableSync } from '@/hooks/timetable-sync.hook'
 import { useBodyScrollLock } from '@/hooks/scroll-lock.hook'
 import { useMessagesInbox } from '@/hooks/messages.hook'
 import { getTodayIsoString, normalizeToMondayIso } from '@/utils/date.util'
+import { addRequestLog } from '@/utils/request-logger.util'
 
 import { AuthView } from '@/components/auth/auth-view'
 import { ScheduleWidget } from '@/components/schedule/schedule-widget'
@@ -195,6 +196,7 @@ export default function Home() {
     setLiveJustFilter(status)
     setShowLiveJustifications(true)
     setIsLoadingLiveJust(true)
+    const t0 = performance.now()
     try {
       const parentAcc = account.savedAccounts.find(
         (a) => a.role === 'parent' || (Boolean(a.username) && !a.username.trim().toLowerCase().endsWith('u'))
@@ -202,9 +204,33 @@ export default function Home() {
       const targetUser = parentAcc ? parentAcc.username : account.username
       const targetPass = parentAcc ? parentAcc.password : account.password
       const res = await getLiveJustificationsAction(targetUser, targetPass, status)
+      const clientDurationMs = Math.round(performance.now() - t0)
       if (res.success) {
         setLiveJustifications(res.data)
+        addRequestLog({
+          name: 'Pobranie statusów usprawiedliwień',
+          clientDurationMs,
+          status: 'ok',
+          details: `Filtr: ${status}, Elementy: ${res.data.length}`
+        })
+      } else {
+        addRequestLog({
+          name: 'Pobranie statusów usprawiedliwień',
+          clientDurationMs,
+          status: 'error',
+          error: res.error,
+          details: `Filtr: ${status}`
+        })
       }
+    } catch (err: any) {
+      const clientDurationMs = Math.round(performance.now() - t0)
+      addRequestLog({
+        name: 'Pobranie statusów usprawiedliwień',
+        clientDurationMs,
+        status: 'error',
+        error: err?.message || 'Nieznany błąd',
+        details: `Filtr: ${status}`
+      })
     } finally {
       setIsLoadingLiveJust(false)
     }

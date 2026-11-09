@@ -11,6 +11,7 @@ import { IosCard } from '@/components/ios/ios-ui'
 import { IosSwitch } from '@/components/ios/ios-switch'
 import { IosSpinner } from '@/components/ios/ios-spinner'
 import { AuthView } from '@/components/auth/auth-view'
+import { RequestTimingsModal } from './request-timings-modal'
 
 const DEFAULT_DASHBOARD_ORDER: DashboardWidgetId[] = [
   'grades',
@@ -142,6 +143,7 @@ export function SettingsSheet({
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [showLangPicker, setShowLangPicker] = useState(false)
   const [showHomeCustomizer, setShowHomeCustomizer] = useState(false)
+  const [showTimingsDebug, setShowTimingsDebug] = useState(false)
   const [isEditingHome, setIsEditingHome] = useState(false)
   const [movingWidgetId, setMovingWidgetId] = useState<DashboardWidgetId | null>(null)
   const [accountToSwitch, setAccountToSwitch] = useState<SavedAccount | null>(null)
@@ -235,7 +237,7 @@ export function SettingsSheet({
         title={t.settingsTitle}
         backLabel={t.backAction}
         isSubView={true}
-        isReceded={showThemePicker || showLangPicker || showAdvanced || showAddForm || showHomeCustomizer}
+        isReceded={showThemePicker || showLangPicker || showAdvanced || showAddForm || showHomeCustomizer || showTimingsDebug}
         contentClassName="px-6 pt-5 pb-12 w-full max-w-4xl mx-auto flex-1"
       >
         <div className="flex flex-col gap-5 pb-12 select-none">
@@ -327,8 +329,15 @@ export function SettingsSheet({
 
           <IosListSection header={t.systemSection}>
             <IosCell
+              title={currentLang === 'en' ? 'Request Timings (Debug)' : 'Czas zapytań (Debug)'}
+              subtitle={currentLang === 'en' ? 'Latency diagnostics & sync benchmark' : 'Diagnostyka opóźnień i czasu synchronizacji'}
+              size="tall"
+              chevron={true}
+              onClick={() => setShowTimingsDebug(true)}
+            />
+            <IosCell
               title={t.advancedTitle}
-              subtitle={currentLang === 'en' ? 'Diagnostics, display and grade calculation' : 'Diagnostyka, wyświetlanie i kalkulator ocen'}
+              subtitle={currentLang === 'en' ? 'Display, grade calculation and options' : 'Wyświetlanie i kalkulator ocen'}
               size="tall"
               chevron={true}
               onClick={() => setShowAdvanced(true)}
@@ -617,6 +626,16 @@ export function SettingsSheet({
               />
             </IosListSection>
           )}
+
+          <IosListSection header={currentLang === 'en' ? 'Diagnostics' : 'Diagnostyka'}>
+            <IosCell
+              title={currentLang === 'en' ? 'Request Timings (Debug)' : 'Czas zapytań (Debug)'}
+              subtitle={currentLang === 'en' ? 'Inspect live response times and copy debug log' : 'Sprawdź czasy odpowiedzi i skopiuj log debagowania'}
+              size="tall"
+              chevron={true}
+              onClick={() => setShowTimingsDebug(true)}
+            />
+          </IosListSection>
         </div>
       </IosScreen>
 
@@ -908,6 +927,15 @@ export function SettingsSheet({
           )
         })()}
       </IosScreen>
+
+      <RequestTimingsModal
+        isOpen={showTimingsDebug}
+        onClose={() => setShowTimingsDebug(false)}
+        username={activeUsername}
+        password={activeAccount?.password || ''}
+        lang={currentLang}
+        t={t}
+      />
     </>
   )
 }

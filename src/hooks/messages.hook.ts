@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { getMessagesAndAnnouncementsAction, readMessageAction, sendMessageAction, downloadAttachmentAction } from '@/app/actions'
+import { addRequestLog } from '@/utils/request-logger.util'
 
 export function useMessagesInbox({ username, password }: { username: string; password: string }) {
     const [messages, setMessages] = useState<MessageItem[]>([])
@@ -38,8 +39,23 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         const fetchBundle = async () => {
             setIsLoadingMessages(true)
             setMessagesError(null)
+            const clientStart = performance.now()
             try {
                 const mRes = await getMessagesAndAnnouncementsAction(username, password)
+                const clientDurationMs = Math.round(performance.now() - clientStart)
+                addRequestLog({
+                    name: 'Wiadomości i ogłoszenia (Start)',
+                    clientDurationMs,
+                    serverDurationMs: mRes.serverTimings?.totalMs,
+                    breakdown: mRes.serverTimings ? {
+                        'Pobranie list': mRes.serverTimings.inboxMs || 0,
+                        'Podglądy': mRes.serverTimings.previewsMs || 0
+                    } : undefined,
+                    status: mRes.success ? 'ok' : 'error',
+                    error: mRes.error,
+                    details: `Wiadomości: ${mRes.messages?.length || 0}, Ogłoszenia: ${mRes.announcements?.length || 0}`
+                })
+
                 if (!isCancelled) {
                     if (mRes.success) {
                         setMessages(mRes.messages || [])
@@ -58,6 +74,13 @@ export function useMessagesInbox({ username, password }: { username: string; pas
                     }
                 }
             } catch (err: any) {
+                const clientDurationMs = Math.round(performance.now() - clientStart)
+                addRequestLog({
+                    name: 'Wiadomości i ogłoszenia (Start)',
+                    clientDurationMs,
+                    status: 'error',
+                    error: err?.message || 'Błąd połączenia'
+                })
                 if (!isCancelled) {
                     setMessagesError(err?.message || 'Błąd połączenia')
                 }
@@ -99,7 +122,16 @@ export function useMessagesInbox({ username, password }: { username: string; pas
             })
         }
 
+        const clientStart = performance.now()
         const res = await readMessageAction(username, password, idNum, folder === 'sent' ? 6 : 5)
+        const clientDurationMs = Math.round(performance.now() - clientStart)
+        addRequestLog({
+            name: `Odczyt wiadomości #${idNum}`,
+            clientDurationMs,
+            status: res.success ? 'ok' : 'error',
+            error: res.error,
+            details: `Folder: ${folder}, Załączników: ${res.attachments?.length || 0}`
+        })
         return {
             content: res.content || '',
             attachments: res.attachments || []
@@ -108,7 +140,15 @@ export function useMessagesInbox({ username, password }: { username: string; pas
 
     const handleDownloadAttachment = async (att: MessageAttachment): Promise<boolean> => {
         if (!username || !password || !att.path) return false
+        const clientStart = performance.now()
         const res = await downloadAttachmentAction(username, password, att.path, att.name)
+        const clientDurationMs = Math.round(performance.now() - clientStart)
+        addRequestLog({
+            name: `Pobieranie załącznika: ${att.name}`,
+            clientDurationMs,
+            status: res.success ? 'ok' : 'error',
+            error: res.error
+        })
         if (!res.success || !res.base64) return false
 
         try {
@@ -145,8 +185,23 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         if (!username || !password) return
         setIsLoadingMessages(true)
         setMessagesError(null)
+        const clientStart = performance.now()
         try {
             const mRes = await getMessagesAndAnnouncementsAction(username, password)
+            const clientDurationMs = Math.round(performance.now() - clientStart)
+            addRequestLog({
+                name: 'Wiadomości i ogłoszenia (Odświeżenie)',
+                clientDurationMs,
+                serverDurationMs: mRes.serverTimings?.totalMs,
+                breakdown: mRes.serverTimings ? {
+                    'Pobranie list': mRes.serverTimings.inboxMs || 0,
+                    'Podglądy': mRes.serverTimings.previewsMs || 0
+                } : undefined,
+                status: mRes.success ? 'ok' : 'error',
+                error: mRes.error,
+                details: `Wiadomości: ${mRes.messages?.length || 0}, Ogłoszenia: ${mRes.announcements?.length || 0}`
+            })
+
             if (mRes.success) {
                 setMessages(mRes.messages || [])
                 setSentMessages(mRes.sentMessages || [])
@@ -163,6 +218,15 @@ export function useMessagesInbox({ username, password }: { username: string; pas
             } else {
                 setMessagesError(mRes.error || 'Błąd ładowania wiadomości')
             }
+        } catch (err: any) {
+            const clientDurationMs = Math.round(performance.now() - clientStart)
+            addRequestLog({
+                name: 'Wiadomości i ogłoszenia (Odświeżenie)',
+                clientDurationMs,
+                status: 'error',
+                error: err?.message || 'Błąd połączenia'
+            })
+            setMessagesError(err?.message || 'Błąd połączenia')
         } finally {
             setIsLoadingMessages(false)
         }

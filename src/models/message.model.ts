@@ -36,6 +36,11 @@ export interface MessagesActionResult {
     announcements: AnnouncementItem[]
     receivers: ReceiverItem[]
     error?: string
+    serverTimings?: {
+        totalMs: number
+        inboxMs?: number
+        previewsMs?: number
+    }
 }
 
 export interface UnreadCounters {

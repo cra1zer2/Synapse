@@ -7,6 +7,7 @@ import { AttendanceResult } from '@/models/attendance.model'
 import { AppLanguage } from '@/config/dictionary.config'
 import { syncAllUserDataAction } from '@/app/actions'
 import { getTodayIsoString, getTodayDayName, normalizeToMondayIso, getSchoolWeekMondayIso } from '@/utils/date.util'
+import { addRequestLog } from '@/utils/request-logger.util'
 
 function getInitialWeekPivot(): string {
   return getSchoolWeekMondayIso(getTodayIsoString())
@@ -68,9 +69,25 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
       setGradesError(null)
       setAttendanceError(null)
 
+      const clientStart = performance.now()
       try {
         const shouldTranslate = currentAppLang === 'en'
         const res = await syncAllUserDataAction(u, p, shouldTranslate, weekPivot)
+        const clientDurationMs = Math.round(performance.now() - clientStart)
+
+        addRequestLog({
+          name: 'Główna synchronizacja (Plan, Oceny, Frekwencja)',
+          clientDurationMs,
+          serverDurationMs: res.serverTimings?.totalMs,
+          breakdown: res.serverTimings ? {
+            'Plan lekcji': res.serverTimings.timetableMs,
+            'Oceny': res.serverTimings.gradesMs,
+            'Frekwencja': res.serverTimings.attendanceMs
+          } : undefined,
+          status: res.success ? 'ok' : 'error',
+          error: res.error,
+          details: `Tydzień: ${weekPivot}`
+        })
 
         if (requestId !== activeRequestCounter.current) return
 

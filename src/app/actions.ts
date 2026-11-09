@@ -55,10 +55,17 @@ export async function syncAllUserDataAction(
 ): Promise<{
     success: boolean
     error?: string
+    serverTimings?: {
+        totalMs: number
+        timetableMs: number
+        gradesMs: number
+        attendanceMs: number
+    }
     timetable?: { success: boolean; data?: SmartTimetableResult; error?: string }
     grades?: { success: boolean; data?: GradesResult; error?: string }
     attendance?: { success: boolean; data?: AttendanceResult; error?: string }
 }> {
+    const overallStart = performance.now()
     try {
         const cleanUser = String(username || '').trim()
         const cleanPass = String(pass || '').trim()
@@ -66,28 +73,68 @@ export async function syncAllUserDataAction(
             return { success: false, error: 'Brak danych logowania' }
         }
 
-        
+        let tTimetable = 0
+        let tGrades = 0
+        let tAttendance = 0
 
         const [timetableRes, gradesRes, attendanceRes] = await Promise.all([
-            fetchSmartTimetable(cleanUser, cleanPass, translate, targetDateIso).catch((err) => ({
-                success: false,
-                data: undefined as SmartTimetableResult | undefined,
-                error: String(err?.message || err)
-            })),
-            fetchStudentGrades(cleanUser, cleanPass, translate).catch((err) => ({
-                success: false,
-                data: undefined as GradesResult | undefined,
-                error: String(err?.message || err)
-            })),
-            fetchAttendanceMetrics(cleanUser, cleanPass, translate).catch((err) => ({
-                success: false,
-                data: undefined as AttendanceResult | undefined,
-                error: String(err?.message || err)
-            }))
+            (async () => {
+                const s = performance.now()
+                try {
+                    const res = await fetchSmartTimetable(cleanUser, cleanPass, translate, targetDateIso)
+                    tTimetable = Math.round(performance.now() - s)
+                    return res
+                } catch (err: any) {
+                    tTimetable = Math.round(performance.now() - s)
+                    return {
+                        success: false,
+                        data: undefined as SmartTimetableResult | undefined,
+                        error: String(err?.message || err)
+                    }
+                }
+            })(),
+            (async () => {
+                const s = performance.now()
+                try {
+                    const res = await fetchStudentGrades(cleanUser, cleanPass, translate)
+                    tGrades = Math.round(performance.now() - s)
+                    return res
+                } catch (err: any) {
+                    tGrades = Math.round(performance.now() - s)
+                    return {
+                        success: false,
+                        data: undefined as GradesResult | undefined,
+                        error: String(err?.message || err)
+                    }
+                }
+            })(),
+            (async () => {
+                const s = performance.now()
+                try {
+                    const res = await fetchAttendanceMetrics(cleanUser, cleanPass, translate)
+                    tAttendance = Math.round(performance.now() - s)
+                    return res
+                } catch (err: any) {
+                    tAttendance = Math.round(performance.now() - s)
+                    return {
+                        success: false,
+                        data: undefined as AttendanceResult | undefined,
+                        error: String(err?.message || err)
+                    }
+                }
+            })()
         ])
+
+        const totalMs = Math.round(performance.now() - overallStart)
 
         return {
             success: true,
+            serverTimings: {
+                totalMs,
+                timetableMs: tTimetable,
+                gradesMs: tGrades,
+                attendanceMs: tAttendance
+            },
             timetable: timetableRes,
             grades: gradesRes,
             attendance: attendanceRes
@@ -239,5 +286,132 @@ export async function getLiveJustificationsAction(
         return await fetchLiveJustificationsHistory(username, pass, statusFilter)
     } catch (error: any) {
         return { success: false, data: [], error: String(error?.message || error) }
+    }
+}
+
+export interface DiagnosticItemResult {
+    name: string
+    category: string
+    durationMs: number
+    status: 'ok' | 'error'
+    error?: string
+    details?: string
+}
+
+export interface DiagnosticsBundleResult {
+    success: boolean
+    timestamp: string
+    totalDurationMs: number
+    items: DiagnosticItemResult[]
+    error?: string
+}
+
+export async function runDisplayDiagnosticsAction(
+    username: string,
+    pass: string,
+    translate: boolean = false
+): Promise<DiagnosticsBundleResult> {
+    const cleanUser = String(username || '').trim()
+    const cleanPass = String(pass || '').trim()
+    if (!cleanUser || !cleanPass) {
+        return {
+            success: false,
+            timestamp: new Date().toISOString(),
+            totalDurationMs: 0,
+            items: [],
+            error: 'Brak danych logowania'
+        }
+    }
+
+    const overallStart = performance.now()
+    const items: DiagnosticItemResult[] = []
+
+    const testStep = async (
+        name: string,
+        category: string,
+        fn: () => Promise<any>,
+        extractDetails?: (data: any) => string
+    ) => {
+        const s = performance.now()
+        try {
+            const data = await fn()
+            const durationMs = Math.round(performance.now() - s)
+            const isOk = data && (data.success !== false)
+            const errMsg = data?.error ? String(data.error) : undefined
+            items.push({
+                name,
+                category,
+                durationMs,
+                status: isOk ? 'ok' : 'error',
+                error: errMsg,
+                details: extractDetails && isOk ? extractDetails(data) : undefined
+            })
+        } catch (err: any) {
+            const durationMs = Math.round(performance.now() - s)
+            items.push({
+                name,
+                category,
+                durationMs,
+                status: 'error',
+                error: String(err?.message || err)
+            })
+        }
+    }
+
+    // 1. Profil użytkownika (Gateway API)
+    await testStep(
+        'Profil i autoryzacja (Gateway)',
+        'profile',
+        () => getStudentProfileAction(cleanUser, cleanPass),
+        (d) => d.data ? `${d.data.fullName} (${d.data.className})` : 'OK'
+    )
+
+    // 2. Plan lekcji (Timetable)
+    await testStep(
+        'Plan lekcji (Timetable)',
+        'timetable',
+        () => fetchSmartTimetable(cleanUser, cleanPass, translate),
+        (d) => d.data?.schedule ? `Dni: ${d.data.schedule.length}, Lekcji: ${d.data.schedule.reduce((acc: number, cur: any) => acc + (cur.lessons?.length || 0), 0)}` : 'OK'
+    )
+
+    // 3. Oceny (Grades)
+    await testStep(
+        'Oceny (Grades)',
+        'grades',
+        () => fetchStudentGrades(cleanUser, cleanPass, translate),
+        (d) => d.data?.subjects ? `Przedmiotów: ${d.data.subjects.length}, Średnia: ${d.data.overallAverage ?? '—'}` : 'OK'
+    )
+
+    // 4. Frekwencja (Attendance)
+    await testStep(
+        'Frekwencja (Attendance)',
+        'attendance',
+        () => fetchAttendanceMetrics(cleanUser, cleanPass, translate),
+        (d) => d.data ? `Obecność: ${d.data.overallPercentage}%, Nb: ${d.data.totalAbsent}` : 'OK'
+    )
+
+    // 5. Wiadomości i ogłoszenia (Messages & Announcements)
+    await testStep(
+        'Wiadomości i ogłoszenia',
+        'messages',
+        () => fetchMessagesBundle(cleanUser, cleanPass),
+        (d) => `Wiadomości: ${d.messages?.length || 0}, Ogłoszenia: ${d.announcements?.length || 0}`
+    )
+
+    // 6. Statusy usprawiedliwień (Live Justifications)
+    await testStep(
+        'Statusy usprawiedliwień',
+        'justifications',
+        () => fetchLiveJustificationsHistory(cleanUser, cleanPass, '0'),
+        (d) => `Wpisów: ${d.data?.length || 0}`
+    )
+
+    const totalDurationMs = Math.round(performance.now() - overallStart)
+
+    return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        totalDurationMs,
+        items
     }
 }

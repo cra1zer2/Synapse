@@ -64,11 +64,19 @@ export function IosScreen({
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const mq = window.matchMedia('(min-width: 768px)')
-    setIsDesktop(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
+    const checkDesktop = () => {
+      const isWide = window.innerWidth >= 768
+      const hasDesktopHeight = window.innerHeight > 550
+      const isMobilePhone = /Android|iPhone|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      setIsDesktop(isWide && hasDesktopHeight && !isMobilePhone)
+    }
+    checkDesktop()
+    window.addEventListener('resize', checkDesktop)
+    window.addEventListener('orientationchange', checkDesktop)
+    return () => {
+      window.removeEventListener('resize', checkDesktop)
+      window.removeEventListener('orientationchange', checkDesktop)
+    }
   }, [])
 
   const touchStartX = useRef(0)
@@ -569,7 +577,7 @@ export function IosScreen({
             </header>
           )}
 
-          <div className={contentClassName ?? "px-4 pt-5 max-w-[402px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]"}>
+          <div className={contentClassName ?? "px-4 pt-5 max-w-[402px] sm:max-w-[560px] md:max-w-[680px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]"}>
             {!hideHeader && largeTitle && (
               <div className="pt-2 pb-3 select-none">
                 <h1 className="text-[34px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-[41px]">

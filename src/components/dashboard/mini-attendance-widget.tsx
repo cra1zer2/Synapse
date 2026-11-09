@@ -6,7 +6,7 @@ import { SmartTimetableResult } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
 import { cn } from '@/utils/cn.util'
-import { formatHumanPolishDate } from '@/utils/date.util'
+import { formatHumanPolishDate, getTodayIsoString } from '@/utils/date.util'
 
 interface MiniAttendanceWidgetProps {
   attendanceData: AttendanceResult | null
@@ -37,56 +37,49 @@ export function MiniAttendanceWidget({
   const isDanger = attendanceData?.overallStatus === 'danger'
   const isWarning = attendanceData?.overallStatus === 'warning'
 
-  const todayIso = useMemo(() => {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = String(now.getMonth() + 1).padStart(2, '0')
-    const d = String(now.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
-  }, [])
+  const todayIso = useMemo(() => getTodayIsoString(), [])
 
-  const todayDayName = useMemo(() => {
-    const dayMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    return dayMap[new Date().getDay()]
+  const todayDotDate = useMemo(() => {
+    const parts = todayIso.split('-')
+    if (parts.length === 3) {
+      return `${parts[2]}.${parts[1]}.${parts[0]}`
+    }
+    return todayIso
+  }, [todayIso])
+
+  const isWeekend = useMemo(() => {
+    const day = new Date().getDay()
+    return day === 0 || day === 6
   }, [])
 
   const todayLegacyDay = useMemo(() => {
     if (!attendanceData?.legacyTable?.days) return null
     return (
-      attendanceData.legacyTable.days.find((d) => d.isoDate === todayIso) ||
-      attendanceData.legacyTable.days[0] ||
-      null
+      attendanceData.legacyTable.days.find(
+        (d) => d.isoDate === todayIso || d.date === todayIso || d.date === todayDotDate
+      ) || null
     )
-  }, [attendanceData, todayIso])
+  }, [attendanceData, todayIso, todayDotDate])
 
   const relevantSchedule = useMemo(() => {
     if (!timetableData?.schedule || timetableData.schedule.length === 0) return null
-    const targetIso = todayLegacyDay?.isoDate || todayIso
-    const targetDate = todayLegacyDay?.date
-    const targetWeekday = todayLegacyDay?.weekday
 
-    const byIso = timetableData.schedule.find((d) => d.isoDate === targetIso)
+    const byIso = timetableData.schedule.find((d) => d.isoDate === todayIso)
     if (byIso && byIso.lessons && byIso.lessons.length > 0) return byIso
 
-    if (targetDate) {
-      const byDate = timetableData.schedule.find((d) => d.date === targetDate)
-      if (byDate && byDate.lessons && byDate.lessons.length > 0) return byDate
-    }
-
-    if (targetWeekday) {
-      const byWeekday = timetableData.schedule.find((d) => d.dayName === targetWeekday)
-      if (byWeekday && byWeekday.lessons && byWeekday.lessons.length > 0) return byWeekday
-    }
+    const byDate = timetableData.schedule.find((d) => d.date === todayDotDate || d.date === todayIso)
+    if (byDate && byDate.lessons && byDate.lessons.length > 0) return byDate
 
     const currentToday = timetableData.schedule.find((d) => d.isToday)
     if (currentToday && currentToday.lessons && currentToday.lessons.length > 0) return currentToday
 
-    const anySchoolDay = timetableData.schedule.find((d) => d.lessons && d.lessons.length > 0)
-    return anySchoolDay || null
-  }, [timetableData, todayLegacyDay, todayIso])
+    return null
+  }, [timetableData, todayIso, todayDotDate])
 
   // Desktop lesson line: exact range of scheduled lessons as static square pills
   const scheduledLessonRange = useMemo(() => {
+    if (isWeekend) return []
+
     if (relevantSchedule?.lessons && relevantSchedule.lessons.length > 0) {
       const numbers = relevantSchedule.lessons
         .map((l) => l.number)
@@ -117,7 +110,7 @@ export function MiniAttendanceWidget({
     }
 
     return [1, 2, 3, 4, 5, 6, 7]
-  }, [relevantSchedule, todayLegacyDay])
+  }, [relevantSchedule, todayLegacyDay, isWeekend])
 
   const statusColor = isDanger
     ? 'text-[var(--ios-red)]'
@@ -204,17 +197,19 @@ export function MiniAttendanceWidget({
             <div className="w-full h-[6px] rounded-full ios-skeleton" />
           </div>
 
-          <div className="hidden md:flex flex-col gap-2 px-4 py-3 border-t border-[var(--ios-separator)]">
-            <div className="flex items-center justify-between">
-              <div className="w-28 h-[12px] rounded-full ios-skeleton" />
-              <div className="w-16 h-[11px] rounded-full ios-skeleton" />
+          {isDesktop && (
+            <div className="flex flex-col gap-2 px-4 py-3 border-t border-[var(--ios-separator)]">
+              <div className="flex items-center justify-between">
+                <div className="w-28 h-[12px] rounded-full ios-skeleton" />
+                <div className="w-16 h-[11px] rounded-full ios-skeleton" />
+              </div>
+              <div className="grid grid-cols-7 gap-1.5 w-full">
+                {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                  <div key={num} className="h-[40px] rounded-[10px] ios-skeleton" />
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-7 gap-1.5 w-full">
-              {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                <div key={num} className="h-[40px] rounded-[10px] ios-skeleton" />
-              ))}
-            </div>
-          </div>
+          )}
         </div>
       ) : (
         <div className="flex flex-col ios-reveal">
@@ -245,73 +240,81 @@ export function MiniAttendanceWidget({
           </div>
 
           {/* Desktop-only Today Attendance Lesson Line */}
-          <div
-            onClick={(e) => {
-              e.stopPropagation()
-              if (onOpenLegacyAttendance) {
-                onOpenLegacyAttendance(todayLegacyDay?.isoDate || todayIso)
-              } else {
-                onOpenAttendance()
-              }
-            }}
-            className="hidden md:flex flex-col gap-2 px-4 py-3 border-t border-[var(--ios-separator)] hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150 cursor-pointer select-none"
-            title={lang === 'en' ? 'Click to open attendance history for today' : 'Kliknij, aby otworzyć historię obecności z tego dnia'}
-          >
-            <div className="flex items-center justify-between text-[12px] font-normal text-[var(--ios-secondary)]">
-              <span>{lang === 'en' ? "Today's Attendance" : 'Dzisiejsza obecność'}</span>
-              <span className="text-[11px] tabular-nums text-[var(--ios-tertiary)]">
-                {formatHumanPolishDate(todayLegacyDay?.date || todayIso, false, lang)}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-start flex-wrap gap-1.5">
-              {scheduledLessonRange.map((num) => {
-                const record = todayLegacyDay?.lessons?.[num]
-                if (!record) {
-                  return (
-                    <div
-                      key={num}
-                      className="min-w-[28px] h-[28px] px-1.5 shrink-0 rounded-[8px] bg-[var(--ios-element)] flex items-center justify-center text-[11px] text-[var(--ios-tertiary)] font-medium tabular-nums select-none"
-                      title={`Lekcja #${num}: obecny / brak wpisu`}
-                    >
-                      {num}
-                    </div>
-                  )
+          {isDesktop && (
+            <div
+              onClick={(e) => {
+                e.stopPropagation()
+                if (onOpenLegacyAttendance) {
+                  onOpenLegacyAttendance(todayIso)
+                } else {
+                  onOpenAttendance()
                 }
+              }}
+              className="flex flex-col gap-2 px-4 py-3 border-t border-[var(--ios-separator)] hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150 cursor-pointer select-none"
+              title={lang === 'en' ? 'Click to open attendance history for today' : 'Kliknij, aby otworzyć historię obecności z dzisiejszego dnia'}
+            >
+              <div className="flex items-center justify-between text-[12px] font-normal text-[var(--ios-secondary)]">
+                <span>{lang === 'en' ? "Today's Attendance" : 'Dzisiejsza obecność'}</span>
+                <span className="text-[11px] tabular-nums text-[var(--ios-tertiary)]">
+                  {formatHumanPolishDate(todayIso, false, lang)}
+                </span>
+              </div>
 
-                const isNu = record.type === 'nb'
-                const isSp = record.type === 'sp'
-                const isU = record.type === 'u'
-                const isZw = record.type === 'zw'
-                const isSl = record.type === 'sl'
+              {isWeekend ? (
+                <div className="text-[12px] text-[var(--ios-tertiary)] py-0.5">
+                  {lang === 'en' ? 'Weekend — no classes' : 'Weekend — brak zajęć'}
+                </div>
+              ) : (
+                <div className="flex items-center justify-start flex-wrap gap-1.5">
+                  {scheduledLessonRange.map((num) => {
+                    const record = todayLegacyDay?.lessons?.[num]
+                    if (!record) {
+                      return (
+                        <div
+                          key={num}
+                          className="min-w-[28px] h-[28px] px-1.5 shrink-0 rounded-[8px] bg-[var(--ios-element)] flex items-center justify-center text-[11px] text-[var(--ios-tertiary)] font-medium tabular-nums select-none"
+                          title={`Lekcja #${num}: obecny / brak wpisu`}
+                        >
+                          {num}
+                        </div>
+                      )
+                    }
 
-                const badgeClass = isNu
-                  ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
-                  : isSp
-                  ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] font-semibold'
-                  : isU
-                  ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)] font-semibold'
-                  : isZw
-                  ? 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)] font-semibold'
-                  : isSl
-                  ? 'bg-[var(--ios-yellow)]/20 text-[var(--ios-yellow)] dark:text-[#ffd60a] font-semibold'
-                  : 'bg-[var(--ios-element)] text-[var(--ios-label)] font-medium'
+                    const isNu = record.type === 'nb'
+                    const isSp = record.type === 'sp'
+                    const isU = record.type === 'u'
+                    const isZw = record.type === 'zw'
+                    const isSl = record.type === 'sl'
 
-                return (
-                  <div
-                    key={num}
-                    className={cn(
-                      "min-w-[28px] h-[28px] px-1.5 shrink-0 rounded-[8px] flex items-center justify-center text-[11px] leading-none select-none",
-                      badgeClass
-                    )}
-                    title={`Lekcja #${num}: ${record.symbol}`}
-                  >
-                    {record.symbol}
-                  </div>
-                )
-              })}
+                    const badgeClass = isNu
+                      ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
+                      : isSp
+                      ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] font-semibold'
+                      : isU
+                      ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)] font-semibold'
+                      : isZw
+                      ? 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)] font-semibold'
+                      : isSl
+                      ? 'bg-[var(--ios-yellow)]/20 text-[var(--ios-yellow)] dark:text-[#ffd60a] font-semibold'
+                      : 'bg-[var(--ios-element)] text-[var(--ios-label)] font-medium'
+
+                    return (
+                      <div
+                        key={num}
+                        className={cn(
+                          "min-w-[28px] h-[28px] px-1.5 shrink-0 rounded-[8px] flex items-center justify-center text-[11px] leading-none select-none",
+                          badgeClass
+                        )}
+                        title={`Lekcja #${num}: ${record.symbol}`}
+                      >
+                        {record.symbol}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
       )}
     </IosCard>

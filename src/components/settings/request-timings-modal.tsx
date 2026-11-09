@@ -196,7 +196,7 @@ export function RequestTimingsModal({
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                       <polygon points="5 3 19 12 5 21 5 3" />
                     </svg>
-                    <span>{isEn ? 'Run latency test' : 'Uruchom test zapytań'}</span>
+                    <span>{isEn ? 'Run latency test' : 'Uruchom test'}</span>
                   </>
                 )}
               </button>
@@ -304,8 +304,8 @@ export function RequestTimingsModal({
                 </span>
                 <p className="text-[13px] text-[var(--ios-secondary)] max-w-sm">
                   {isEn
-                    ? 'Perform navigation, sync data or click "Run latency test" to benchmark all read endpoints.'
-                    : 'Przejdź po aplikacji, odśwież plan/oceny lub kliknij "Uruchom test zapytań", aby zmierzyć czas odpowiedzi.'}
+                    ? 'Perform navigation, sync data or click "Run test" to benchmark all read endpoints.'
+                    : 'Przejdź po aplikacji, odśwież plan/oceny lub kliknij "Uruchom test", aby zmierzyć czas odpowiedzi.'}
                 </p>
               </IosCard>
             ) : (

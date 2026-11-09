@@ -61,8 +61,6 @@ interface SettingsSheetProps {
   onToggleEnableGradeSimulator?: (val: boolean) => void
   showHomeworks?: boolean
   onToggleShowHomeworks?: (val: boolean) => void
-  showUpcomingEventsWidget?: boolean
-  onToggleShowUpcomingEventsWidget?: (val: boolean) => void
   dashboardOrder?: DashboardWidgetId[]
   onChangeDashboardOrder?: (newOrder: DashboardWidgetId[]) => void
   dashboardVisible?: Record<DashboardWidgetId, boolean>
@@ -124,8 +122,6 @@ export function SettingsSheet({
   onToggleEnableGradeSimulator,
   showHomeworks = false,
   onToggleShowHomeworks,
-  showUpcomingEventsWidget = false,
-  onToggleShowUpcomingEventsWidget,
   dashboardOrder = DEFAULT_DASHBOARD_ORDER,
   onChangeDashboardOrder,
   dashboardVisible = DEFAULT_DASHBOARD_VISIBLE,
@@ -327,15 +323,8 @@ export function SettingsSheet({
 
           <IosListSection header={t.systemSection}>
             <IosCell
-              title={currentLang === 'en' ? 'Request Timings (Debug)' : 'Czas zapytań (Debug)'}
-              subtitle={currentLang === 'en' ? 'Latency diagnostics & sync benchmark' : 'Diagnostyka opóźnień i czasu synchronizacji'}
-              size="tall"
-              chevron={true}
-              onClick={() => setShowTimingsDebug(true)}
-            />
-            <IosCell
               title={t.advancedTitle}
-              subtitle={currentLang === 'en' ? 'Display, grade calculation and options' : 'Wyświetlanie i kalkulator ocen'}
+              subtitle={currentLang === 'en' ? 'Display, grade calculation and diagnostics' : 'Wyświetlanie, kalkulator ocen i diagnostyka'}
               size="tall"
               chevron={true}
               onClick={() => setShowAdvanced(true)}
@@ -541,19 +530,6 @@ export function SettingsSheet({
                 />
               }
             />
-            {onToggleShowUpcomingEventsWidget && (
-              <IosCell
-                title={currentLang === 'en' ? 'Upcoming tests widget' : 'Widżet sprawdzianów i terminów'}
-                subtitle={currentLang === 'en' ? 'Show upcoming exams and quizzes on dashboard' : 'Pokazuj najbliższe sprawdziany i kartkówki na pulpicie'}
-                size="tall"
-                trailing={
-                  <IosSwitch
-                    checked={Boolean(showUpcomingEventsWidget)}
-                    onChange={() => onToggleShowUpcomingEventsWidget(!showUpcomingEventsWidget)}
-                  />
-                }
-              />
-            )}
             {onToggleShowHomeworks && (
               <IosCell
                 title={currentLang === 'en' ? 'Show homework assignments' : 'Pokazuj zadania domowe'}

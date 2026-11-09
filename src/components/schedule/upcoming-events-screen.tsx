@@ -4,7 +4,6 @@ import { useState, useMemo, Fragment } from 'react'
 import { TimetableEvent, SmartTimetableResult } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard, IosSearchBar, IosSegmentedControl } from '@/components/ios/ios-ui'
-import { IosSpinner } from '@/components/ios/ios-spinner'
 import { formatSubjectName } from '@/utils/text.util'
 import { formatHumanPolishDate, formatPolishDayDate, getTodayIsoString } from '@/utils/date.util'
 import { cn } from '@/utils/cn.util'
@@ -22,7 +21,6 @@ export interface UpcomingEventsScreenProps {
 
 type ViewMode = 'list' | 'calendar'
 type CategoryFilter = 'all' | 'exam' | 'quiz' | 'homework' | 'other'
-type ScopeFilter = 'upcoming' | 'all'
 
 interface MonthGroup {
   key: string
@@ -60,16 +58,16 @@ function getCategoryDotColor(category: TimetableEvent['category']) {
   }
 }
 
-function getCategoryLabel(category: TimetableEvent['category'], isEn: boolean) {
+function getCategoryShortLabel(category: TimetableEvent['category'], isEn: boolean) {
   switch (category) {
     case 'exam':
       return isEn ? 'Exam' : 'Sprawdzian'
     case 'quiz':
       return isEn ? 'Quiz' : 'Kartkówka'
     case 'homework':
-      return isEn ? 'Homework' : 'Zadanie domowe'
+      return isEn ? 'Homework' : 'Zadanie'
     case 'holiday':
-      return isEn ? 'Day off' : 'Dzień wolny'
+      return isEn ? 'Holiday' : 'Wolne'
     default:
       return isEn ? 'Notice' : 'Wydarzenie'
   }
@@ -91,8 +89,9 @@ export function UpcomingEventsScreen({
 
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
-  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('upcoming')
+  const [showArchived, setShowArchived] = useState<boolean>(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   // Calendar view navigation state
   const [calYear, setCalYear] = useState<number>(() => todayDate.getFullYear())
@@ -125,11 +124,11 @@ export function UpcomingEventsScreen({
     })
   }, [timetableData])
 
-  // Category counts (for badges on filter pills)
+  // Category counts
   const categoryCounts = useMemo(() => {
     const counts = { all: 0, exam: 0, quiz: 0, homework: 0, other: 0 }
     for (const ev of allEvents) {
-      if (scopeFilter === 'upcoming' && ev.isoDate < todayIso) continue
+      if (!showArchived && ev.isoDate < todayIso) continue
       counts.all++
       if (ev.category === 'exam') counts.exam++
       else if (ev.category === 'quiz') counts.quiz++
@@ -137,15 +136,26 @@ export function UpcomingEventsScreen({
       else counts.other++
     }
     return counts
-  }, [allEvents, scopeFilter, todayIso])
+  }, [allEvents, showArchived, todayIso])
+
+  // Active filter label on button
+  const hasCustomFilter = categoryFilter !== 'all' || showArchived
+  const filterButtonLabel = useMemo(() => {
+    if (categoryFilter === 'exam') return isEn ? 'Exams' : 'Sprawdziany'
+    if (categoryFilter === 'quiz') return isEn ? 'Quizzes' : 'Kartkówki'
+    if (categoryFilter === 'homework') return isEn ? 'Homework' : 'Zadania'
+    if (categoryFilter === 'other') return isEn ? 'Other' : 'Inne'
+    if (showArchived) return isEn ? 'All dates' : 'Wszystkie daty'
+    return isEn ? 'Filter' : 'Filtr'
+  }, [categoryFilter, showArchived, isEn])
 
   // Filtered events
   const filteredEvents = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
 
     return allEvents.filter((ev) => {
-      // Scope filter
-      if (scopeFilter === 'upcoming' && ev.isoDate < todayIso) return false
+      // Archive/Past filter
+      if (!showArchived && ev.isoDate < todayIso) return false
 
       // Category filter
       if (categoryFilter === 'exam' && ev.category !== 'exam') return false
@@ -167,7 +177,7 @@ export function UpcomingEventsScreen({
 
       return true
     })
-  }, [allEvents, scopeFilter, categoryFilter, searchQuery, todayIso])
+  }, [allEvents, showArchived, categoryFilter, searchQuery, todayIso])
 
   // Tomorrow ISO
   const tomorrowIso = useMemo(() => {
@@ -179,7 +189,7 @@ export function UpcomingEventsScreen({
     return `${y}-${m}-${d}`
   }, [])
 
-  // Week ranges for bucketing
+  // Week ranges for clean bucketing
   const weekBuckets = useMemo(() => {
     const now = new Date()
     const currentDay = now.getDay()
@@ -248,7 +258,7 @@ export function UpcomingEventsScreen({
       } else if (evDate >= weekBuckets.nextMonday && evDate <= weekBuckets.nextSunday) {
         nextWeekList.push(ev)
       } else {
-        const mKey = ev.isoDate.slice(0, 7) // e.g. "2026-11"
+        const mKey = ev.isoDate.slice(0, 7)
         const y = evDate.getFullYear()
         const mIdx = evDate.getMonth()
         const mName = isEn ? monthNamesEn[mIdx] : monthNamesPl[mIdx]
@@ -279,7 +289,7 @@ export function UpcomingEventsScreen({
     }
   }, [filteredEvents, todayIso, tomorrowIso, weekBuckets, isEn])
 
-  // Events grouped by date for Calendar view lookup
+  // Events grouped by date for Calendar view
   const eventsByDate = useMemo(() => {
     const map: Record<string, TimetableEvent[]> = {}
     for (const ev of allEvents) {
@@ -289,7 +299,7 @@ export function UpcomingEventsScreen({
     return map
   }, [allEvents])
 
-  // Calendar grid calculation
+  // Calendar grid
   const calendarGrid = useMemo(() => {
     const firstDay = new Date(calYear, calMonth, 1)
     const startingDayOfWeek = (firstDay.getDay() + 6) % 7 // Monday = 0
@@ -351,22 +361,14 @@ export function UpcomingEventsScreen({
     setSelectedDateIso(todayIso)
   }
 
-  // Events for selected date in Calendar view
   const selectedDayEvents = useMemo(() => {
     return eventsByDate[selectedDateIso] || []
   }, [eventsByDate, selectedDateIso])
 
-  // Events for entire selected calendar month
-  const currentMonthEvents = useMemo(() => {
-    const prefix = `${calYear}-${String(calMonth + 1).padStart(2, '0')}`
-    return allEvents.filter((ev) => ev.isoDate.startsWith(prefix))
-  }, [allEvents, calYear, calMonth])
-
-  // Reusable Event Row
+  // Clean, uncluttered event row aligned with HIG specifications
   const renderEventRow = (ev: TimetableEvent, isLast: boolean) => {
     const dateInfo = formatPolishDayDate(ev.isoDate, lang)
     const isToday = ev.isoDate === todayIso
-    const isTomorrow = ev.isoDate === tomorrowIso
     const subjLabel = ev.subjectName
       ? formatSubjectName(ev.subjectName, showFullSubjectNames)
       : ev.eventType || (isEn ? 'Event' : 'Wydarzenie')
@@ -375,49 +377,37 @@ export function UpcomingEventsScreen({
       <Fragment key={(ev.id || '') + '-' + ev.isoDate + '-' + (ev.lessonNumber || '') + '-' + ev.title}>
         <div
           onClick={() => onSelectEvent(ev)}
-          className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors cursor-pointer select-none"
+          className="w-full px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors cursor-pointer select-none"
         >
-          {/* Date squircle */}
-          <div className="w-[46px] shrink-0 flex flex-col items-center justify-center py-1.5 rounded-[10px] bg-[var(--ios-element)]/65">
-            <span className="text-[14px] font-semibold text-[var(--ios-label)] leading-none tabular-nums">
+          {/* Crisp 2-line date squircle */}
+          <div className="w-[42px] h-[46px] shrink-0 rounded-[10px] bg-[var(--ios-element)]/65 flex flex-col items-center justify-center">
+            <span className="text-[15px] font-semibold text-[var(--ios-label)] leading-none tabular-nums">
               {dateInfo.dayNum}
             </span>
-            <span className="text-[10px] font-medium text-[var(--ios-secondary)] uppercase mt-0.5 leading-none">
+            <span className="text-[10px] font-medium text-[var(--ios-secondary)] uppercase mt-1 leading-none">
               {dateInfo.monthName}
-            </span>
-            <span className="text-[9px] font-normal text-[var(--ios-tertiary)] mt-0.5 leading-none">
-              {isToday ? (isEn ? 'Today' : 'Dziś') : isTomorrow ? (isEn ? 'Tmrw' : 'Jutro') : dateInfo.weekday}
             </span>
           </div>
 
-          {/* Details */}
+          {/* Core Info */}
           <div className="min-w-0 flex-1 flex flex-col justify-center">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[15px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] truncate leading-snug">
-                {subjLabel}
-              </span>
-            </div>
+            <span className="text-[15px] font-medium text-[var(--ios-label)] tracking-[-0.2px] truncate leading-tight">
+              {subjLabel}
+            </span>
 
-            <span className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] line-clamp-2 leading-relaxed mt-0.5">
+            <span className="text-[13px] font-normal text-[var(--ios-secondary)] truncate mt-0.5 leading-snug">
               {ev.title}
             </span>
 
-            {(ev.lessonNumber || ev.time || ev.teacher) && (
-              <div className="flex items-center gap-2 mt-1 text-[11px] font-normal text-[var(--ios-tertiary)] tabular-nums truncate">
-                {ev.lessonNumber !== undefined && (
-                  <span>{isEn ? `Period ${ev.lessonNumber}` : `Lekcja ${ev.lessonNumber}`}</span>
-                )}
-                {ev.time && (
-                  <span>• {ev.time}</span>
-                )}
-                {ev.teacher && (
-                  <span className="truncate">• {ev.teacher}</span>
-                )}
-              </div>
+            {(ev.lessonNumber !== undefined || ev.time) && (
+              <span className="text-[11px] font-normal text-[var(--ios-tertiary)] tabular-nums mt-0.5 leading-none">
+                {ev.lessonNumber !== undefined && (isEn ? `Period ${ev.lessonNumber}` : `Lekcja ${ev.lessonNumber}`)}
+                {ev.time && ` • ${ev.time}`}
+              </span>
             )}
           </div>
 
-          {/* Category Badge & Chevron */}
+          {/* Category Badge & Arrow */}
           <div className="shrink-0 flex items-center gap-2">
             <span
               className={cn(
@@ -425,185 +415,252 @@ export function UpcomingEventsScreen({
                 getBadgeStyle(ev.category)
               )}
             >
-              {ev.eventType || getCategoryLabel(ev.category, isEn)}
+              {ev.eventType || getCategoryShortLabel(ev.category, isEn)}
             </span>
 
-            <svg width="15" height="15" className="text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" className="text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </div>
         </div>
 
         {!isLast && (
-          <div className="h-[0.5px] bg-[var(--ios-separator)] ml-[74px] mr-4 pointer-events-none" />
+          <div className="h-[0.5px] bg-[var(--ios-separator)] ml-[68px] mr-4 pointer-events-none" />
         )}
       </Fragment>
     )
   }
 
-  // Section header helper
+  // Section header
   const renderSectionHeader = (title: string, count: number) => (
-    <div className="flex items-center justify-between px-4 pt-3 pb-1.5 text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-[0.02em]">
+    <div className="flex items-center justify-between px-4 pt-4 pb-1.5 text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-[0.02em]">
       <span>{title}</span>
       <span className="tabular-nums normal-case">{count}</span>
     </div>
   )
 
   return (
-    <div className="flex flex-col gap-4 pb-16 select-none max-w-3xl mx-auto w-full">
-      {/* Top Controls: Mode Switcher & Search Bar */}
-      <div className="flex flex-col gap-3">
-        {/* Mode Switcher: Lista vs Kalendarz */}
-        <div className="flex items-center justify-center">
-          <IosSegmentedControl<ViewMode>
-            value={viewMode}
-            onChange={setViewMode}
-            options={[
-              { id: 'list', label: isEn ? 'Layered List' : 'Lista terminów' },
-              { id: 'calendar', label: isEn ? 'Calendar' : 'Kalendarz' }
-            ]}
-            className="w-full max-w-sm"
+    <div className="flex flex-col gap-3 pb-16 select-none max-w-2xl mx-auto w-full">
+      {/* 1. View Mode Segmented Control */}
+      <div className="flex items-center justify-center">
+        <IosSegmentedControl<ViewMode>
+          value={viewMode}
+          onChange={setViewMode}
+          options={[
+            { id: 'list', label: isEn ? 'List' : 'Lista' },
+            { id: 'calendar', label: isEn ? 'Calendar' : 'Kalendarz' }
+          ]}
+          className="w-full max-w-xs"
+        />
+      </div>
+
+      {/* 2. Search Bar + Filter Button (IN A SINGLE LINE) */}
+      <div className="relative flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <IosSearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={isEn ? 'Search events or subjects...' : 'Szukaj sprawdzianów lub lekcji...'}
           />
         </div>
 
-        {/* Search Bar */}
-        <IosSearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={isEn ? 'Search tests, quizzes, subjects...' : 'Szukaj sprawdzianów, kartkówek, przedmiotów...'}
-        />
+        <button
+          type="button"
+          onClick={() => setIsFilterOpen((prev) => !prev)}
+          className={cn(
+            'h-[40px] px-3.5 rounded-full flex items-center gap-1.5 shrink-0 transition-all cursor-pointer select-none text-[13px]',
+            hasCustomFilter
+              ? 'bg-[var(--ios-blue)] text-white shadow-sm font-semibold'
+              : 'bg-[var(--ios-card-solid)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] font-medium active:bg-[var(--ios-element)]'
+          )}
+          aria-label="Filter"
+          title={isEn ? 'Filter events' : 'Filtruj wydarzenia'}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
+          <span className="truncate max-w-[110px]">
+            {filterButtonLabel}
+          </span>
+        </button>
 
-        {/* Category Filters Carousel */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-          <button
-            type="button"
-            onClick={() => setCategoryFilter('all')}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 shrink-0',
-              categoryFilter === 'all'
-                ? 'bg-[var(--ios-label)] text-[var(--ios-bg)] shadow-sm'
-                : 'bg-[var(--ios-card-solid)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
-            )}
-          >
-            <span>{isEn ? 'All' : 'Wszystkie'}</span>
-            <span className="text-[11px] opacity-75 tabular-nums">({categoryCounts.all})</span>
-          </button>
+        {/* Filter Dropdown Popover */}
+        {isFilterOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-30"
+              onClick={() => setIsFilterOpen(false)}
+            />
+            <div className="absolute right-0 top-[46px] z-40 w-64 bg-[var(--ios-card-solid)] rounded-[20px] p-2 shadow-2xl border border-[var(--ios-separator)] flex flex-col gap-1">
+              <span className="text-[11px] font-medium uppercase text-[var(--ios-secondary)] tracking-wider px-3 pt-2 pb-1">
+                {isEn ? 'Category' : 'Kategoria'}
+              </span>
 
-          <button
-            type="button"
-            onClick={() => setCategoryFilter('exam')}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 shrink-0',
-              categoryFilter === 'exam'
-                ? 'bg-[var(--ios-purple)] text-white shadow-sm'
-                : 'bg-[var(--ios-card-solid)] text-[var(--ios-purple)]'
-            )}
-          >
-            <span>{isEn ? 'Exams' : 'Sprawdziany'}</span>
-            <span className="text-[11px] opacity-75 tabular-nums">({categoryCounts.exam})</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryFilter('all')
+                  setIsFilterOpen(false)
+                }}
+                className={cn(
+                  'w-full px-3 py-2 rounded-[12px] flex items-center justify-between text-[14px] transition-colors cursor-pointer text-left',
+                  categoryFilter === 'all'
+                    ? 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] font-medium'
+                    : 'text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60'
+                )}
+              >
+                <span>{isEn ? 'All categories' : 'Wszystkie kategorie'}</span>
+                <span className="text-[12px] opacity-75 tabular-nums">{categoryCounts.all}</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => setCategoryFilter('quiz')}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 shrink-0',
-              categoryFilter === 'quiz'
-                ? 'bg-[var(--ios-orange)] text-white shadow-sm'
-                : 'bg-[var(--ios-card-solid)] text-[var(--ios-orange)]'
-            )}
-          >
-            <span>{isEn ? 'Quizzes' : 'Kartkówki'}</span>
-            <span className="text-[11px] opacity-75 tabular-nums">({categoryCounts.quiz})</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryFilter('exam')
+                  setIsFilterOpen(false)
+                }}
+                className={cn(
+                  'w-full px-3 py-2 rounded-[12px] flex items-center justify-between text-[14px] transition-colors cursor-pointer text-left',
+                  categoryFilter === 'exam'
+                    ? 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)] font-medium'
+                    : 'text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60'
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[var(--ios-purple)]" />
+                  <span>{isEn ? 'Exams' : 'Sprawdziany'}</span>
+                </div>
+                <span className="text-[12px] opacity-75 tabular-nums">{categoryCounts.exam}</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => setCategoryFilter('homework')}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 shrink-0',
-              categoryFilter === 'homework'
-                ? 'bg-[var(--ios-blue)] text-white shadow-sm'
-                : 'bg-[var(--ios-card-solid)] text-[var(--ios-blue)]'
-            )}
-          >
-            <span>{isEn ? 'Homework' : 'Zadania'}</span>
-            <span className="text-[11px] opacity-75 tabular-nums">({categoryCounts.homework})</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryFilter('quiz')
+                  setIsFilterOpen(false)
+                }}
+                className={cn(
+                  'w-full px-3 py-2 rounded-[12px] flex items-center justify-between text-[14px] transition-colors cursor-pointer text-left',
+                  categoryFilter === 'quiz'
+                    ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] font-medium'
+                    : 'text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60'
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[var(--ios-orange)]" />
+                  <span>{isEn ? 'Quizzes' : 'Kartkówki'}</span>
+                </div>
+                <span className="text-[12px] opacity-75 tabular-nums">{categoryCounts.quiz}</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => setCategoryFilter('other')}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 shrink-0',
-              categoryFilter === 'other'
-                ? 'bg-[var(--ios-label)] text-[var(--ios-bg)] shadow-sm'
-                : 'bg-[var(--ios-card-solid)] text-[var(--ios-secondary)]'
-            )}
-          >
-            <span>{isEn ? 'Other' : 'Inne'}</span>
-            <span className="text-[11px] opacity-75 tabular-nums">({categoryCounts.other})</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryFilter('homework')
+                  setIsFilterOpen(false)
+                }}
+                className={cn(
+                  'w-full px-3 py-2 rounded-[12px] flex items-center justify-between text-[14px] transition-colors cursor-pointer text-left',
+                  categoryFilter === 'homework'
+                    ? 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] font-medium'
+                    : 'text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60'
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)]" />
+                  <span>{isEn ? 'Homework' : 'Zadania'}</span>
+                </div>
+                <span className="text-[12px] opacity-75 tabular-nums">{categoryCounts.homework}</span>
+              </button>
 
-          <div className="h-5 w-[1px] bg-[var(--ios-separator)] mx-1 shrink-0" />
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryFilter('other')
+                  setIsFilterOpen(false)
+                }}
+                className={cn(
+                  'w-full px-3 py-2 rounded-[12px] flex items-center justify-between text-[14px] transition-colors cursor-pointer text-left',
+                  categoryFilter === 'other'
+                    ? 'bg-[var(--ios-element)] text-[var(--ios-label)] font-medium'
+                    : 'text-[var(--ios-label)] hover:bg-[var(--ios-element)]/60'
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[var(--ios-secondary)]" />
+                  <span>{isEn ? 'Other / Notices' : 'Inne / Wydarzenia'}</span>
+                </div>
+                <span className="text-[12px] opacity-75 tabular-nums">{categoryCounts.other}</span>
+              </button>
 
-          {/* Scope Toggle: Nadchodzące vs Wszystkie */}
-          <button
-            type="button"
-            onClick={() => setScopeFilter((s) => (s === 'upcoming' ? 'all' : 'upcoming'))}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 border border-transparent',
-              scopeFilter === 'all'
-                ? 'bg-[var(--ios-element)] text-[var(--ios-label)] font-semibold'
-                : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
-            )}
-          >
-            {scopeFilter === 'upcoming'
-              ? (isEn ? 'Upcoming only' : 'Tylko nadchodzące')
-              : (isEn ? 'Including archive' : 'Z archiwalnymi')}
-          </button>
-        </div>
+              <div className="h-[0.5px] bg-[var(--ios-separator)] my-1" />
+
+              {/* Archive Toggle */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowArchived((s) => !s)
+                  setIsFilterOpen(false)
+                }}
+                className="w-full px-3 py-2 rounded-[12px] flex items-center justify-between text-[13px] text-[var(--ios-secondary)] hover:bg-[var(--ios-element)]/60 cursor-pointer text-left"
+              >
+                <span>{showArchived ? (isEn ? 'Hide past events' : 'Ukryj przeszłe') : (isEn ? 'Include past events' : 'Pokaż także przeszłe')}</span>
+                <span className="text-[15px]">{showArchived ? '✓' : ''}</span>
+              </button>
+
+              {/* Reset Action */}
+              {hasCustomFilter && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategoryFilter('all')
+                    setShowArchived(false)
+                    setIsFilterOpen(false)
+                  }}
+                  className="w-full mt-0.5 px-3 py-1.5 rounded-[12px] text-center text-[13px] font-medium text-[var(--ios-red)] hover:bg-[var(--ios-red-subtle)] cursor-pointer"
+                >
+                  {isEn ? 'Reset filters' : 'Wyczyść filtry'}
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Loading Skeletons */}
+      {/* 3. Main Content Views */}
       {isLoading && allEvents.length === 0 ? (
-        <div className="flex flex-col gap-3">
-          <div className="w-32 h-[13px] rounded-full ios-skeleton px-4" />
+        <div className="flex flex-col gap-3 pt-2">
+          <div className="w-28 h-[13px] rounded-full ios-skeleton px-4" />
           <IosCard className="overflow-hidden flex flex-col divide-y divide-[var(--ios-separator)]">
-            {[0, 1, 2, 3].map((i) => (
+            {[0, 1, 2].map((i) => (
               <div key={i} className="px-4 py-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-[46px] h-[48px] rounded-[10px] ios-skeleton shrink-0" />
+                  <div className="w-[42px] h-[46px] rounded-[10px] ios-skeleton shrink-0" />
                   <div className="flex flex-col gap-1.5 flex-1">
-                    <div className="w-32 h-[14px] rounded-full ios-skeleton" />
-                    <div className="w-48 h-[12px] rounded-full ios-skeleton" />
+                    <div className="w-28 h-[14px] rounded-full ios-skeleton" />
+                    <div className="w-40 h-[12px] rounded-full ios-skeleton" />
                   </div>
                 </div>
-                <div className="w-20 h-[22px] rounded-full ios-skeleton shrink-0" />
+                <div className="w-16 h-[20px] rounded-full ios-skeleton shrink-0" />
               </div>
             ))}
           </IosCard>
         </div>
       ) : viewMode === 'list' ? (
-        /* ======================== VIEW 1: LAYERED LIST ======================== */
+        /* ======================== VIEW 1: CLEAN LAYERED LIST ======================== */
         filteredEvents.length === 0 ? (
-          <IosCard className="p-8 text-center flex flex-col items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-[var(--ios-element)]/60 text-[var(--ios-secondary)] flex items-center justify-center text-[22px]">
-              📅
-            </div>
-            <div className="flex flex-col gap-1">
-              <h3 className="text-[16px] font-semibold text-[var(--ios-label)] tracking-tight">
-                {isEn ? 'No tests or deadlines found' : 'Brak sprawdzianów i terminów'}
-              </h3>
-              <p className="text-[13px] font-normal text-[var(--ios-secondary)] max-w-sm">
-                {searchQuery
-                  ? (isEn ? 'Try changing your search query or category filter.' : 'Brak wpisów pasujących do wyszukiwanej frazy lub wybranego filtra.')
-                  : (isEn ? 'No upcoming events recorded on Librus.' : 'Wszystko zaliczone! Brak zaplanowanych terminów w wybranym filtrze.')}
-              </p>
-            </div>
+          <IosCard className="p-8 text-center flex flex-col items-center justify-center gap-2 mt-2">
+            <span className="text-[15px] font-medium text-[var(--ios-label)]">
+              {isEn ? 'No tests or deadlines found' : 'Brak sprawdzianów i terminów'}
+            </span>
+            <p className="text-[13px] font-normal text-[var(--ios-secondary)] max-w-xs">
+              {searchQuery || hasCustomFilter
+                ? (isEn ? 'Try changing your search query or filter.' : 'Brak wpisów pasujących do wyszukiwanej frazy lub filtra.')
+                : (isEn ? 'All clear! No upcoming events recorded.' : 'Wszystko zaliczone! Brak zaplanowanych terminów.')}
+            </p>
           </IosCard>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {/* 1. Today */}
             {layeredGroups.today.length > 0 && (
               <div className="flex flex-col">
@@ -665,8 +722,8 @@ export function UpcomingEventsScreen({
             ))}
 
             {/* 6. Past Events (Archive) */}
-            {layeredGroups.past.length > 0 && (
-              <div className="flex flex-col mt-2">
+            {showArchived && layeredGroups.past.length > 0 && (
+              <div className="flex flex-col">
                 {renderSectionHeader(isEn ? 'Past Events (Archive)' : 'Archiwum / Przeszłe terminy', layeredGroups.past.length)}
                 <IosCard className="overflow-hidden flex flex-col opacity-80">
                   {layeredGroups.past.map((ev, idx) =>
@@ -678,22 +735,22 @@ export function UpcomingEventsScreen({
           </div>
         )
       ) : (
-        /* ======================== VIEW 2: CALENDAR ======================== */
-        <div className="flex flex-col gap-4">
+        /* ======================== VIEW 2: CLEAN CALENDAR ======================== */
+        <div className="flex flex-col gap-3">
           {/* Calendar Card */}
           <IosCard className="p-4 flex flex-col gap-3">
-            {/* Calendar Month Header */}
+            {/* Month Header */}
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-[17px] font-semibold text-[var(--ios-label)] tracking-tight">
+              <span className="text-[17px] font-semibold text-[var(--ios-label)] tracking-tight">
                 {calMonthTitle}
-              </h3>
+              </span>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 {!isCurrentCalMonth && (
                   <button
                     type="button"
                     onClick={handleJumpToToday}
-                    className="px-2.5 py-1 rounded-full text-[12px] font-medium bg-[var(--ios-element)] text-[var(--ios-blue)] active:opacity-70 transition-opacity cursor-pointer"
+                    className="px-2.5 py-1 rounded-full text-[12px] font-medium bg-[var(--ios-element)] text-[var(--ios-blue)] active:opacity-70 transition-opacity cursor-pointer mr-1"
                   >
                     {isEn ? 'Today' : 'Dzisiaj'}
                   </button>
@@ -723,8 +780,8 @@ export function UpcomingEventsScreen({
               </div>
             </div>
 
-            {/* Weekday Names Header */}
-            <div className="grid grid-cols-7 gap-1 text-center text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-wider pt-1">
+            {/* Weekdays */}
+            <div className="grid grid-cols-7 gap-1 text-center text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-wider pt-0.5">
               <span>{isEn ? 'Mo' : 'Pn'}</span>
               <span>{isEn ? 'Tu' : 'Wt'}</span>
               <span>{isEn ? 'We' : 'Śr'}</span>
@@ -735,7 +792,7 @@ export function UpcomingEventsScreen({
             </div>
 
             {/* Days Grid */}
-            <div className="grid grid-cols-7 gap-1 pt-1">
+            <div className="grid grid-cols-7 gap-1 pt-0.5">
               {calendarGrid.map((cell, idx) => {
                 if (!cell.dayNum || !cell.iso) {
                   return <div key={'empty-' + idx} className="h-10" />
@@ -752,7 +809,7 @@ export function UpcomingEventsScreen({
                     type="button"
                     onClick={() => setSelectedDateIso(cell.iso!)}
                     className={cn(
-                      'h-11 rounded-[12px] flex flex-col items-center justify-center relative transition-all cursor-pointer select-none',
+                      'h-10 rounded-[12px] flex flex-col items-center justify-center relative transition-all cursor-pointer select-none',
                       isSelected
                         ? 'bg-[var(--ios-blue)] text-white shadow-sm font-semibold'
                         : isToday
@@ -766,12 +823,12 @@ export function UpcomingEventsScreen({
 
                     {/* Indicator dots for events */}
                     {hasEvents && (
-                      <div className="flex items-center gap-0.5 mt-1 h-1.5">
+                      <div className="flex items-center gap-0.5 mt-1 h-1">
                         {dayEvs.slice(0, 3).map((ev, dIdx) => (
                           <div
                             key={dIdx}
                             className={cn(
-                              'w-1.5 h-1.5 rounded-full shrink-0',
+                              'w-1 h-1 rounded-full shrink-0',
                               isSelected ? 'bg-white' : getCategoryDotColor(ev.category)
                             )}
                           />
@@ -798,26 +855,11 @@ export function UpcomingEventsScreen({
                 )}
               </IosCard>
             ) : (
-              <IosCard className="p-6 text-center text-[14px] font-normal text-[var(--ios-secondary)]">
+              <IosCard className="p-6 text-center text-[13px] font-normal text-[var(--ios-secondary)]">
                 {isEn ? 'No tests or deadlines for this day' : 'Brak sprawdzianów i terminów w wybranym dniu'}
               </IosCard>
             )}
           </div>
-
-          {/* All events in this calendar month */}
-          {currentMonthEvents.length > 0 && (
-            <div className="flex flex-col mt-2">
-              {renderSectionHeader(
-                `${isEn ? 'All events in' : 'Wszystkie terminy w'} ${calMonthTitle}`,
-                currentMonthEvents.length
-              )}
-              <IosCard className="overflow-hidden flex flex-col">
-                {currentMonthEvents.map((ev, idx) =>
-                  renderEventRow(ev, idx === currentMonthEvents.length - 1)
-                )}
-              </IosCard>
-            </div>
-          )}
         </div>
       )}
     </div>

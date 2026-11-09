@@ -92,7 +92,6 @@ export default function Home() {
   const [allowStudentJustifications, setAllowStudentJustifications] = useState<boolean>(false)
   const [enableGradeSimulator, setEnableGradeSimulator] = useState<boolean>(false)
   const [showHomeworks, setShowHomeworks] = useState<boolean>(false)
-  const [showUpcomingEventsWidget, setShowUpcomingEventsWidget] = useState<boolean>(false)
   const [dashboardOrder, setDashboardOrder] = useState<DashboardWidgetId[]>(DEFAULT_DASHBOARD_ORDER)
   const [dashboardVisible, setDashboardVisible] = useState<Record<DashboardWidgetId, boolean>>(DEFAULT_DASHBOARD_VISIBLE)
   const [showLuckyNumberBanner, setShowLuckyNumberBanner] = useState<boolean>(false)
@@ -339,7 +338,6 @@ export default function Home() {
     const savedStudentJust = localStorage.getItem('synapse_allow_student_justifications') === 'true'
     const savedSim = localStorage.getItem('synapse_grade_simulator') === 'true'
     const savedHw = localStorage.getItem('synapse_show_homeworks') === 'true'
-    const savedEvents = localStorage.getItem('synapse_show_upcoming_events') === 'true'
     const savedLuckyBanner = localStorage.getItem('synapse_show_lucky_banner') === 'true'
     const savedLuckyDismissed = localStorage.getItem('synapse_lucky_dismissed_date') || ''
 
@@ -351,7 +349,6 @@ export default function Home() {
     setAllowStudentJustifications(savedStudentJust)
     setEnableGradeSimulator(savedSim)
     setShowHomeworks(savedHw)
-    setShowUpcomingEventsWidget(savedEvents)
     setShowLuckyNumberBanner(savedLuckyBanner)
     setLuckyDismissedDate(savedLuckyDismissed)
 
@@ -374,12 +371,8 @@ export default function Home() {
           ...parsed
         }
         setDashboardVisible(merged)
-        setShowUpcomingEventsWidget(Boolean(merged.upcoming))
       } else {
-        setDashboardVisible({
-          ...DEFAULT_DASHBOARD_VISIBLE,
-          upcoming: savedEvents
-        })
+        setDashboardVisible(DEFAULT_DASHBOARD_VISIBLE)
       }
     } catch {}
 
@@ -470,16 +463,6 @@ export default function Home() {
     localStorage.setItem('synapse_show_homeworks', String(val))
   }
 
-  const handleToggleShowUpcomingEventsWidget = (val: boolean) => {
-    setShowUpcomingEventsWidget(val)
-    localStorage.setItem('synapse_show_upcoming_events', String(val))
-    setDashboardVisible((prev) => {
-      const next = { ...prev, upcoming: val }
-      localStorage.setItem('synapse_dashboard_visible_v1', JSON.stringify(next))
-      return next
-    })
-  }
-
   const handleChangeDashboardOrder = (newOrder: DashboardWidgetId[]) => {
     setDashboardOrder(newOrder)
     localStorage.setItem('synapse_dashboard_order_v1', JSON.stringify(newOrder))
@@ -491,10 +474,6 @@ export default function Home() {
       localStorage.setItem('synapse_dashboard_visible_v1', JSON.stringify(next))
       return next
     })
-    if (id === 'upcoming') {
-      setShowUpcomingEventsWidget(val)
-      localStorage.setItem('synapse_show_upcoming_events', String(val))
-    }
   }
 
   const handleToggleShowLuckyNumberBanner = (val: boolean) => {
@@ -1365,8 +1344,6 @@ export default function Home() {
         onToggleEnableGradeSimulator={handleToggleEnableGradeSimulator}
         showHomeworks={showHomeworks}
         onToggleShowHomeworks={handleToggleShowHomeworks}
-        showUpcomingEventsWidget={showUpcomingEventsWidget}
-        onToggleShowUpcomingEventsWidget={handleToggleShowUpcomingEventsWidget}
         dashboardOrder={dashboardOrder}
         onChangeDashboardOrder={handleChangeDashboardOrder}
         dashboardVisible={dashboardVisible}

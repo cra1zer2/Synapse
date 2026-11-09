@@ -18,6 +18,7 @@ import { addRequestLog } from '@/utils/request-logger.util'
 
 import { AuthView } from '@/components/auth/auth-view'
 import { ScheduleWidget } from '@/components/schedule/schedule-widget'
+import { UpcomingEventsScreen } from '@/components/schedule/upcoming-events-screen'
 import { LessonDetailModal } from '@/components/schedule/lesson-detail-modal'
 import { EventDetailModal } from '@/components/schedule/event-detail-modal'
 import { AttendanceWidget } from '@/components/attendance/attendance-widget'
@@ -164,6 +165,7 @@ export default function Home() {
   const [showQuickNb, setShowQuickNb] = useState(false)
   const [showManualExcuse, setShowManualExcuse] = useState(false)
   const [showFullSchedule, setShowFullSchedule] = useState(false)
+  const [showFullUpcoming, setShowFullUpcoming] = useState(false)
   const [showFullAttendance, setShowFullAttendance] = useState(false)
   const [showMessagesScreen, setShowMessagesScreen] = useState(false)
   const [showAnnouncementsScreen, setShowAnnouncementsScreen] = useState(false)
@@ -259,6 +261,7 @@ export default function Home() {
     setShowSettings(false)
     setShowFullGrades(false)
     setShowFullSchedule(false)
+    setShowFullUpcoming(false)
     setShowFullAttendance(false)
     setShowMessagesScreen(false)
     setShowAnnouncementsScreen(false)
@@ -305,6 +308,7 @@ export default function Home() {
   const isLevel1Active = Boolean(
     showFullGrades ||
     showFullSchedule ||
+    showFullUpcoming ||
     showFullAttendance ||
     showMessagesScreen ||
     showAnnouncementsScreen ||
@@ -395,6 +399,8 @@ export default function Home() {
           setShowMessagesScreen(true)
         } else if (tab === 'schedule') {
           setShowFullSchedule(true)
+        } else if (tab === 'upcoming' || tab === 'events') {
+          setShowFullUpcoming(true)
         } else if (tab === 'attendance') {
           setShowFullAttendance(true)
         }
@@ -825,7 +831,7 @@ export default function Home() {
                       t={t}
                       isDesktop={desktopMode}
                       onSelectEvent={handleSelectEvent}
-                      onOpenCalendar={() => setShowFullSchedule(true)}
+                      onOpenCalendar={() => setShowFullUpcoming(true)}
                     />
                   )
                 case 'attendance':
@@ -986,6 +992,30 @@ export default function Home() {
             </span>
           </div>
         )}
+      </IosScreen>
+
+      <IosScreen
+        isOpen={showFullUpcoming}
+        onClose={() => {
+          setShowFullUpcoming(false)
+          if (typeof window !== 'undefined' && (window.location.search.includes('tab=upcoming') || window.location.search.includes('tab=events'))) {
+            window.history.replaceState({}, '', window.location.pathname)
+          }
+        }}
+        title={lang === 'en' ? 'Tests & Deadlines' : 'Sprawdziany i terminy'}
+        backLabel={t.backAction}
+        isSubView={true}
+      >
+        <UpcomingEventsScreen
+          timetableData={timetable.timetableData}
+          isLoading={timetable.isLoadingWeek}
+          showHomeworks={showHomeworks}
+          showFullSubjectNames={showFullSubjectNames}
+          lang={lang}
+          t={t}
+          onSelectEvent={handleSelectEvent}
+          onRefresh={handleManualRefresh}
+        />
       </IosScreen>
 
       <IosScreen

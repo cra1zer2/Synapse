@@ -86,11 +86,15 @@ export async function fetchSmartTimetable(
             fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Users').catch(() => null),
             fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Me').catch(() => null),
             fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Subjects').catch(() => null),
-            ...daysIso.map((iso) =>
-                fetchGatewayEndpoint(username, pass, `gateway/api/2.0/Realizations?date=${iso}`)
+            ...daysIso.map((iso) => {
+                const timeoutPromise = new Promise<{ iso: string; data: null }>((resolve) =>
+                    setTimeout(() => resolve({ iso, data: null }), 2500)
+                )
+                const fetchPromise = fetchGatewayEndpoint(username, pass, `gateway/api/2.0/Realizations?date=${iso}`)
                     .then((res) => ({ iso, data: res }))
                     .catch(() => ({ iso, data: null }))
-            )
+                return Promise.race([fetchPromise, timeoutPromise])
+            })
         ])
 
         if (!gatewayTimetableRes || typeof gatewayTimetableRes === 'string') {

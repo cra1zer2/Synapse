@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem } from '@/models/message.model'
-import { getMessagesAndAnnouncementsAction, readMessageAction, sendMessageAction, downloadAttachmentAction } from '@/app/actions'
+import { getMessagesAndAnnouncementsAction, getReceiversAction, readMessageAction, sendMessageAction, downloadAttachmentAction } from '@/app/actions'
 import { addRequestLog } from '@/utils/request-logger.util'
 
 export function useMessagesInbox({ username, password }: { username: string; password: string }) {
@@ -19,13 +19,17 @@ export function useMessagesInbox({ username, password }: { username: string; pas
 
         const cacheKey = `synapse_msg_${username}`
         const cached = localStorage.getItem(cacheKey)
+        let cachedReceiversSnapshot: ReceiverItem[] = []
         if (cached) {
             try {
                 const parsed = JSON.parse(cached)
                 if (Array.isArray(parsed.messages)) setMessages(parsed.messages)
                 if (Array.isArray(parsed.sentMessages)) setSentMessages(parsed.sentMessages)
                 if (Array.isArray(parsed.announcements)) setAnnouncements(parsed.announcements)
-                if (Array.isArray(parsed.receivers)) setReceivers(parsed.receivers)
+                if (Array.isArray(parsed.receivers)) {
+                    setReceivers(parsed.receivers)
+                    cachedReceiversSnapshot = parsed.receivers
+                }
             } catch {}
         } else {
             setMessages([])
@@ -61,13 +65,15 @@ export function useMessagesInbox({ username, password }: { username: string; pas
                         setMessages(mRes.messages || [])
                         setSentMessages(mRes.sentMessages || [])
                         setAnnouncements(mRes.announcements || [])
-                        setReceivers(mRes.receivers || [])
+                        if (mRes.receivers && mRes.receivers.length > 0) {
+                            setReceivers(mRes.receivers)
+                        }
                         setMessagesError(null)
                         localStorage.setItem(cacheKey, JSON.stringify({
                             messages: mRes.messages || [],
                             sentMessages: mRes.sentMessages || [],
                             announcements: mRes.announcements || [],
-                            receivers: mRes.receivers || []
+                            receivers: mRes.receivers && mRes.receivers.length > 0 ? mRes.receivers : cachedReceiversSnapshot
                         }))
                     } else {
                         setMessagesError(mRes.error || 'Błąd ładowania wiadomości')
@@ -91,12 +97,29 @@ export function useMessagesInbox({ username, password }: { username: string; pas
             }
         }
 
-        fetchBundle()
+        // Stagger network fetch slightly if warm cache is available to give priority to main timetable sync
+        const delayMs = cached ? 350 : 0
+        const timer = setTimeout(() => {
+            fetchBundle()
+        }, delayMs)
 
         return () => {
             isCancelled = true
+            clearTimeout(timer)
         }
     }, [username, password])
+
+    const ensureReceivers = useCallback(async (): Promise<ReceiverItem[]> => {
+        if (receivers.length > 0) return receivers
+        try {
+            const res = await getReceiversAction(username, password)
+            if (res.success && res.receivers && res.receivers.length > 0) {
+                setReceivers(res.receivers)
+                return res.receivers
+            }
+        } catch {}
+        return receivers
+    }, [username, password, receivers])
 
     const handleOpenMessage = async (
         msgId: number | string,
@@ -206,14 +229,16 @@ export function useMessagesInbox({ username, password }: { username: string; pas
                 setMessages(mRes.messages || [])
                 setSentMessages(mRes.sentMessages || [])
                 setAnnouncements(mRes.announcements || [])
-                setReceivers(mRes.receivers || [])
+                if (mRes.receivers && mRes.receivers.length > 0) {
+                    setReceivers(mRes.receivers)
+                }
                 setMessagesError(null)
                 const cacheKey = `synapse_msg_${username}`
                 localStorage.setItem(cacheKey, JSON.stringify({
                     messages: mRes.messages || [],
                     sentMessages: mRes.sentMessages || [],
                     announcements: mRes.announcements || [],
-                    receivers: mRes.receivers || []
+                    receivers: mRes.receivers && mRes.receivers.length > 0 ? mRes.receivers : receivers
                 }))
             } else {
                 setMessagesError(mRes.error || 'Błąd ładowania wiadomości')
@@ -239,6 +264,7 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         setCurrentFolder,
         announcements,
         receivers,
+        ensureReceivers,
         isLoadingMessages,
         messagesError,
         handleOpenMessage,

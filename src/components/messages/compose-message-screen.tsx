@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { ReceiverItem } from '@/models/message.model'
 import { AppDictionary } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
@@ -15,6 +15,7 @@ interface ComposeMessageScreenProps {
   initialTitle?: string
   onClose: () => void
   onSend: (receiverIds: number[], title: string, body: string) => Promise<boolean>
+  onLoadReceivers?: () => void
   t: AppDictionary
 }
 
@@ -25,6 +26,7 @@ export function ComposeMessageScreen({
   initialTitle = '',
   onClose,
   onSend,
+  onLoadReceivers,
   t
 }: ComposeMessageScreenProps) {
   const [recipients, setRecipients] = useState<ReceiverItem[]>(initialRecipients)
@@ -33,6 +35,12 @@ export function ComposeMessageScreen({
   const [isSending, setIsSending] = useState(false)
   const [isSent, setIsSent] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
+
+  useEffect(() => {
+    if (isOpen && receivers.length === 0 && onLoadReceivers) {
+      onLoadReceivers()
+    }
+  }, [isOpen, receivers.length, onLoadReceivers])
 
   const handleToggleRecipient = (r: ReceiverItem) => {
     setRecipients((prev) => {

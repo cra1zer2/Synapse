@@ -398,6 +398,33 @@ async function fetchReceiversList(session: NativeLibrusSession): Promise<Receive
     return receiversList
 }
 
+const receiversCache = new Map<string, { data: ReceiverItem[]; expiresAt: number }>()
+
+export async function fetchReceiversOnly(username: string, pass: string): Promise<ReceiverItem[]> {
+    const cleanUser = String(username || '').trim().toLowerCase()
+    const cleanPass = String(pass || '').trim()
+    const now = Date.now()
+
+    const cached = receiversCache.get(cleanUser)
+    if (cached && cached.expiresAt > now && cached.data.length > 0) {
+        return cached.data
+    }
+
+    try {
+        const session = await getNativeLibrusSession(cleanUser, cleanPass)
+        const list = await fetchReceiversList(session)
+        if (list.length > 0) {
+            receiversCache.set(cleanUser, {
+                data: list,
+                expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes cache
+            })
+        }
+        return list
+    } catch {
+        return cached?.data || []
+    }
+}
+
 export async function fetchMessagesBundle(username: string, pass: string): Promise<MessagesActionResult> {
     const bundleStart = performance.now()
     try {
@@ -414,22 +441,23 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
         }
 
         const defaultRef = getDefaultReferer(cleanUser)
-        const inboxFetch = await fetchHtmlWithRetry(
-            cleanUser,
-            cleanPass,
-            'https://synergia.librus.pl/wiadomosci/5',
-            defaultRef
-        )
-        const session = inboxFetch.session
+        // Ensure session is initialized once
+        const session = await getNativeLibrusSession(cleanUser, cleanPass)
 
-        const [annFetch, receiversList, sentFetch] = await Promise.all([
+        // Fetch inbox, announcements and sent lists in parallel
+        const [inboxFetch, annFetch, sentFetch] = await Promise.all([
+            fetchHtmlWithRetry(
+                cleanUser,
+                cleanPass,
+                'https://synergia.librus.pl/wiadomosci/5',
+                defaultRef
+            ).catch(() => ({ session, html: '', ok: false })),
             fetchHtmlWithRetry(
                 cleanUser,
                 cleanPass,
                 'https://synergia.librus.pl/ogloszenia',
                 defaultRef
             ).catch(() => ({ session, html: '', ok: false })),
-            fetchReceiversList(session),
             fetchHtmlWithRetry(
                 cleanUser,
                 cleanPass,
@@ -446,47 +474,33 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
             const announcements = parseAnnouncementsHtml(annFetch.html)
 
             const previewsStart = performance.now()
-            // Populate cached or prefetched content previews for up to 4 most recent messages (keeps mobile fast)
-            const previewCandidates = [
-                ...inboxMessages.filter((m) => m.isRead && Number(m.id) > 0).slice(0, 4).map((m) => ({ msg: m, folderId: 5 })),
-                ...sentMessages.filter((m) => Number(m.id) > 0).slice(0, 2).map((m) => ({ msg: m, folderId: 6 }))
-            ]
-
-            await Promise.all(
-                previewCandidates.map(async ({ msg, folderId }) => {
-                    const cacheKey = `${cleanUser}:${folderId}:${msg.id}`
-                    const cached = messageBodyCache.get(cacheKey)
-                    if (cached) {
-                        msg.content = cached.content
-                        if (cached.attachments.length > 0) msg.attachments = cached.attachments
-                        return
+            // Populate previews only from existing memory cache (never block initial bundle with live preview HTTP requests)
+            for (const msg of inboxMessages) {
+                const cacheKey = `${cleanUser}:5:${msg.id}`
+                const cached = messageBodyCache.get(cacheKey)
+                if (cached) {
+                    msg.content = cached.content
+                    if (cached.attachments && cached.attachments.length > 0) {
+                        msg.attachments = cached.attachments
                     }
-                    try {
-                        const controller = new AbortController()
-                        const timeoutId = setTimeout(() => controller.abort(), 2500)
-                        const res = await session.fetch(`https://synergia.librus.pl/wiadomosci/1/${folderId}/${msg.id}/f0`, {
-                            headers: {
-                                'Referer': `https://synergia.librus.pl/wiadomosci/${folderId}`,
-                                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-                            },
-                            signal: controller.signal
-                        }).finally(() => clearTimeout(timeoutId))
-
-                        if (res.ok) {
-                            const html = await res.text()
-                            const body = extractMessageBodyFromHtml(html)
-                            const attachments = extractMessageAttachmentsFromHtml(html)
-                            if (body) {
-                                msg.content = body
-                                if (attachments.length > 0) msg.attachments = attachments
-                                messageBodyCache.set(cacheKey, { content: body, attachments })
-                            }
-                        }
-                    } catch {}
-                })
-            )
+                }
+            }
+            for (const msg of sentMessages) {
+                const cacheKey = `${cleanUser}:6:${msg.id}`
+                const cached = messageBodyCache.get(cacheKey)
+                if (cached) {
+                    msg.content = cached.content
+                    if (cached.attachments && cached.attachments.length > 0) {
+                        msg.attachments = cached.attachments
+                    }
+                }
+            }
             const previewsMs = Math.round(performance.now() - previewsStart)
             const totalMs = Math.round(performance.now() - bundleStart)
+
+            // Return cached receivers if available, without blocking bundle
+            const cachedRec = receiversCache.get(cleanUser.toLowerCase())
+            const receiversList = cachedRec && cachedRec.expiresAt > Date.now() ? cachedRec.data : []
 
             return {
                 success: true,
@@ -549,7 +563,7 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
                 messages,
                 sentMessages,
                 announcements,
-                receivers: receiversList
+                receivers: []
             }
         } catch (fallbackErr: any) {
             return {

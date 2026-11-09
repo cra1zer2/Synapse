@@ -18,6 +18,7 @@ interface MessagesWidgetProps {
   receivers: ReceiverItem[]
   isComposeOpen?: boolean
   onCloseCompose?: () => void
+  onLoadReceivers?: () => void
   onOpenMessage: (id: number | string, folder?: 'inbox' | 'sent') => Promise<{ content: string; attachments: MessageAttachment[] }>
   onDownloadAttachment?: (att: MessageAttachment) => Promise<boolean>
   onSendMessage: (receiverId: number | number[], title: string, body: string) => Promise<boolean>
@@ -109,6 +110,7 @@ export function MessagesWidget({
   receivers,
   isComposeOpen = false,
   onCloseCompose,
+  onLoadReceivers,
   onOpenMessage,
   onDownloadAttachment,
   onSendMessage,
@@ -458,6 +460,7 @@ export function MessagesWidget({
         initialRecipients={composeInitialRecipients}
         initialTitle={composeInitialTitle}
         onClose={handleCloseComposeModal}
+        onLoadReceivers={onLoadReceivers}
         onSend={async (ids, title, body) => {
           let allOk = true
           for (const id of ids) {

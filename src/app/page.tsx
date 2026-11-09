@@ -1175,6 +1175,7 @@ export default function Home() {
           receivers={messagesInbox.receivers}
           isComposeOpen={showComposeInHeader}
           onCloseCompose={() => setShowComposeInHeader(false)}
+          onLoadReceivers={messagesInbox.ensureReceivers}
           onOpenMessage={messagesInbox.handleOpenMessage}
           onDownloadAttachment={messagesInbox.handleDownloadAttachment}
           onSendMessage={messagesInbox.handleSendMessage}

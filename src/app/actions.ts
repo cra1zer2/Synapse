@@ -7,6 +7,7 @@ import { fetchStudentGrades } from '@/services/grade.service'
 import { fetchAttendanceMetrics } from '@/services/attendance.service'
 import {
     fetchMessagesBundle,
+    fetchReceiversOnly,
     fetchUnreadCounters,
     fetchMessageContent,
     sendMessageToUser,
@@ -235,6 +236,15 @@ export async function getMessagesAndAnnouncementsAction(
     pass: string
 ): Promise<MessagesActionResult> {
     return fetchMessagesBundle(username, pass)
+}
+
+export async function getReceiversAction(username: string, pass: string) {
+    try {
+        const list = await fetchReceiversOnly(username, pass)
+        return { success: true, receivers: list }
+    } catch (err: any) {
+        return { success: false, receivers: [], error: String(err?.message || err) }
+    }
 }
 
 export async function readMessageAction(username: string, pass: string, messageId: number, folderId: number = 5) {

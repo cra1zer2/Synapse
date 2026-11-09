@@ -907,7 +907,6 @@ export default function Home() {
         title={t.grades}
         backLabel={t.backAction}
         isSubView={true}
-        isReceded={Boolean(selectedGradeDetail)}
       >
         {timetable.gradesData ? (
           <GradesWidget
@@ -948,7 +947,6 @@ export default function Home() {
         title={t.schedule}
         backLabel={t.backAction}
         isSubView={true}
-        isReceded={Boolean(selectedLesson || selectedEvent)}
       >
         {timetable.timetableData ? (
           <ScheduleWidget

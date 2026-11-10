@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: 'Smart Librus Synergia Client',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'Synapse'
   }
 }
@@ -59,6 +59,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-[100dvh] flex flex-col bg-[var(--ios-bg)] text-[var(--ios-label)] antialiased" suppressHydrationWarning>
+        <div className="ios-status-shield" aria-hidden="true" />
         {children}
       </body>
     </html>

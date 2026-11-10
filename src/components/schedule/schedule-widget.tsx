@@ -4,8 +4,8 @@ import { useRef, useState, useEffect, useMemo, Fragment } from 'react'
 import { SmartTimetableResult, DaySchedule, LessonItem, TimetableEvent } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { formatSubjectName } from '@/utils/text.util'
-import { TextClampOption } from '@/app/page'
-import { IosCard } from '@/components/ios/ios-ui'
+import { TextClampOption } from '@/hooks/settings.hook'
+import { IosCard, IosBreakDivider } from '@/components/ios/ios-ui'
 import { IosSpinner } from '@/components/ios/ios-spinner'
 import { getDayAbbr, computeLiveWeekDays } from '@/utils/date.util'
 import {
@@ -65,12 +65,10 @@ function getFocusLessonIndex(lessons: LessonItem[], currentMinutes: number): num
 function getDayIndicatorColor(day?: DaySchedule): string | null {
   if (!day) return null
 
-  // Red dot: cancellations or days off / holidays
   const hasCancelled = day.lessons.some((l) => l.isCancelled)
   const hasHoliday = day.events && day.events.some((e) => e.category === 'holiday')
   if (hasCancelled || hasHoliday) return 'bg-[var(--ios-red)]'
 
-  // Blue dot: any tests, quizzes, events, or substitutions happening on this day
   const hasEventsOrExams = day.events && day.events.length > 0
   const hasSubstitution = day.lessons.some((l) => l.isSubstitution)
   const hasShortened = day.lessons.some((l) => l.isShortened)
@@ -83,7 +81,7 @@ function getDayIndicatorColor(day?: DaySchedule): string | null {
 
 function LessonSkeletonRow() {
   return (
-    <div className="w-full bg-[var(--ios-block-bg)] rounded-[16px] p-3.5 flex items-center justify-between gap-3">
+    <div className="w-full bg-[var(--ios-card-solid)] rounded-[14px] p-3.5 flex items-center justify-between gap-3">
       <div className="flex-1 min-w-0 flex flex-col gap-1.5 justify-center py-0.5">
         <div className="w-20 h-[12px] rounded-full ios-skeleton" />
         <div className="w-44 h-[16px] rounded-full ios-skeleton" />
@@ -204,7 +202,7 @@ export function ScheduleWidget({
           <button
             type="button"
             onClick={() => onShiftWeek(-7)}
-            className="w-[34px] h-[34px] rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center active:scale-90 active:opacity-75 transition-[transform,opacity] duration-150 cursor-pointer"
+            className="w-[34px] h-[34px] rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center active:scale-90 transition-transform duration-150 cursor-pointer"
             aria-label="Previous week"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -247,7 +245,7 @@ export function ScheduleWidget({
           <button
             type="button"
             onClick={() => onShiftWeek(7)}
-            className="w-[34px] h-[34px] rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center active:scale-90 active:opacity-75 transition-[transform,opacity] duration-150 cursor-pointer"
+            className="w-[34px] h-[34px] rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center active:scale-90 transition-transform duration-150 cursor-pointer"
             aria-label="Next week"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -261,7 +259,7 @@ export function ScheduleWidget({
             <div
               className="pointer-events-none absolute inset-y-0 left-0 w-1/5 flex flex-col items-center justify-end pb-[4px] transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform"
               style={{
-                transform: `translate3d(${selectedDayIndex * 100}%, 0, 0)`
+                transform: 'translate3d(' + (selectedDayIndex * 100) + '%, 0, 0)'
               }}
             >
               <div className="w-[34px] h-[34px] rounded-full bg-[var(--ios-blue)]" />
@@ -280,16 +278,16 @@ export function ScheduleWidget({
                   className="relative z-10 py-1 flex flex-col items-center justify-center select-none cursor-pointer gap-1 w-full active:scale-[0.94] transition-transform duration-150"
                 >
                   <span className={cn(
-                    "text-[11px] uppercase font-semibold tracking-wide transition-colors duration-150",
-                    isSelected ? "text-[var(--ios-blue)]" : "text-[var(--ios-secondary)]"
+                    'text-[11px] uppercase font-semibold tracking-wide transition-colors duration-150',
+                    isSelected ? 'text-[var(--ios-blue)]' : 'text-[var(--ios-secondary)]'
                   )}>
                     {getDayAbbr(daySlot.dayName, lang)}
                   </span>
                   <span className={cn(
-                    "relative w-[34px] h-[34px] flex items-center justify-center text-[16px] rounded-full transition-colors duration-150 tabular-nums",
+                    'relative w-[34px] h-[34px] flex items-center justify-center text-[16px] rounded-full transition-colors duration-150 tabular-nums',
                     isSelected
-                      ? "text-white font-semibold"
-                      : "text-[var(--ios-label)] font-normal hover:bg-[var(--ios-element)]/35"
+                      ? 'text-white font-semibold'
+                      : 'text-[var(--ios-label)] font-normal hover:bg-[var(--ios-row-hover)]'
                   )}>
                     {daySlot.dateNum}
                     {dotColor && (
@@ -318,7 +316,7 @@ export function ScheduleWidget({
                   const isHoliday = ev.category === 'holiday'
                   const isQuiz = ev.category === 'quiz'
                   const badgeText = ev.eventType || (isHoliday ? 'Dzień wolny' : isQuiz ? 'Kartkówka' : 'Sprawdzian')
-                  const lessonInfo = ev.lessonNumber !== undefined && ev.lessonNumber !== null ? `${t.lessonNumberLabel(ev.lessonNumber)} • ` : ''
+                  const lessonInfo = ev.lessonNumber !== undefined && ev.lessonNumber !== null ? t.lessonNumberLabel(ev.lessonNumber) + ' • ' : ''
                   const displayTitle = ev.subjectName && ev.subjectName !== ev.eventType ? ev.subjectName : ev.title
 
                   return (
@@ -326,9 +324,9 @@ export function ScheduleWidget({
                       key={i}
                       onClick={() => onSelectEvent?.(ev)}
                       className={cn(
-                        'px-3.5 py-2.5 rounded-[14px] text-[13px] font-medium cursor-pointer active:scale-[0.985] active:opacity-80 transition-[transform,opacity] duration-150 flex items-center justify-between',
+                        'px-3.5 py-2.5 rounded-[14px] text-[13px] font-medium cursor-pointer active:scale-[0.985] transition-transform duration-150 flex items-center justify-between',
                         isHoliday
-                          ? 'bg-[var(--ios-teal)]/15 text-[var(--ios-teal)]'
+                          ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
                           : isQuiz
                           ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
                           : ev.category === 'exam'
@@ -338,8 +336,8 @@ export function ScheduleWidget({
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <span className={cn(
-                          'font-semibold uppercase text-[10px] px-2 py-0.5 rounded-full shrink-0',
-                          isHoliday ? 'bg-[var(--ios-teal)] text-white' : isQuiz ? 'bg-[var(--ios-orange)] text-white' : ev.category === 'exam' ? 'bg-[var(--ios-purple)] text-white' : 'bg-[var(--ios-blue)] text-white'
+                          'font-semibold uppercase text-[10px] px-2 py-0.5 rounded-full shrink-0 text-white',
+                          isHoliday ? 'bg-[var(--ios-green)]' : isQuiz ? 'bg-[var(--ios-orange)]' : ev.category === 'exam' ? 'bg-[var(--ios-purple)]' : 'bg-[var(--ios-blue)]'
                         )}>
                           {badgeText}
                         </span>
@@ -370,7 +368,6 @@ export function ScheduleWidget({
                   const isCancelled = Boolean(lesson.isCancelled)
                   const isSub = Boolean(lesson.isSubstitution)
                   const displayTitle = formatSubjectName(lesson.subject, showFullSubjectNames)
-
                   const shouldShowCountdown = breakActive && breakRemaining > 0
 
                   return (
@@ -379,7 +376,7 @@ export function ScheduleWidget({
                         <div
                           onClick={() => onSelectLesson(lesson)}
                           className={cn(
-                            'w-full p-3.5 px-4 flex items-center justify-between gap-3 transition-[background-color,transform] duration-150 cursor-pointer select-none active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20 active:scale-[0.985]',
+                            'w-full p-3.5 px-4 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]',
                             isCancelled && 'opacity-40'
                           )}
                         >
@@ -432,21 +429,13 @@ export function ScheduleWidget({
 
                       {idx < currentDaySchedule.lessons.length - 1 && (
                         shouldShowCountdown ? (
-                          <div className="w-full flex items-center gap-3 px-4 py-1.5 bg-[var(--ios-element)]/10">
-                            <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
-                            <div className="flex items-center gap-1 text-[11px] font-medium text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] animate-pulse px-2.5 py-0.5 rounded-full shrink-0">
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="10" />
-                                <polyline points="12 6 12 12 16 14" />
-                              </svg>
-                              <span className="tabular-nums">
-                                {t.breakCountdownLabel(breakRemaining)}
-                              </span>
-                            </div>
-                            <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
-                          </div>
+                          <IosBreakDivider
+                            minutes={breakMinutes}
+                            isCountdown={true}
+                            countdownText={t.breakCountdownLabel(breakRemaining)}
+                          />
                         ) : (
-                          <div className="h-[1px] bg-[var(--ios-separator)] mx-4" />
+                          <div className="h-[0.5px] bg-[var(--ios-separator)] mx-4" />
                         )
                       )}
                     </Fragment>

@@ -37,17 +37,21 @@ export default function RootLayout({
               try {
                 var theme = localStorage.getItem('synapse_theme') || 'system';
                 var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                var root = document.documentElement;
                 if (isDark) {
-                  document.documentElement.classList.add('dark');
-                  document.documentElement.classList.remove('light');
+                  root.classList.add('dark');
+                  root.classList.remove('light');
                 } else {
-                  document.documentElement.classList.add('light');
-                  document.documentElement.classList.remove('dark');
+                  root.classList.add('light');
+                  root.classList.remove('dark');
                 }
                 var ua = navigator.userAgent || '';
-                var isIPhone = /iPhone/i.test(ua);
-                if (isIPhone) {
-                  document.documentElement.classList.add('is-iphone');
+                if (/iPhone|iPod/i.test(ua)) {
+                  root.classList.add('is-iphone');
+                }
+                var isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+                if (isStandalone) {
+                  root.classList.add('is-standalone');
                 }
               } catch(e) {}
             })()`

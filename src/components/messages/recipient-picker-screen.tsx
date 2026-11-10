@@ -98,15 +98,15 @@ export function RecipientPickerScreen({
                   <div
                     key={r.id}
                     onClick={() => onToggleRecipient(r)}
-                    className="p-3.5 px-4 flex items-center justify-between gap-3 hover:bg-[var(--ios-element)]/25 active:bg-[var(--ios-element)]/55 transition-colors duration-100 cursor-pointer"
+                    className="p-3.5 px-4 flex items-center justify-between gap-3 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150 cursor-pointer"
                   >
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-[15px] font-medium text-[var(--ios-label)] truncate">{r.name}</span>
                       <span className="text-[12px] text-[var(--ios-secondary)]">{capitalize(r.group)}</span>
                     </div>
                     <div className={cn(
-                      'w-[22px] h-[22px] rounded-full flex items-center justify-center border-2 transition-all',
-                      isSelected ? 'bg-[var(--ios-blue)] border-[var(--ios-blue)] text-white' : 'border-[var(--ios-tertiary)] bg-transparent'
+                      'w-[22px] h-[22px] rounded-full flex items-center justify-center border transition-all',
+                      isSelected ? 'bg-[var(--ios-blue)] border-[var(--ios-blue)] text-white' : 'border-[var(--ios-separator)] bg-[var(--bg-card-secondary)]'
                     )}>
                       {isSelected && (
                         <svg className="w-3.5 h-3.5 stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -134,7 +134,7 @@ export function RecipientPickerScreen({
                 <div key={cat} className="flex flex-col">
                   <div
                     onClick={() => setOpenCategory(isCategoryOpen ? null : cat)}
-                    className="p-3.5 px-4 flex items-center justify-between gap-3 hover:bg-[var(--ios-element)]/20 active:bg-[var(--ios-element)]/50 cursor-pointer transition-colors duration-100"
+                    className="p-3.5 px-4 flex items-center justify-between gap-3 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] cursor-pointer transition-colors duration-150"
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-[15px] font-semibold text-[var(--ios-label)]">{cat}</span>
@@ -165,19 +165,19 @@ export function RecipientPickerScreen({
                     'grid transition-all duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]',
                     isCategoryOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
                   )}>
-                    <div className="overflow-hidden divide-y divide-[var(--ios-separator)] bg-[var(--ios-element)]/15 border-t border-[var(--ios-separator)]">
+                    <div className="overflow-hidden divide-y divide-[var(--ios-separator)] bg-[var(--bg-card-secondary)] border-t border-[var(--ios-separator)]">
                       {items.map((r) => {
                         const isSelected = selectedRecipients.some((x) => x.id === r.id)
                         return (
                           <div
                             key={r.id}
                             onClick={() => onToggleRecipient(r)}
-                            className="py-2.5 px-4 pl-6 flex items-center justify-between gap-3 hover:bg-[var(--ios-element)]/20 active:bg-[var(--ios-element)]/50 transition-colors duration-100 cursor-pointer"
+                            className="py-2.5 px-4 pl-6 flex items-center justify-between gap-3 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150 cursor-pointer"
                           >
                             <span className="text-[15px] font-normal text-[var(--ios-label)] truncate">{r.name}</span>
                             <div className={cn(
-                              'w-[22px] h-[22px] rounded-full flex items-center justify-center border-2 transition-all',
-                              isSelected ? 'bg-[var(--ios-blue)] border-[var(--ios-blue)] text-white' : 'border-[var(--ios-tertiary)] bg-transparent'
+                              'w-[22px] h-[22px] rounded-full flex items-center justify-center border transition-all',
+                              isSelected ? 'bg-[var(--ios-blue)] border-[var(--ios-blue)] text-white' : 'border-[var(--ios-separator)] bg-[var(--ios-card-solid)]'
                             )}>
                               {isSelected && (
                                 <svg className="w-3.5 h-3.5 stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">

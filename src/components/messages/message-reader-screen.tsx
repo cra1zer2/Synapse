@@ -81,10 +81,10 @@ export function MessageReaderScreen({
         ) : null
       }
     >
-      <div className="flex flex-col gap-4 pb-16 select-none max-w-3xl mx-auto w-full">
+      <div className="flex flex-col gap-3.5 pb-16 select-none max-w-3xl mx-auto w-full">
         {message ? (
           <>
-            <IosCard className="p-4 sm:p-5 rounded-[20px] flex flex-col gap-2">
+            <IosCard className="p-4 sm:p-5 flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[12px] font-semibold text-[var(--ios-blue)] uppercase tracking-wider truncate">
                   {cleanSenderName(message.sender)}
@@ -94,42 +94,30 @@ export function MessageReaderScreen({
                 </span>
               </div>
 
-              <h2 className="text-[19px] sm:text-[20px] font-bold text-[var(--ios-label)] tracking-tight leading-snug break-words mt-0.5">
+              <h2 className="text-[18px] sm:text-[20px] font-bold text-[var(--ios-label)] tracking-tight leading-snug break-words mt-0.5">
                 {message.subject}
               </h2>
             </IosCard>
 
             {isLoadingContent ? (
-              <div className="flex flex-col gap-5 pt-2 select-none" aria-busy="true" aria-label={t.loadingMessages}>
-                {/* Greeting skeleton */}
+              <IosCard className="p-4 sm:p-5 flex flex-col gap-4 select-none" aria-busy="true">
                 <div className="w-36 h-[13px] rounded-full ios-skeleton" />
-
-                {/* First paragraph skeleton */}
                 <div className="flex flex-col gap-2.5">
                   <div className="w-full h-[13px] rounded-full ios-skeleton" />
                   <div className="w-[94%] h-[13px] rounded-full ios-skeleton" />
-                  <div className="w-[89%] h-[13px] rounded-full ios-skeleton" />
-                  <div className="w-[64%] h-[13px] rounded-full ios-skeleton" />
+                  <div className="w-[88%] h-[13px] rounded-full ios-skeleton" />
+                  <div className="w-[62%] h-[13px] rounded-full ios-skeleton" />
                 </div>
-
-                {/* Second paragraph skeleton */}
                 <div className="flex flex-col gap-2.5">
-                  <div className="w-[96%] h-[13px] rounded-full ios-skeleton" />
-                  <div className="w-[84%] h-[13px] rounded-full ios-skeleton" />
-                  <div className="w-[48%] h-[13px] rounded-full ios-skeleton" />
+                  <div className="w-[92%] h-[13px] rounded-full ios-skeleton" />
+                  <div className="w-[78%] h-[13px] rounded-full ios-skeleton" />
                 </div>
-
-                {/* Sign-off / Signature skeleton */}
-                <div className="flex flex-col gap-2 pt-2">
-                  <div className="w-28 h-[12px] rounded-full ios-skeleton" />
-                  <div className="w-44 h-[13px] rounded-full ios-skeleton" />
-                </div>
-              </div>
+              </IosCard>
             ) : (
               <>
                 {attachments.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    <span className="text-[12px] font-normal uppercase text-[var(--ios-secondary)] tracking-[-0.08px] px-1">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[12px] font-semibold uppercase text-[var(--ios-secondary)] tracking-[0.03em] px-4">
                       Załączniki ({attachments.length})
                     </span>
                     <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
@@ -144,7 +132,7 @@ export function MessageReaderScreen({
                             className="w-full p-3 px-4 flex items-center justify-between gap-3 text-left hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors cursor-pointer disabled:opacity-60"
                           >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
-                              <div className="w-8 h-8 rounded-[10px] bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] flex items-center justify-center shrink-0">
+                              <div className="w-8 h-8 rounded-[8px] bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] flex items-center justify-center shrink-0">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                   <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                                 </svg>
@@ -174,7 +162,7 @@ export function MessageReaderScreen({
                   </div>
                 )}
 
-                <IosCard className="p-4 sm:p-5 rounded-[20px]">
+                <IosCard className="p-4 sm:p-5">
                   <div className="text-[15px] font-normal text-[var(--ios-label)] leading-[1.65] whitespace-pre-wrap select-text">
                     {renderContent(content || t.emptyMessageContent)}
                   </div>

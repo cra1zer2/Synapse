@@ -19,8 +19,8 @@ export function IosCard({
     <div
       onClick={onClick}
       className={cn(
-        'ios-card',
-        onClick && 'cursor-pointer active:scale-[0.985] active:opacity-90 transition-[transform,opacity] duration-150 ease-[cubic-bezier(0.32,0.72,0,1)]',
+        'ios-card rounded-[26px]',
+        onClick && 'cursor-pointer [&:not(:has(button:active))]:active:scale-[0.985] transition-transform duration-150 ease-[cubic-bezier(0.32,0.72,0,1)]',
         className
       )}
     >
@@ -49,22 +49,21 @@ export function IosSegmentedControl<T extends string | number>({
 }) {
   const activeIndex = Math.max(0, options.findIndex((o) => o.id === value))
   const count = Math.max(options.length, 1)
-
-  const heightClass = size === 'compact' ? 'h-[32px]' : 'h-[32px]'
+  const heightClass = size === 'compact' ? 'h-[32px]' : 'h-[36px]'
 
   return (
     <div
       className={cn(
-        'relative bg-[var(--ios-segmented-track)] p-[2px] rounded-full flex items-center select-none',
+        'relative bg-[var(--ios-segmented-track)] p-[3px] rounded-full flex items-center select-none',
         heightClass,
         className
       )}
     >
       <div
-        className="pointer-events-none absolute top-[2px] bottom-[2px] left-[2px] rounded-full bg-[var(--ios-segmented-thumb)] transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform"
+        className="pointer-events-none absolute top-[3px] bottom-[3px] left-[3px] rounded-full bg-[var(--ios-segmented-thumb)] transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform"
         style={{
-          width: `calc((100% - 4px) / ${count})`,
-          transform: `translate3d(${activeIndex * 100}%, 0, 0)`
+          width: 'calc((100% - 6px) / ' + count + ')',
+          transform: 'translate3d(' + (activeIndex * 100) + '%, 0, 0)'
         }}
       />
       {options.map((opt) => {
@@ -75,10 +74,10 @@ export function IosSegmentedControl<T extends string | number>({
             type="button"
             onClick={() => onChange(opt.id)}
             className={cn(
-              'relative z-10 flex-1 h-full rounded-full text-[13px] tracking-[-0.15px] text-center flex items-center justify-center px-2 truncate cursor-pointer select-none transition-[color,transform] duration-150 active:scale-[0.96]',
+              'relative z-10 flex-1 h-full rounded-full text-[13px] tracking-[-0.15px] text-center flex items-center justify-center px-2 truncate cursor-pointer select-none transition-colors duration-150',
               isActive
                 ? 'text-[var(--ios-label)] font-semibold'
-                : 'text-[var(--ios-secondary)] font-medium hover:text-[var(--ios-label)]/80'
+                : 'text-[var(--ios-secondary)] font-medium hover:text-[var(--ios-label)]'
             )}
           >
             <span className="truncate">{opt.label}</span>
@@ -103,14 +102,14 @@ export function IosSearchBar({
   return (
     <div
       className={cn(
-        'w-full h-[40px] bg-[var(--ios-card-solid)] rounded-full px-3.5 flex items-center gap-2.5 select-none transition-all duration-150',
+        'w-full h-[42px] bg-[var(--ios-element)] rounded-full px-4 flex items-center gap-2.5 select-none',
         className
       )}
     >
       <svg
         width="16"
         height="16"
-        className="text-[var(--ios-secondary)] shrink-0 ml-0.5"
+        className="text-[var(--ios-secondary)] shrink-0"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -127,14 +126,14 @@ export function IosSearchBar({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-transparent text-[15px] text-[var(--ios-label)] outline-none placeholder-[var(--ios-secondary)] font-normal tracking-[-0.24px] leading-tight"
+        className="w-full bg-transparent text-[15px] text-[var(--ios-label)] outline-none placeholder-[var(--ios-secondary)] font-normal tracking-[-0.2px] leading-tight"
       />
 
       {value.length > 0 && (
         <button
           type="button"
           onClick={() => onChange('')}
-          className="w-[19px] h-[19px] rounded-full bg-[var(--ios-tertiary)] text-[var(--ios-card-solid)] flex items-center justify-center shrink-0 active:scale-90 active:opacity-75 transition-all cursor-pointer mr-0.5"
+          className="w-[18px] h-[18px] rounded-full bg-[var(--ios-tertiary)] text-[var(--ios-card-solid)] flex items-center justify-center shrink-0 active:scale-90 transition-transform cursor-pointer"
           aria-label="Clear search"
         >
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round">
@@ -157,24 +156,18 @@ export function IosBreakDivider({
   countdownText?: string
 }) {
   return (
-    <div className="w-full flex items-center gap-3 px-4 py-1.5">
+    <div className="w-full flex items-center gap-3 px-4 py-1">
       <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
-      <div
+      <span
         className={cn(
-          'flex items-center gap-1.5 text-[11px] font-medium shrink-0 px-2.5 py-0.5 rounded-full',
+          'text-[11px] font-medium shrink-0 tabular-nums',
           isCountdown
-            ? 'text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] animate-pulse'
-            : 'text-[var(--ios-secondary)] bg-[var(--ios-element)]'
+            ? 'text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] px-2.5 py-0.5 rounded-full font-semibold'
+            : 'text-[var(--ios-tertiary)] px-1'
         )}
       >
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-        <span className="tabular-nums">
-          {isCountdown && countdownText ? countdownText : minutes > 0 ? minutes + ' min' : 'Przerwa'}
-        </span>
-      </div>
+        {isCountdown && countdownText ? countdownText : minutes > 0 ? 'Przerwa ' + minutes + ' min' : 'Przerwa'}
+      </span>
       <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
     </div>
   )

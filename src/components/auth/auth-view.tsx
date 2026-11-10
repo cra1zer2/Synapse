@@ -5,6 +5,7 @@ import { StudentProfile } from '@/models/account.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosListSection, IosCell } from '@/components/ios/ios-list'
 import { IosSpinner } from '@/components/ios/ios-spinner'
+import { cn } from '@/utils/cn.util'
 
 interface AuthViewProps {
   authStep: 'input' | 'verifying' | 'preview'
@@ -78,11 +79,12 @@ export function AuthView({
   const isPasswordFloating = isPasswordFocused || password.length > 0
 
   return (
-    <main className={`w-full flex flex-col justify-between max-w-[402px] mx-auto box-border select-none ${
+    <main className={cn(
+      'w-full flex flex-col justify-between max-w-[480px] mx-auto box-border select-none',
       isSubView
         ? 'pt-1 pb-6 min-h-full'
         : 'min-h-screen bg-[var(--ios-bg)] px-5 sm:px-6 pt-[max(calc(env(safe-area-inset-top,0px)+1rem),1.75rem)] pb-[max(calc(env(safe-area-inset-bottom,0px)+1rem),1.75rem)]'
-    }`}>
+    )}>
       <header className="w-full h-[44px] flex items-center justify-between relative shrink-0">
         {authStep === 'preview' ? (
           <button
@@ -90,15 +92,7 @@ export function AuthView({
             onClick={onBackToInput}
             className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
           >
-            <svg
-              className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
             <span>{t.backAction}</span>
@@ -109,15 +103,7 @@ export function AuthView({
             onClick={onCancel}
             className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
           >
-            <svg
-              className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
             <span>{isSubView ? (t.settingsTitle || t.backAction) : t.backAction}</span>
@@ -135,7 +121,7 @@ export function AuthView({
         <div className="w-[70px] z-10" />
       </header>
 
-      <section className={`w-full flex-1 flex flex-col justify-center ${isSubView ? 'py-2' : 'py-4'}`}>
+      <section className={cn('w-full flex-1 flex flex-col justify-center', isSubView ? 'py-2' : 'py-4')}>
         {authStep === 'input' && (
           <div className="flex flex-col items-center text-center mb-6">
             <h1 className="text-[26px] font-bold text-[var(--ios-label)] tracking-[-0.5px] leading-tight">
@@ -148,32 +134,29 @@ export function AuthView({
         )}
 
         {authError && authStep === 'input' && (
-          <div className="bg-[var(--ios-red-subtle)] text-[var(--ios-red)] text-[13px] font-normal p-3.5 rounded-[18px] mb-4 text-center">
+          <div className="bg-[var(--ios-red-subtle)] text-[var(--ios-red)] text-[13px] font-normal p-3.5 rounded-[14px] mb-4 text-center">
             {authError}
           </div>
         )}
 
         {authStep === 'input' && (
           <form onSubmit={onStartVerification} className="flex flex-col gap-4 w-full">
-            <div className="w-full rounded-[26px] bg-[var(--ios-card-solid)] relative flex flex-col">
-              {/* Login / Username field */}
+            <div className="w-full rounded-[24px] bg-[var(--ios-card-solid)] border border-[var(--ios-card-border)] relative flex flex-col">
               <div
-                onClick={() => {
-                  document.getElementById('username-input')?.focus()
-                }}
-                className={`relative h-[62px] w-full flex items-center px-4 cursor-text rounded-t-[26px] border-2 transition-colors duration-200 select-none ${
-                  isUsernameFocused
-                    ? 'border-[var(--ios-blue)] z-20'
-                    : 'border-transparent z-10'
-                }`}
+                onClick={() => document.getElementById('username-input')?.focus()}
+                className={cn(
+                  'relative h-[62px] w-full flex items-center px-4 cursor-text rounded-t-[24px] border-2 transition-colors duration-200 select-none',
+                  isUsernameFocused ? 'border-[var(--ios-blue)] z-20' : 'border-transparent z-10'
+                )}
               >
                 <label
                   htmlFor="username-input"
-                  className={`absolute left-4 pointer-events-none select-none origin-left transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] text-[var(--ios-secondary)] ${
+                  className={cn(
+                    'absolute left-4 pointer-events-none select-none origin-left transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] text-[var(--ios-secondary)]',
                     isUsernameFloating
                       ? 'top-[9px] translate-y-0 text-[11px] font-medium tracking-tight leading-none'
                       : 'top-1/2 -translate-y-1/2 text-[16px] font-normal tracking-[-0.2px] leading-none'
-                  }`}
+                  )}
                 >
                   {t.loginPlaceholder}
                 </label>
@@ -213,31 +196,28 @@ export function AuthView({
                 </div>
               </div>
 
-              {/* Divider between fields when neither is focused */}
               <div
-                className={`h-[1px] mx-4 bg-[var(--ios-separator)] transition-opacity duration-150 ${
+                className={cn(
+                  'h-[1px] mx-4 bg-[var(--ios-separator)] transition-opacity duration-150',
                   isUsernameFocused || isPasswordFocused ? 'opacity-0' : 'opacity-100'
-                }`}
+                )}
               />
 
-              {/* Password field */}
               <div
-                onClick={() => {
-                  document.getElementById('password-input')?.focus()
-                }}
-                className={`relative h-[62px] w-full flex items-center px-4 cursor-text rounded-b-[26px] border-2 transition-colors duration-200 select-none ${
-                  isPasswordFocused
-                    ? 'border-[var(--ios-blue)] z-20'
-                    : 'border-transparent z-10'
-                }`}
+                onClick={() => document.getElementById('password-input')?.focus()}
+                className={cn(
+                  'relative h-[62px] w-full flex items-center px-4 cursor-text rounded-b-[24px] border-2 transition-colors duration-200 select-none',
+                  isPasswordFocused ? 'border-[var(--ios-blue)] z-20' : 'border-transparent z-10'
+                )}
               >
                 <label
                   htmlFor="password-input"
-                  className={`absolute left-4 pointer-events-none select-none origin-left transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] text-[var(--ios-secondary)] ${
+                  className={cn(
+                    'absolute left-4 pointer-events-none select-none origin-left transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] text-[var(--ios-secondary)]',
                     isPasswordFloating
                       ? 'top-[9px] translate-y-0 text-[11px] font-medium tracking-tight leading-none'
                       : 'top-1/2 -translate-y-1/2 text-[16px] font-normal tracking-[-0.2px] leading-none'
-                  }`}
+                  )}
                 >
                   {t.passwordPlaceholder}
                 </label>
@@ -284,11 +264,12 @@ export function AuthView({
             <button
               type="submit"
               disabled={!isFormValid}
-              className={`h-[50px] w-full rounded-full font-semibold text-[17px] tracking-[-0.3px] transition-all duration-150 flex items-center justify-center select-none mt-1 ${
+              className={cn(
+                'h-[50px] w-full rounded-full font-semibold text-[17px] tracking-[-0.3px] transition-all duration-150 flex items-center justify-center select-none mt-1',
                 isFormValid
-                  ? 'bg-[var(--ios-blue)] text-white active:scale-[0.97] active:opacity-90 cursor-pointer'
-                  : 'bg-[var(--ios-element)] text-[var(--ios-secondary)]/50 cursor-not-allowed'
-              }`}
+                  ? 'bg-[var(--ios-blue)] text-white active:scale-[0.97] cursor-pointer'
+                  : 'bg-[var(--ios-element)] text-[var(--ios-tertiary)] cursor-not-allowed'
+              )}
             >
               {t.verifyButton}
             </button>
@@ -373,14 +354,14 @@ export function AuthView({
               <button
                 type="button"
                 onClick={onConfirmLogin}
-                className="h-[50px] w-full bg-[var(--ios-blue)] text-white text-[17px] font-semibold tracking-[-0.3px] rounded-full active:scale-[0.97] active:opacity-90 transition-[transform,opacity] duration-150 flex items-center justify-center cursor-pointer select-none"
+                className="h-[50px] w-full bg-[var(--ios-blue)] text-white text-[17px] font-semibold tracking-[-0.3px] rounded-full active:scale-[0.97] transition-transform duration-150 flex items-center justify-center cursor-pointer select-none"
               >
                 {t.confirmAndEnter}
               </button>
               <button
                 type="button"
                 onClick={onBackToInput}
-                className="h-[50px] w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-[17px] font-medium tracking-[-0.2px] rounded-full active:scale-[0.97] active:opacity-75 transition-[transform,opacity] duration-150 flex items-center justify-center cursor-pointer select-none"
+                className="h-[50px] w-full bg-[var(--ios-element)] text-[var(--ios-label)] text-[17px] font-medium tracking-[-0.2px] rounded-full active:scale-[0.97] transition-transform duration-150 flex items-center justify-center cursor-pointer select-none"
               >
                 {t.changeData}
               </button>

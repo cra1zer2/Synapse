@@ -3,7 +3,6 @@
 import { MessageItem, AnnouncementItem } from '@/models/message.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
-import { cleanSenderName } from '@/utils/text.util'
 
 interface MiniMessagesWidgetProps {
   unreadCount: number
@@ -24,30 +23,25 @@ interface MiniMessagesWidgetProps {
 export function MiniMessagesWidget({
   unreadCount,
   announcementsCount,
-  latestMessage = null,
-  latestAnnouncement = null,
   isLoading = false,
   error = null,
   onRetry,
   lang = 'pl',
   t,
   onOpenMessages,
-  onOpenAnnouncements,
-  onOpenMessageDetail,
-  onOpenAnnouncementDetail
+  onOpenAnnouncements
 }: MiniMessagesWidgetProps) {
   const isEn = lang === 'en'
 
   return (
     <IosCard className="overflow-hidden flex flex-col select-none">
-      <div className="px-4 pt-3.5 pb-2.5 flex items-center gap-2 border-b border-[var(--ios-separator)]">
-        <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.2px]">
+      <div className="px-4 h-[46px] flex items-center justify-between border-b border-[var(--ios-separator)]">
+        <span className="text-[15px] font-semibold text-[var(--ios-label)] tracking-[-0.2px]">
           {t.messages}
         </span>
       </div>
 
       <div className="flex flex-col">
-        {/* Odebrane Row */}
         <div
           onClick={onOpenMessages}
           className="w-full py-3 px-4 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
@@ -70,8 +64,8 @@ export function MiniMessagesWidget({
                 <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] truncate mt-0.5 tabular-nums">
                   {unreadCount > 0
                     ? isEn
-                      ? `${unreadCount} unread`
-                      : `${unreadCount} nieprzeczytanych`
+                      ? unreadCount + ' unread'
+                      : unreadCount + ' nieprzeczytanych'
                     : isEn
                       ? 'No new messages'
                       : 'Brak nowych wiadomości'}
@@ -90,15 +84,14 @@ export function MiniMessagesWidget({
                 </span>
               )
             )}
-            <svg width="15" height="15" className="text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </div>
         </div>
 
-        <div className="h-[0.5px] bg-[var(--ios-separator)] ml-[60px] mr-4 pointer-events-none" />
+        <div className="h-[1px] bg-[var(--ios-separator)] ml-[60px] mr-4 pointer-events-none" />
 
-        {/* Ogłoszenia Row */}
         <div
           onClick={onOpenAnnouncements}
           className="w-full py-3 px-4 flex items-center justify-between gap-3 transition-colors duration-150 cursor-pointer select-none hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
@@ -135,7 +128,7 @@ export function MiniMessagesWidget({
                 </span>
               )
             )}
-            <svg width="15" height="15" className="text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </div>
@@ -144,15 +137,9 @@ export function MiniMessagesWidget({
 
       {!isLoading && error && unreadCount === 0 && announcementsCount === 0 && (
         <div className="px-4 py-2.5 border-t border-[var(--ios-separator)] flex items-center justify-between gap-2">
-          <span className="text-[12px] font-normal text-[var(--ios-secondary)] truncate">
-            {error}
-          </span>
+          <span className="text-[12px] font-normal text-[var(--ios-secondary)] truncate">{error}</span>
           {onRetry && (
-            <button
-              type="button"
-              onClick={onRetry}
-              className="text-[12px] font-medium text-[var(--ios-blue)] active:opacity-60 cursor-pointer shrink-0"
-            >
+            <button type="button" onClick={onRetry} className="text-[12px] font-medium text-[var(--ios-blue)] active:opacity-60 cursor-pointer shrink-0">
               {t.refresh || 'Odśwież'}
             </button>
           )}

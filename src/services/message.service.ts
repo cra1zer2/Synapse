@@ -3,7 +3,7 @@ import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem, Message
 import { getNativeLibrusSession, invalidateNativeSession, NativeLibrusSession } from '@/services/session.service'
 import { getAuthenticatedClient, invalidateClientSession } from '@/services/librus.service'
 
-const messageBodyCache = new Map<string, { content: string; attachments: MessageAttachment[] }>()
+const messageBodyCacheV2 = new Map<string, { content: string; attachments: MessageAttachment[] }>()
 
 function getDefaultReferer(username: string): string {
     return String(username || '').trim().toLowerCase().endsWith('u')
@@ -226,7 +226,7 @@ function parseSentMessagesHtml(html: string): MessageItem[] {
         messages.push({
             id: id || idx + 1,
             sender: sender || 'Nauczyciel',
-            subject: subject || 'Wiadomość',
+            subject: itemSubjectOrDefault(subject),
             date,
             isRead,
             hasAttachments,
@@ -242,6 +242,10 @@ function parseSentMessagesHtml(html: string): MessageItem[] {
     })
 
     return messages
+}
+
+function itemSubjectOrDefault(s: string): string {
+    return s || 'Wiadomość'
 }
 
 function parseAnnouncementsHtml(html: string): AnnouncementItem[] {
@@ -416,7 +420,7 @@ export async function fetchReceiversOnly(username: string, pass: string): Promis
         if (list.length > 0) {
             receiversCache.set(cleanUser, {
                 data: list,
-                expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes cache
+                expiresAt: Date.now() + 10 * 60 * 1000
             })
         }
         return list
@@ -441,10 +445,8 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
         }
 
         const defaultRef = getDefaultReferer(cleanUser)
-        // Ensure session is initialized once
         const session = await getNativeLibrusSession(cleanUser, cleanPass)
 
-        // Fetch inbox, announcements and sent lists in parallel
         const [inboxFetch, annFetch, sentFetch] = await Promise.all([
             fetchHtmlWithRetry(
                 cleanUser,
@@ -474,10 +476,9 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
             const announcements = parseAnnouncementsHtml(annFetch.html)
 
             const previewsStart = performance.now()
-            // Populate previews only from existing memory cache (never block initial bundle with live preview HTTP requests)
             for (const msg of inboxMessages) {
-                const cacheKey = `${cleanUser}:5:${msg.id}`
-                const cached = messageBodyCache.get(cacheKey)
+                const cacheKey = cleanUser + ':5:' + msg.id
+                const cached = messageBodyCacheV2.get(cacheKey)
                 if (cached) {
                     msg.content = cached.content
                     if (cached.attachments && cached.attachments.length > 0) {
@@ -486,8 +487,8 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
                 }
             }
             for (const msg of sentMessages) {
-                const cacheKey = `${cleanUser}:6:${msg.id}`
-                const cached = messageBodyCache.get(cacheKey)
+                const cacheKey = cleanUser + ':6:' + msg.id
+                const cached = messageBodyCacheV2.get(cacheKey)
                 if (cached) {
                     msg.content = cached.content
                     if (cached.attachments && cached.attachments.length > 0) {
@@ -498,7 +499,6 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
             const previewsMs = Math.round(performance.now() - previewsStart)
             const totalMs = Math.round(performance.now() - bundleStart)
 
-            // Return cached receivers if available, without blocking bundle
             const cachedRec = receiversCache.get(cleanUser.toLowerCase())
             const receiversList = cachedRec && cachedRec.expiresAt > Date.now() ? cachedRec.data : []
 
@@ -516,7 +516,6 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
             }
         }
 
-        // Fallback to librus-api client if native session HTML was rejected
         try {
             invalidateClientSession(cleanUser)
             const client = await getAuthenticatedClient(cleanUser, cleanPass)
@@ -536,7 +535,7 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
                 subject: item.title || item.subject || 'Wiadomość',
                 date: item.date || '',
                 isRead: Boolean(item.read),
-                hasAttachments: Boolean(item.files && item.files.length > 0),
+                hasAttachments: Boolean(item.hasAttachment || (item.files && item.files.length > 0)),
                 folder: 'inbox'
             }))
 
@@ -546,7 +545,7 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
                 subject: item.title || item.subject || 'Wiadomość',
                 date: item.date || '',
                 isRead: Boolean(item.read),
-                hasAttachments: Boolean(item.files && item.files.length > 0),
+                hasAttachments: Boolean(item.hasAttachment || (item.files && item.files.length > 0)),
                 folder: 'sent'
             }))
 
@@ -623,33 +622,58 @@ function extractMessageBodyFromHtml(html: string): string {
 
 function extractMessageAttachmentsFromHtml(html: string): MessageAttachment[] {
     if (!html) return []
-    const $ = cheerio.load(html)
+    const normalizedHtml = html.replace(/\\\//g, '/')
+    const $ = cheerio.load(normalizedHtml)
     const attachments: MessageAttachment[] = []
 
     const names: string[] = []
-    $('img[src*="filetype"]').each((_, elem) => {
+    $('img[src*="filetype"], img[src*="ikona_plik"], img[src*="file"]').each((_, elem) => {
         const text = $(elem).parent().text().replace(/\s+/g, ' ').trim()
-        if (text) names.push(text)
+        if (text && !names.includes(text)) {
+            names.push(text)
+        }
     })
 
     const paths: string[] = []
+    const rowNames: string[] = []
+
     $('img[src*="download"], a[href*="pobierz_zalacznik"], [onclick*="pobierz_zalacznik"]').each((_, elem) => {
-        const onclick = $(elem).attr('onclick') || $(elem).attr('href') || ''
-        const match = onclick.match(/wiadomosci\/pobierz_zalacznik\/[^\s"'\\)]+/i)
+        const rawAttr = ($(elem).attr('onclick') || $(elem).attr('href') || '').replace(/\\\//g, '/')
+        const match = rawAttr.match(/wiadomosci\/pobierz_zalacznik\/[0-9a-zA-Z/_-]+/i)
         if (match && match[0]) {
-            const cleanPath = match[0].replace(/\\/g, '').replace(/^\//, '')
+            const cleanPath = match[0].replace(/^\//, '')
             if (!paths.includes(cleanPath)) {
                 paths.push(cleanPath)
+                const tr = $(elem).closest('tr')
+                if (tr.length > 0) {
+                    const firstTd = tr.find('td').first().text().replace(/\s+/g, ' ').trim()
+                    if (firstTd && !/^(pliki|załączniki):?$/i.test(firstTd)) {
+                        rowNames.push(firstTd)
+                    } else {
+                        rowNames.push('')
+                    }
+                } else {
+                    rowNames.push('')
+                }
             }
         }
     })
 
-    const count = Math.max(names.length, paths.length)
-    for (let i = 0; i < count; i++) {
-        const path = paths[i] || ''
-        if (!path) continue
-        const name = names[i] || `Załącznik ${i + 1}`
-        attachments.push({ name, path })
+    if (paths.length === 0) {
+        const globalMatches = normalizedHtml.matchAll(/wiadomosci\/pobierz_zalacznik\/[0-9a-zA-Z/_-]+/gi)
+        for (const m of globalMatches) {
+            const cleanPath = m[0].replace(/^\//, '')
+            if (!paths.includes(cleanPath)) {
+                paths.push(cleanPath)
+            }
+        }
+    }
+
+    for (let i = 0; i < paths.length; i++) {
+        const filePath = paths[i]
+        if (!filePath) continue
+        const fileName = names[i] || rowNames[i] || ('Załącznik ' + (i + 1))
+        attachments.push({ name: fileName, path: filePath })
     }
 
     return attachments
@@ -664,36 +688,37 @@ export async function fetchMessageContent(
     try {
         const cleanUser = String(username || '').trim()
         const cleanPass = String(pass || '').trim()
-        const cacheKey = `${cleanUser}:${folderId}:${messageId}`
-        const cached = messageBodyCache.get(cacheKey)
-        if (cached && cached.content) {
+        const cacheKey = cleanUser + ':' + folderId + ':' + messageId
+        const cached = messageBodyCacheV2.get(cacheKey)
+        if (cached && cached.content && cached.attachments.length > 0) {
             return { success: true, content: cached.content, attachments: cached.attachments }
         }
 
         const primary = await fetchHtmlWithRetry(
             cleanUser,
             cleanPass,
-            `https://synergia.librus.pl/wiadomosci/1/${folderId}/${messageId}/f0`,
-            `https://synergia.librus.pl/wiadomosci/${folderId}`
+            'https://synergia.librus.pl/wiadomosci/1/' + folderId + '/' + messageId + '/f0',
+            'https://synergia.librus.pl/wiadomosci/' + folderId
         )
 
         let body = extractMessageBodyFromHtml(primary.html)
         let attachments = extractMessageAttachmentsFromHtml(primary.html)
         if (body || attachments.length > 0) {
-            if (body) messageBodyCache.set(cacheKey, { content: body, attachments })
+            if (body) messageBodyCacheV2.set(cacheKey, { content: body, attachments })
             return { success: true, content: body, attachments }
         }
 
         const secondary = await fetchHtmlWithRetry(
             cleanUser,
             cleanPass,
-            `https://synergia.librus.pl/wiadomosci/1/${folderId}/${messageId}`,
-            `https://synergia.librus.pl/wiadomosci/${folderId}`
+            'https://synergia.librus.pl/wiadomosci/1/' + folderId + '/' + messageId,
+            'https://synergia.librus.pl/wiadomosci/' + folderId
         )
 
         body = extractMessageBodyFromHtml(secondary.html)
         attachments = extractMessageAttachmentsFromHtml(secondary.html)
         if (body || attachments.length > 0) {
+            if (body) messageBodyCacheV2.set(cacheKey, { content: body, attachments })
             return { success: true, content: body, attachments }
         }
 
@@ -701,8 +726,8 @@ export async function fetchMessageContent(
         const alt = await fetchHtmlWithRetry(
             cleanUser,
             cleanPass,
-            `https://synergia.librus.pl/wiadomosci/1/${altFolder}/${messageId}/f0`,
-            `https://synergia.librus.pl/wiadomosci/${altFolder}`
+            'https://synergia.librus.pl/wiadomosci/1/' + altFolder + '/' + messageId + '/f0',
+            'https://synergia.librus.pl/wiadomosci/' + altFolder
         )
         body = extractMessageBodyFromHtml(alt.html)
         attachments = extractMessageAttachmentsFromHtml(alt.html)
@@ -710,15 +735,14 @@ export async function fetchMessageContent(
             return { success: true, content: body, attachments }
         }
 
-        // Fallback to librus-api getMessage
         try {
             const client = await getAuthenticatedClient(cleanUser, cleanPass)
             const msgData: any = await client.inbox.getMessage(folderId, messageId)
             const rawContent = typeof msgData === 'string' ? msgData : String(msgData?.content || '')
             const rawFiles = Array.isArray(msgData?.files)
                 ? msgData.files.map((f: any, idx: number) => ({
-                    name: String(f?.name || `Załącznik ${idx + 1}`),
-                    path: String(f?.path || '')
+                    name: String(f?.name || ('Załącznik ' + (idx + 1))),
+                    path: String(f?.path || '').replace(/\\\//g, '/').replace(/^\//, '')
                 })).filter((f: MessageAttachment) => Boolean(f.path))
                 : []
             if (rawContent || rawFiles.length > 0) {
@@ -739,25 +763,33 @@ export async function fetchMessageContent(
 export async function downloadMessageAttachment(
     username: string,
     pass: string,
-    path: string,
+    filePath: string,
     fileName: string
 ): Promise<{ success: boolean; base64?: string; mimeType?: string; fileName?: string; error?: string }> {
     try {
         const cleanUser = String(username || '').trim()
         const cleanPass = String(pass || '').trim()
+        const normalizedPath = filePath.replace(/\\\//g, '/').replace(/^\//, '')
         const client = await getAuthenticatedClient(cleanUser, cleanPass)
-        const stream: any = await client.inbox.getFile(path)
+        const stream: any = await client.inbox.getFile(normalizedPath)
 
-        const chunks: Buffer[] = []
-        await new Promise<void>((resolve, reject) => {
-            stream.on('data', (chunk: Buffer | Uint8Array | string) => {
-                chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+        let fullBuffer: Buffer
+        if (Buffer.isBuffer(stream)) {
+            fullBuffer = stream
+        } else if (typeof stream?.arrayBuffer === 'function') {
+            fullBuffer = Buffer.from(await stream.arrayBuffer())
+        } else {
+            const chunks: Buffer[] = []
+            await new Promise<void>((resolve, reject) => {
+                stream.on('data', (chunk: Buffer | Uint8Array | string) => {
+                    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+                })
+                stream.on('end', () => resolve())
+                stream.on('error', (err: any) => reject(err))
             })
-            stream.on('end', () => resolve())
-            stream.on('error', (err: any) => reject(err))
-        })
+            fullBuffer = Buffer.concat(chunks)
+        }
 
-        const fullBuffer = Buffer.concat(chunks)
         const ext = (fileName.split('.').pop() || '').toLowerCase()
         const mimeMap: Record<string, string> = {
             pdf: 'application/pdf',
@@ -816,7 +848,7 @@ export async function sendMessageToUser(
             formParams.append('DoKogo', String(ids[0]))
         } else {
             ids.forEach((id, index) => {
-                formParams.append(`DoKogo[${index}]`, String(id))
+                formParams.append('DoKogo[' + index + ']', String(id))
             })
         }
         formParams.append('temat', title)

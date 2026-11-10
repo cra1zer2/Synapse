@@ -10,6 +10,21 @@ interface UseAccountSessionOptions {
     t: AppDictionary
 }
 
+function deduplicateSavedAccounts(accounts: SavedAccount[]): SavedAccount[] {
+    const map = new Map<string, SavedAccount>()
+    for (const acc of accounts) {
+        if (!acc || !acc.username) continue
+        const key = acc.username.trim().toLowerCase()
+        const existing = map.get(key)
+        if (!existing) {
+            map.set(key, { ...acc, id: key, username: acc.username.trim() })
+        } else if (acc.isActive) {
+            map.set(key, { ...acc, id: key, username: acc.username.trim(), isActive: true })
+        }
+    }
+    return Array.from(map.values())
+}
+
 export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
     const [isConfigured, setIsConfigured] = useState(false)
     const [username, setUsername] = useState('')
@@ -33,17 +48,20 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         let loadedAccounts: SavedAccount[] = []
         if (savedAccountsJson) {
             try {
-                loadedAccounts = JSON.parse(savedAccountsJson)
+                const parsed = JSON.parse(savedAccountsJson)
+                if (Array.isArray(parsed)) {
+                    loadedAccounts = deduplicateSavedAccounts(parsed)
+                }
             } catch { }
         }
 
-        const savedUser = localStorage.getItem('synapse_user') || ''
+        const savedUser = (localStorage.getItem('synapse_user') || '').trim()
         const savedPass = localStorage.getItem('synapse_pass') || ''
 
         if (loadedAccounts.length === 0 && savedUser && savedPass) {
-            const isStudent = savedUser.trim().toLowerCase().endsWith('u')
+            const isStudent = savedUser.toLowerCase().endsWith('u')
             const initialAccount: SavedAccount = {
-                id: savedUser,
+                id: savedUser.toLowerCase(),
                 username: savedUser,
                 password: savedPass,
                 role: isStudent ? 'student' : 'parent',
@@ -57,7 +75,10 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
                 isActive: true
             }
             loadedAccounts = [initialAccount]
-            localStorage.setItem('synapse_accounts', JSON.stringify([initialAccount]))
+        }
+
+        if (loadedAccounts.length > 0) {
+            localStorage.setItem('synapse_accounts', JSON.stringify(loadedAccounts))
         }
 
         setSavedAccounts(loadedAccounts)
@@ -81,8 +102,10 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         setAuthError(null)
         setAuthStep('verifying')
 
-        const res = await getStudentProfileAction(username, password)
+        const cleanUser = username.trim()
+        const res = await getStudentProfileAction(cleanUser, password)
         if (res.success && res.data) {
+            setUsername(cleanUser)
             setVerifiedCandidate(res.data)
             setAuthStep('preview')
         } else {
@@ -93,13 +116,14 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
 
     const handleConfirmLogin = () => {
         if (!verifiedCandidate) return
-        localStorage.setItem('synapse_user', username)
+        const cleanUser = username.trim()
+        localStorage.setItem('synapse_user', cleanUser)
         localStorage.setItem('synapse_pass', password)
         localStorage.setItem('synapse_lang', lang)
 
         const newAcc: SavedAccount = {
-            id: username,
-            username,
+            id: cleanUser.toLowerCase(),
+            username: cleanUser,
             password,
             role: verifiedCandidate.role,
             profile: verifiedCandidate,
@@ -116,9 +140,10 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
     }
 
     const handleSwitchAccount = (acc: SavedAccount) => {
+        const targetKey = acc.username.trim().toLowerCase()
         const updated = savedAccounts.map((a) => ({
             ...a,
-            isActive: a.id === acc.id
+            isActive: a.username.trim().toLowerCase() === targetKey
         }))
         setSavedAccounts(updated)
         localStorage.setItem('synapse_accounts', JSON.stringify(updated))
@@ -132,13 +157,49 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
     const handleStartAddAccountVerification = async (e: React.FormEvent) => {
         e.preventDefault()
         setAddAccountError(null)
+
+        const cleanCandidateUser = newAccUser.trim()
+        const candidateKey = cleanCandidateUser.toLowerCase()
+
+        const alreadyExists = savedAccounts.some(
+            (a) => a.username.trim().toLowerCase() === candidateKey
+        )
+        if (alreadyExists) {
+            setAddAccountError(
+                lang === 'en'
+                    ? 'This account is already added.'
+                    : 'To konto jest już dodane na tym urządzeniu.'
+            )
+            setAddAccountStep('input')
+            return
+        }
+
         setAddAccountStep('verifying')
         setIsAddingAcc(true)
 
-        const res = await getStudentProfileAction(newAccUser, newAccPass)
+        const res = await getStudentProfileAction(cleanCandidateUser, newAccPass)
         setIsAddingAcc(false)
 
         if (res.success && res.data) {
+            const sameRoleAndPerson = savedAccounts.some(
+                (a) =>
+                    a.role === res.data!.role &&
+                    a.profile?.fullName &&
+                    res.data!.fullName &&
+                    a.profile.fullName.toLowerCase() === res.data!.fullName.toLowerCase() &&
+                    a.username.trim().toLowerCase() === candidateKey
+            )
+            if (sameRoleAndPerson) {
+                setAddAccountError(
+                    lang === 'en'
+                        ? 'This account is already added.'
+                        : 'To konto jest już dodane na tym urządzeniu.'
+                )
+                setAddAccountStep('input')
+                return
+            }
+
+            setNewAccUser(cleanCandidateUser)
             setAddAccountCandidate(res.data)
             setAddAccountStep('preview')
         } else {
@@ -150,15 +211,28 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
     const handleConfirmAddAccount = (): boolean => {
         if (!addAccountCandidate || !newAccUser || !newAccPass) return false
 
+        const cleanUser = newAccUser.trim()
+        const key = cleanUser.toLowerCase()
+
+        if (savedAccounts.some((a) => a.username.trim().toLowerCase() === key)) {
+            setAddAccountError(
+                lang === 'en'
+                    ? 'This account is already added.'
+                    : 'To konto jest już dodane na tym urządzeniu.'
+            )
+            setAddAccountStep('input')
+            return false
+        }
+
         const newAcc: SavedAccount = {
-            id: newAccUser,
-            username: newAccUser,
+            id: key,
+            username: cleanUser,
             password: newAccPass,
             role: addAccountCandidate.role,
             profile: addAccountCandidate,
             isActive: false
         }
-        const updated = [...savedAccounts, newAcc]
+        const updated = deduplicateSavedAccounts([...savedAccounts, newAcc])
         setSavedAccounts(updated)
         localStorage.setItem('synapse_accounts', JSON.stringify(updated))
         setNewAccUser('')

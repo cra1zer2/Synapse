@@ -7,6 +7,7 @@ import { formatSubjectName } from '@/utils/text.util'
 import { IosListSection, IosCell } from '@/components/ios/ios-list'
 import { IosCard } from '@/components/ios/ios-ui'
 import { getPendingJustifications, isLessonJustificationPending } from '@/utils/justification.util'
+import { cn } from '@/utils/cn.util'
 
 interface AttendanceWidgetProps {
   attendanceData: AttendanceResult
@@ -79,7 +80,7 @@ export function AttendanceWidget({
             <p className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight">
               {t.attendanceRate}
             </p>
-            <h2 className={"text-[34px] font-semibold tracking-[-0.8px] leading-none mt-1 tabular-nums " + statusColor}>
+            <h2 className={cn('text-[34px] font-semibold tracking-[-0.8px] leading-none mt-1 tabular-nums', statusColor)}>
               {attendanceData.overallPercentage}%
             </h2>
           </div>
@@ -91,23 +92,23 @@ export function AttendanceWidget({
           </div>
         </div>
 
-        <div className="w-full bg-[var(--ios-element)]/75 h-2 rounded-full overflow-hidden">
+        <div className="w-full bg-[var(--ios-element)] h-[6px] rounded-full overflow-hidden">
           <div
-            className={"h-full rounded-full transition-[width] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] " + barBg}
-            style={{ width: Math.min(Math.max(attendanceData.overallPercentage, 0), 100) + "%" }}
+            className={cn('h-full rounded-full transition-[width] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]', barBg)}
+            style={{ width: Math.min(Math.max(attendanceData.overallPercentage, 0), 100) + '%' }}
           />
         </div>
       </IosCard>
 
       {allowExcuse && (
-        <div className="flex flex-col gap-3 select-none">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-2.5 select-none">
+          <div className="grid grid-cols-2 gap-2.5">
             <IosCard
               onClick={onOpenManualExcuse}
-              className="p-3.5 rounded-[22px] flex flex-col justify-between min-h-[86px]"
+              className="p-3.5 flex flex-col justify-between min-h-[86px] hover:bg-[var(--ios-row-hover)]"
             >
               <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-[8px] bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] flex items-center justify-center">
+                <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-blue)] flex items-center justify-center">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                     <path d="m15 5 4 4"/>
@@ -129,19 +130,20 @@ export function AttendanceWidget({
 
             <IosCard
               onClick={onOpenQuickNb}
-              className="p-3.5 rounded-[22px] flex flex-col justify-between min-h-[86px]"
+              className="p-3.5 flex flex-col justify-between min-h-[86px] hover:bg-[var(--ios-row-hover)]"
             >
               <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-[8px] bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] flex items-center justify-center">
+                <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/>
                     <polyline points="12 6 12 12 16 14"/>
                   </svg>
                 </span>
-                <span className={"text-[12px] font-semibold px-2 py-0.5 rounded-full tabular-nums " + (
+                <span className={cn(
+                  'text-[12px] font-semibold px-2 py-0.5 rounded-full tabular-nums',
                   nbCount > 0
-                    ? "bg-[var(--ios-red-subtle)] text-[var(--ios-red)]"
-                    : "bg-[var(--ios-element)] text-[var(--ios-secondary)]"
+                    ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
+                    : 'bg-[var(--ios-element)] text-[var(--ios-secondary)]'
                 )}>
                   {nbCount} nb
                 </span>
@@ -161,10 +163,10 @@ export function AttendanceWidget({
 
           <IosCard
             onClick={onOpenLiveJustifications}
-            className="p-3.5 px-4 rounded-[26px] flex items-center justify-between gap-3"
+            className="p-3.5 px-4 flex items-center justify-between gap-3 hover:bg-[var(--ios-row-hover)]"
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <span className="w-8 h-8 rounded-[8px] bg-[var(--ios-teal)]/15 text-[var(--ios-teal)] flex items-center justify-center shrink-0">
+              <span className="w-8 h-8 rounded-[10px] bg-[var(--ios-element)] text-[var(--ios-secondary)] flex items-center justify-center shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 11l3 3L22 4" />
                   <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
@@ -210,17 +212,19 @@ export function AttendanceWidget({
                     {formattedTitle}
                   </span>
                   {activeUnexcusedCount > 0 && (
-                    <span className="text-[13px] font-medium text-[var(--ios-red)] shrink-0 tabular-nums">{activeUnexcusedCount} nb</span>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--ios-red)] shrink-0 tabular-nums">
+                      {activeUnexcusedCount} nb
+                    </span>
                   )}
                 </div>
               }
-              subtitle={t.missedLessonsCount(sub.absentLessons) + " " + t.ofScheduled(sub.totalLessons)}
+              subtitle={t.missedLessonsCount(sub.absentLessons) + ' ' + t.ofScheduled(sub.totalLessons)}
               trailing={
                 <span
-                  className={
-                    "text-[16px] tabular-nums tracking-[-0.2px] " +
-                    (isBelowHalf ? "text-[var(--ios-red)] font-semibold" : "text-[var(--ios-label)] font-medium")
-                  }
+                  className={cn(
+                    'text-[16px] tabular-nums tracking-[-0.2px]',
+                    isBelowHalf ? 'text-[var(--ios-red)] font-semibold' : 'text-[var(--ios-label)] font-medium'
+                  )}
                 >
                   {sub.percentage}%
                 </span>

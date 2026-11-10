@@ -3,17 +3,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createJustificationAction, getLiveJustificationsAction } from './actions'
 import { LiveJustificationItem } from '@/models/justification.model'
-import { LessonItem } from '@/models/timetable.model'
+import { LessonItem, TimetableEvent } from '@/models/timetable.model'
 import { SubjectAttendance } from '@/models/attendance.model'
 import { MessageItem, AnnouncementItem } from '@/models/message.model'
 import { GradeItem } from '@/models/grade.model'
-import { getDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
+import { getDictionary, AppLanguage } from '@/config/dictionary.config'
 
 import { useAccountSession } from '@/hooks/account.hook'
 import { useTimetableSync } from '@/hooks/timetable-sync.hook'
 import { useBodyScrollLock } from '@/hooks/scroll-lock.hook'
 import { useMessagesInbox } from '@/hooks/messages.hook'
-import { getTodayIsoString, normalizeToMondayIso, formatHumanPolishDate } from '@/utils/date.util'
+import { useAppSettings, TextClampOption, DashboardWidgetId } from '@/hooks/settings.hook'
+import { normalizeToMondayIso, formatHumanPolishDate } from '@/utils/date.util'
 import { addRequestLog } from '@/utils/request-logger.util'
 
 import { AuthView } from '@/components/auth/auth-view'
@@ -23,10 +24,8 @@ import { LessonDetailModal } from '@/components/schedule/lesson-detail-modal'
 import { EventDetailModal } from '@/components/schedule/event-detail-modal'
 import { AttendanceWidget } from '@/components/attendance/attendance-widget'
 import { AttendanceDetailModal } from '@/components/attendance/attendance-detail-modal'
-import { QuickNbScreen } from '@/components/attendance/quick-nb-screen'
-import { LegacyAttendanceScreen, LegacyAttendanceView } from '@/components/attendance/legacy-attendance-screen'
+import { LegacyAttendanceView } from '@/components/attendance/legacy-attendance-screen'
 import { ManualExcuseScreen } from '@/components/attendance/manual-excuse-screen'
-import { JustificationModal } from '@/components/attendance/justification-modal'
 import { GradesWidget } from '@/components/grades/grades-widget'
 import { GradeDetailModal } from '@/components/grades/grade-detail-modal'
 import { MessagesWidget } from '@/components/messages/messages-widget'
@@ -39,137 +38,39 @@ import { MiniUpcomingEventsWidget } from '@/components/dashboard/mini-upcoming-e
 import { IosScreen, IOS_PARALLAX_PERCENT, IOS_PANEL_TRANSITION } from '@/components/ios/ios-screen'
 import { IosSpinner } from '@/components/ios/ios-spinner'
 import { IosCard, IosSegmentedControl } from '@/components/ios/ios-ui'
-import { cn } from '@/utils/cn.util'
 
-export type TextClampOption = 'full' | '1' | '2'
-export type DashboardWidgetId = 'grades' | 'schedule' | 'upcoming' | 'messages' | 'attendance'
-
-const DEFAULT_DASHBOARD_ORDER: DashboardWidgetId[] = [
-  'grades',
-  'schedule',
-  'upcoming',
-  'messages',
-  'attendance'
-]
-
-const DEFAULT_DASHBOARD_VISIBLE: Record<DashboardWidgetId, boolean> = {
-  grades: true,
-  schedule: true,
-  upcoming: false,
-  messages: true,
-  attendance: true
-}
-
-function syncMetaThemeColor(isDark: boolean) {
-  if (typeof document === 'undefined') return
-  let meta = document.querySelector('meta[name="theme-color"]')
-  const targetColor = isDark ? '#000000' : '#f2f2f7'
-  if (!meta) {
-    meta = document.createElement('meta')
-    meta.setAttribute('name', 'theme-color')
-    document.head.appendChild(meta)
-  }
-  meta.setAttribute('content', targetColor)
-}
+export type { TextClampOption, DashboardWidgetId }
 
 export default function Home() {
-  const [mounted, setMounted] = useState(false)
-  const [isDesktop, setIsDesktop] = useState(false)
-  const [lang, setLang] = useState<AppLanguage>('pl')
+  const settings = useAppSettings()
+  const {
+    mounted,
+    isDesktop,
+    lang,
+    theme,
+    textClamp,
+    showFullSubjectNames,
+    ignoreGradeModifiers,
+    allowStudentJustifications,
+    enableGradeSimulator,
+    showHomeworks,
+    dashboardOrder,
+    dashboardVisible,
+    showLuckyNumberBanner,
+    luckyDismissedDate,
+    todayIsoStr
+  } = settings
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const checkDesktop = () => {
-      const isWide = window.innerWidth >= 768
-      const hasDesktopHeight = window.innerHeight > 550
-      const isMobilePhone = /Android|iPhone|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      setIsDesktop(isWide && hasDesktopHeight && !isMobilePhone)
-    }
-    checkDesktop()
-    window.addEventListener('resize', checkDesktop)
-    window.addEventListener('orientationchange', checkDesktop)
-    return () => {
-      window.removeEventListener('resize', checkDesktop)
-      window.removeEventListener('orientationchange', checkDesktop)
-    }
-  }, [])
-  const [theme, setTheme] = useState<AppTheme>('system')
-  const [textClamp, setTextClamp] = useState<TextClampOption>('full')
-  const [showFullSubjectNames, setShowFullSubjectNames] = useState<boolean>(false)
-  const [ignoreGradeModifiers, setIgnoreGradeModifiers] = useState<boolean>(false)
-  const [allowStudentJustifications, setAllowStudentJustifications] = useState<boolean>(false)
-  const [enableGradeSimulator, setEnableGradeSimulator] = useState<boolean>(false)
-  const [showHomeworks, setShowHomeworks] = useState<boolean>(false)
-  const [dashboardOrder, setDashboardOrder] = useState<DashboardWidgetId[]>(DEFAULT_DASHBOARD_ORDER)
-  const [dashboardVisible, setDashboardVisible] = useState<Record<DashboardWidgetId, boolean>>(DEFAULT_DASHBOARD_VISIBLE)
-  const [showLuckyNumberBanner, setShowLuckyNumberBanner] = useState<boolean>(false)
-  const [luckyDismissedDate, setLuckyDismissedDate] = useState<string>('')
   const [attendanceViewTab, setAttendanceViewTab] = useState<'summary' | 'table'>('summary')
-  const [isLegacyDaySubViewOpen, setIsLegacyDaySubViewOpen] = useState<boolean>(false)
+  const [isLegacyDaySubViewOpen, setIsLegacyDaySubViewOpen] = useState(false)
   const [manualExcuseInitialTab, setManualExcuseInitialTab] = useState<'nb' | 'range' | 'hours'>('range')
 
   const [selectedLesson, setSelectedLesson] = useState<LessonItem | null>(null)
-  const [cachedLesson, setCachedLesson] = useState<LessonItem | null>(null)
-  
-  const [selectedEvent, setSelectedEvent] = useState<any | null>(null)
-  const [cachedEvent, setCachedEvent] = useState<any | null>(null)
-  const [selectedGradeDetail, setSelectedGradeDetail] = useState<{ grade: any; subject: string } | null>(null)
-  const [cachedGradeDetail, setCachedGradeDetail] = useState<{ grade: any; subject: string } | null>(null)
-
-  const handleSelectGrade = (grade: any, subject: string) => {
-    setCachedGradeDetail({ grade, subject })
-    setSelectedGradeDetail({ grade, subject })
-  }
-
-  const handleCloseGrade = () => {
-    setSelectedGradeDetail(null)
-    setTimeout(() => {
-      setCachedGradeDetail(null)
-    }, 320)
-  }
-
-  const handleSelectLesson = (lesson: LessonItem) => {
-    setCachedLesson(lesson)
-    setSelectedLesson(lesson)
-  }
-
-  const handleSelectEvent = (event: any) => {
-    setCachedEvent(event)
-    setSelectedEvent(event)
-  }
-
-  const handleCloseEvent = () => {
-    setSelectedEvent(null)
-    setTimeout(() => {
-      setCachedEvent(null)
-    }, 320)
-  }
-
-  const handleCloseLesson = () => {
-    setSelectedLesson(null)
-    setTimeout(() => {
-      setCachedLesson(null)
-    }, 320)
-  }
-
+  const [selectedEvent, setSelectedEvent] = useState<TimetableEvent | null>(null)
+  const [selectedGradeDetail, setSelectedGradeDetail] = useState<{ grade: GradeItem; subject: string } | null>(null)
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<SubjectAttendance | null>(null)
-  const [cachedDetailItem, setCachedDetailItem] = useState<SubjectAttendance | null>(null)
-
-  const handleOpenSubjectDetail = (sub: SubjectAttendance) => {
-    setCachedDetailItem(sub)
-    setSelectedSubjectDetail(sub)
-  }
-
-  const handleCloseSubjectDetail = () => {
-    setSelectedSubjectDetail(null)
-    setTimeout(() => {
-      setCachedDetailItem(null)
-    }, 350)
-  }
 
   const [showSettings, setShowSettings] = useState(false)
-  const [showExcuseMatrix, setShowExcuseMatrix] = useState(false)
-  const [showQuickNb, setShowQuickNb] = useState(false)
   const [showManualExcuse, setShowManualExcuse] = useState(false)
   const [showFullSchedule, setShowFullSchedule] = useState(false)
   const [showFullUpcoming, setShowFullUpcoming] = useState(false)
@@ -177,29 +78,51 @@ export default function Home() {
   const [showMessagesScreen, setShowMessagesScreen] = useState(false)
   const [showAnnouncementsScreen, setShowAnnouncementsScreen] = useState(false)
   const [showComposeInHeader, setShowComposeInHeader] = useState(false)
-  const [isFolderMenuOpen, setIsFolderMenuOpen] = useState(false)
-  const [showLegacyAttendance, setShowLegacyAttendance] = useState(false)
   const [showFullGrades, setShowFullGrades] = useState(false)
   const [isManualRefreshing, setIsManualRefreshing] = useState(false)
 
   const [directMessageToOpen, setDirectMessageToOpen] = useState<MessageItem | null>(null)
   const [directAnnouncementToOpen, setDirectAnnouncementToOpen] = useState<AnnouncementItem | null>(null)
-
-  const handleOpenDirectMessage = (msg: MessageItem) => {
-    setDirectMessageToOpen(msg)
-    setShowMessagesScreen(true)
-  }
-
-  const handleOpenDirectAnnouncement = (ann: AnnouncementItem) => {
-    setDirectAnnouncementToOpen(ann)
-    setShowAnnouncementsScreen(true)
-  }
-
   const [isMessagesSubViewOpen, setIsMessagesSubViewOpen] = useState(false)
+
   const [showLiveJustifications, setShowLiveJustifications] = useState(false)
   const [liveJustifications, setLiveJustifications] = useState<LiveJustificationItem[]>([])
   const [isLoadingLiveJust, setIsLoadingLiveJust] = useState(false)
   const [liveJustFilter, setLiveJustFilter] = useState<'0' | '1' | '2' | '3'>('0')
+
+  const t = getDictionary(lang)
+  const account = useAccountSession({ lang, t })
+
+  useEffect(() => {
+    setShowSettings(false)
+    setShowFullGrades(false)
+    setShowFullSchedule(false)
+    setShowFullUpcoming(false)
+    setShowFullAttendance(false)
+    setShowMessagesScreen(false)
+    setShowAnnouncementsScreen(false)
+    setShowManualExcuse(false)
+    setShowLiveJustifications(false)
+    setSelectedLesson(null)
+    setSelectedEvent(null)
+    setSelectedSubjectDetail(null)
+    setSelectedGradeDetail(null)
+    setDirectMessageToOpen(null)
+    setDirectAnnouncementToOpen(null)
+    setIsMessagesSubViewOpen(false)
+  }, [account.username])
+
+  const messagesInbox = useMessagesInbox({
+    username: account.username,
+    password: account.password
+  })
+
+  const timetable = useTimetableSync({
+    username: account.username,
+    password: account.password,
+    lang,
+    isConfigured: account.isConfigured
+  })
 
   const handleOpenLiveJustifications = async (status: '0' | '1' | '2' | '3' = '0') => {
     setLiveJustFilter(status)
@@ -220,7 +143,7 @@ export default function Home() {
           name: 'Pobranie statusów usprawiedliwień',
           clientDurationMs,
           status: 'ok',
-          details: `Filtr: ${status}, Elementy: ${res.data.length}`
+          details: 'Filtr: ' + status + ', Elementy: ' + res.data.length
         })
       } else {
         addRequestLog({
@@ -228,7 +151,7 @@ export default function Home() {
           clientDurationMs,
           status: 'error',
           error: res.error,
-          details: `Filtr: ${status}`
+          details: 'Filtr: ' + status
         })
       }
     } catch (err: any) {
@@ -238,65 +161,12 @@ export default function Home() {
         clientDurationMs,
         status: 'error',
         error: err?.message || 'Nieznany błąd',
-        details: `Filtr: ${status}`
+        details: 'Filtr: ' + status
       })
     } finally {
       setIsLoadingLiveJust(false)
     }
   }
-
-  const t = getDictionary(lang)
-
-  const applyTheme = useCallback((targetTheme: AppTheme) => {
-    const root = document.documentElement
-    root.classList.remove('dark', 'light')
-    const isDark =
-      targetTheme === 'dark' ||
-      (targetTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-
-    if (isDark) {
-      root.classList.add('dark')
-    } else {
-      root.classList.add('light')
-    }
-    syncMetaThemeColor(isDark)
-  }, [])
-
-  const account = useAccountSession({ lang, t })
-
-  useEffect(() => {
-    setShowSettings(false)
-    setShowFullGrades(false)
-    setShowFullSchedule(false)
-    setShowFullUpcoming(false)
-    setShowFullAttendance(false)
-    setShowMessagesScreen(false)
-    setShowAnnouncementsScreen(false)
-    setShowQuickNb(false)
-    setShowManualExcuse(false)
-    setShowLegacyAttendance(false)
-    setShowLiveJustifications(false)
-    setSelectedLesson(null)
-    setSelectedEvent(null)
-    setSelectedSubjectDetail(null)
-    setSelectedGradeDetail(null)
-    setDirectMessageToOpen(null)
-    setDirectAnnouncementToOpen(null)
-    setIsMessagesSubViewOpen(false)
-    setIsFolderMenuOpen(false)
-  }, [account.username])
-
-  const messagesInbox = useMessagesInbox({
-    username: account.username,
-    password: account.password
-  })
-
-  const timetable = useTimetableSync({
-    username: account.username,
-    password: account.password,
-    lang,
-    isConfigured: account.isConfigured
-  })
 
   const findSubjectForGrade = useCallback((grade: GradeItem): string => {
     if (grade.subject) return grade.subject
@@ -312,7 +182,7 @@ export default function Home() {
     return ''
   }, [timetable.gradesData])
 
-  const isLevel1Active = Boolean(
+  const isAnyOverlayActive = Boolean(
     showFullGrades ||
     showFullSchedule ||
     showFullUpcoming ||
@@ -320,179 +190,127 @@ export default function Home() {
     showMessagesScreen ||
     showAnnouncementsScreen ||
     showSettings ||
-    showExcuseMatrix
-  )
-
-  const isLevel2Active = Boolean(
-    showQuickNb ||
     showManualExcuse ||
-    showLegacyAttendance ||
     showLiveJustifications ||
     selectedSubjectDetail ||
     isMessagesSubViewOpen
   )
 
-  const isAnyOverlayActive = isLevel1Active || isLevel2Active
+  const isAnySheetActive = Boolean(selectedLesson || selectedEvent || selectedGradeDetail)
+  const hasAnyActiveLayer = isAnyOverlayActive || isAnySheetActive
+  const historyGuardRef = useRef(false)
 
-  useBodyScrollLock(isAnyOverlayActive)
-
-  useEffect(() => {
-    setMounted(true)
-    const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
-    const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
-    const savedClamp = (localStorage.getItem('synapse_text_clamp') as TextClampOption) || 'full'
-    const savedFull = localStorage.getItem('synapse_full_names') === 'true'
-    const savedIgnore = localStorage.getItem('synapse_ignore_modifiers') === 'true'
-    const savedStudentJust = localStorage.getItem('synapse_allow_student_justifications') === 'true'
-    const savedSim = localStorage.getItem('synapse_grade_simulator') === 'true'
-    const savedHw = localStorage.getItem('synapse_show_homeworks') === 'true'
-    const savedLuckyBanner = localStorage.getItem('synapse_show_lucky_banner') === 'true'
-    const savedLuckyDismissed = localStorage.getItem('synapse_lucky_dismissed_date') || ''
-
-    setLang(savedLang)
-    setTheme(savedTheme)
-    setTextClamp(savedClamp)
-    setShowFullSubjectNames(savedFull)
-    setIgnoreGradeModifiers(savedIgnore)
-    setAllowStudentJustifications(savedStudentJust)
-    setEnableGradeSimulator(savedSim)
-    setShowHomeworks(savedHw)
-    setShowLuckyNumberBanner(savedLuckyBanner)
-    setLuckyDismissedDate(savedLuckyDismissed)
-
-    try {
-      const rawOrder = localStorage.getItem('synapse_dashboard_order_v1')
-      if (rawOrder) {
-        const parsed = JSON.parse(rawOrder) as DashboardWidgetId[]
-        if (Array.isArray(parsed) && DEFAULT_DASHBOARD_ORDER.every((k) => parsed.includes(k))) {
-          setDashboardOrder(parsed)
-        }
-      }
-    } catch {}
-
-    try {
-      const rawVis = localStorage.getItem('synapse_dashboard_visible_v1')
-      if (rawVis) {
-        const parsed = JSON.parse(rawVis) as Partial<Record<DashboardWidgetId, boolean>>
-        const merged: Record<DashboardWidgetId, boolean> = {
-          ...DEFAULT_DASHBOARD_VISIBLE,
-          ...parsed
-        }
-        setDashboardVisible(merged)
-      } else {
-        setDashboardVisible(DEFAULT_DASHBOARD_VISIBLE)
-      }
-    } catch {}
-
-    applyTheme(savedTheme)
-  }, [applyTheme])
+  useBodyScrollLock(hasAnyActiveLayer)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    if (hasAnyActiveLayer && !historyGuardRef.current) {
+      window.history.pushState({ synapseLayer: true }, '')
+      historyGuardRef.current = true
+    } else if (!hasAnyActiveLayer) {
+      historyGuardRef.current = false
+    }
+  }, [hasAnyActiveLayer])
 
-    const handleDeepLinking = () => {
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handlePopState = () => {
+      if (selectedLesson || selectedEvent || selectedGradeDetail) {
+        setSelectedLesson(null)
+        setSelectedEvent(null)
+        setSelectedGradeDetail(null)
+        if (isAnyOverlayActive) {
+          window.history.pushState({ synapseLayer: true }, '')
+          historyGuardRef.current = true
+        } else {
+          historyGuardRef.current = false
+        }
+        return
+      }
+
+      if (showLiveJustifications) {
+        setShowLiveJustifications(false)
+        window.history.pushState({ synapseLayer: true }, '')
+        historyGuardRef.current = true
+        return
+      }
+
+      if (showManualExcuse) {
+        setShowManualExcuse(false)
+        window.history.pushState({ synapseLayer: true }, '')
+        historyGuardRef.current = true
+        return
+      }
+
+      if (selectedSubjectDetail) {
+        setSelectedSubjectDetail(null)
+        window.history.pushState({ synapseLayer: true }, '')
+        historyGuardRef.current = true
+        return
+      }
+
+      if (showComposeInHeader) {
+        setShowComposeInHeader(false)
+        window.history.pushState({ synapseLayer: true }, '')
+        historyGuardRef.current = true
+        return
+      }
+
+      if (isAnyOverlayActive) {
+        setShowSettings(false)
+        setShowFullGrades(false)
+        setShowFullSchedule(false)
+        setShowFullUpcoming(false)
+        setShowFullAttendance(false)
+        setShowMessagesScreen(false)
+        setShowAnnouncementsScreen(false)
+        setIsMessagesSubViewOpen(false)
+        setDirectMessageToOpen(null)
+        setDirectAnnouncementToOpen(null)
+        historyGuardRef.current = false
+        return
+      }
+
       try {
         const params = new URLSearchParams(window.location.search)
         const tab = params.get('tab')
-        if (tab === 'grades') {
-          setShowFullGrades(true)
-        } else if (tab === 'messages') {
-          setShowMessagesScreen(true)
-        } else if (tab === 'schedule') {
-          setShowFullSchedule(true)
-        } else if (tab === 'upcoming' || tab === 'events') {
-          setShowFullUpcoming(true)
-        } else if (tab === 'attendance') {
-          setShowFullAttendance(true)
-        }
+        if (tab === 'grades') setShowFullGrades(true)
+        else if (tab === 'messages') setShowMessagesScreen(true)
+        else if (tab === 'schedule') setShowFullSchedule(true)
+        else if (tab === 'upcoming' || tab === 'events') setShowFullUpcoming(true)
+        else if (tab === 'attendance') setShowFullAttendance(true)
       } catch {}
     }
 
-    handleDeepLinking()
-    window.addEventListener('popstate', handleDeepLinking)
-    return () => window.removeEventListener('popstate', handleDeepLinking)
-  }, [])
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const tab = params.get('tab')
+      if (tab === 'grades') setShowFullGrades(true)
+      else if (tab === 'messages') setShowMessagesScreen(true)
+      else if (tab === 'schedule') setShowFullSchedule(true)
+      else if (tab === 'upcoming' || tab === 'events') setShowFullUpcoming(true)
+      else if (tab === 'attendance') setShowFullAttendance(true)
+    } catch {}
 
-  useEffect(() => {
-    if (theme !== 'system') return
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = (e: MediaQueryListEvent) => {
-      const root = document.documentElement
-      root.classList.remove('dark', 'light')
-      if (e.matches) root.classList.add('dark')
-      else root.classList.add('light')
-      syncMetaThemeColor(e.matches)
-    }
-    mediaQuery.addEventListener('change', handler)
-    return () => mediaQuery.removeEventListener('change', handler)
-  }, [theme])
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [
+    selectedLesson,
+    selectedEvent,
+    selectedGradeDetail,
+    showLiveJustifications,
+    showManualExcuse,
+    selectedSubjectDetail,
+    showComposeInHeader,
+    isAnyOverlayActive
+  ])
 
-  const handleSelectLanguage = (newLang: AppLanguage) => {
-    setLang(newLang)
-    localStorage.setItem('synapse_lang', newLang)
-    if (account.isConfigured && account.username && account.password) {
-      timetable.executeSync(account.username, account.password, newLang, timetable.currentWeekPivot, true)
-    }
-  }
-
-  const handleSelectTheme = (newTheme: AppTheme) => {
-    setTheme(newTheme)
-    localStorage.setItem('synapse_theme', newTheme)
-    applyTheme(newTheme)
-  }
-
-  const handleSelectTextClamp = (clamp: TextClampOption) => {
-    setTextClamp(clamp)
-    localStorage.setItem('synapse_text_clamp', clamp)
-  }
-
-  const handleToggleShowFullSubjectNames = (val: boolean) => {
-    setShowFullSubjectNames(val)
-    localStorage.setItem('synapse_full_names', String(val))
-  }
-
-  const handleToggleIgnoreGradeModifiers = (val: boolean) => {
-    setIgnoreGradeModifiers(val)
-    localStorage.setItem('synapse_ignore_modifiers', String(val))
-  }
-
-  const handleToggleAllowStudentJustifications = (val: boolean) => {
-    setAllowStudentJustifications(val)
-    localStorage.setItem('synapse_allow_student_justifications', String(val))
-  }
-
-  const handleToggleEnableGradeSimulator = (val: boolean) => {
-    setEnableGradeSimulator(val)
-    localStorage.setItem('synapse_grade_simulator', String(val))
-  }
-
-  const handleToggleShowHomeworks = (val: boolean) => {
-    setShowHomeworks(val)
-    localStorage.setItem('synapse_show_homeworks', String(val))
-  }
-
-  const handleChangeDashboardOrder = (newOrder: DashboardWidgetId[]) => {
-    setDashboardOrder(newOrder)
-    localStorage.setItem('synapse_dashboard_order_v1', JSON.stringify(newOrder))
-  }
-
-  const handleToggleDashboardWidget = (id: DashboardWidgetId, val: boolean) => {
-    setDashboardVisible((prev) => {
-      const next = { ...prev, [id]: val }
-      localStorage.setItem('synapse_dashboard_visible_v1', JSON.stringify(next))
-      return next
+  const onLanguageChange = (newLang: AppLanguage) => {
+    settings.handleSelectLanguage(newLang, (l) => {
+      if (account.isConfigured && account.username && account.password) {
+        timetable.executeSync(account.username, account.password, l, timetable.currentWeekPivot, true)
+      }
     })
-  }
-
-  const handleToggleShowLuckyNumberBanner = (val: boolean) => {
-    setShowLuckyNumberBanner(val)
-    localStorage.setItem('synapse_show_lucky_banner', String(val))
-  }
-
-  const todayIsoStr = getTodayIsoString()
-  const handleDismissLuckyBanner = () => {
-    setLuckyDismissedDate(todayIsoStr)
-    localStorage.setItem('synapse_lucky_dismissed_date', todayIsoStr)
   }
 
   const handleManualRefresh = async () => {
@@ -519,7 +337,6 @@ export default function Home() {
   })()
 
   const canSubmitExcuse = isCurrentStudent ? allowStudentJustifications : true
-  const hasParentAccess = canSubmitExcuse
 
   const handleSubmitJustifications = async (payload: {
     dateIso?: string
@@ -553,7 +370,6 @@ export default function Home() {
         }, 800)
         return { ok: true }
       }
-      console.warn('[e-usprawiedliwienia] submit failed', { from, to, lessons: payload.lessons, error: res.error })
       return { ok: false, error: res.error || 'Błąd wysyłania usprawiedliwienia' }
     } catch (err: any) {
       return { ok: false, error: String(err?.message || err) }
@@ -576,7 +392,7 @@ export default function Home() {
         onConfirmLogin={account.handleConfirmLogin}
         onBackToInput={() => account.setAuthStep('input')}
         lang={lang}
-        onSelectLanguage={handleSelectLanguage}
+        onSelectLanguage={onLanguageChange}
         t={t}
       />
     )
@@ -585,13 +401,133 @@ export default function Home() {
   const currentDaySchedule = timetable.timetableData?.schedule.find((d) => d.dayName === timetable.selectedDay)
   const activeTodayData = timetable.todayTimetableData || timetable.timetableData
 
+  const renderWidget = (id: DashboardWidgetId, desktopMode: boolean) => {
+    switch (id) {
+      case 'schedule':
+        return (
+          <MiniScheduleWidget
+            key="schedule"
+            timetableData={isManualRefreshing ? null : activeTodayData}
+            isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
+            error={timetable.timetableError}
+            onRetry={handleManualRefresh}
+            textClamp={textClamp}
+            showFullSubjectNames={showFullSubjectNames}
+            lang={lang}
+            t={t}
+            showAllLessons={desktopMode}
+            onSelectLesson={setSelectedLesson}
+            onOpenFullSchedule={(targetDay, targetIsoDate) => {
+              if (targetIsoDate) {
+                const targetMonday = normalizeToMondayIso(targetIsoDate)
+                if (targetMonday !== timetable.currentWeekPivot) {
+                  timetable.queueWeekChange(targetMonday)
+                }
+              }
+              if (targetDay) {
+                timetable.setSelectedDay(targetDay)
+              }
+              setShowFullSchedule(true)
+            }}
+          />
+        )
+      case 'grades':
+        return (
+          <MiniGradesWidget
+            key="grades"
+            gradesData={isManualRefreshing ? null : timetable.gradesData}
+            ignoreGradeModifiers={ignoreGradeModifiers}
+            isLoading={isManualRefreshing || (!timetable.gradesData && timetable.isUpdating && !timetable.gradesError)}
+            error={timetable.gradesError}
+            onRetry={handleManualRefresh}
+            lang={lang}
+            t={t}
+            isDesktop={desktopMode}
+            onOpenGrades={() => setShowFullGrades(true)}
+            onSelectGrade={(g) => setSelectedGradeDetail({ grade: g, subject: desktopMode ? findSubjectForGrade(g) : (g.subject || '') })}
+          />
+        )
+      case 'upcoming':
+        return (
+          <MiniUpcomingEventsWidget
+            key="upcoming"
+            timetableData={isManualRefreshing ? null : (activeTodayData || timetable.timetableData)}
+            isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
+            showHomeworks={showHomeworks}
+            showFullSubjectNames={showFullSubjectNames}
+            lang={lang}
+            t={t}
+            isDesktop={desktopMode}
+            onSelectEvent={setSelectedEvent}
+            onOpenCalendar={() => setShowFullUpcoming(true)}
+          />
+        )
+      case 'attendance':
+        return (
+          <MiniAttendanceWidget
+            key="attendance"
+            attendanceData={isManualRefreshing ? null : timetable.attendanceData}
+            timetableData={isManualRefreshing ? null : activeTodayData}
+            isLoading={isManualRefreshing || (!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError)}
+            error={timetable.attendanceError}
+            onRetry={handleManualRefresh}
+            lang={lang}
+            t={t}
+            isDesktop={desktopMode}
+            onOpenAttendance={() => {
+              setAttendanceViewTab('summary')
+              setShowFullAttendance(true)
+            }}
+            onOpenLegacyAttendance={() => {
+              setAttendanceViewTab('table')
+              setShowFullAttendance(true)
+            }}
+          />
+        )
+      case 'messages':
+        return (
+          <MiniMessagesWidget
+            key="messages"
+            unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
+            announcementsCount={messagesInbox.announcements.length}
+            isLoading={isManualRefreshing || (messagesInbox.isLoadingMessages && messagesInbox.messages.length === 0 && messagesInbox.announcements.length === 0 && !messagesInbox.messagesError)}
+            error={messagesInbox.messagesError}
+            onRetry={messagesInbox.reloadMessages}
+            lang={lang}
+            t={t}
+            latestMessage={messagesInbox.messages[0] || null}
+            latestAnnouncement={messagesInbox.announcements[0] || null}
+            onOpenMessageDetail={(msg) => {
+              setDirectMessageToOpen(msg)
+              setShowMessagesScreen(true)
+            }}
+            onOpenAnnouncementDetail={(ann) => {
+              setDirectAnnouncementToOpen(ann)
+              setShowAnnouncementsScreen(true)
+            }}
+            onOpenMessages={() => setShowMessagesScreen(true)}
+            onOpenAnnouncements={() => setShowAnnouncementsScreen(true)}
+          />
+        )
+    }
+  }
+
+  const visibleMobileIds = dashboardOrder.filter((id) => dashboardVisible[id])
+  const nonScheduleDesktopIds = dashboardOrder.filter((id) => id !== 'schedule' && dashboardVisible[id])
+  const leftDesktopIds: DashboardWidgetId[] = dashboardVisible.schedule
+    ? ['schedule']
+    : nonScheduleDesktopIds.filter((_, idx) => idx % 2 === 0)
+  const rightDesktopIds: DashboardWidgetId[] = dashboardVisible.schedule
+    ? nonScheduleDesktopIds
+    : nonScheduleDesktopIds.filter((_, idx) => idx % 2 === 1)
+
   return (
-    <div className="w-full min-h-screen bg-[var(--ios-bg)] dark:bg-black relative overflow-x-hidden">
+    <div className="w-full min-h-screen bg-[var(--ios-bg)] relative overflow-x-hidden">
       <div
         data-ios-root-panel="true"
         className="w-full min-h-screen flex flex-col bg-[var(--ios-bg)]"
         style={{
-          transform: (!isDesktop && isAnyOverlayActive) ? `translate3d(-${IOS_PARALLAX_PERCENT}%, 0, 0)` : 'translate3d(0, 0, 0)',
+          transform: (!isDesktop && isAnyOverlayActive) ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'translate3d(0, 0, 0)',
           WebkitBackfaceVisibility: 'hidden',
           backfaceVisibility: 'hidden',
           transition: IOS_PANEL_TRANSITION,
@@ -599,12 +535,11 @@ export default function Home() {
           willChange: 'transform'
         }}
       >
-        {/* Mobile Header */}
         <header className="ios-header md:hidden">
-          <div className="relative flex items-center justify-between w-full max-w-[402px] mx-auto h-[44px]">
+          <div className="relative flex items-center justify-between w-full max-w-[480px] mx-auto h-[40px]">
             <div className="z-10 flex items-center min-w-[70px] h-full">
               <div className="relative w-9 h-9 flex items-center justify-center">
-                <div className={"absolute inset-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none " + ((timetable.isUpdating || isManualRefreshing) ? "opacity-100" : "opacity-0")}>
+                <div className={'absolute inset-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none ' + ((timetable.isUpdating || isManualRefreshing) ? 'opacity-100' : 'opacity-0')}>
                   <IosSpinner size="small" className="text-[var(--ios-secondary)]" />
                 </div>
 
@@ -612,7 +547,7 @@ export default function Home() {
                   type="button"
                   onClick={handleManualRefresh}
                   disabled={timetable.isUpdating || isManualRefreshing}
-                  className={"w-9 h-9 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:opacity-60 transition-all duration-300 select-none " + ((timetable.isUpdating || isManualRefreshing) ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100 cursor-pointer")}
+                  className={'w-9 h-9 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:opacity-60 transition-all duration-300 select-none ' + ((timetable.isUpdating || isManualRefreshing) ? 'opacity-0 pointer-events-none scale-90' : 'opacity-100 scale-100 cursor-pointer')}
                   aria-label="Refresh"
                 >
                   <svg width="17" height="17" className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -645,8 +580,7 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Desktop Unified Toolbar */}
-        <header className="hidden md:block sticky top-0 z-30 w-full bg-[var(--ios-nav-bg)]/85 backdrop-blur-xl border-b border-[var(--ios-separator)] select-none">
+        <header style={{ backgroundColor: "var(--ios-header-bg)", WebkitBackdropFilter: "saturate(190%) blur(24px)", backdropFilter: "saturate(190%) blur(24px)" }} className="hidden md:block sticky top-0 z-30 w-full border-b border-[var(--ios-separator)] select-none">
           <div className="relative flex items-center justify-between w-full max-w-[860px] mx-auto px-5 h-[52px]">
             <div className="flex items-center gap-2 min-w-0 z-10">
               <button
@@ -679,7 +613,7 @@ export default function Home() {
 
             <div className="flex items-center gap-2 z-10">
               <div className="flex items-center gap-1.5 text-[12px] text-[var(--ios-secondary)] font-normal pr-1">
-                <div className={"w-3.5 h-3.5 flex items-center justify-center transition-opacity duration-300 " + ((timetable.isUpdating || isManualRefreshing) ? "opacity-100" : "opacity-0")}>
+                <div className={'w-3.5 h-3.5 flex items-center justify-center transition-opacity duration-300 ' + ((timetable.isUpdating || isManualRefreshing) ? 'opacity-100' : 'opacity-0')}>
                   <IosSpinner size="small" className="text-[var(--ios-secondary)]" />
                 </div>
                 <span className="tabular-nums hidden lg:inline">
@@ -719,7 +653,7 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="w-full flex-1 pt-4 md:pt-5 pb-32 px-4 md:px-5 max-w-[402px] md:max-w-[860px] mx-auto flex flex-col gap-4 box-border">
+        <main className="w-full flex-1 pt-4 md:pt-5 pb-32 px-4 md:px-5 max-w-[480px] md:max-w-[860px] mx-auto flex flex-col gap-4 box-border">
           {showLuckyNumberBanner &&
             account.profile?.luckyNumber !== null &&
             account.profile?.luckyNumber !== undefined &&
@@ -727,7 +661,7 @@ export default function Home() {
             account.profile?.classNumber !== undefined &&
             account.profile.classNumber === account.profile.luckyNumber &&
             luckyDismissedDate !== todayIsoStr && (
-              <div className="bg-[var(--ios-card-solid)] px-4 py-3 rounded-[22px] flex items-center justify-between gap-3 select-none">
+              <div className="ios-card px-4 py-3 flex items-center justify-between gap-3 select-none">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-8 h-8 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center font-semibold text-[13px] shrink-0 tabular-nums">
                     #{account.profile.luckyNumber}
@@ -743,7 +677,7 @@ export default function Home() {
                 </div>
                 <button
                   type="button"
-                  onClick={handleDismissLuckyBanner}
+                  onClick={settings.handleDismissLuckyBanner}
                   className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer"
                   aria-label="Zamknij"
                 >
@@ -755,150 +689,18 @@ export default function Home() {
               </div>
             )}
 
-          {timetable.hasNewUpdate && (
-            <div
-              onClick={timetable.applyPendingUpdates}
-              className="bg-[var(--ios-blue)] text-white px-4 py-3 rounded-full flex items-center justify-between cursor-pointer active:scale-[0.985] active:opacity-90 transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <svg className="w-3.5 h-3.5 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg>
-                <p className="text-[13px] font-semibold tracking-tight">{t.newChanges}</p>
-              </div>
-              <span className="text-[12px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">
-                {t.updateNow}
-              </span>
+          <div className="hidden md:grid md:grid-cols-2 gap-4 items-start w-full">
+            <div className="flex flex-col gap-4 w-full">
+              {leftDesktopIds.map((id) => renderWidget(id, true))}
             </div>
-          )}
+            <div className="flex flex-col gap-4 w-full">
+              {rightDesktopIds.map((id) => renderWidget(id, true))}
+            </div>
+          </div>
 
-          {/* DESKTOP LAYOUT (md:grid md:grid-cols-2) */}
-          {(() => {
-            const renderWidget = (id: DashboardWidgetId, desktopMode: boolean) => {
-              switch (id) {
-                case 'schedule':
-                  return (
-                    <MiniScheduleWidget
-                      key="schedule"
-                      timetableData={isManualRefreshing ? null : activeTodayData}
-                      isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
-                      error={timetable.timetableError}
-                      onRetry={handleManualRefresh}
-                      textClamp={textClamp}
-                      showFullSubjectNames={showFullSubjectNames}
-                      lang={lang}
-                      t={t}
-                      showAllLessons={desktopMode}
-                      onSelectLesson={handleSelectLesson}
-                      onOpenFullSchedule={(targetDay, targetIsoDate) => {
-                        if (targetIsoDate) {
-                          const targetMonday = normalizeToMondayIso(targetIsoDate)
-                          if (targetMonday !== timetable.currentWeekPivot) {
-                            timetable.queueWeekChange(targetMonday)
-                          }
-                        }
-                        if (targetDay) {
-                          timetable.setSelectedDay(targetDay)
-                        }
-                        setShowFullSchedule(true)
-                      }}
-                    />
-                  )
-                case 'grades':
-                  return (
-                    <MiniGradesWidget
-                      key="grades"
-                      gradesData={isManualRefreshing ? null : timetable.gradesData}
-                      isLoading={isManualRefreshing || (!timetable.gradesData && timetable.isUpdating && !timetable.gradesError)}
-                      error={timetable.gradesError}
-                      onRetry={handleManualRefresh}
-                      t={t}
-                      isDesktop={desktopMode}
-                      onOpenGrades={() => setShowFullGrades(true)}
-                      onSelectGrade={(g) => handleSelectGrade(g, desktopMode ? findSubjectForGrade(g) : (g.subject || ''))}
-                    />
-                  )
-                case 'upcoming':
-                  return (
-                    <MiniUpcomingEventsWidget
-                      key="upcoming"
-                      timetableData={isManualRefreshing ? null : (activeTodayData || timetable.timetableData)}
-                      isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
-                      showHomeworks={showHomeworks}
-                      showFullSubjectNames={showFullSubjectNames}
-                      lang={lang}
-                      t={t}
-                      isDesktop={desktopMode}
-                      onSelectEvent={handleSelectEvent}
-                      onOpenCalendar={() => setShowFullUpcoming(true)}
-                    />
-                  )
-                case 'attendance':
-                  return (
-                    <MiniAttendanceWidget
-                      key="attendance"
-                      attendanceData={isManualRefreshing ? null : timetable.attendanceData}
-                      timetableData={isManualRefreshing ? null : activeTodayData}
-                      isLoading={isManualRefreshing || (!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError)}
-                      error={timetable.attendanceError}
-                      onRetry={handleManualRefresh}
-                      lang={lang}
-                      t={t}
-                      isDesktop={desktopMode}
-                      onOpenAttendance={() => setShowFullAttendance(true)}
-                      onOpenLegacyAttendance={() => setShowLegacyAttendance(true)}
-                    />
-                  )
-                case 'messages':
-                  return (
-                    <MiniMessagesWidget
-                      key="messages"
-                      unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
-                      announcementsCount={messagesInbox.announcements.length}
-                      isLoading={isManualRefreshing || (messagesInbox.isLoadingMessages && messagesInbox.messages.length === 0 && messagesInbox.announcements.length === 0 && !messagesInbox.messagesError)}
-                      error={messagesInbox.messagesError}
-                      onRetry={messagesInbox.reloadMessages}
-                      lang={lang}
-                      t={t}
-                      latestMessage={messagesInbox.messages[0] || null}
-                      latestAnnouncement={messagesInbox.announcements[0] || null}
-                      onOpenMessageDetail={handleOpenDirectMessage}
-                      onOpenAnnouncementDetail={handleOpenDirectAnnouncement}
-                      onOpenMessages={() => setShowMessagesScreen(true)}
-                      onOpenAnnouncements={() => setShowAnnouncementsScreen(true)}
-                    />
-                  )
-              }
-            }
-
-            const visibleMobileIds = dashboardOrder.filter((id) => dashboardVisible[id])
-            const nonScheduleDesktopIds = dashboardOrder.filter((id) => id !== 'schedule' && dashboardVisible[id])
-            const leftDesktopIds: DashboardWidgetId[] = dashboardVisible.schedule
-              ? ['schedule']
-              : nonScheduleDesktopIds.filter((_, idx) => idx % 2 === 0)
-            const rightDesktopIds: DashboardWidgetId[] = dashboardVisible.schedule
-              ? nonScheduleDesktopIds
-              : nonScheduleDesktopIds.filter((_, idx) => idx % 2 === 1)
-
-            return (
-              <>
-                <div className="hidden md:grid md:grid-cols-2 gap-4 items-start w-full">
-                  <div className="flex flex-col gap-4 w-full">
-                    {leftDesktopIds.map((id) => renderWidget(id, isDesktop))}
-                  </div>
-                  <div className="flex flex-col gap-4 w-full">
-                    {rightDesktopIds.map((id) => renderWidget(id, isDesktop))}
-                  </div>
-                </div>
-
-                {/* MOBILE LAYOUT (md:hidden) */}
-                <div className="flex md:hidden flex-col gap-3.5 w-full">
-                  {visibleMobileIds.map((id) => renderWidget(id, false))}
-                </div>
-              </>
-            )
-          })()}
+          <div className="flex md:hidden flex-col gap-3.5 w-full">
+            {visibleMobileIds.map((id) => renderWidget(id, false))}
+          </div>
         </main>
       </div>
 
@@ -922,7 +724,7 @@ export default function Home() {
             enableGradeSimulator={enableGradeSimulator}
             lang={lang}
             t={t}
-            onSelectGrade={handleSelectGrade}
+            onSelectGrade={(grade, subject) => setSelectedGradeDetail({ grade, subject })}
           />
         ) : timetable.gradesError ? (
           <div className="py-24 flex flex-col items-center justify-center gap-3 px-6 text-center">
@@ -958,9 +760,9 @@ export default function Home() {
           <ScheduleWidget
             timetableData={timetable.timetableData}
             selectedDay={timetable.selectedDay}
-            onSelectDay={(day) => timetable.setSelectedDay(day)}
-            onSelectLesson={handleSelectLesson}
-            onSelectEvent={handleSelectEvent}
+            onSelectDay={timetable.setSelectedDay}
+            onSelectLesson={setSelectedLesson}
+            onSelectEvent={setSelectedEvent}
             currentWeekPivot={timetable.currentWeekPivot}
             onShiftWeek={timetable.shiftWeek}
             onSelectDate={timetable.queueWeekChange}
@@ -1013,7 +815,7 @@ export default function Home() {
           showFullSubjectNames={showFullSubjectNames}
           lang={lang}
           t={t}
-          onSelectEvent={handleSelectEvent}
+          onSelectEvent={setSelectedEvent}
           onRefresh={handleManualRefresh}
         />
       </IosScreen>
@@ -1028,28 +830,26 @@ export default function Home() {
         title={t.attendance}
         backLabel={t.backAction}
         isSubView={true}
-        isReceded={Boolean(selectedSubjectDetail || showQuickNb || showManualExcuse || showLegacyAttendance || showLiveJustifications || isLegacyDaySubViewOpen)}
+        isReceded={Boolean(selectedSubjectDetail || showManualExcuse || showLiveJustifications || isLegacyDaySubViewOpen)}
       >
         {timetable.attendanceData && (
           <div className="w-full flex flex-col gap-3.5">
-            <div className="w-full flex justify-center">
-              <IosSegmentedControl<'summary' | 'table'>
-                value={attendanceViewTab}
-                onChange={(val) => setAttendanceViewTab(val)}
-                options={[
-                  { id: 'summary', label: lang === 'en' ? 'Subjects' : 'Przedmioty' },
-                  { id: 'table', label: lang === 'en' ? 'Journal' : 'Dziennik' }
-                ]}
-                className="w-full max-w-sm"
-              />
-            </div>
+            <IosSegmentedControl<'summary' | 'table'>
+              value={attendanceViewTab}
+              onChange={setAttendanceViewTab}
+              options={[
+                { id: 'summary', label: lang === 'en' ? 'Subjects' : 'Przedmioty' },
+                { id: 'table', label: lang === 'en' ? 'Journal' : 'Dziennik' }
+              ]}
+              className="w-full"
+            />
 
             {attendanceViewTab === 'summary' ? (
               <AttendanceWidget
                 attendanceData={timetable.attendanceData}
                 lang={lang}
                 showFullSubjectNames={showFullSubjectNames}
-                onSelectSubject={handleOpenSubjectDetail}
+                onSelectSubject={setSelectedSubjectDetail}
                 isStudent={isCurrentStudent}
                 canSubmitExcuse={canSubmitExcuse}
                 onOpenManualExcuse={() => {
@@ -1077,38 +877,25 @@ export default function Home() {
       </IosScreen>
 
       <GradeDetailModal
-        gradeDetail={selectedGradeDetail || cachedGradeDetail}
+        gradeDetail={selectedGradeDetail}
         isOpen={Boolean(selectedGradeDetail)}
-        onClose={handleCloseGrade}
+        onClose={() => setSelectedGradeDetail(null)}
         t={t}
       />
 
       <LessonDetailModal
-        lesson={selectedLesson || cachedLesson}
-        onClose={handleCloseLesson}
+        lesson={selectedLesson}
+        onClose={() => setSelectedLesson(null)}
         isToday={Boolean(currentDaySchedule?.isToday)}
         t={t}
       />
 
       <EventDetailModal
-        event={selectedEvent || cachedEvent}
+        event={selectedEvent}
         isOpen={Boolean(selectedEvent)}
-        onClose={handleCloseEvent}
+        onClose={() => setSelectedEvent(null)}
         t={t}
       />
-
-      {timetable.attendanceData && (
-        <QuickNbScreen
-          isOpen={showQuickNb}
-          onClose={() => setShowQuickNb(false)}
-          attendanceData={timetable.attendanceData}
-          canSubmitExcuse={canSubmitExcuse}
-          showFullSubjectNames={showFullSubjectNames}
-          onSubmitMultiple={handleSubmitJustifications}
-          lang={lang}
-          t={t}
-        />
-      )}
 
       {timetable.attendanceData && (
         <ManualExcuseScreen
@@ -1125,35 +912,13 @@ export default function Home() {
         />
       )}
 
-      {timetable.attendanceData && (
-        <LegacyAttendanceScreen
-          isOpen={showLegacyAttendance}
-          onClose={() => setShowLegacyAttendance(false)}
-          attendanceData={timetable.attendanceData}
-          showFullSubjectNames={showFullSubjectNames}
-          lang={lang}
-          t={t}
-        />
-      )}
-
       <AttendanceDetailModal
-        subjectDetail={selectedSubjectDetail || cachedDetailItem}
+        subjectDetail={selectedSubjectDetail}
         isOpen={Boolean(selectedSubjectDetail)}
-        onClose={handleCloseSubjectDetail}
+        onClose={() => setSelectedSubjectDetail(null)}
         showFullSubjectNames={showFullSubjectNames}
         t={t}
       />
-
-      {showExcuseMatrix && timetable.attendanceData && (
-        <JustificationModal
-          attendanceData={timetable.attendanceData}
-          timetableData={timetable.timetableData}
-          canSubmitExcuse={canSubmitExcuse}
-          onClose={() => setShowExcuseMatrix(false)}
-          onSubmitMultiple={handleSubmitJustifications}
-          t={t}
-        />
-      )}
 
       <IosScreen
         isOpen={showMessagesScreen}
@@ -1161,7 +926,6 @@ export default function Home() {
           setShowMessagesScreen(false)
           setIsMessagesSubViewOpen(false)
           setShowComposeInHeader(false)
-          setIsFolderMenuOpen(false)
           setDirectMessageToOpen(null)
           if (typeof window !== 'undefined' && window.location.search.includes('tab=messages')) {
             window.history.replaceState({}, '', window.location.pathname)
@@ -1174,10 +938,7 @@ export default function Home() {
         trailing={
           <button
             type="button"
-            onClick={() => {
-              setIsFolderMenuOpen(false)
-              setShowComposeInHeader(true)
-            }}
+            onClick={() => setShowComposeInHeader(true)}
             className="text-[var(--ios-blue)] text-[17px] font-normal leading-none active:opacity-60 select-none h-full flex items-center pl-2 cursor-pointer"
           >
             {t.writeNewMessage || 'Napisz'}
@@ -1185,39 +946,34 @@ export default function Home() {
         }
       >
         <div className="w-full flex flex-col gap-3.5">
-          <div className="w-full flex justify-center">
-            <IosSegmentedControl
-              options={[
-                { id: 'inbox', label: t.messagesInbox },
-                { id: 'sent', label: lang === 'en' ? 'Sent' : 'Wysłane' }
-              ]}
-              value={messagesInbox.currentFolder}
-              onChange={(val) => messagesInbox.setCurrentFolder(val as 'inbox' | 'sent')}
-              className="w-full max-w-sm"
-            />
-          </div>
+          <IosSegmentedControl
+            options={[
+              { id: 'inbox', label: t.messagesInbox },
+              { id: 'sent', label: lang === 'en' ? 'Sent' : 'Wysłane' }
+            ]}
+            value={messagesInbox.currentFolder}
+            onChange={(val) => messagesInbox.setCurrentFolder(val as 'inbox' | 'sent')}
+            className="w-full"
+          />
 
           <MessagesWidget
-          mode="messages"
-          folder={messagesInbox.currentFolder}
-          messages={messagesInbox.currentFolder === 'sent' ? messagesInbox.sentMessages : messagesInbox.messages}
-          announcements={messagesInbox.announcements}
-          receivers={messagesInbox.receivers}
-          isComposeOpen={showComposeInHeader}
-          onCloseCompose={() => setShowComposeInHeader(false)}
-          onLoadReceivers={messagesInbox.ensureReceivers}
-          onOpenMessage={messagesInbox.handleOpenMessage}
-          onDownloadAttachment={messagesInbox.handleDownloadAttachment}
-          onSendMessage={messagesInbox.handleSendMessage}
-          isLoading={messagesInbox.isLoadingMessages}
-          lang={lang}
-          t={t}
-          initialSelectedMessage={directMessageToOpen}
-          onSubViewChange={(isOpen) => {
-            setIsMessagesSubViewOpen(isOpen)
-            if (isOpen) setIsFolderMenuOpen(false)
-          }}
-        />
+            mode="messages"
+            folder={messagesInbox.currentFolder}
+            messages={messagesInbox.currentFolder === 'sent' ? messagesInbox.sentMessages : messagesInbox.messages}
+            announcements={messagesInbox.announcements}
+            receivers={messagesInbox.receivers}
+            isComposeOpen={showComposeInHeader}
+            onCloseCompose={() => setShowComposeInHeader(false)}
+            onLoadReceivers={messagesInbox.ensureReceivers}
+            onOpenMessage={messagesInbox.handleOpenMessage}
+            onDownloadAttachment={messagesInbox.handleDownloadAttachment}
+            onSendMessage={messagesInbox.handleSendMessage}
+            isLoading={messagesInbox.isLoadingMessages}
+            lang={lang}
+            t={t}
+            initialSelectedMessage={directMessageToOpen}
+            onSubViewChange={setIsMessagesSubViewOpen}
+          />
         </div>
       </IosScreen>
 
@@ -1266,7 +1022,7 @@ export default function Home() {
           </button>
         }
       >
-        <div className="flex flex-col gap-3.5 pb-16 select-none max-w-2xl mx-auto w-full">
+        <div className="flex flex-col gap-3.5 pb-16 select-none w-full">
           <IosSegmentedControl<'0' | '1' | '2' | '3'>
             value={liveJustFilter}
             onChange={(id) => handleOpenLiveJustifications(id)}
@@ -1297,19 +1053,19 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <span className={"text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 " + (
+                    <span className={'text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 ' + (
                       item.statusCode === 'accepted'
-                        ? "bg-[var(--ios-green-subtle)] text-[var(--ios-green)]"
+                        ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
                         : item.statusCode === 'rejected'
-                        ? "bg-[var(--ios-red-subtle)] text-[var(--ios-red)]"
-                        : "bg-[var(--ios-yellow)]/15 text-[var(--ios-yellow)] dark:text-[#ffd60a]"
+                        ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
+                        : 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
                     )}>
                       {item.statusCode === 'accepted' ? 'Przyjęte' : item.statusCode === 'rejected' ? 'Odrzucone' : 'Oczekuje'}
                     </span>
                   </div>
 
                   {item.comment && (
-                    <div className="bg-[var(--bg-card-secondary)] p-3 rounded-[14px] text-[13px] text-[var(--ios-label)] border-none">
+                    <div className="bg-[var(--bg-card-secondary)] p-3 rounded-[16px] text-[13px] text-[var(--ios-label)]">
                       <span className="text-[var(--ios-secondary)]">Uzasadnienie: </span>{item.comment}
                     </div>
                   )}
@@ -1336,9 +1092,7 @@ export default function Home() {
         onClose={() => setShowSettings(false)}
         profile={account.profile}
         savedAccounts={account.savedAccounts}
-        onSwitchAccount={(acc) => {
-          account.handleSwitchAccount(acc)
-        }}
+        onSwitchAccount={account.handleSwitchAccount}
         onAddAccount={account.handleAddSecondaryAccount}
         onConfirmAddAccount={account.handleConfirmAddAccount}
         onResetAddAccount={account.handleResetAddAccount}
@@ -1352,28 +1106,28 @@ export default function Home() {
         setNewPassword={account.setNewAccPass}
         isAddingAccount={account.isAddingAcc}
         currentLang={lang}
-        onSelectLang={handleSelectLanguage}
+        onSelectLang={onLanguageChange}
         currentTheme={theme}
-        onSelectTheme={handleSelectTheme}
+        onSelectTheme={settings.handleSelectTheme}
         textClamp={textClamp}
-        onSelectTextClamp={handleSelectTextClamp}
+        onSelectTextClamp={settings.handleSelectTextClamp}
         showFullSubjectNames={showFullSubjectNames}
-        onToggleShowFullSubjectNames={handleToggleShowFullSubjectNames}
+        onToggleShowFullSubjectNames={settings.handleToggleShowFullSubjectNames}
         ignoreGradeModifiers={ignoreGradeModifiers}
-        onToggleIgnoreGradeModifiers={handleToggleIgnoreGradeModifiers}
+        onToggleIgnoreGradeModifiers={settings.handleToggleIgnoreGradeModifiers}
         enableGradeSimulator={enableGradeSimulator}
-        onToggleEnableGradeSimulator={handleToggleEnableGradeSimulator}
+        onToggleEnableGradeSimulator={settings.handleToggleEnableGradeSimulator}
         showHomeworks={showHomeworks}
-        onToggleShowHomeworks={handleToggleShowHomeworks}
+        onToggleShowHomeworks={settings.handleToggleShowHomeworks}
         dashboardOrder={dashboardOrder}
-        onChangeDashboardOrder={handleChangeDashboardOrder}
+        onChangeDashboardOrder={settings.handleChangeDashboardOrder}
         dashboardVisible={dashboardVisible}
-        onToggleDashboardWidget={handleToggleDashboardWidget}
+        onToggleDashboardWidget={settings.handleToggleDashboardWidget}
         showLuckyNumberBanner={showLuckyNumberBanner}
-        onToggleShowLuckyNumberBanner={handleToggleShowLuckyNumberBanner}
+        onToggleShowLuckyNumberBanner={settings.handleToggleShowLuckyNumberBanner}
         isStudent={isCurrentStudent}
         allowStudentJustifications={allowStudentJustifications}
-        onToggleAllowStudentJustifications={handleToggleAllowStudentJustifications}
+        onToggleAllowStudentJustifications={settings.handleToggleAllowStudentJustifications}
         onLogout={account.handleLogout}
         t={t}
       />

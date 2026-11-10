@@ -48,6 +48,7 @@ benchmark*.json
 AGENTS.md
 CLAUDE.md
 dump.mjs
+run.mjs
 update.mjs
 fix-and-deploy.mjs
 download_figma.sh

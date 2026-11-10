@@ -1,11 +1,13 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { SubjectAttendance, AbsenceDetail } from '@/models/attendance.model'
 import { AppDictionary } from '@/config/dictionary.config'
 import { IosScreen } from '@/components/ios/ios-screen'
 import { IosCard } from '@/components/ios/ios-ui'
 import { formatSubjectName } from '@/utils/text.util'
 import { getPendingJustifications, isLessonJustificationPending } from '@/utils/justification.util'
+import { cn } from '@/utils/cn.util'
 
 interface AttendanceDetailModalProps {
   subjectDetail: SubjectAttendance | null
@@ -23,9 +25,18 @@ export function AttendanceDetailModal({
   showFullSubjectNames = false,
   t
 }: AttendanceDetailModalProps) {
-  const shortTitle = formatSubjectName(subjectDetail?.subject || '', showFullSubjectNames)
-  const isDanger = (subjectDetail?.percentage ?? 100) < 50.0
-  const isWarning = (subjectDetail?.percentage ?? 100) >= 50.0 && (subjectDetail?.percentage ?? 100) < 75.0
+  const [cached, setCached] = useState<SubjectAttendance | null>(subjectDetail)
+
+  useEffect(() => {
+    if (subjectDetail) {
+      setCached(subjectDetail)
+    }
+  }, [subjectDetail])
+
+  const activeData = subjectDetail || cached
+  const shortTitle = formatSubjectName(activeData?.subject || '', showFullSubjectNames)
+  const isDanger = (activeData?.percentage ?? 100) < 50.0
+  const isWarning = (activeData?.percentage ?? 100) >= 50.0 && (activeData?.percentage ?? 100) < 75.0
 
   const statusColor = isDanger
     ? 'text-[var(--ios-red)]'
@@ -33,7 +44,7 @@ export function AttendanceDetailModal({
       ? 'text-[var(--ios-orange)]'
       : 'text-[var(--ios-label)]'
 
-  const absences = subjectDetail?.absences || []
+  const absences = activeData?.absences || []
   const pendingList = getPendingJustifications()
 
   return (
@@ -52,20 +63,20 @@ export function AttendanceDetailModal({
             <p className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight">
               {t.subjectAttendance}
             </p>
-            <h2 className={"text-[34px] font-semibold tracking-[-0.8px] leading-none mt-1 tabular-nums " + statusColor}>
-              {subjectDetail?.percentage ?? 0}%
+            <h2 className={cn('text-[34px] font-semibold tracking-[-0.8px] leading-none mt-1 tabular-nums', statusColor)}>
+              {activeData?.percentage ?? 0}%
             </h2>
           </div>
 
           <div className="text-right">
             <span className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] tabular-nums">
-              {subjectDetail?.absentLessons ?? 0} / {subjectDetail?.totalLessons ?? 0} opuszczonych
+              {activeData?.absentLessons ?? 0} / {activeData?.totalLessons ?? 0} opuszczonych
             </span>
           </div>
         </IosCard>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-normal uppercase text-[var(--ios-secondary)] tracking-[-0.08px] px-4 select-none">
+          <span className="text-[12px] font-semibold uppercase text-[var(--ios-secondary)] tracking-[0.03em] px-4 select-none">
             {t.recordedAbsencesTitle}
           </span>
 
@@ -87,17 +98,17 @@ export function AttendanceDetailModal({
                       </div>
 
                       {isPending ? (
-                        <span className="text-[12px] font-medium text-[var(--ios-yellow)] dark:text-[#ffd60a] tracking-[-0.1px] tabular-nums">
-                          oczekuje
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] tabular-nums">
+                          {t.pendingJustification}
                         </span>
                       ) : (
                         <span
-                          className={
-                            "text-[13px] font-medium tracking-[-0.1px] tabular-nums " +
-                            (item.isUnexcused
-                              ? "text-[var(--ios-red)]"
-                              : "text-[var(--ios-green)]")
-                          }
+                          className={cn(
+                            'text-[12px] font-semibold px-2 py-0.5 rounded-full tabular-nums',
+                            item.isUnexcused
+                              ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
+                              : 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
+                          )}
                         >
                           {item.type.toLowerCase()}
                         </span>

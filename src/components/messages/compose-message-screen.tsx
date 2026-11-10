@@ -37,6 +37,13 @@ export function ComposeMessageScreen({
   const [showPicker, setShowPicker] = useState(false)
 
   useEffect(() => {
+    if (isOpen) {
+      setRecipients(initialRecipients)
+      setTitle(initialTitle)
+    }
+  }, [isOpen, initialRecipients, initialTitle])
+
+  useEffect(() => {
     if (isOpen && receivers.length === 0 && onLoadReceivers) {
       onLoadReceivers()
     }
@@ -64,6 +71,7 @@ export function ComposeMessageScreen({
 
     if (success) {
       setIsSent(true)
+      setBody('')
       setTimeout(() => {
         setIsSent(false)
         onClose()
@@ -94,7 +102,7 @@ export function ComposeMessageScreen({
           </button>
         }
       >
-        <div className="flex flex-col gap-4 pb-16 select-none max-w-2xl mx-auto w-full">
+        <div className="flex flex-col gap-3.5 pb-16 select-none max-w-2xl mx-auto w-full">
           {isSent ? (
             <IosCard className="p-8 flex flex-col items-center justify-center gap-3 text-center">
               <div className="w-12 h-12 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center text-[22px] font-bold">
@@ -103,7 +111,7 @@ export function ComposeMessageScreen({
               <h3 className="text-[17px] font-bold text-[var(--ios-label)]">{t.messageSent}</h3>
             </IosCard>
           ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
               <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
                 <div className="p-3 px-4 flex items-center gap-3 min-h-[50px]">
                   <span className="w-14 text-[15px] font-normal text-[var(--ios-secondary)] shrink-0">
@@ -145,21 +153,21 @@ export function ComposeMessageScreen({
                     placeholder={t.subjectPlaceholder}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-transparent text-[15px] text-[var(--ios-label)] placeholder-[var(--ios-secondary)]/50 font-normal outline-none"
+                    className="w-full bg-transparent text-[15px] text-[var(--ios-label)] placeholder-[var(--ios-secondary)] font-normal outline-none"
                     required
                   />
                 </div>
               </IosCard>
 
-              <div className="pt-2 px-1">
+              <IosCard className="p-4">
                 <textarea
                   placeholder={t.messagePlaceholder}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  className="w-full bg-transparent text-[15px] text-[var(--ios-label)] placeholder-[var(--ios-secondary)]/50 font-normal outline-none resize-none min-h-[300px] leading-relaxed"
+                  className="w-full bg-transparent text-[15px] text-[var(--ios-label)] placeholder-[var(--ios-secondary)] font-normal outline-none resize-none min-h-[260px] leading-relaxed"
                   required
                 />
-              </div>
+              </IosCard>
             </form>
           )}
         </div>

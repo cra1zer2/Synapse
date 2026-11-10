@@ -16,6 +16,7 @@ import {
   PendingJustificationRecord
 } from '@/utils/justification.util'
 import { getDatesList } from '@/utils/date.util'
+import { cn } from '@/utils/cn.util'
 
 interface ManualExcuseScreenProps {
   isOpen: boolean
@@ -27,6 +28,7 @@ interface ManualExcuseScreenProps {
   onSubmitJustification: (payload: { dateFrom: string; dateTo: string; lessons: number[]; message: string }) => Promise<{ ok: boolean; error?: string }>
   lang?: AppLanguage
   t: AppDictionary
+  initialModeTab?: 'nb' | 'range' | 'hours'
 }
 
 type ModeTab = 'nb' | 'range' | 'hours'
@@ -43,7 +45,7 @@ export function ManualExcuseScreen({
   lang = 'pl',
   t,
   initialModeTab = 'range'
-}: ManualExcuseScreenProps & { initialModeTab?: ModeTab }) {
+}: ManualExcuseScreenProps) {
   const [modeTab, setModeTab] = useState<ModeTab>(initialModeTab)
   const [status, setStatus] = useState<ScreenStatus>('form')
   const [parentMessage, setParentMessage] = useState('')
@@ -179,25 +181,11 @@ export function ManualExcuseScreen({
   }, [attendanceData, selectedDayIso])
 
   const dayLessons = useMemo(() => {
-    if (!timetableData?.schedule) {
-      return Array.from({ length: 8 }, (_, i) => ({
-        number: i + 1,
-        subject: 'Lekcja ' + (i + 1),
-        time: '',
-        room: '',
-        teacher: '',
-        isCancelled: false,
-        isSubstitution: false,
-        isShortened: false,
-        durationMinutes: 45,
-        flag: null,
-        teacherAbsent: false
-      })) as LessonItem[]
-    }
-
-    const matchedDay = timetableData.schedule.find((d) => d.isoDate === selectedDayIso)
-    if (matchedDay && matchedDay.lessons && matchedDay.lessons.length > 0) {
-      return matchedDay.lessons
+    if (timetableData?.schedule) {
+      const matchedDay = timetableData.schedule.find((d) => d.isoDate === selectedDayIso)
+      if (matchedDay && matchedDay.lessons && matchedDay.lessons.length > 0) {
+        return matchedDay.lessons
+      }
     }
 
     return Array.from({ length: 8 }, (_, i) => ({
@@ -433,7 +421,7 @@ export function ManualExcuseScreen({
             />
 
             {!canSubmitExcuse && (
-              <div className="p-3.5 rounded-[16px] bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] text-[12px] font-normal leading-relaxed">
+              <div className="p-3.5 rounded-[14px] bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] text-[12px] font-normal leading-relaxed">
                 {t.onlyParentCanExcuse}
               </div>
             )}
@@ -455,17 +443,17 @@ export function ManualExcuseScreen({
                       <button
                         type="button"
                         onClick={toggleSelectAllNb}
-                        className="flex items-center gap-2 py-1.5 px-3 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] active:scale-[0.96] active:opacity-75 transition-all cursor-pointer"
+                        className="flex items-center gap-2 py-1.5 px-3 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] active:scale-[0.96] transition-transform cursor-pointer"
                       >
                         <span className="text-[13px] font-medium tracking-tight">
                           {lang === 'en' ? 'Select all' : 'Zaznacz wszystkie'}
                         </span>
-                        <div className={
-                          "w-5 h-5 rounded-full flex items-center justify-center transition-colors shrink-0 " +
-                          (isAllNbSelected
-                            ? "bg-[var(--ios-blue)] text-white"
-                            : "border border-[var(--ios-separator)] bg-[var(--ios-card-solid)]")
-                        }>
+                        <div className={cn(
+                          'w-5 h-5 rounded-full flex items-center justify-center transition-colors shrink-0',
+                          isAllNbSelected
+                            ? 'bg-[var(--ios-blue)] text-white'
+                            : 'border border-[var(--ios-separator)] bg-[var(--ios-card-solid)]'
+                        )}>
                           {isAllNbSelected && (
                             <svg className="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                               <polyline points="20 6 9 17 4 12" />
@@ -474,7 +462,7 @@ export function ManualExcuseScreen({
                         </div>
                       </button>
                     ) : (
-                      <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-[var(--ios-yellow)]/15 text-[var(--ios-yellow)] dark:text-[#ffd60a]">
+                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]">
                         {t.pendingJustification}
                       </span>
                     )}
@@ -507,25 +495,25 @@ export function ManualExcuseScreen({
                               <div
                                 key={lesson.lessonNumber}
                                 onClick={() => !isPending && canSubmitExcuse && toggleNbLesson(group.date, lesson.lessonNumber)}
-                                className={
-                                  "px-4 py-3 flex items-center justify-between gap-3 transition-colors duration-100 " +
-                                  (isPending
-                                    ? "opacity-50 cursor-not-allowed bg-transparent"
-                                    : "cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]")
-                                }
+                                className={cn(
+                                  'px-4 py-3 flex items-center justify-between gap-3 transition-colors duration-100',
+                                  isPending
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : 'cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]'
+                                )}
                               >
                                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
                                   {isPending ? (
-                                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[12px] text-[var(--ios-yellow)] dark:text-[#ffd60a]">
-                                      ⏳
+                                    <div className="w-[22px] h-[22px] rounded-full bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] flex items-center justify-center shrink-0 text-[11px] font-bold">
+                                      •
                                     </div>
                                   ) : (
-                                    <div className={
-                                      "w-[22px] h-[22px] rounded-full flex items-center justify-center transition-colors shrink-0 " +
-                                      (isChecked
-                                        ? "bg-[var(--ios-blue)] text-white"
-                                        : "border border-[var(--ios-separator)] bg-[var(--ios-element)]/30")
-                                    }>
+                                    <div className={cn(
+                                      'w-[22px] h-[22px] rounded-full flex items-center justify-center transition-colors shrink-0',
+                                      isChecked
+                                        ? 'bg-[var(--ios-blue)] text-white'
+                                        : 'border border-[var(--ios-separator)] bg-[var(--bg-card-secondary)]'
+                                    )}>
                                       {isChecked && (
                                         <svg className="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                           <polyline points="20 6 9 17 4 12" />
@@ -544,7 +532,12 @@ export function ManualExcuseScreen({
                                   </div>
                                 </div>
 
-                                <span className="text-[12px] font-medium text-[var(--ios-red)] tracking-tight tabular-nums">
+                                <span className={cn(
+                                  'text-[11px] font-semibold px-2 py-0.5 rounded-full tabular-nums',
+                                  isPending
+                                    ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
+                                    : 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
+                                )}>
                                   {isPending ? t.pendingJustification : 'NB'}
                                 </span>
                               </div>
@@ -613,7 +606,7 @@ export function ManualExcuseScreen({
                   </IosCard>
 
                   <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between px-4 pb-1.5 text-[12px] font-medium uppercase tracking-[0.02em] text-[var(--ios-secondary)]">
+                    <div className="flex items-center justify-between px-4 pb-1.5 text-[12px] font-semibold uppercase tracking-[0.03em] text-[var(--ios-secondary)]">
                       <span>{lang === 'en' ? 'Select lesson periods' : 'Wybierz godziny lekcyjne'}</span>
                       <span className="tabular-nums normal-case">
                         {selectedLessonsArray.length} {lang === 'en' ? 'selected' : 'zaznaczonych'}
@@ -636,29 +629,29 @@ export function ManualExcuseScreen({
                           <div
                             key={lesson.number}
                             onClick={() => !isBlocked && canSubmitExcuse && toggleHour(lesson.number)}
-                            className={
-                              "px-4 py-3 flex items-center justify-between gap-3 transition-colors duration-100 " +
-                              (isBlocked
-                                ? "opacity-50 cursor-not-allowed bg-transparent"
-                                : "cursor-pointer active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20")
-                            }
+                            className={cn(
+                              'px-4 py-3 flex items-center justify-between gap-3 transition-colors duration-100',
+                              isBlocked
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]'
+                            )}
                           >
                             <div className="flex items-center gap-3.5 min-w-0 flex-1">
                               {isPending ? (
-                                <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[12px] text-[var(--ios-yellow)] dark:text-[#ffd60a]">
-                                  ⏳
+                                <div className="w-[22px] h-[22px] rounded-full bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] flex items-center justify-center shrink-0 text-[11px] font-bold">
+                                  •
                                 </div>
                               ) : isExcused ? (
-                                <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[12px] text-[var(--ios-secondary)]">
-                                  🔒
+                                <div className="w-[22px] h-[22px] rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center shrink-0 text-[11px] font-bold">
+                                  ✓
                                 </div>
                               ) : (
-                                <div className={
-                                  "w-[22px] h-[22px] rounded-full flex items-center justify-center transition-colors shrink-0 " +
-                                  (isChecked
-                                    ? "bg-[var(--ios-blue)] text-white"
-                                    : "border border-[var(--ios-separator)] bg-[var(--ios-element)]/30")
-                                }>
+                                <div className={cn(
+                                  'w-[22px] h-[22px] rounded-full flex items-center justify-center transition-colors shrink-0',
+                                  isChecked
+                                    ? 'bg-[var(--ios-blue)] text-white'
+                                    : 'border border-[var(--ios-separator)] bg-[var(--bg-card-secondary)]'
+                                )}>
                                   {isChecked && (
                                     <svg className="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                       <polyline points="20 6 9 17 4 12" />
@@ -679,11 +672,11 @@ export function ManualExcuseScreen({
 
                             <div className="shrink-0 flex items-center">
                               {isPending ? (
-                                <span className="text-[11px] font-medium text-[var(--ios-yellow)] dark:text-[#ffd60a] tabular-nums">
+                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] tabular-nums">
                                   {t.pendingJustification}
                                 </span>
                               ) : isExcused ? (
-                                <span className="text-[11px] font-medium text-[var(--ios-green)] tabular-nums">
+                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] tabular-nums">
                                   usprawiedliwione
                                 </span>
                               ) : null}
@@ -697,7 +690,7 @@ export function ManualExcuseScreen({
               )}
 
               <IosCard className="p-3.5 flex flex-col gap-1.5">
-                <span className="text-[11px] font-normal text-[var(--ios-secondary)] uppercase tracking-wider px-1">
+                <span className="text-[11px] font-semibold text-[var(--ios-secondary)] uppercase tracking-wider px-1">
                   {lang === 'en' ? 'Note for teacher' : 'Wiadomość do wychowawcy'}
                 </span>
                 <textarea
@@ -705,7 +698,7 @@ export function ManualExcuseScreen({
                   disabled={!canSubmitExcuse}
                   onChange={(e) => setParentMessage(e.target.value)}
                   placeholder={t.commentPlaceholder}
-                  className="w-full bg-[var(--bg-card-secondary)] text-[var(--ios-label)] text-[15px] font-normal rounded-[16px] p-3 outline-none placeholder-[var(--ios-secondary)]/60 resize-none h-20 border-none transition-colors"
+                  className="w-full bg-[var(--bg-card-secondary)] text-[var(--ios-label)] text-[15px] font-normal rounded-[14px] p-3 outline-none placeholder-[var(--ios-secondary)] resize-none h-20 border-none transition-colors"
                 />
               </IosCard>
 
@@ -717,13 +710,13 @@ export function ManualExcuseScreen({
                   (modeTab === 'range' && rangePlan.totalLessons === 0) ||
                   (modeTab === 'hours' && selectedLessonsArray.length === 0)
                 }
-                className="h-[48px] w-full bg-[var(--ios-blue)] text-white text-[16px] font-semibold tracking-[-0.3px] rounded-full active:scale-[0.98] active:opacity-85 disabled:opacity-40 transition-[transform,opacity] duration-150 flex items-center justify-center gap-2 mt-1 cursor-pointer"
+                className="h-[48px] w-full bg-[var(--ios-blue)] text-white text-[16px] font-semibold tracking-[-0.3px] rounded-full active:scale-[0.98] disabled:opacity-40 transition-all duration-150 flex items-center justify-center gap-2 mt-1 cursor-pointer"
               >
                 {modeTab === 'nb'
-                  ? (lang === 'en' ? (`Excuse selected (${selectedNbCount})`) : (`Usprawiedliw zaznaczone (${selectedNbCount})`))
+                  ? (lang === 'en' ? 'Excuse selected (' + selectedNbCount + ')' : 'Usprawiedliw zaznaczone (' + selectedNbCount + ')')
                   : modeTab === 'range'
-                    ? (lang === 'en' ? (`Excuse range (${rangePlan.totalLessons} periods)`) : (`Usprawiedliw okres (${rangePlan.totalLessons} lekcji)`))
-                    : (lang === 'en' ? (`Excuse selected (${selectedLessonsArray.length})`) : (`Usprawiedliw zaznaczone (${selectedLessonsArray.length})`))}
+                    ? (lang === 'en' ? 'Excuse range (' + rangePlan.totalLessons + ' periods)' : 'Usprawiedliw okres (' + rangePlan.totalLessons + ' lekcji)')
+                    : (lang === 'en' ? 'Excuse selected (' + selectedLessonsArray.length + ')' : 'Usprawiedliw zaznaczone (' + selectedLessonsArray.length + ')')}
               </button>
             </form>
           </>
@@ -743,7 +736,7 @@ export function ManualExcuseScreen({
             <div className="w-full max-w-[240px] bg-[var(--ios-element)] h-2 rounded-full overflow-hidden mt-1">
               <div
                 className="h-full bg-[var(--ios-blue)] rounded-full transition-[width] duration-300 ease-out"
-                style={{ width: Math.round((progressCurrent / Math.max(progressTotal, 1)) * 100) + "%" }}
+                style={{ width: Math.round((progressCurrent / Math.max(progressTotal, 1)) * 100) + '%' }}
               />
             </div>
           </IosCard>
@@ -751,7 +744,7 @@ export function ManualExcuseScreen({
 
         {status === 'completed' && failures.length > 0 && (
           <IosCard className="p-6 flex flex-col items-center justify-center gap-4 text-center my-auto min-h-[300px]">
-            <div className="w-14 h-14 rounded-full bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border border-[var(--ios-red)]/20 flex items-center justify-center text-[28px]">
+            <div className="w-14 h-14 rounded-full bg-[var(--ios-red-subtle)] text-[var(--ios-red)] flex items-center justify-center text-[28px] font-bold">
               !
             </div>
             <div className="flex flex-col gap-1">
@@ -760,13 +753,13 @@ export function ManualExcuseScreen({
               </h3>
               <p className="text-[13px] font-normal text-[var(--ios-secondary)]">
                 {lang === 'en'
-                  ? `${failures.length} day(s) rejected by Librus.`
-                  : `Librus odrzucił ${failures.length} dzień/dni.`}
+                  ? failures.length + ' day(s) rejected by Librus.'
+                  : 'Librus odrzucił ' + failures.length + ' dzień/dni.'}
               </p>
             </div>
             <div className="w-full flex flex-col gap-2 text-left">
               {failures.map((f) => (
-                <div key={f.date} className="p-3 rounded-[14px] bg-[var(--ios-element)]/40 text-[12px] leading-relaxed">
+                <div key={f.date} className="p-3 rounded-[14px] bg-[var(--bg-card-secondary)] text-[12px] leading-relaxed">
                   <div className="font-semibold text-[var(--ios-label)]">
                     {f.date} • {lang === 'en' ? 'lessons' : 'lekcje'}: {f.lessons.join(', ')}
                   </div>
@@ -777,7 +770,7 @@ export function ManualExcuseScreen({
             <button
               type="button"
               onClick={handleClose}
-              className="h-[48px] px-8 bg-[var(--ios-element)] text-[var(--ios-label)] text-[16px] font-medium tracking-tight rounded-full active:scale-[0.96] active:opacity-75 transition-[transform,opacity] duration-150 mt-2 cursor-pointer"
+              className="h-[48px] px-8 bg-[var(--ios-element)] text-[var(--ios-label)] text-[16px] font-medium tracking-tight rounded-full active:scale-[0.96] transition-transform duration-150 mt-2 cursor-pointer"
             >
               {t.done}
             </button>
@@ -786,7 +779,7 @@ export function ManualExcuseScreen({
 
         {status === 'completed' && failures.length === 0 && (
           <IosCard className="p-8 flex flex-col items-center justify-center gap-4 text-center my-auto min-h-[300px]">
-            <div className="w-14 h-14 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center text-[26px]">
+            <div className="w-14 h-14 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center text-[26px] font-bold">
               ✓
             </div>
             <div className="flex flex-col gap-1">
@@ -794,14 +787,14 @@ export function ManualExcuseScreen({
                 {lang === 'en' ? 'Justification Submitted' : 'Usprawiedliwiono pomyślnie'}
               </h3>
               <p className="text-[13px] font-normal text-[var(--ios-secondary)]">
-                {lang === 'en' ? (`Sent ${progressTotal} justifications to teacher.`) : (`Wysłano ${progressTotal} usprawiedliwień do wychowawcy.`)}
+                {lang === 'en' ? 'Sent ' + progressTotal + ' justifications to teacher.' : 'Wysłano ' + progressTotal + ' usprawiedliwień do wychowawcy.'}
               </p>
             </div>
 
             <button
               type="button"
               onClick={handleClose}
-              className="h-[48px] px-8 bg-[var(--ios-element)] text-[var(--ios-label)] text-[16px] font-medium tracking-tight rounded-full active:scale-[0.96] active:opacity-75 transition-[transform,opacity] duration-150 mt-2 cursor-pointer"
+              className="h-[48px] px-8 bg-[var(--ios-element)] text-[var(--ios-label)] text-[16px] font-medium tracking-tight rounded-full active:scale-[0.96] transition-transform duration-150 mt-2 cursor-pointer"
             >
               {t.done}
             </button>

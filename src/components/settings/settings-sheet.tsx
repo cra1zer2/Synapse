@@ -4,30 +4,14 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { AppDictionary, AppLanguage, AppTheme } from '@/config/dictionary.config'
-import { TextClampOption, DashboardWidgetId } from '@/app/page'
-import { IosScreen, IOS_PANEL_TRANSITION, IOS_BACKDROP_TRANSITION, IOS_PARALLAX_PERCENT } from '@/components/ios/ios-screen'
+import { TextClampOption, DashboardWidgetId, DEFAULT_DASHBOARD_ORDER, DEFAULT_DASHBOARD_VISIBLE } from '@/hooks/settings.hook'
+import { IosScreen } from '@/components/ios/ios-screen'
 import { IosListSection, IosCell } from '@/components/ios/ios-list'
 import { IosCard } from '@/components/ios/ios-ui'
 import { IosSwitch } from '@/components/ios/ios-switch'
-import { IosSpinner } from '@/components/ios/ios-spinner'
 import { AuthView } from '@/components/auth/auth-view'
 import { RequestTimingsModal } from './request-timings-modal'
-
-const DEFAULT_DASHBOARD_ORDER: DashboardWidgetId[] = [
-  'grades',
-  'schedule',
-  'upcoming',
-  'messages',
-  'attendance'
-]
-
-const DEFAULT_DASHBOARD_VISIBLE: Record<DashboardWidgetId, boolean> = {
-  grades: true,
-  schedule: true,
-  upcoming: false,
-  messages: true,
-  attendance: true
-}
+import { cn } from '@/utils/cn.util'
 
 interface SettingsSheetProps {
   isOpen: boolean
@@ -109,7 +93,6 @@ export function SettingsSheet({
   setNewUsername,
   newPassword,
   setNewPassword,
-  isAddingAccount,
   currentLang,
   onSelectLang,
   currentTheme,
@@ -233,12 +216,11 @@ export function SettingsSheet({
         backLabel={t.backAction}
         isSubView={true}
         isReceded={showThemePicker || showLangPicker || showAdvanced || showAddForm || showHomeCustomizer || showTimingsDebug}
-        contentClassName="px-6 pt-5 pb-12 w-full max-w-4xl mx-auto flex-1"
       >
         <div className="flex flex-col gap-5 pb-12 select-none">
           <IosCard>
             <div className="p-4 flex items-center gap-3 border-b border-[var(--ios-separator)]">
-              <div className="w-11 h-11 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] border border-[var(--ios-blue)]/20 flex items-center justify-center font-semibold text-[15px] shrink-0">
+              <div className="w-11 h-11 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] flex items-center justify-center font-semibold text-[15px] shrink-0">
                 {heroAvatar}
               </div>
 
@@ -265,10 +247,10 @@ export function SettingsSheet({
                 <IosCell
                   key={acc.id}
                   onClick={() => {
-                  if (!isCurrent) {
-                    setAccountToSwitch(acc)
-                  }
-                }}
+                    if (!isCurrent) {
+                      setAccountToSwitch(acc)
+                    }
+                  }}
                   title={accTitle}
                   subtitle={accRole + ' • ' + acc.username}
                   size="tall"
@@ -293,7 +275,7 @@ export function SettingsSheet({
                 if (onResetAddAccount) onResetAddAccount()
                 setShowAddForm(true)
               }}
-              className="w-full p-4 text-left text-[15px] font-normal text-[var(--ios-blue)] tracking-[-0.2px] flex items-center justify-between active:bg-[var(--ios-element)]/30 transition-colors cursor-pointer"
+              className="w-full p-4 text-left text-[15px] font-normal text-[var(--ios-blue)] tracking-[-0.2px] flex items-center justify-between hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors cursor-pointer"
             >
               <span>+ {t.addAccount}</span>
               <svg width="16" height="16" className="w-4 h-4 text-[var(--ios-tertiary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -311,13 +293,18 @@ export function SettingsSheet({
               onClick={() => setShowThemePicker(true)}
             />
             <IosCell
+              title={t.appLanguage}
+              detail={langLabel}
+              chevron={true}
+              size="standard"
+              onClick={() => setShowLangPicker(true)}
+            />
+            <IosCell
               title={currentLang === 'en' ? 'Home Screen' : 'Ekran główny'}
               subtitle={currentLang === 'en' ? 'Customize visible widgets and their order' : 'Wybierz widoczne karty i ich kolejność'}
               chevron={true}
               size="tall"
-              onClick={() => {
-                setShowHomeCustomizer(true)
-              }}
+              onClick={() => setShowHomeCustomizer(true)}
             />
           </IosListSection>
 
@@ -331,11 +318,11 @@ export function SettingsSheet({
             />
           </IosListSection>
 
-          <IosCard className="rounded-[26px] overflow-hidden">
+          <IosCard className="overflow-hidden">
             <button
               type="button"
               onClick={onLogout}
-              className="w-full text-center h-[52px] text-[16px] font-medium text-[#FF453A] dark:text-[#ff453a] tracking-[-0.2px] active:bg-[var(--ios-element)]/30 transition-colors cursor-pointer flex items-center justify-center"
+              className="w-full text-center h-[52px] text-[16px] font-medium text-[var(--ios-red)] tracking-[-0.2px] hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors cursor-pointer flex items-center justify-center"
             >
               {t.logout}
             </button>
@@ -358,20 +345,21 @@ export function SettingsSheet({
               pointerEvents: isSwitchModalVisible ? 'auto' : 'none',
               transition: 'opacity 0.25s cubic-bezier(0.32, 0.72, 0, 1)'
             }}
-            className="fixed inset-0 z-[120] bg-black/45 flex items-center justify-center p-6 select-none"
+            className="fixed inset-0 z-[120] bg-black/55 flex items-center justify-center p-6 select-none"
           >
             <div
               onClick={(e) => e.stopPropagation()}
               style={{
                 transform: isSwitchModalVisible ? 'scale3d(1, 1, 1)' : 'scale3d(0.92, 0.92, 1)',
                 opacity: isSwitchModalVisible ? 1 : 0,
+                boxShadow: 'var(--ios-modal-shadow)',
                 transition: 'transform 0.26s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.22s cubic-bezier(0.32, 0.72, 0, 1)',
                 willChange: 'transform, opacity'
               }}
-              className="w-[308px] bg-[var(--ios-card-solid)] rounded-[34px] p-[14px] pt-[22px] border border-[var(--ios-border)] flex flex-col gap-5 text-center -mt-10 md:-mt-14"
+              className="w-[308px] bg-[var(--ios-card-solid)] rounded-[28px] p-[14px] pt-[22px] border border-[var(--ios-separator)] flex flex-col gap-5 text-center"
             >
               <div className="px-3 flex flex-col items-center gap-1.5">
-                <div className="w-11 h-11 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] border border-[var(--ios-blue)]/20 flex items-center justify-center font-semibold text-[15px] mb-1">
+                <div className="w-11 h-11 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] flex items-center justify-center font-semibold text-[15px] mb-1">
                   {targetAvatar}
                 </div>
                 <h3 className="text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px] leading-snug">
@@ -380,7 +368,7 @@ export function SettingsSheet({
                 <p className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-snug">
                   {targetTitle}
                 </p>
-                <span className="text-[12px] font-normal text-[var(--ios-secondary)]/80 tracking-[-0.1px] tabular-nums">
+                <span className="text-[12px] font-normal text-[var(--ios-tertiary)] tracking-[-0.1px] tabular-nums">
                   {targetRoleLabel} • {targetAcc.username}
                 </span>
               </div>
@@ -389,14 +377,14 @@ export function SettingsSheet({
                 <button
                   type="button"
                   onClick={handleDismissSwitchModal}
-                  className="h-[48px] w-full rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] text-[17px] font-medium tracking-[-0.3px] active:scale-[0.96] active:opacity-75 transition-[transform,opacity] duration-150 flex items-center justify-center cursor-pointer select-none"
+                  className="h-[46px] w-full rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] text-[16px] font-medium tracking-[-0.2px] active:scale-[0.96] transition-transform duration-150 flex items-center justify-center cursor-pointer select-none"
                 >
                   {t.cancel}
                 </button>
                 <button
                   type="button"
                   onClick={handleConfirmSwitchAccount}
-                  className="h-[48px] w-full rounded-full bg-[var(--ios-blue)] text-white text-[17px] font-semibold tracking-[-0.3px] active:scale-[0.96] active:opacity-85 transition-[transform,opacity] duration-150 flex items-center justify-center cursor-pointer select-none"
+                  className="h-[46px] w-full rounded-full bg-[var(--ios-blue)] text-white text-[16px] font-semibold tracking-[-0.2px] active:scale-[0.96] transition-transform duration-150 flex items-center justify-center cursor-pointer select-none"
                 >
                   {t.switchAccount}
                 </button>
@@ -615,9 +603,7 @@ export function SettingsSheet({
 
       <IosScreen
         isOpen={showHomeCustomizer}
-        onClose={() => {
-          setShowHomeCustomizer(false)
-        }}
+        onClose={() => setShowHomeCustomizer(false)}
         title={currentLang === 'en' ? 'Home Screen' : 'Ekran główny'}
         backLabel={t.settingsTitle || t.backAction}
         showBackButton={true}
@@ -747,7 +733,7 @@ export function SettingsSheet({
             if (nextVisible) {
               onChangeDashboardOrder([...activeIds, id, ...inactiveIds])
             } else {
-              onChangeDashboardOrder([...activeIds, id, ...inactiveIds])
+              onChangeDashboardOrder([...activeIds, ...inactiveIds, id])
             }
             onToggleDashboardWidget(id, nextVisible)
           }
@@ -755,34 +741,32 @@ export function SettingsSheet({
           return (
             <div className="flex flex-col gap-4 pb-16 select-none max-w-xl mx-auto w-full">
               <div className="px-1 flex items-center justify-between">
-                <span className="text-[12px] font-normal uppercase text-[var(--ios-secondary)] tracking-wider">
+                <span className="text-[12px] font-semibold uppercase text-[var(--ios-secondary)] tracking-[0.03em]">
                   {isEn ? 'Active widgets on home screen' : 'Aktywne widżety na ekranie głównym'}
                 </span>
               </div>
 
               <div
                 style={{
-                  height: `${Math.max(totalHeight, 64)}px`,
+                  height: Math.max(totalHeight, 64) + 'px',
                   transition: 'height 520ms cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
                 className="relative w-full"
               >
-                {/* Hidden Widgets Section Header */}
                 <div
                   style={{
-                    transform: `translate3d(0, ${enabledList.length * STEP + (enabledList.length > 0 ? 14 : 0)}px, 0)`,
+                    transform: 'translate3d(0, ' + (enabledList.length * STEP + (enabledList.length > 0 ? 14 : 0)) + 'px, 0)',
                     opacity: disabledList.length > 0 ? 1 : 0,
                     transition:
                       'transform 520ms cubic-bezier(0.16, 1, 0.3, 1), opacity 380ms cubic-bezier(0.16, 1, 0.3, 1)'
                   }}
                   className="absolute top-0 left-1 right-1 pointer-events-none z-0 flex items-center justify-between"
                 >
-                  <span className="text-[12px] font-normal uppercase text-[var(--ios-secondary)] tracking-wider">
+                  <span className="text-[12px] font-semibold uppercase text-[var(--ios-secondary)] tracking-[0.03em]">
                     {isEn ? 'Hidden widgets' : 'Wyłączone widżety'}
                   </span>
                 </div>
 
-                {/* All 5 Widgets rendered in stable DOM order so CSS transitions always fire smoothly */}
                 {DEFAULT_DASHBOARD_ORDER.map((id) => {
                   const meta = widgetMeta[id]
                   const isVisible = Boolean(dashboardVisible[id])
@@ -801,20 +785,19 @@ export function SettingsSheet({
                     <div
                       key={id}
                       style={{
-                        height: `${ROW_HEIGHT}px`,
-                        transform: `translate3d(0, ${yPos}px, 0) scale(${isMoving ? 1.022 : 1})`,
+                        height: ROW_HEIGHT + 'px',
+                        transform: 'translate3d(0, ' + yPos + 'px, 0) scale(' + (isMoving ? 1.022 : 1) + ')',
                         transition:
-                          'transform 520ms cubic-bezier(0.16, 1, 0.3, 1), opacity 380ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1)',
-                        zIndex: isMoving ? 30 : isVisible ? 15 : 10,
-                        boxShadow: isMoving ? '0 14px 32px rgba(0, 0, 0, 0.18)' : 'none'
+                          'transform 520ms cubic-bezier(0.16, 1, 0.3, 1), opacity 380ms cubic-bezier(0.16, 1, 0.3, 1)',
+                        zIndex: isMoving ? 30 : isVisible ? 15 : 10
                       }}
-                      className={
-                        'absolute top-0 left-0 right-0 rounded-[20px] bg-[var(--ios-card-solid)] px-3.5 flex items-center justify-between gap-3 ' +
-                        (!isVisible ? 'opacity-65' : 'opacity-100')
-                      }
+                      className={cn(
+                        'absolute top-0 left-0 right-0 rounded-[24px] bg-[var(--ios-card-solid)] border border-[var(--ios-card-border)] px-3.5 flex items-center justify-between gap-3',
+                        !isVisible ? 'opacity-65' : 'opacity-100'
+                      )}
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className={`w-[32px] h-[32px] rounded-[8px] ${meta.color} text-white flex items-center justify-center shrink-0`}>
+                        <div className={cn('w-[32px] h-[32px] rounded-[8px] text-white flex items-center justify-center shrink-0', meta.color)}>
                           {meta.icon}
                         </div>
                         <div className="flex flex-col min-w-0 flex-1">
@@ -827,7 +810,6 @@ export function SettingsSheet({
                         </div>
                       </div>
 
-                      {/* Controls: compact chevrons + Switch */}
                       <div className="flex items-center gap-2 shrink-0">
                         {isVisible && (
                           <div className="flex items-center gap-0.5 mr-0.5">
@@ -836,12 +818,12 @@ export function SettingsSheet({
                               disabled={!canMoveUp}
                               onClick={() => handleMoveToTop(id)}
                               title={isEn ? 'Move to top' : 'Na samą górę'}
-                              className={
-                                'w-6 h-6 flex items-center justify-center transition-all cursor-pointer ' +
-                                (canMoveUp
+                              className={cn(
+                                'w-6 h-6 flex items-center justify-center transition-all cursor-pointer',
+                                canMoveUp
                                   ? 'text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] active:scale-90'
-                                  : 'text-[var(--ios-tertiary)] opacity-25 cursor-not-allowed')
-                              }
+                                  : 'text-[var(--ios-tertiary)] opacity-25 cursor-not-allowed'
+                              )}
                               aria-label="Move to top"
                             >
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -855,12 +837,12 @@ export function SettingsSheet({
                               disabled={!canMoveUp}
                               onClick={() => handleMoveWidget(id, -1)}
                               title={isEn ? 'Move up' : 'Wyżej'}
-                              className={
-                                'w-6 h-6 flex items-center justify-center transition-all cursor-pointer ' +
-                                (canMoveUp
+                              className={cn(
+                                'w-6 h-6 flex items-center justify-center transition-all cursor-pointer',
+                                canMoveUp
                                   ? 'text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] active:scale-90'
-                                  : 'text-[var(--ios-tertiary)] opacity-25 cursor-not-allowed')
-                              }
+                                  : 'text-[var(--ios-tertiary)] opacity-25 cursor-not-allowed'
+                              )}
                               aria-label="Move up"
                             >
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -872,12 +854,12 @@ export function SettingsSheet({
                               disabled={!canMoveDown}
                               onClick={() => handleMoveWidget(id, 1)}
                               title={isEn ? 'Move down' : 'Niżej'}
-                              className={
-                                'w-6 h-6 flex items-center justify-center transition-all cursor-pointer ' +
-                                (canMoveDown
+                              className={cn(
+                                'w-6 h-6 flex items-center justify-center transition-all cursor-pointer',
+                                canMoveDown
                                   ? 'text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] active:scale-90'
-                                  : 'text-[var(--ios-tertiary)] opacity-25 cursor-not-allowed')
-                              }
+                                  : 'text-[var(--ios-tertiary)] opacity-25 cursor-not-allowed'
+                              )}
                               aria-label="Move down"
                             >
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

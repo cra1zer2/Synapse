@@ -5,6 +5,7 @@ import { GradesResult, GradeItem } from '@/models/grade.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { formatSubjectName } from '@/utils/text.util'
 import { IosCard, IosSegmentedControl } from '@/components/ios/ios-ui'
+import { cn } from '@/utils/cn.util'
 
 interface GradesWidgetProps {
   gradesData: GradesResult
@@ -24,12 +25,14 @@ interface SimulatedGrade {
   weight: number
 }
 
+type SemesterTab = 1 | 2 | 'all'
+
 function getGradeBadgeStyle(gradeStr: string): string {
   const g = gradeStr.trim().toLowerCase()
   if (g.startsWith('0') || g.startsWith('1') || g === 'nb' || g === 'np') {
     return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
   }
-  return 'bg-[var(--ios-element)]/65 text-[var(--ios-label)]'
+  return 'bg-[var(--ios-element)] text-[var(--ios-label)] font-medium'
 }
 
 export function GradesWidget({
@@ -41,7 +44,7 @@ export function GradesWidget({
   t,
   onSelectGrade
 }: GradesWidgetProps) {
-  const [selectedSemester, setSelectedSemester] = useState<1 | 2>(1)
+  const [selectedSemester, setSelectedSemester] = useState<SemesterTab>('all')
   const [simulatedBySubject, setSimulatedBySubject] = useState<Record<string, SimulatedGrade[]>>({})
   const [activeSimSubject, setActiveSimSubject] = useState<string | null>(null)
   const [simGradeVal, setSimGradeVal] = useState<string>('5')
@@ -119,7 +122,13 @@ export function GradesWidget({
   const subjectAveragesMap = useMemo(() => {
     const map = new Map<string, number | null>()
     for (const sub of subjects) {
-      const realGrades = selectedSemester === 1 ? sub.semester1 : sub.semester2
+      const realGrades =
+        selectedSemester === 1
+          ? sub.semester1
+          : selectedSemester === 2
+          ? sub.semester2
+          : [...sub.semester1, ...sub.semester2]
+
       const simGrades: GradeItem[] = enableGradeSimulator
         ? (simulatedBySubject[sub.subject] || []).map((sg) => ({
             id: sg.id,
@@ -129,7 +138,6 @@ export function GradesWidget({
             category: 'Symulacja',
             date: '',
             teacher: '',
-            comment: '',
             isRecent: false
           }))
         : []
@@ -169,7 +177,7 @@ export function GradesWidget({
                   onClick={clearAllSimulated}
                   className="text-[11px] font-semibold text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] px-2 py-0.5 rounded-full cursor-pointer active:opacity-70"
                 >
-                  {lang === 'en' ? `Reset sim (${totalSimulatedCount})` : `Resetuj symulację (${totalSimulatedCount})`}
+                  {lang === 'en' ? 'Reset sim (' + totalSimulatedCount + ')' : 'Resetuj symulację (' + totalSimulatedCount + ')'}
                 </button>
               )}
             </div>
@@ -188,8 +196,11 @@ export function GradesWidget({
                     e.stopPropagation()
                     onSelectGrade(g, g.subject || '')
                   }}
-                  title={`${g.subject || ''}: ${g.grade}${g.category ? ` (${g.category})` : ''}`}
-                  className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] font-medium tabular-nums cursor-pointer hover:opacity-80 active:scale-[0.94] transition-all select-none ${getGradeBadgeStyle(g.grade)}`}
+                  title={(g.subject || '') + ': ' + g.grade + (g.category ? ' (' + g.category + ')' : '')}
+                  className={cn(
+                    'min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] tabular-nums cursor-pointer hover:opacity-80 active:scale-[0.94] transition-all select-none',
+                    getGradeBadgeStyle(g.grade)
+                  )}
                 >
                   {g.grade}
                 </button>
@@ -199,22 +210,28 @@ export function GradesWidget({
         </div>
       </IosCard>
 
-      <div className="w-full flex justify-center">
-        <IosSegmentedControl<1 | 2>
-          value={selectedSemester}
-          onChange={setSelectedSemester}
-          options={[
-            { id: 1, label: lang === 'en' ? 'Term 1' : 'Semestr 1' },
-            { id: 2, label: lang === 'en' ? 'Term 2' : 'Semestr 2' }
-          ]}
-          className="w-full max-w-sm"
-        />
-      </div>
+      <IosSegmentedControl<SemesterTab>
+        value={selectedSemester}
+        onChange={setSelectedSemester}
+        options={[
+          { id: 1, label: lang === 'en' ? 'Term 1' : 'Semestr 1' },
+          { id: 2, label: lang === 'en' ? 'Term 2' : 'Semestr 2' },
+          { id: 'all', label: lang === 'en' ? 'Full Year' : 'Cały rok' }
+        ]}
+        className="w-full"
+      />
 
-      <IosCard className="overflow-hidden">
+      <IosCard className="overflow-hidden divide-y">
         {subjects.length > 0 ? (
           subjects.map((sub, idx) => {
-            const grades = selectedSemester === 1 ? sub.semester1 : sub.semester2
+            const sem1Grades = sub.semester1
+            const sem2Grades = sub.semester2
+            const singleGrades = selectedSemester === 1 ? sem1Grades : sem2Grades
+            const totalRealCount =
+              selectedSemester === 'all'
+                ? sem1Grades.length + sem2Grades.length
+                : singleGrades.length
+
             const simList = enableGradeSimulator ? (simulatedBySubject[sub.subject] || []) : []
             const avgNum = subjectAveragesMap.get(sub.subject)
             const avgStr = avgNum !== null && avgNum !== undefined ? avgNum.toFixed(2) : '—'
@@ -225,7 +242,7 @@ export function GradesWidget({
             return (
               <div
                 key={sub.subject + '-' + idx}
-                className="relative p-3.5 px-4 flex flex-col gap-2.5 after:absolute after:bottom-0 after:right-4 after:left-4 after:h-[0.5px] after:bg-[var(--ios-separator)] last:after:hidden"
+                className="p-3.5 px-4 flex flex-col gap-2.5"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0 pr-3">
@@ -234,21 +251,65 @@ export function GradesWidget({
                     </span>
 
                     <div className="flex flex-wrap items-center gap-1.5 mt-2 min-h-[28px]">
-                      {grades.length > 0 || simList.length > 0 ? (
+                      {totalRealCount > 0 || simList.length > 0 ? (
                         <>
-                          {grades.map((g, gIdx) => (
-                            <button
-                              key={gIdx}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                onSelectGrade(g, sub.subject)
-                              }}
-                              className={`min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] font-medium tabular-nums active:scale-[0.94] active:opacity-70 transition-[transform,opacity] duration-150 cursor-pointer ${getGradeBadgeStyle(g.grade)}`}
-                            >
-                              {g.grade}
-                            </button>
-                          ))}
+                          {selectedSemester === 'all' ? (
+                            <>
+                              {sem1Grades.map((g, gIdx) => (
+                                <button
+                                  key={'s1-' + gIdx}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onSelectGrade(g, sub.subject)
+                                  }}
+                                  className={cn(
+                                    'min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] tabular-nums active:scale-[0.94] active:opacity-70 transition-all duration-150 cursor-pointer',
+                                    getGradeBadgeStyle(g.grade)
+                                  )}
+                                >
+                                  {g.grade}
+                                </button>
+                              ))}
+                              {sem1Grades.length > 0 && sem2Grades.length > 0 && (
+                                <span className="w-[1px] h-[16px] bg-[var(--ios-separator)] mx-1 shrink-0" />
+                              )}
+                              {sem2Grades.map((g, gIdx) => (
+                                <button
+                                  key={'s2-' + gIdx}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onSelectGrade(g, sub.subject)
+                                  }}
+                                  className={cn(
+                                    'min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] tabular-nums active:scale-[0.94] active:opacity-70 transition-all duration-150 cursor-pointer',
+                                    getGradeBadgeStyle(g.grade)
+                                  )}
+                                >
+                                  {g.grade}
+                                </button>
+                              ))}
+                            </>
+                          ) : (
+                            singleGrades.map((g, gIdx) => (
+                              <button
+                                key={gIdx}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onSelectGrade(g, sub.subject)
+                                }}
+                                className={cn(
+                                  'min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] tabular-nums active:scale-[0.94] active:opacity-70 transition-all duration-150 cursor-pointer',
+                                  getGradeBadgeStyle(g.grade)
+                                )}
+                              >
+                                {g.grade}
+                              </button>
+                            ))
+                          )}
+
                           {simList.map((sg) => (
                             <button
                               key={sg.id}
@@ -273,12 +334,12 @@ export function GradesWidget({
                           type="button"
                           onClick={() => setActiveSimSubject(isSimExpanded ? null : sub.subject)}
                           title={lang === 'en' ? 'Simulate grade' : 'Symuluj ocenę'}
-                          className={
-                            'w-[28px] h-[28px] rounded-[8px] flex items-center justify-center text-[15px] font-semibold transition-colors cursor-pointer ' +
-                            (isSimExpanded
+                          className={cn(
+                            'w-[28px] h-[28px] rounded-[8px] flex items-center justify-center text-[15px] font-semibold transition-colors cursor-pointer',
+                            isSimExpanded
                               ? 'bg-[var(--ios-blue)] text-white'
-                              : 'bg-[var(--ios-element)]/55 text-[var(--ios-blue)] hover:bg-[var(--ios-blue-subtle)]')
-                          }
+                              : 'bg-[var(--ios-element)] text-[var(--ios-blue)] hover:bg-[var(--ios-blue-subtle)]'
+                          )}
                         >
                           +
                         </button>
@@ -293,7 +354,10 @@ export function GradesWidget({
                   </div>
 
                   <div className="shrink-0 flex flex-col items-end justify-center min-w-[50px] self-center">
-                    <span className={`text-[16px] font-medium tabular-nums ${simList.length > 0 ? 'text-[var(--ios-blue)] font-semibold' : isDanger ? 'text-[var(--ios-red)]' : 'text-[var(--ios-label)]'}`}>
+                    <span className={cn(
+                      'text-[16px] font-medium tabular-nums',
+                      simList.length > 0 ? 'text-[var(--ios-blue)] font-semibold' : isDanger ? 'text-[var(--ios-red)]' : 'text-[var(--ios-label)]'
+                    )}>
                       {avgStr}
                     </span>
                     {simList.length > 0 && (
@@ -305,14 +369,14 @@ export function GradesWidget({
                 </div>
 
                 {isSimExpanded && (
-                  <div className="p-2.5 rounded-[14px] bg-[var(--ios-element)]/45 flex flex-wrap items-center justify-between gap-2 mt-1">
+                  <div className="p-2.5 rounded-[16px] bg-[var(--bg-card-secondary)] flex flex-wrap items-center justify-between gap-2 mt-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <label className="flex items-center gap-1.5 text-[12px] text-[var(--ios-secondary)]">
                         <span>{lang === 'en' ? 'Grade:' : 'Ocena:'}</span>
                         <select
                           value={simGradeVal}
                           onChange={(e) => setSimGradeVal(e.target.value)}
-                          className="h-[30px] px-2.5 rounded-[10px] bg-[var(--ios-card-solid)] text-[13px] font-semibold text-[var(--ios-label)] outline-none border border-[var(--ios-separator)] cursor-pointer tabular-nums"
+                          className="h-[30px] px-2.5 rounded-[8px] bg-[var(--ios-card-solid)] text-[13px] font-semibold text-[var(--ios-label)] outline-none border border-[var(--ios-separator)] cursor-pointer tabular-nums"
                         >
                           {gradeOptions.map((opt) => (
                             <option key={opt.label} value={opt.label}>
@@ -327,7 +391,7 @@ export function GradesWidget({
                         <select
                           value={simWeightVal}
                           onChange={(e) => setSimWeightVal(Number(e.target.value))}
-                          className="h-[30px] px-2.5 rounded-[10px] bg-[var(--ios-card-solid)] text-[13px] font-semibold text-[var(--ios-label)] outline-none border border-[var(--ios-separator)] cursor-pointer tabular-nums"
+                          className="h-[30px] px-2.5 rounded-[8px] bg-[var(--ios-card-solid)] text-[13px] font-semibold text-[var(--ios-label)] outline-none border border-[var(--ios-separator)] cursor-pointer tabular-nums"
                         >
                           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((w) => (
                             <option key={w} value={w}>

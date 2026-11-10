@@ -64,7 +64,7 @@ function isDateRecent(dateStr: string, daysThreshold: number = 14): boolean {
     return diffDays <= daysThreshold
 }
 
-function generateFixOptions(grades: GradeItem[], currentAverage: number): SubjectWarning {
+function generateFixOptions(grades: GradeItem[]): SubjectWarning {
     let totalScore = 0
     let totalWeight = 0
 
@@ -91,7 +91,7 @@ function generateFixOptions(grades: GradeItem[], currentAverage: number): Subjec
             gradeNeeded: Math.max(2, gradeWeight2),
             weight: 2,
             count: 1,
-            description: `Otrzymaj ocenę co najmniej ${Math.max(2, gradeWeight2)} z kartkówki (waga 2)`
+            description: 'Otrzymaj ocenę co najmniej ' + Math.max(2, gradeWeight2) + ' z kartkówki (waga 2)'
         })
     }
 
@@ -100,7 +100,7 @@ function generateFixOptions(grades: GradeItem[], currentAverage: number): Subjec
             gradeNeeded: Math.max(2, gradeWeight3),
             weight: 3,
             count: 1,
-            description: `Otrzymaj ocenę co najmniej ${Math.max(2, gradeWeight3)} ze sprawdzianu (waga 3)`
+            description: 'Otrzymaj ocenę co najmniej ' + Math.max(2, gradeWeight3) + ' ze sprawdzianu (waga 3)'
         })
     }
 
@@ -110,7 +110,7 @@ function generateFixOptions(grades: GradeItem[], currentAverage: number): Subjec
             gradeNeeded: Math.max(2, doubleGradeNeeded),
             weight: 2,
             count: 2,
-            description: `Otrzymaj dwie oceny ${Math.max(2, doubleGradeNeeded)} (waga 2)`
+            description: 'Otrzymaj dwie oceny ' + Math.max(2, doubleGradeNeeded) + ' (waga 2)'
         })
     }
 
@@ -276,12 +276,7 @@ export async function fetchStudentGrades(
         for (const sub of subjectsList) {
             sub.average1 = calculateWeightedAverage(sub.semester1)
             sub.average2 = calculateWeightedAverage(sub.semester2)
-
-            if (sub.average2 !== null && sub.average1 !== null) {
-                sub.finalAverage = Math.round(((sub.average1 + sub.average2) / 2) * 100) / 100
-            } else {
-                sub.finalAverage = sub.average2 ?? sub.average1
-            }
+            sub.finalAverage = calculateWeightedAverage([...sub.semester1, ...sub.semester2])
 
             if (sub.finalAverage !== null) {
                 sumOfSubjectAverages += sub.finalAverage
@@ -290,7 +285,7 @@ export async function fetchStudentGrades(
                 if (sub.finalAverage < 2.0) {
                     failingSubjectsCount++
                     const relevantGrades = sub.semester2.length > 0 ? sub.semester2 : sub.semester1
-                    sub.warning = generateFixOptions(relevantGrades, sub.finalAverage)
+                    sub.warning = generateFixOptions(relevantGrades)
                 }
             }
         }

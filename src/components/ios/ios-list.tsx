@@ -50,7 +50,7 @@ export function IosCell({
   const heightClasses = {
     compact: 'min-h-[44px] py-1.5',
     standard: 'min-h-[52px] py-2.5',
-    tall: 'min-h-[68px] py-3'
+    tall: 'min-h-[66px] py-3'
   }[resolvedSize]
 
   const separatorLeft = leading ? 'left-[56px]' : 'left-4'
@@ -87,7 +87,7 @@ export function IosCell({
 
       <div className="flex items-center gap-2 shrink-0">
         {detail && (
-          <span className="text-[15px] font-normal text-[var(--ios-secondary)] tracking-[-0.24px]">
+          <span className="text-[15px] font-normal text-[var(--ios-secondary)] tracking-[-0.2px]">
             {detail}
           </span>
         )}
@@ -129,7 +129,7 @@ export function IosListSection({
   return (
     <section className={cn('flex flex-col w-full', className)}>
       {header && (
-        <div className="text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-[0.02em] px-4 pt-3 pb-1.5 select-none">
+        <div className="text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-[0.02em] px-4 pt-2 pb-1.5 select-none">
           {header}
         </div>
       )}
@@ -144,7 +144,7 @@ export function IosListSection({
       </div>
 
       {footer && (
-        <div className="text-[13px] font-normal text-[var(--ios-secondary)] px-4 pt-1.5 pb-2 leading-[18px] select-none">
+        <div className="text-[12px] font-normal text-[var(--ios-secondary)] px-4 pt-1.5 pb-1 leading-[17px] select-none">
           {footer}
         </div>
       )}

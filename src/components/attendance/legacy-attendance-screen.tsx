@@ -7,6 +7,7 @@ import { IosScreen } from '@/components/ios/ios-screen'
 import { IosCard } from '@/components/ios/ios-ui'
 import { formatPolishDayDate } from '@/utils/date.util'
 import { formatSubjectName } from '@/utils/text.util'
+import { cn } from '@/utils/cn.util'
 
 interface LegacyAttendanceViewProps {
   attendanceData: AttendanceResult
@@ -95,6 +96,25 @@ export function LegacyAttendanceView({
     }
   }, [table, days])
 
+  const lessonCols = useMemo(() => {
+    let minCol = 1
+    let maxCol = 8
+    for (const day of days) {
+      for (const k of Object.keys(day.lessons)) {
+        const n = Number(k)
+        if (!isNaN(n)) {
+          if (n < minCol) minCol = n
+          if (n > maxCol) maxCol = n
+        }
+      }
+    }
+    const cols: number[] = []
+    for (let i = minCol; i <= Math.min(maxCol, 10); i++) {
+      cols.push(i)
+    }
+    return cols
+  }, [days])
+
   const getAbsencesForDay = (dayIso: string, dayDate: string): AbsenceDetail[] => {
     const list: AbsenceDetail[] = []
     attendanceData.subjects.forEach((sub) => {
@@ -119,175 +139,156 @@ export function LegacyAttendanceView({
     onSubViewChange?.(false)
     setTimeout(() => {
       setCachedDay(null)
-    }, 390)
+    }, 350)
   }
 
-  const lessonCols = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   const displayDay = activeDay || cachedDay
 
   const activeDayAbsences = useMemo(() => {
     if (!displayDay) return []
     return getAbsencesForDay(displayDay.isoDate, displayDay.date)
-  }, [displayDay])
+  }, [displayDay, attendanceData])
+
+  const statItems = [
+    { label: 'nb', value: summary.nu, isAlert: summary.nu > 0 },
+    { label: 'usp', value: summary.u, isAlert: false },
+    { label: 'sp', value: summary.sp, isAlert: false },
+    { label: 'sL', value: summary.sl, isAlert: false },
+    { label: 'zw', value: summary.zw, isAlert: false }
+  ]
 
   return (
     <>
-      <div className="flex flex-col gap-3.5 pb-16 select-none max-w-2xl mx-auto w-full">
-        {/* Сводная карточка со всеми кодами Librus */}
-        <IosCard className="p-3 grid grid-cols-5 divide-x divide-[var(--ios-separator)] text-center">
-          <div className="flex flex-col items-center justify-center px-1">
-            <span className="text-[12px] font-semibold text-[var(--ios-red)] tracking-tight">nb</span>
-            <span className="text-[18px] font-medium tabular-nums text-[var(--ios-label)] mt-0.5 leading-none">
-              {summary.nu}
-            </span>
-          </div>
-
-          <div className="flex flex-col items-center justify-center px-1">
-            <span className="text-[12px] font-semibold text-[var(--ios-green)] tracking-tight">usp</span>
-            <span className="text-[18px] font-medium tabular-nums text-[var(--ios-label)] mt-0.5 leading-none">
-              {summary.u}
-            </span>
-          </div>
-
-          <div className="flex flex-col items-center justify-center px-1">
-            <span className="text-[12px] font-semibold text-[var(--ios-orange)] tracking-tight">sp</span>
-            <span className="text-[18px] font-medium tabular-nums text-[var(--ios-label)] mt-0.5 leading-none">
-              {summary.sp}
-            </span>
-          </div>
-
-          <div className="flex flex-col items-center justify-center px-1">
-            <span className="text-[12px] font-semibold text-[var(--ios-yellow)] dark:text-[#ffd60a] tracking-tight">sL</span>
-            <span className="text-[18px] font-medium tabular-nums text-[var(--ios-label)] mt-0.5 leading-none">
-              {summary.sl}
-            </span>
-          </div>
-
-          <div className="flex flex-col items-center justify-center px-1">
-            <span className="text-[12px] font-semibold text-[var(--ios-purple)] tracking-tight">zw</span>
-            <span className="text-[18px] font-medium tabular-nums text-[var(--ios-label)] mt-0.5 leading-none">
-              {summary.zw}
-            </span>
-          </div>
+      <div className="flex flex-col gap-3.5 pb-16 select-none w-full">
+        <IosCard className="p-3.5 grid grid-cols-5 gap-1.5 text-center">
+          {statItems.map((st) => (
+            <div key={st.label} className="flex flex-col items-center justify-center py-1.5 rounded-[14px] bg-[var(--bg-card-secondary)]">
+              <span className="text-[11px] font-medium text-[var(--ios-secondary)] leading-none">
+                {st.label}
+              </span>
+              <span className={cn(
+                'text-[19px] font-semibold tabular-nums mt-1.5 leading-none',
+                st.isAlert
+                  ? 'text-[var(--ios-red)]'
+                  : st.value > 0
+                    ? 'text-[var(--ios-label)]'
+                    : 'text-[var(--ios-tertiary)] font-normal'
+              )}>
+                {st.value}
+              </span>
+            </div>
+          ))}
         </IosCard>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-normal uppercase text-[var(--ios-secondary)] tracking-[-0.08px] px-3 select-none">
+          <span className="text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-[0.02em] px-4 pt-1 select-none">
             {lang === 'en' ? 'Attendance History' : 'Historia obecności'}
           </span>
 
-          <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
-            {/* Шапка таблицы с легкими номерами уроков */}
-            <div className="px-3 py-2 flex items-center justify-between gap-2 bg-[var(--ios-element)] border-b border-[var(--ios-separator)] text-[11px] font-medium text-[var(--ios-secondary)]">
-              <span className="w-[58px] shrink-0 text-left">Data</span>
-
-              <div className="grid grid-cols-11 gap-0.5 flex-1 text-center">
-                {lessonCols.map((col) => (
-                  <span key={col} className="w-full text-center font-normal">
-                    {col}
-                  </span>
-                ))}
-              </div>
-
-              <span className="w-[32px] shrink-0 text-right pr-0.5">Suma</span>
-            </div>
-
-            {days.map((day) => {
-              const dateInfo = formatPolishDayDate(day.isoDate, lang)
-              return (
-                <div
-                  key={day.date}
-                  onClick={() => handleOpenDay(day)}
-                  className="px-3 py-2 flex items-center justify-between gap-2 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors cursor-pointer"
-                >
-                  <div className="flex flex-col w-[58px] shrink-0">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[15px] font-medium text-[var(--ios-label)] leading-none tabular-nums">
-                        {dateInfo.dayNum}
-                      </span>
-                      <span className="text-[11px] font-normal text-[var(--ios-secondary)]">
-                        {dateInfo.monthName}
+          {days.length > 0 ? (
+            <IosCard className="overflow-hidden divide-y">
+              {days.map((day) => {
+                const dateInfo = formatPolishDayDate(day.isoDate, lang)
+                return (
+                  <div
+                    key={day.date}
+                    onClick={() => handleOpenDay(day)}
+                    className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors cursor-pointer"
+                  >
+                    <div className="flex flex-col w-[52px] shrink-0">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-[15px] font-semibold text-[var(--ios-label)] leading-none tabular-nums">
+                          {dateInfo.dayNum}
+                        </span>
+                        <span className="text-[11px] font-normal text-[var(--ios-secondary)]">
+                          {dateInfo.monthName}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-normal text-[var(--ios-tertiary)] mt-0.5 leading-none">
+                        {dateInfo.weekday}
                       </span>
                     </div>
-                    <span className="text-[11px] font-normal text-[var(--ios-secondary)] mt-0.5 leading-none">
-                      {dateInfo.weekday}
-                    </span>
-                  </div>
 
-                  <div className="grid grid-cols-11 gap-0.5 flex-1 items-center text-center">
-                    {lessonCols.map((col) => {
-                      const lesson = day.lessons[col]
-                      if (!lesson) {
+                    <div
+                      className="grid gap-1 flex-1 items-center"
+                      style={{
+                        gridTemplateColumns: 'repeat(' + lessonCols.length + ', minmax(0, 1fr))'
+                      }}
+                    >
+                      {lessonCols.map((col) => {
+                        const lesson = day.lessons[col]
+                        if (!lesson) {
+                          return (
+                            <div
+                              key={col}
+                              className="h-[26px] rounded-[8px] bg-[var(--bg-card-secondary)] flex items-center justify-center text-[10px] text-[var(--ios-quaternary)] font-medium tabular-nums"
+                            >
+                              {col}
+                            </div>
+                          )
+                        }
+
+                        const lType = lesson.type
+                        const isNu = lType === 'nb'
+                        const isSpOrSl = lType === 'sp' || lType === 'sl'
+
+                        const badgeClass = isNu
+                          ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
+                          : isSpOrSl
+                            ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] font-semibold'
+                            : 'bg-[var(--ios-element)] text-[var(--ios-secondary)] font-medium'
+
                         return (
                           <div
                             key={col}
-                            className="w-full aspect-square max-h-[22px] rounded-[5px] bg-[var(--ios-element)] flex items-center justify-center text-[10px] text-[var(--ios-tertiary)] font-normal"
+                            className={cn('h-[26px] rounded-[8px] flex items-center justify-center text-[10px] leading-none tracking-tight', badgeClass)}
                           >
-                            ·
+                            {lesson.symbol}
                           </div>
                         )
-                      }
+                      })}
+                    </div>
 
-                      const lType = lesson.type
-                      const isSl = lType === 'sl'
-                      const isNu = lType === 'nb'
-                      const isU = lType === 'u'
-                      const isSp = lType === 'sp'
-                      const isZw = lType === 'zw'
-
-                      const badgeClass = isSl
-                        ? 'bg-[var(--ios-yellow)]/20 text-[var(--ios-yellow)] dark:text-[#ffd60a] font-semibold'
-                        : isNu
-                          ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
-                          : isU
-                            ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)] font-semibold'
-                            : isSp
-                              ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] font-semibold'
-                              : isZw
-                                ? 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)] font-semibold'
-                                : 'bg-[var(--ios-element)] text-[var(--ios-label)] font-medium'
-
-                      return (
-                        <div
-                          key={col}
-                          className={"w-full aspect-square max-h-[22px] rounded-[5px] flex items-center justify-center text-[9px] leading-none " + badgeClass}
-                        >
-                          {lesson.symbol}
-                        </div>
-                      )
-                    })}
+                    <div className="flex items-center justify-end gap-1.5 min-w-[34px] shrink-0">
+                      <span className={cn(
+                        'text-[13px] font-semibold tabular-nums',
+                        day.nuCount > 0 ? 'text-[var(--ios-red)]' : 'text-[var(--ios-secondary)]'
+                      )}>
+                        {day.totalCount}
+                      </span>
+                      <svg className="w-3.5 h-3.5 text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-1 w-[32px] shrink-0 justify-end pr-0.5">
-                    <span className="text-[13px] font-medium tabular-nums text-[var(--ios-label)]">
-                      {day.totalCount}
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-          </IosCard>
+                )
+              })}
+            </IosCard>
+          ) : (
+            <IosCard className="p-8 text-center text-[15px] font-normal text-[var(--ios-secondary)]">
+              {t.noAbsencesRecorded}
+            </IosCard>
+          )}
         </div>
       </div>
 
-      {/* Экран деталей дня */}
       <IosScreen
         isOpen={Boolean(activeDay)}
         onClose={handleCloseDay}
         title={displayDay ? displayDay.date : ''}
-        backLabel={lang === 'en' ? 'Table' : 'Tabela'}
+        backLabel={lang === 'en' ? 'Journal' : 'Dziennik'}
         showBackButton={true}
         isSubView={true}
         className="z-[70]"
       >
-        <div className="flex flex-col gap-3 pb-16 select-none max-w-[402px] mx-auto w-full">
+        <div className="flex flex-col gap-3 pb-16 select-none w-full">
           {displayDay && (
             <div className="flex flex-col gap-1.5">
-              <span className="text-[13px] font-normal uppercase text-[var(--ios-secondary)] tracking-[-0.08px] px-3 select-none">
+              <span className="text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-[0.02em] px-4 select-none">
                 {lang === 'en' ? 'Lessons & Absences' : 'Lekcje w tym dniu'}
               </span>
 
-              <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
+              <IosCard className="overflow-hidden divide-y">
                 {activeDayAbsences.length > 0 ? (
                   activeDayAbsences.map((item, idx) => (
                     <div key={idx} className="p-3.5 px-4 flex items-center justify-between gap-3">
@@ -305,14 +306,13 @@ export function LegacyAttendanceView({
                         )}
                       </div>
 
-                      <span className={"text-[12px] font-medium px-2.5 py-0.5 rounded-full shrink-0 tabular-nums " + (
-                        item.type === 'sl'
-                          ? "bg-[var(--ios-yellow)]/15 text-[var(--ios-yellow)] dark:text-[#ffd60a]"
-                          : item.type === 'sp'
-                            ? "bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]"
-                            : item.isUnexcused
-                              ? "bg-[var(--ios-red-subtle)] text-[var(--ios-red)]"
-                              : "bg-[var(--ios-green-subtle)] text-[var(--ios-green)]"
+                      <span className={cn(
+                        'text-[12px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 tabular-nums',
+                        item.type === 'sl' || item.type === 'sp'
+                          ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
+                          : item.isUnexcused
+                            ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
+                            : 'bg-[var(--ios-element)] text-[var(--ios-secondary)]'
                       )}>
                         {item.type === 'sl' ? 'sL' : item.type.toUpperCase()}
                       </span>

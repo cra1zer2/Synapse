@@ -6,6 +6,7 @@ import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
 import { formatSubjectName } from '@/utils/text.util'
 import { formatPolishDayDate, getTodayIsoString } from '@/utils/date.util'
+import { cn } from '@/utils/cn.util'
 
 interface MiniUpcomingEventsWidgetProps {
   timetableData: SmartTimetableResult | null
@@ -25,7 +26,6 @@ export function MiniUpcomingEventsWidget({
   showHomeworks = false,
   showFullSubjectNames = false,
   lang = 'pl',
-  t,
   onSelectEvent,
   onOpenCalendar,
   isDesktop = false
@@ -48,7 +48,7 @@ export function MiniUpcomingEventsWidget({
       if (ev.isoDate < todayIso) continue
       if (!showHomeworks && ev.category === 'homework') continue
 
-      const key = `${ev.isoDate}_${ev.lessonNumber || ''}_${ev.title}_${ev.category}`
+      const key = ev.isoDate + '_' + (ev.lessonNumber || '') + '_' + ev.title + '_' + ev.category
       if (seen.has(key)) continue
       seen.add(key)
       filtered.push(ev)
@@ -69,34 +69,30 @@ export function MiniUpcomingEventsWidget({
         return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
       case 'quiz':
         return 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
-      case 'homework':
-        return 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)]'
       case 'holiday':
         return 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
       default:
-        return 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)]'
+        return 'bg-[var(--ios-element)] text-[var(--ios-secondary)]'
     }
   }
 
   return (
     <IosCard
       onClick={!isDesktop ? onOpenCalendar : undefined}
-      className={
-        'overflow-hidden flex flex-col select-none transition-colors duration-100 ' +
-        (!isDesktop && onOpenCalendar ? 'cursor-pointer active:bg-[var(--ios-row-active)]' : '')
-      }
+      className={cn(
+        'overflow-hidden flex flex-col select-none',
+        !isDesktop && onOpenCalendar && 'cursor-pointer active:bg-[var(--ios-row-active)]'
+      )}
     >
       <div
         onClick={isDesktop ? onOpenCalendar : undefined}
-        className={
-          'px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-[var(--ios-separator)] transition-colors duration-100 ' +
-          (isDesktop && onOpenCalendar
-            ? 'cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]'
-            : '')
-        }
+        className={cn(
+          'px-4 h-[46px] flex items-center justify-between border-b border-[var(--ios-separator)] transition-colors duration-150',
+          onOpenCalendar && 'cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]'
+        )}
       >
         <div className="flex items-center gap-2">
-          <span className="text-[15px] font-medium tracking-[-0.2px] text-[var(--ios-label)] leading-none">
+          <span className="text-[15px] font-semibold tracking-[-0.2px] text-[var(--ios-label)] leading-none">
             {isEn ? 'Tests & Deadlines' : 'Sprawdziany i terminy'}
           </span>
           {isLoading ? (
@@ -119,7 +115,7 @@ export function MiniUpcomingEventsWidget({
             <Fragment key={i}>
               <div className="px-4 py-2.5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-[44px] h-[36px] shrink-0 rounded-[10px] ios-skeleton" />
+                  <div className="w-[44px] h-[36px] shrink-0 rounded-[8px] ios-skeleton" />
                   <div className="flex flex-col gap-1.5 flex-1">
                     <div className="w-28 h-[13px] rounded-full ios-skeleton" />
                     <div className="w-40 h-[11px] rounded-full ios-skeleton" />
@@ -127,7 +123,7 @@ export function MiniUpcomingEventsWidget({
                 </div>
                 <div className="w-16 h-[20px] rounded-full ios-skeleton shrink-0" />
               </div>
-              {i < 2 && <div className="h-[0.5px] bg-[var(--ios-separator)] ml-[72px] mr-4" />}
+              {i < 2 && <div className="h-[1px] bg-[var(--ios-separator)] ml-[72px] mr-4" />}
             </Fragment>
           ))}
         </div>
@@ -150,7 +146,7 @@ export function MiniUpcomingEventsWidget({
                   className="px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-[44px] shrink-0 flex flex-col items-center justify-center py-1 rounded-[10px] bg-[var(--ios-element)]/55">
+                    <div className="w-[44px] shrink-0 flex flex-col items-center justify-center py-1 rounded-[8px] bg-[var(--bg-card-secondary)]">
                       <span className="text-[13px] font-semibold text-[var(--ios-label)] leading-none tabular-nums">
                         {dateInfo.dayNum} {dateInfo.monthName}
                       </span>
@@ -169,24 +165,25 @@ export function MiniUpcomingEventsWidget({
                     </div>
                   </div>
 
-                  <span
-                    className={
-                      'text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 ' +
-                      getBadgeStyle(ev.category)
-                    }
-                  >
+                  <span className={cn('text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0', getBadgeStyle(ev.category))}>
                     {ev.eventType || (ev.category === 'exam' ? 'Sprawdzian' : ev.category === 'quiz' ? 'Kartkówka' : ev.category === 'homework' ? 'Zadanie' : 'Info')}
                   </span>
                 </div>
                 {idx < previewList.length - 1 && (
-                  <div className="h-[0.5px] bg-[var(--ios-separator)] ml-[72px] mr-4" />
+                  <div className="h-[1px] bg-[var(--ios-separator)] ml-[72px] mr-4" />
                 )}
               </Fragment>
             )
           })}
         </div>
       ) : (
-        <div className="px-4 py-5 text-center text-[13px] font-normal text-[var(--ios-secondary)]">
+        <div
+          onClick={onOpenCalendar}
+          className={cn(
+            'px-4 py-5 text-center text-[13px] font-normal text-[var(--ios-secondary)]',
+            onOpenCalendar && 'cursor-pointer hover:bg-[var(--ios-row-hover)]'
+          )}
+        >
           {isEn ? 'No upcoming tests or deadlines' : 'Brak nadchodzących sprawdzianów i terminów'}
         </div>
       )}

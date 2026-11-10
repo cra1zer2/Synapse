@@ -103,6 +103,10 @@ function deduplicateReceivers(list: ReceiverItem[]): ReceiverItem[] {
   return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pl'))
 }
 
+function hasExplicitTime(dateStr: string): boolean {
+  return /\d{1,2}:\d{2}/.test(dateStr || '')
+}
+
 export function MessagesWidget({
   mode,
   folder = 'inbox',
@@ -252,7 +256,7 @@ export function MessagesWidget({
     })
 
     setComposeInitialRecipients(found ? [found] : [])
-    setComposeInitialTitle(msg.subject.toLowerCase().startsWith('re:') ? msg.subject : `Re: ${msg.subject}`)
+    setComposeInitialTitle(msg.subject.toLowerCase().startsWith('re:') ? msg.subject : 'Re: ' + msg.subject)
     setLocalCompose(true)
     notifySubView(true)
   }
@@ -278,10 +282,10 @@ export function MessagesWidget({
             type="button"
             onClick={() => setOnlyUnread((prev) => !prev)}
             className={cn(
-              'h-[40px] px-3.5 rounded-full text-[13px] font-medium tracking-[-0.1px] shrink-0 transition-colors cursor-pointer select-none',
+              'h-[42px] px-4 rounded-full text-[13px] font-medium tracking-[-0.1px] shrink-0 transition-colors cursor-pointer select-none',
               onlyUnread
-                ? 'bg-[var(--ios-blue)] text-white'
-                : 'bg-[var(--ios-card-solid)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
+                ? 'bg-[var(--ios-blue)] text-white font-semibold'
+                : 'bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
             )}
           >
             {isEn ? 'Unread' : 'Nieprzeczytane'}
@@ -290,19 +294,16 @@ export function MessagesWidget({
       </div>
 
       {mode === 'messages' ? (
-        <IosCard className="overflow-hidden">
+        <IosCard className="overflow-hidden divide-y">
           {isLoading && messages.length === 0 ? (
             Array.from({ length: 4 }).map((_, idx) => (
-              <div key={idx} className="relative w-full p-3.5 px-4 flex flex-col gap-2">
+              <div key={idx} className="w-full p-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="w-24 h-[11px] rounded-full ios-skeleton" />
                   <div className="w-16 h-[11px] rounded-full ios-skeleton" />
                 </div>
                 <div className="w-48 h-[15px] rounded-full ios-skeleton" />
                 <div className="w-full h-[12px] rounded-full ios-skeleton" />
-                {idx < 3 && (
-                  <div className="absolute bottom-0 right-4 left-4 h-[1px] bg-[var(--ios-separator)] pointer-events-none" />
-                )}
               </div>
             ))
           ) : filteredMessages.length > 0 ? (
@@ -310,9 +311,9 @@ export function MessagesWidget({
               <div
                 key={msg.id + '-' + idx}
                 onClick={() => handleReadMessage(msg)}
-                className="relative w-full p-3.5 px-4 flex flex-col gap-1 transition-colors duration-100 cursor-pointer active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20"
+                className="w-full p-4 flex flex-col gap-1 transition-colors duration-150 cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0">
                     {folder !== 'sent' && !msg.isRead && (
                       <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] shrink-0" />
@@ -333,7 +334,7 @@ export function MessagesWidget({
                         <circle cx="12" cy="12" r="3" />
                       </svg>
                     )}
-                    <span className="text-[11px] font-semibold text-[var(--ios-blue)] uppercase tracking-wider truncate">
+                    <span className="text-[12px] font-semibold text-[var(--ios-blue)] tracking-tight truncate">
                       {cleanSenderName(msg.sender)}
                     </span>
                   </div>
@@ -353,24 +354,26 @@ export function MessagesWidget({
                         <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                       </svg>
                     )}
-                    <span className="text-[11px] font-normal text-[var(--ios-secondary)] tabular-nums">
-                      {formatHumanPolishDate(msg.date, true)}
+                    <span className="text-[12px] font-normal text-[var(--ios-secondary)] tabular-nums">
+                      {formatHumanPolishDate(msg.date, hasExplicitTime(msg.date), lang)}
                     </span>
+                    <svg className="w-3.5 h-3.5 text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
                   </div>
                 </div>
 
-                <h3 className="text-[15px] font-medium text-[var(--ios-label)] tracking-[-0.2px] leading-snug">
+                <h3 className={cn(
+                  'text-[15px] text-[var(--ios-label)] tracking-[-0.2px] leading-snug',
+                  !msg.isRead && folder !== 'sent' ? 'font-semibold' : 'font-medium'
+                )}>
                   {msg.subject}
                 </h3>
 
                 {msg.content && (
-                  <p className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] line-clamp-2 leading-relaxed">
+                  <p className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] line-clamp-2 leading-relaxed">
                     {msg.content}
                   </p>
-                )}
-
-                {idx < filteredMessages.length - 1 && (
-                  <div className="absolute bottom-0 right-4 left-4 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
                 )}
               </div>
             ))
@@ -381,19 +384,16 @@ export function MessagesWidget({
           )}
         </IosCard>
       ) : (
-        <IosCard className="overflow-hidden">
+        <IosCard className="overflow-hidden divide-y">
           {isLoading && announcements.length === 0 ? (
             Array.from({ length: 4 }).map((_, idx) => (
-              <div key={idx} className="relative w-full p-3.5 px-4 flex flex-col gap-2">
+              <div key={idx} className="w-full p-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="w-24 h-[11px] rounded-full ios-skeleton" />
                   <div className="w-16 h-[11px] rounded-full ios-skeleton" />
                 </div>
                 <div className="w-48 h-[15px] rounded-full ios-skeleton" />
                 <div className="w-full h-[12px] rounded-full ios-skeleton" />
-                {idx < 3 && (
-                  <div className="absolute bottom-0 right-4 left-4 h-[1px] bg-[var(--ios-separator)] pointer-events-none" />
-                )}
               </div>
             ))
           ) : filteredAnnouncements.length > 0 ? (
@@ -401,28 +401,29 @@ export function MessagesWidget({
               <div
                 key={item.id + '-' + idx}
                 onClick={() => handleReadAnnouncement(item)}
-                className="relative w-full p-3.5 px-4 flex flex-col gap-1 transition-colors duration-100 cursor-pointer active:bg-[var(--ios-element)]/55 hover:bg-[var(--ios-element)]/20"
+                className="w-full p-4 flex flex-col gap-1 transition-colors duration-150 cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-[var(--ios-purple)] uppercase tracking-wider">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] font-semibold text-[var(--ios-purple)] tracking-tight truncate">
                     {cleanSenderName(item.author)}
                   </span>
-                  <span className="text-[11px] font-normal text-[var(--ios-secondary)] tabular-nums">
-                    {formatHumanPolishDate(item.date, true)}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[12px] font-normal text-[var(--ios-secondary)] tabular-nums">
+                      {formatHumanPolishDate(item.date, hasExplicitTime(item.date), lang)}
+                    </span>
+                    <svg className="w-3.5 h-3.5 text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </div>
                 </div>
 
-                <h3 className="text-[15px] font-medium text-[var(--ios-label)] tracking-[-0.2px] leading-snug">
+                <h3 className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.25px] leading-snug">
                   {item.title}
                 </h3>
 
-                <p className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] line-clamp-2 leading-relaxed">
+                <p className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] line-clamp-2 leading-relaxed mt-0.5">
                   {item.content}
                 </p>
-
-                {idx < filteredAnnouncements.length - 1 && (
-                  <div className="absolute bottom-0 right-4 left-4 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
-                )}
               </div>
             ))
           ) : (
@@ -463,12 +464,7 @@ export function MessagesWidget({
         onClose={handleCloseComposeModal}
         onLoadReceivers={onLoadReceivers}
         onSend={async (ids, title, body) => {
-          let allOk = true
-          for (const id of ids) {
-            const ok = await onSendMessage(id, title, body)
-            if (!ok) allOk = false
-          }
-          return allOk
+          return await onSendMessage(ids, title, body)
         }}
         t={t}
       />

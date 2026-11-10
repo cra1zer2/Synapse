@@ -23,6 +23,8 @@ export function AnnouncementReaderScreen({
   renderContent,
   t
 }: AnnouncementReaderScreenProps) {
+  const hasTime = Boolean(announcement?.date && /\d{1,2}:\d{2}/.test(announcement.date))
+
   return (
     <IosScreen
       isOpen={isOpen}
@@ -33,16 +35,16 @@ export function AnnouncementReaderScreen({
       isSubView={true}
       className="z-[60]"
     >
-      <div className="flex flex-col gap-4 pb-16 select-none max-w-3xl mx-auto w-full">
+      <div className="flex flex-col gap-3.5 pb-16 select-none max-w-3xl mx-auto w-full">
         {announcement ? (
           <>
-            <IosCard className="p-4 sm:p-5 rounded-[20px] flex flex-col gap-2">
+            <IosCard className="p-5 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-[12px] font-semibold text-[var(--ios-purple)] uppercase tracking-wider">
+                <span className="text-[12px] font-semibold text-[var(--ios-purple)] tracking-tight">
                   {cleanSenderName(announcement.author)}
                 </span>
-                <span className="text-[11px] font-normal text-[var(--ios-secondary)] tabular-nums">
-                  {formatHumanPolishDate(announcement.date, true)}
+                <span className="text-[12px] font-normal text-[var(--ios-secondary)] tabular-nums">
+                  {formatHumanPolishDate(announcement.date, hasTime)}
                 </span>
               </div>
 
@@ -51,7 +53,7 @@ export function AnnouncementReaderScreen({
               </h2>
             </IosCard>
 
-            <IosCard className="p-4 sm:p-5 rounded-[20px]">
+            <IosCard className="p-5">
               <div className="text-[15px] font-normal text-[var(--ios-label)] leading-[1.65] whitespace-pre-wrap select-text">
                 {renderContent(announcement.content)}
               </div>

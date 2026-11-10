@@ -13,7 +13,6 @@ import {
     sendMessageToUser,
     downloadMessageAttachment
 } from '@/services/message.service'
-import { runLibrusBenchmark } from '@/services/benchmark.service'
 import { JustificationPayload } from '@/models/justification.model'
 import { StudentProfile } from '@/models/account.model'
 import { MessagesActionResult } from '@/models/message.model'
@@ -21,19 +20,9 @@ import { SmartTimetableResult } from '@/models/timetable.model'
 import { GradesResult } from '@/models/grade.model'
 import { AttendanceResult } from '@/models/attendance.model'
 
-export async function executeLibrusBenchmarkAction(username: string, pass: string) {
-    try {
-        const report = await runLibrusBenchmark(username, pass)
-        return { success: true, data: report }
-    } catch (error) {
-        return { success: false, error: String(error) }
-    }
-}
-
 export async function getJustificationsAction(username: string, pass: string, dateFrom: string, dateTo: string) {
     try {
-        const result = await fetchJustificationsHistory(username, pass, dateFrom, dateTo)
-        return result
+        return await fetchJustificationsHistory(username, pass, dateFrom, dateTo)
     } catch (error) {
         return { success: false, error: String(error) }
     }
@@ -41,8 +30,7 @@ export async function getJustificationsAction(username: string, pass: string, da
 
 export async function createJustificationAction(username: string, pass: string, payload: JustificationPayload) {
     try {
-        const result = await submitJustification(username, pass, payload)
-        return result
+        return await submitJustification(username, pass, payload)
     } catch (error) {
         return { success: false, error: String(error) }
     }
@@ -150,8 +138,7 @@ export async function syncAllUserDataAction(
 
 export async function getSmartTimetableAction(username: string, pass: string, translate: boolean, targetDateIso?: string) {
     try {
-        const result = await fetchSmartTimetable(username, pass, translate, targetDateIso)
-        return result
+        return await fetchSmartTimetable(username, pass, translate, targetDateIso)
     } catch (error: any) {
         return { success: false, error: String(error?.message || error) }
     }
@@ -159,8 +146,7 @@ export async function getSmartTimetableAction(username: string, pass: string, tr
 
 export async function getStudentGradesAction(username: string, pass: string, translate: boolean) {
     try {
-        const result = await fetchStudentGrades(username, pass, translate)
-        return result
+        return await fetchStudentGrades(username, pass, translate)
     } catch (error: any) {
         return { success: false, error: String(error?.message || error) }
     }
@@ -168,8 +154,7 @@ export async function getStudentGradesAction(username: string, pass: string, tra
 
 export async function getAttendanceAction(username: string, pass: string, translate: boolean) {
     try {
-        const result = await fetchAttendanceMetrics(username, pass, translate)
-        return result
+        return await fetchAttendanceMetrics(username, pass, translate)
     } catch (error: any) {
         return { success: false, error: String(error?.message || error) }
     }
@@ -249,16 +234,15 @@ export async function getReceiversAction(username: string, pass: string) {
 
 export async function readMessageAction(username: string, pass: string, messageId: number, folderId: number = 5) {
     try {
-        const res = await fetchMessageContent(username, pass, messageId, folderId)
-        return res
+        return await fetchMessageContent(username, pass, messageId, folderId)
     } catch (error) {
         return { success: false, error: String(error) }
     }
 }
 
-export async function downloadAttachmentAction(username: string, pass: string, path: string, fileName: string) {
+export async function downloadAttachmentAction(username: string, pass: string, filePath: string, fileName: string) {
     try {
-        return await downloadMessageAttachment(username, pass, path, fileName)
+        return await downloadMessageAttachment(username, pass, filePath, fileName)
     } catch (error) {
         return { success: false, error: String(error) }
     }
@@ -267,11 +251,10 @@ export async function downloadAttachmentAction(username: string, pass: string, p
 export async function sendMessageAction(username: string, pass: string, receiverId: number | number[], title: string, body: string) {
     try {
         const ids = Array.isArray(receiverId) ? receiverId : [receiverId]
-        for (const id of ids) {
-            const res = await sendMessageToUser(username, pass, id, title, body)
-            if (!res.success) return res
+        if (ids.length === 0) {
+            return { success: false, error: 'Brak odbiorców' }
         }
-        return { success: true }
+        return await sendMessageToUser(username, pass, ids, title, body)
     } catch (error) {
         return { success: false, error: String(error) }
     }
@@ -279,13 +262,11 @@ export async function sendMessageAction(username: string, pass: string, receiver
 
 export async function getUnreadCountsAction(username: string, pass: string) {
     try {
-        const res = await fetchUnreadCounters(username, pass)
-        return res
+        return await fetchUnreadCounters(username, pass)
     } catch (error) {
         return { success: false, unreadMessages: 0, announcementsCount: 0, error: String(error) }
     }
 }
-
 
 export async function getLiveJustificationsAction(
     username: string,
@@ -368,52 +349,46 @@ export async function runDisplayDiagnosticsAction(
         }
     }
 
-    // 1. Profil użytkownika (Gateway API)
     await testStep(
         'Profil i autoryzacja (Gateway)',
         'profile',
         () => getStudentProfileAction(cleanUser, cleanPass),
-        (d) => d.data ? `${d.data.fullName} (${d.data.className})` : 'OK'
+        (d) => d.data ? d.data.fullName + ' (' + d.data.className + ')' : 'OK'
     )
 
-    // 2. Plan lekcji (Timetable)
     await testStep(
         'Plan lekcji (Timetable)',
         'timetable',
         () => fetchSmartTimetable(cleanUser, cleanPass, translate),
-        (d) => d.data?.schedule ? `Dni: ${d.data.schedule.length}, Lekcji: ${d.data.schedule.reduce((acc: number, cur: any) => acc + (cur.lessons?.length || 0), 0)}` : 'OK'
+        (d) => d.data?.schedule ? 'Dni: ' + d.data.schedule.length + ', Lekcji: ' + d.data.schedule.reduce((acc: number, cur: any) => acc + (cur.lessons?.length || 0), 0) : 'OK'
     )
 
-    // 3. Oceny (Grades)
     await testStep(
         'Oceny (Grades)',
         'grades',
         () => fetchStudentGrades(cleanUser, cleanPass, translate),
-        (d) => d.data?.subjects ? `Przedmiotów: ${d.data.subjects.length}, Średnia: ${d.data.overallAverage ?? '—'}` : 'OK'
+        (d) => d.data?.subjects ? 'Przedmiotów: ' + d.data.subjects.length + ', Średnia: ' + (d.data.overallAverage ?? '—') : 'OK'
     )
 
-    // 4. Frekwencja (Attendance)
     await testStep(
         'Frekwencja (Attendance)',
         'attendance',
         () => fetchAttendanceMetrics(cleanUser, cleanPass, translate),
-        (d) => d.data ? `Obecność: ${d.data.overallPercentage}%, Nb: ${d.data.totalAbsent}` : 'OK'
+        (d) => d.data ? 'Obecność: ' + d.data.overallPercentage + '%, Nb: ' + d.data.totalAbsent : 'OK'
     )
 
-    // 5. Wiadomości i ogłoszenia (Messages & Announcements)
     await testStep(
         'Wiadomości i ogłoszenia',
         'messages',
         () => fetchMessagesBundle(cleanUser, cleanPass),
-        (d) => `Wiadomości: ${d.messages?.length || 0}, Ogłoszenia: ${d.announcements?.length || 0}`
+        (d) => 'Wiadomości: ' + (d.messages?.length || 0) + ', Ogłoszenia: ' + (d.announcements?.length || 0)
     )
 
-    // 6. Statusy usprawiedliwień (Live Justifications)
     await testStep(
         'Statusy usprawiedliwień',
         'justifications',
         () => fetchLiveJustificationsHistory(cleanUser, cleanPass, '0'),
-        (d) => `Wpisów: ${d.data?.length || 0}`
+        (d) => 'Wpisów: ' + (d.data?.length || 0)
     )
 
     const totalDurationMs = Math.round(performance.now() - overallStart)

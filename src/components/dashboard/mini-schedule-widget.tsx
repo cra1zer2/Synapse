@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, Fragment } from 'react'
 import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
 import { parseLessonTimeRange, calculateBreakDuration, getCurrentTimeMinutes, getBreakRemainingMinutes } from '@/utils/time.util'
 import { formatSubjectName } from '@/utils/text.util'
-import { TextClampOption } from '@/app/page'
+import { TextClampOption } from '@/hooks/settings.hook'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard, IosBreakDivider } from '@/components/ios/ios-ui'
 import { cn } from '@/utils/cn.util'
@@ -156,7 +156,7 @@ export function MiniScheduleWidget({
     const y = now.getFullYear()
     const m = String(now.getMonth() + 1).padStart(2, '0')
     const d = String(now.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
+    return y + '-' + m + '-' + d
   }, [])
 
   const todayDayName = useMemo(() => {
@@ -203,50 +203,27 @@ export function MiniScheduleWidget({
     )
   }, [timetableData, isWeekend, todaySchedule, todayDayName])
 
-  const todayLessons = useMemo(() => {
-    return todaySchedule?.lessons || []
-  }, [todaySchedule])
-
-  const activeTodayLessons = useMemo(() => {
-    return todayLessons.filter((l) => !l.isCancelled)
-  }, [todayLessons])
-
-  const nextDayLessons = useMemo(() => {
-    return nextUpcomingDaySchedule?.lessons || []
-  }, [nextUpcomingDaySchedule])
-
-  const activeNextDayLessons = useMemo(() => {
-    return nextDayLessons.filter((l) => !l.isCancelled)
-  }, [nextDayLessons])
+  const todayLessons = useMemo(() => todaySchedule?.lessons || [], [todaySchedule])
+  const activeTodayLessons = useMemo(() => todayLessons.filter((l) => !l.isCancelled), [todayLessons])
+  const nextDayLessons = useMemo(() => nextUpcomingDaySchedule?.lessons || [], [nextUpcomingDaySchedule])
+  const activeNextDayLessons = useMemo(() => nextDayLessons.filter((l) => !l.isCancelled), [nextDayLessons])
 
   const lastLessonEndMinutes = useMemo(() => {
     let maxEnd = 0
     for (const l of activeTodayLessons) {
       const r = parseLessonTimeRange(l.time)
-      if (r.isValid && r.endMinutes > maxEnd) {
-        maxEnd = r.endMinutes
-      }
+      if (r.isValid && r.endMinutes > maxEnd) maxEnd = r.endMinutes
     }
     return maxEnd > 0 ? maxEnd : (15 * 60)
   }, [activeTodayLessons])
 
   const scheduleState = useMemo(() => {
     if (isWeekend) {
-      return {
-        mode: 'next_day' as const,
-        currentLesson: null,
-        nextLesson: null,
-        breakMinutes: 0
-      }
+      return { mode: 'next_day' as const, currentLesson: null, nextLesson: null, breakMinutes: 0 }
     }
 
     if (activeTodayLessons.length === 0) {
-      return {
-        mode: 'empty' as const,
-        currentLesson: null,
-        nextLesson: null,
-        breakMinutes: 0
-      }
+      return { mode: 'empty' as const, currentLesson: null, nextLesson: null, breakMinutes: 0 }
     }
 
     let focusIdx = -1
@@ -259,9 +236,7 @@ export function MiniScheduleWidget({
     }
 
     if (focusIdx === -1) {
-      const threeHoursAfterLessons = lastLessonEndMinutes + 180
-      const isPastThreeHours = currentMinutes >= threeHoursAfterLessons
-
+      const isPastThreeHours = currentMinutes >= lastLessonEndMinutes + 180
       return {
         mode: (isPastThreeHours && activeNextDayLessons.length > 0) ? ('next_day' as const) : ('all_ended_today' as const),
         currentLesson: null,
@@ -311,9 +286,7 @@ export function MiniScheduleWidget({
 
   const displayLessons = useMemo(() => {
     const list = shouldShowNextDay ? nextDayLessons : todayLessons
-    if (showAllLessons) {
-      return list
-    }
+    if (showAllLessons) return list
     if (scheduleState.currentLesson || scheduleState.nextLesson) {
       const res: LessonItem[] = []
       if (scheduleState.currentLesson) res.push(scheduleState.currentLesson)
@@ -327,16 +300,16 @@ export function MiniScheduleWidget({
     <IosCard className="overflow-hidden flex flex-col select-none">
       <div
         onClick={handleCardClick}
-        className="px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-[var(--ios-separator)] cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150"
+        className="px-4 h-[46px] flex items-center justify-between border-b border-[var(--ios-separator)] cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150"
       >
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] truncate">
+          <span className="text-[15px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] truncate">
             {t.schedule}
           </span>
           {(isLoading || !timetableData) ? (
             <div className="w-16 h-[20px] rounded-full ios-skeleton shrink-0" />
           ) : badgeLabel ? (
-            <span className="text-[12px] font-medium text-[var(--ios-secondary)] bg-[var(--ios-element)] px-2.5 py-0.5 rounded-full shrink-0">
+            <span className="text-[11px] font-semibold text-[var(--ios-secondary)] bg-[var(--ios-element)] px-2.5 py-0.5 rounded-full shrink-0">
               {badgeLabel}
             </span>
           ) : null}
@@ -352,15 +325,9 @@ export function MiniScheduleWidget({
           <div className="w-8 h-8 rounded-full bg-[var(--ios-red-subtle)] text-[var(--ios-red)] flex items-center justify-center text-[15px] font-bold">
             !
           </div>
-          <span className="text-[13px] font-normal text-[var(--ios-label)] px-3">
-            {error}
-          </span>
+          <span className="text-[13px] font-normal text-[var(--ios-label)] px-3">{error}</span>
           {onRetry && (
-            <button
-              type="button"
-              onClick={onRetry}
-              className="text-[13px] font-medium text-[var(--ios-blue)] active:opacity-60 cursor-pointer pt-1"
-            >
+            <button type="button" onClick={onRetry} className="text-[13px] font-medium text-[var(--ios-blue)] active:opacity-60 cursor-pointer pt-1">
               {t.refresh || 'Spróbuj ponownie'}
             </button>
           )}
@@ -374,14 +341,11 @@ export function MiniScheduleWidget({
               { subjectWidth: 'w-52', teacherWidth: 'w-36' },
               { subjectWidth: 'w-40', teacherWidth: 'w-28' },
               { subjectWidth: 'w-48', teacherWidth: 'w-32' },
-              { subjectWidth: 'w-32', teacherWidth: 'w-24' },
-              { subjectWidth: 'w-44', teacherWidth: 'w-28' }
+              { subjectWidth: 'w-32', teacherWidth: 'w-24' }
             ].map((row, idx, arr) => (
               <Fragment key={idx}>
                 <MiniLessonSkeleton subjectWidth={row.subjectWidth} teacherWidth={row.teacherWidth} />
-                {idx < arr.length - 1 && (
-                  <div className="h-[0.5px] bg-[var(--ios-separator)] mx-4" />
-                )}
+                {idx < arr.length - 1 && <div className="h-[1px] bg-[var(--ios-separator)] mx-4" />}
               </Fragment>
             ))}
           </div>
@@ -389,9 +353,9 @@ export function MiniScheduleWidget({
           <div className="flex flex-col py-1">
             <MiniLessonSkeleton />
             <div className="w-full flex items-center gap-3 px-4 py-1">
-              <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
+              <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
               <div className="w-16 h-[20px] rounded-full ios-skeleton" />
-              <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
+              <div className="h-[1px] flex-1 bg-[var(--ios-separator)]" />
             </div>
             <MiniLessonSkeleton />
           </div>
@@ -421,7 +385,7 @@ export function MiniScheduleWidget({
               {showAllLessons && scheduleState.mode === 'all_ended_today' && !shouldShowNextDay && (
                 <div className="mx-4 mt-3 mb-1 py-1.5 px-3 rounded-[10px] bg-[var(--ios-green-subtle)] text-[var(--ios-green)] text-[12px] font-medium flex items-center justify-between select-none">
                   <span>{lang === 'en' ? 'All lessons for today completed' : 'Lekcje na dziś zakończone'}</span>
-                  <span className="opacity-75">{lang === 'en' ? 'Done' : 'Koniec'}</span>
+                  <span>{lang === 'en' ? 'Done' : 'Koniec'}</span>
                 </div>
               )}
 
@@ -441,7 +405,7 @@ export function MiniScheduleWidget({
                 const breakRemaining = isBreakActive && nextLesson ? getBreakRemainingMinutes(nextLesson.time) : 0
 
                 return (
-                  <Fragment key={`${lesson.time}-${lesson.subject}-${lesson.number}-${idx}`}>
+                  <Fragment key={lesson.time + '-' + lesson.subject + '-' + lesson.number + '-' + idx}>
                     <MiniLessonItem
                       lesson={lesson}
                       isActive={isOngoing}
@@ -466,7 +430,7 @@ export function MiniScheduleWidget({
                             countdownText={t.breakCountdownLabel(breakRemaining)}
                           />
                         ) : (
-                          <div className="h-[0.5px] bg-[var(--ios-separator)] mx-4" />
+                          <div className="h-[1px] bg-[var(--ios-separator)] mx-4" />
                         )
                       )
                     )}

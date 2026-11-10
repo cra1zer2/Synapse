@@ -1,5 +1,7 @@
 'use client'
 
+import { cn } from '@/utils/cn.util'
+
 export type IosBadgeVariant =
   | 'room'
   | 'shortened'
@@ -21,17 +23,17 @@ export function IosBadge({
   className = ''
 }: IosBadgeProps) {
   const variantMap: Record<IosBadgeVariant, string> = {
-    room: 'bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] text-[11px] font-medium rounded-[6px] px-2 py-0.5',
+    room: 'bg-[var(--ios-room-bg)] text-[var(--ios-room-text)] text-[11px] font-medium rounded-[8px] px-2 py-0.5',
     shortened: 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] text-[10px] font-semibold rounded-full px-2 py-0.5',
     cancelled: 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] text-[10px] font-semibold rounded-full px-2 py-0.5',
     substitution: 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)] text-[10px] font-semibold rounded-full px-2 py-0.5',
     nb: 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] text-[10px] font-semibold rounded-full px-2 py-0.5',
     usp: 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)] text-[10px] font-semibold rounded-full px-2 py-0.5',
-    neutral: 'bg-[var(--ios-element)] text-[var(--ios-secondary)] text-[11px] font-normal rounded-[6px] px-2 py-0.5'
+    neutral: 'bg-[var(--ios-element)] text-[var(--ios-secondary)] text-[11px] font-normal rounded-[8px] px-2 py-0.5'
   }
 
   return (
-    <span className={`whitespace-nowrap shrink-0 inline-flex items-center justify-center ${variantMap[variant] || variantMap.neutral} ${className}`}>
+    <span className={cn('whitespace-nowrap shrink-0 inline-flex items-center justify-center', variantMap[variant] || variantMap.neutral, className)}>
       {text}
     </span>
   )

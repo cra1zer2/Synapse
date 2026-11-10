@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, Fragment } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { TimetableEvent, SmartTimetableResult } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard, IosSearchBar, IosSegmentedControl } from '@/components/ios/ios-ui'
@@ -37,7 +37,7 @@ function getBadgeStyle(category: TimetableEvent['category']) {
     case 'homework':
       return 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)]'
     case 'holiday':
-      return 'bg-[var(--ios-teal)]/15 text-[var(--ios-teal)]'
+      return 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
     default:
       return 'bg-[var(--bg-card-secondary)] text-[var(--ios-secondary)]'
   }
@@ -52,7 +52,7 @@ function getCategoryColor(category: TimetableEvent['category']) {
     case 'homework':
       return 'bg-[var(--ios-blue)]'
     case 'holiday':
-      return 'bg-[var(--ios-teal)]'
+      return 'bg-[var(--ios-green)]'
     default:
       return 'bg-[var(--ios-secondary)]'
   }
@@ -76,12 +76,9 @@ function getCategoryShortLabel(category: TimetableEvent['category'], isEn: boole
 export function UpcomingEventsScreen({
   timetableData,
   isLoading = false,
-  showHomeworks = false,
   showFullSubjectNames = false,
   lang = 'pl',
-  t,
-  onSelectEvent,
-  onRefresh
+  onSelectEvent
 }: UpcomingEventsScreenProps) {
   const isEn = lang === 'en'
   const todayIso = useMemo(() => getTodayIsoString(), [])
@@ -92,7 +89,6 @@ export function UpcomingEventsScreen({
   const [showArchived, setShowArchived] = useState<boolean>(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Animated popover state with enter/exit transition
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isFilterMounted, setIsFilterMounted] = useState(false)
 
@@ -105,12 +101,10 @@ export function UpcomingEventsScreen({
     }
   }, [isFilterOpen, isFilterMounted])
 
-  // Calendar view navigation state
   const [calYear, setCalYear] = useState<number>(() => todayDate.getFullYear())
   const [calMonth, setCalMonth] = useState<number>(() => todayDate.getMonth())
   const [selectedDateIso, setSelectedDateIso] = useState<string>(todayIso)
 
-  // Deduplicate and aggregate all events
   const allEvents = useMemo(() => {
     if (!timetableData) return []
     const rawList = [
@@ -123,7 +117,7 @@ export function UpcomingEventsScreen({
 
     for (const ev of rawList) {
       if (!ev || !ev.isoDate) continue
-      const key = `${ev.isoDate}_${ev.lessonNumber || ''}_${ev.title}_${ev.category}_${ev.subjectName || ''}`
+      const key = ev.isoDate + '_' + (ev.lessonNumber || '') + '_' + ev.title + '_' + ev.category + '_' + (ev.subjectName || '')
       if (seen.has(key)) continue
       seen.add(key)
       deduped.push(ev)
@@ -136,7 +130,6 @@ export function UpcomingEventsScreen({
     })
   }, [timetableData])
 
-  // Category counts
   const categoryCounts = useMemo(() => {
     const counts = { all: 0, exam: 0, quiz: 0, homework: 0, other: 0 }
     for (const ev of allEvents) {
@@ -150,7 +143,6 @@ export function UpcomingEventsScreen({
     return counts
   }, [allEvents, showArchived, todayIso])
 
-  // Active filter label on button
   const hasCustomFilter = categoryFilter !== 'all' || showArchived
   const filterButtonLabel = useMemo(() => {
     if (categoryFilter === 'exam') return isEn ? 'Exams' : 'Sprawdziany'
@@ -161,21 +153,16 @@ export function UpcomingEventsScreen({
     return isEn ? 'Filter' : 'Filtr'
   }, [categoryFilter, showArchived, isEn])
 
-  // Filtered events
   const filteredEvents = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
 
     return allEvents.filter((ev) => {
-      // Archive/Past filter
       if (!showArchived && ev.isoDate < todayIso) return false
-
-      // Category filter
       if (categoryFilter === 'exam' && ev.category !== 'exam') return false
       if (categoryFilter === 'quiz' && ev.category !== 'quiz') return false
       if (categoryFilter === 'homework' && ev.category !== 'homework') return false
       if (categoryFilter === 'other' && (ev.category === 'exam' || ev.category === 'quiz' || ev.category === 'homework')) return false
 
-      // Search query
       if (q) {
         const titleMatch = (ev.title || '').toLowerCase().includes(q)
         const subjMatch = (ev.subjectName || '').toLowerCase().includes(q)
@@ -191,17 +178,15 @@ export function UpcomingEventsScreen({
     })
   }, [allEvents, showArchived, categoryFilter, searchQuery, todayIso])
 
-  // Tomorrow ISO
   const tomorrowIso = useMemo(() => {
     const tom = new Date()
     tom.setDate(tom.getDate() + 1)
     const y = tom.getFullYear()
     const m = String(tom.getMonth() + 1).padStart(2, '0')
     const d = String(tom.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
+    return y + '-' + m + '-' + d
   }, [])
 
-  // Week ranges for clean bucketing
   const weekBuckets = useMemo(() => {
     const now = new Date()
     const currentDay = now.getDay()
@@ -221,15 +206,9 @@ export function UpcomingEventsScreen({
     nextSunday.setDate(thisMonday.getDate() + 13)
     nextSunday.setHours(23, 59, 59, 999)
 
-    return {
-      thisMonday,
-      thisSunday,
-      nextMonday,
-      nextSunday
-    }
+    return { thisMonday, thisSunday, nextMonday, nextSunday }
   }, [])
 
-  // Layered buckets for list view
   const layeredGroups = useMemo(() => {
     const todayList: TimetableEvent[] = []
     const tomorrowList: TimetableEvent[] = []
@@ -252,19 +231,16 @@ export function UpcomingEventsScreen({
         pastList.push(ev)
         continue
       }
-
       if (ev.isoDate === todayIso) {
         todayList.push(ev)
         continue
       }
-
       if (ev.isoDate === tomorrowIso) {
         tomorrowList.push(ev)
         continue
       }
 
       const evDate = new Date(ev.isoDate + 'T12:00:00')
-
       if (evDate >= weekBuckets.thisMonday && evDate <= weekBuckets.thisSunday) {
         thisWeekList.push(ev)
       } else if (evDate >= weekBuckets.nextMonday && evDate <= weekBuckets.nextSunday) {
@@ -274,23 +250,16 @@ export function UpcomingEventsScreen({
         const y = evDate.getFullYear()
         const mIdx = evDate.getMonth()
         const mName = isEn ? monthNamesEn[mIdx] : monthNamesPl[mIdx]
-        const label = `${mName} ${y}`
+        const label = mName + ' ' + y
 
         if (!monthMap[mKey]) {
-          monthMap[mKey] = {
-            key: mKey,
-            label,
-            events: []
-          }
+          monthMap[mKey] = { key: mKey, label, events: [] }
         }
         monthMap[mKey].events.push(ev)
       }
     }
 
-    const laterMonths = Object.keys(monthMap)
-      .sort()
-      .map((k) => monthMap[k])
-
+    const laterMonths = Object.keys(monthMap).sort().map((k) => monthMap[k])
     return {
       today: todayList,
       tomorrow: tomorrowList,
@@ -301,7 +270,6 @@ export function UpcomingEventsScreen({
     }
   }, [filteredEvents, todayIso, tomorrowIso, weekBuckets, isEn])
 
-  // Events grouped by date for Calendar view
   const eventsByDate = useMemo(() => {
     const map: Record<string, TimetableEvent[]> = {}
     for (const ev of allEvents) {
@@ -311,29 +279,23 @@ export function UpcomingEventsScreen({
     return map
   }, [allEvents])
 
-  // Calendar grid
   const calendarGrid = useMemo(() => {
     const firstDay = new Date(calYear, calMonth, 1)
-    const startingDayOfWeek = (firstDay.getDay() + 6) % 7 // Monday = 0
+    const startingDayOfWeek = (firstDay.getDay() + 6) % 7
     const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
 
     const cells: Array<{ dayNum: number | null; iso: string | null }> = []
-
     for (let i = 0; i < startingDayOfWeek; i++) {
       cells.push({ dayNum: null, iso: null })
     }
-
     for (let d = 1; d <= daysInMonth; d++) {
       const mStr = String(calMonth + 1).padStart(2, '0')
       const dStr = String(d).padStart(2, '0')
-      const iso = `${calYear}-${mStr}-${dStr}`
-      cells.push({ dayNum: d, iso })
+      cells.push({ dayNum: d, iso: calYear + '-' + mStr + '-' + dStr })
     }
-
     return cells
   }, [calYear, calMonth])
 
-  // Calendar month label
   const calMonthTitle = useMemo(() => {
     const monthNamesPl = [
       'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
@@ -344,7 +306,7 @@ export function UpcomingEventsScreen({
       'July', 'August', 'September', 'October', 'November', 'December'
     ]
     const mName = isEn ? monthNamesEn[calMonth] : monthNamesPl[calMonth]
-    return `${mName} ${calYear}`
+    return mName + ' ' + calYear
   }, [calMonth, calYear, isEn])
 
   const isCurrentCalMonth = calYear === todayDate.getFullYear() && calMonth === todayDate.getMonth()
@@ -377,126 +339,90 @@ export function UpcomingEventsScreen({
     return eventsByDate[selectedDateIso] || []
   }, [eventsByDate, selectedDateIso])
 
-  // High-contrast, clean Apple HIG event row
-  const renderEventRow = (ev: TimetableEvent, isLast: boolean) => {
+  const renderEventRow = (ev: TimetableEvent) => {
     const dateInfo = formatPolishDayDate(ev.isoDate, lang)
     const subjLabel = ev.subjectName
       ? formatSubjectName(ev.subjectName, showFullSubjectNames)
       : ev.eventType || (isEn ? 'Event' : 'Wydarzenie')
 
-    return (
-      <Fragment key={(ev.id || '') + '-' + ev.isoDate + '-' + (ev.lessonNumber || '') + '-' + ev.title}>
-        <div
-          onClick={() => onSelectEvent(ev)}
-          className="group w-full px-4 py-3 flex items-center justify-between gap-3.5 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150 cursor-pointer select-none"
-        >
-          {/* Crisp Apple Date Squircle with colored category top indicator */}
-          <div className="w-[48px] h-[52px] shrink-0 rounded-[14px] bg-[var(--bg-card-secondary)] flex flex-col items-center justify-center relative overflow-hidden shadow-xs">
-            {/* Category color top strip */}
-            <div className={cn('absolute top-0 left-0 right-0 h-[3.5px]', getCategoryColor(ev.category))} />
-            <span className="text-[17px] font-bold text-[var(--ios-label)] leading-none tabular-nums mt-1">
-              {dateInfo.dayNum}
-            </span>
-            <span className="text-[10px] font-semibold text-[var(--ios-secondary)] uppercase mt-1 leading-none tracking-tight">
-              {dateInfo.monthName}
-            </span>
-          </div>
+    const metaParts: string[] = []
+    if (ev.lessonNumber !== undefined) {
+      metaParts.push(isEn ? 'Period ' + ev.lessonNumber : 'Lekcja ' + ev.lessonNumber)
+    }
+    if (ev.time) {
+      metaParts.push(ev.time)
+    }
+    if (ev.teacher) {
+      metaParts.push(ev.teacher)
+    }
 
-          {/* Core Info */}
-          <div className="min-w-0 flex-1 flex flex-col justify-center">
-            <span className="text-[15px] font-semibold text-[var(--ios-label)] tracking-tight truncate leading-tight">
+    return (
+      <div
+        key={(ev.id || '') + '-' + ev.isoDate + '-' + (ev.lessonNumber || '') + '-' + ev.title}
+        onClick={() => onSelectEvent(ev)}
+        className="w-full px-4 py-3.5 flex items-start gap-3.5 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150 cursor-pointer select-none"
+      >
+        <div className="w-[44px] h-[46px] shrink-0 rounded-[12px] bg-[var(--bg-card-secondary)] flex flex-col items-center justify-center mt-0.5">
+          <span className="text-[16px] font-semibold text-[var(--ios-label)] leading-none tabular-nums">
+            {dateInfo.dayNum}
+          </span>
+          <span className="text-[10px] font-medium text-[var(--ios-secondary)] lowercase mt-1 leading-none">
+            {dateInfo.monthName}
+          </span>
+        </div>
+
+        <div className="min-w-0 flex-1 flex flex-col">
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-[15px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] leading-snug">
               {subjLabel}
             </span>
 
-            <span className="text-[13px] font-normal text-[var(--ios-secondary)] truncate mt-0.5 leading-snug">
-              {ev.title}
-            </span>
-
-            {(ev.lessonNumber !== undefined || ev.time || ev.teacher) && (
-              <div className="flex items-center gap-1.5 mt-1 text-[11px] font-medium text-[var(--ios-tertiary)] tabular-nums truncate leading-none">
-                {ev.lessonNumber !== undefined && (
-                  <span>{isEn ? `Period ${ev.lessonNumber}` : `Lekcja ${ev.lessonNumber}`}</span>
-                )}
-                {ev.lessonNumber !== undefined && ev.time && <span>•</span>}
-                {ev.time && <span>{ev.time}</span>}
-                {(ev.lessonNumber !== undefined || ev.time) && ev.teacher && <span>•</span>}
-                {ev.teacher && <span className="truncate">{ev.teacher}</span>}
-              </div>
-            )}
-          </div>
-
-          {/* Category Badge & Arrow */}
-          <div className="shrink-0 flex items-center gap-2">
             <span
               className={cn(
-                'text-[11px] font-semibold px-2.5 py-1 rounded-[10px] shrink-0 flex items-center gap-1.5 leading-none transition-transform',
+                'text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 leading-tight mt-0.5',
                 getBadgeStyle(ev.category)
               )}
             >
-              <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', getCategoryColor(ev.category))} />
-              <span>{ev.eventType || getCategoryShortLabel(ev.category, isEn)}</span>
+              {ev.eventType || getCategoryShortLabel(ev.category, isEn)}
             </span>
-
-            <svg
-              width="14"
-              height="14"
-              className="text-[var(--ios-tertiary)] shrink-0 opacity-40 group-hover:opacity-80 group-hover:translate-x-0.5 transition-all"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
           </div>
-        </div>
 
-        {!isLast && (
-          <div className="h-[0.5px] bg-[var(--ios-separator)] ml-[78px] mr-4 pointer-events-none" />
-        )}
-      </Fragment>
+          {ev.title && ev.title !== subjLabel && (
+            <p className="text-[13px] font-normal text-[var(--ios-secondary)] line-clamp-2 mt-0.5 leading-snug">
+              {ev.title}
+            </p>
+          )}
+
+          {metaParts.length > 0 && (
+            <span className="text-[12px] font-normal text-[var(--ios-tertiary)] tabular-nums truncate mt-1 leading-tight">
+              {metaParts.join(' • ')}
+            </span>
+          )}
+        </div>
+      </div>
     )
   }
 
-  // Section header with bold HIG typography and category indicator
-  const renderSectionHeader = (
-    title: string,
-    count: number,
-    iconType?: 'today' | 'tomorrow' | 'week' | 'month' | 'past'
-  ) => (
-    <div className="flex items-center justify-between px-4 pt-3.5 pb-1.5">
-      <div className="flex items-center gap-2">
-        {iconType === 'today' && (
-          <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] animate-pulse" />
-        )}
-        <span className="text-[12px] font-bold uppercase text-[var(--ios-secondary)] tracking-wider">
-          {title}
-        </span>
-      </div>
-      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--bg-card-secondary)] text-[var(--ios-secondary)] tabular-nums">
-        {count}
+  const renderSectionHeader = (title: string) => (
+    <div className="px-4 pt-3 pb-1.5">
+      <span className="text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-[0.02em]">
+        {title}
       </span>
     </div>
   )
 
   return (
-    <div className="flex flex-col gap-3 pb-16 select-none max-w-2xl mx-auto w-full">
-      {/* 1. View Mode Segmented Control */}
-      <div className="flex items-center justify-center">
-        <IosSegmentedControl<ViewMode>
-          value={viewMode}
-          onChange={setViewMode}
-          options={[
-            { id: 'list', label: isEn ? 'List' : 'Lista' },
-            { id: 'calendar', label: isEn ? 'Calendar' : 'Kalendarz' }
-          ]}
-          className="w-full max-w-xs"
-        />
-      </div>
+    <div className="flex flex-col gap-3.5 pb-16 select-none w-full">
+      <IosSegmentedControl<ViewMode>
+        value={viewMode}
+        onChange={setViewMode}
+        options={[
+          { id: 'list', label: isEn ? 'List' : 'Lista' },
+          { id: 'calendar', label: isEn ? 'Calendar' : 'Kalendarz' }
+        ]}
+        className="w-full"
+      />
 
-      {/* 2. Search Bar + Filter Button (IN A SINGLE LINE) */}
       <div className="relative flex items-center gap-2">
         <div className="flex-1 min-w-0">
           <IosSearchBar
@@ -510,63 +436,58 @@ export function UpcomingEventsScreen({
           type="button"
           onClick={() => setIsFilterOpen((prev) => !prev)}
           className={cn(
-            'h-[40px] px-3.5 rounded-full flex items-center gap-1.5 shrink-0 transition-all duration-150 cursor-pointer select-none text-[13px] active:scale-95 shadow-xs',
+            'h-[42px] px-4 rounded-full flex items-center gap-1.5 shrink-0 transition-all duration-150 cursor-pointer select-none text-[13px] active:scale-95',
             hasCustomFilter
-              ? 'bg-[var(--ios-blue)] text-white shadow-sm font-semibold'
-              : 'bg-[var(--bg-card-primary)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] font-medium active:bg-[var(--bg-card-secondary)]'
+              ? 'bg-[var(--ios-blue)] text-white font-semibold'
+              : 'bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] font-medium'
           )}
           aria-label="Filter"
-          title={isEn ? 'Filter events' : 'Filtruj wydarzenia'}
         >
           <svg
-            width="15"
-            height="15"
+            width="14"
+            height="14"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.3"
+            strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={cn('transition-transform duration-200', isFilterOpen && 'rotate-180')}
           >
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
           </svg>
           <span className="truncate max-w-[110px]">
             {filterButtonLabel}
           </span>
-          {hasCustomFilter && (
-            <span className="w-1.5 h-1.5 rounded-full bg-white ml-0.5 shrink-0" />
-          )}
         </button>
 
-        {/* Filter Dropdown Popover with smooth spring entrance & exit */}
         {isFilterMounted && (
           <>
             <div
               className={cn(
                 'fixed inset-0 z-30 transition-opacity duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]',
-                isFilterOpen ? 'opacity-100 bg-black/25 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                isFilterOpen ? 'opacity-100 bg-black/35 pointer-events-auto' : 'opacity-0 pointer-events-none'
               )}
               onClick={() => setIsFilterOpen(false)}
             />
             <div
+              style={{ boxShadow: 'var(--ios-modal-shadow)' }}
               className={cn(
-                'absolute right-0 top-[48px] z-40 w-64 bg-[var(--bg-card-primary)] rounded-[22px] p-2 shadow-2xl flex flex-col gap-1 origin-top-right transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]',
+                'absolute right-0 top-[50px] z-40 w-64 bg-[var(--ios-card-solid)] border border-[var(--ios-border)] rounded-[26px] p-2 flex flex-col gap-0.5 origin-top-right transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]',
                 isFilterOpen
                   ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
                   : 'opacity-0 scale-90 -translate-y-2 pointer-events-none'
               )}
             >
-              <span className="text-[11px] font-bold uppercase text-[var(--ios-tertiary)] tracking-wider px-3 pt-2 pb-1">
+              <span className="text-[11px] font-semibold uppercase text-[var(--ios-secondary)] tracking-wider px-3 pt-2 pb-1">
                 {isEn ? 'Category' : 'Kategoria'}
               </span>
 
               {[
-                { id: 'all', label: isEn ? 'All categories' : 'Wszystkie kategorie', count: categoryCounts.all, dot: null },
-                { id: 'exam', label: isEn ? 'Exams' : 'Sprawdziany', count: categoryCounts.exam, dot: 'bg-[var(--ios-purple)]' },
-                { id: 'quiz', label: isEn ? 'Quizzes' : 'Kartkówki', count: categoryCounts.quiz, dot: 'bg-[var(--ios-orange)]' },
-                { id: 'homework', label: isEn ? 'Homework' : 'Zadania', count: categoryCounts.homework, dot: 'bg-[var(--ios-blue)]' },
-                { id: 'other', label: isEn ? 'Other / Notices' : 'Inne / Wydarzenia', count: categoryCounts.other, dot: 'bg-[var(--ios-secondary)]' }
+                { id: 'all', label: isEn ? 'All categories' : 'Wszystkie kategorie', count: categoryCounts.all },
+                { id: 'exam', label: isEn ? 'Exams' : 'Sprawdziany', count: categoryCounts.exam },
+                { id: 'quiz', label: isEn ? 'Quizzes' : 'Kartkówki', count: categoryCounts.quiz },
+                { id: 'homework', label: isEn ? 'Homework' : 'Zadania', count: categoryCounts.homework },
+                { id: 'other', label: isEn ? 'Other / Notices' : 'Inne / Wydarzenia', count: categoryCounts.other }
               ].map((item) => {
                 const isSelected = categoryFilter === item.id
                 return (
@@ -581,23 +502,16 @@ export function UpcomingEventsScreen({
                       'w-full px-3 py-2 rounded-[14px] flex items-center justify-between text-[14px] transition-all cursor-pointer text-left active:scale-[0.98]',
                       isSelected
                         ? 'bg-[var(--bg-card-secondary)] text-[var(--ios-label)] font-semibold'
-                        : 'text-[var(--ios-label)] hover:bg-[var(--bg-card-secondary)]/60 font-normal'
+                        : 'text-[var(--ios-label)] hover:bg-[var(--ios-row-hover)] font-normal'
                     )}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {item.dot ? (
-                        <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', item.dot)} />
-                      ) : (
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-[var(--ios-tertiary)] opacity-40" />
-                      )}
-                      <span className="truncate">{item.label}</span>
-                    </div>
+                    <span className="truncate">{item.label}</span>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[12px] font-medium text-[var(--ios-secondary)] tabular-nums">
+                      <span className="text-[12px] font-normal text-[var(--ios-secondary)] tabular-nums">
                         {item.count}
                       </span>
                       {isSelected && (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ios-blue)]">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ios-blue)]">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       )}
@@ -606,9 +520,8 @@ export function UpcomingEventsScreen({
                 )
               })}
 
-              <div className="h-[0.5px] bg-[var(--ios-separator)] my-1" />
+              <div className="h-[0.5px] bg-[var(--ios-separator)] my-1 mx-2" />
 
-              {/* Archive Toggle */}
               <button
                 type="button"
                 onClick={() => {
@@ -619,24 +532,17 @@ export function UpcomingEventsScreen({
                   'w-full px-3 py-2 rounded-[14px] flex items-center justify-between text-[13px] transition-all cursor-pointer text-left active:scale-[0.98]',
                   showArchived
                     ? 'bg-[var(--bg-card-secondary)] text-[var(--ios-label)] font-semibold'
-                    : 'text-[var(--ios-secondary)] hover:bg-[var(--bg-card-secondary)]/60'
+                    : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-row-hover)]'
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  <span>{showArchived ? (isEn ? 'Past events included' : 'Przeszłe terminy włączone') : (isEn ? 'Include past events' : 'Pokaż przeszłe terminy')}</span>
-                </div>
+                <span>{showArchived ? (isEn ? 'Past events included' : 'Przeszłe terminy włączone') : (isEn ? 'Include past events' : 'Pokaż przeszłe terminy')}</span>
                 {showArchived && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ios-blue)]">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ios-blue)]">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 )}
               </button>
 
-              {/* Reset Action */}
               {hasCustomFilter && (
                 <button
                   type="button"
@@ -645,7 +551,7 @@ export function UpcomingEventsScreen({
                     setShowArchived(false)
                     setIsFilterOpen(false)
                   }}
-                  className="w-full mt-0.5 px-3 py-1.5 rounded-[12px] text-center text-[13px] font-semibold text-[var(--ios-red)] hover:bg-[var(--ios-red-subtle)] active:scale-[0.98] transition-all cursor-pointer"
+                  className="w-full mt-0.5 px-3 py-2 rounded-[14px] text-center text-[13px] font-medium text-[var(--ios-red)] hover:bg-[var(--ios-red-subtle)] active:scale-[0.98] transition-all cursor-pointer"
                 >
                   {isEn ? 'Reset filters' : 'Wyczyść filtry'}
                 </button>
@@ -655,57 +561,41 @@ export function UpcomingEventsScreen({
         )}
       </div>
 
-      {/* 3. Main Content Views with animated transition on filter / mode switch */}
       <div
-        key={`${viewMode}-${categoryFilter}-${showArchived}-${searchQuery ? 'search' : 'all'}`}
+        key={viewMode + '-' + categoryFilter + '-' + showArchived + '-' + (searchQuery ? 'search' : 'all')}
         className="ios-content-swap flex flex-col gap-3"
       >
         {isLoading && allEvents.length === 0 ? (
-          <div className="flex flex-col gap-3 pt-2">
-            <div className="w-28 h-[13px] rounded-full ios-skeleton px-4 ml-4" />
-            <IosCard className="overflow-hidden flex flex-col rounded-[22px]">
+          <div className="flex flex-col gap-2 pt-1">
+            <div className="w-24 h-[12px] rounded-full ios-skeleton ml-4" />
+            <IosCard className="overflow-hidden flex flex-col divide-y">
               {[0, 1, 2].map((i) => (
-                <Fragment key={i}>
-                  <div className="px-4 py-3 flex items-center justify-between gap-3.5">
-                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                      <div className="w-[48px] h-[52px] rounded-[14px] ios-skeleton shrink-0" />
-                      <div className="flex flex-col gap-2 flex-1">
-                        <div className="w-32 h-[15px] rounded-full ios-skeleton" />
-                        <div className="w-48 h-[12px] rounded-full ios-skeleton" />
-                      </div>
+                <div key={i} className="px-4 py-3.5 flex items-center justify-between gap-3.5">
+                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                    <div className="w-[44px] h-[46px] rounded-[12px] ios-skeleton shrink-0" />
+                    <div className="flex flex-col gap-2 flex-1">
+                      <div className="w-36 h-[15px] rounded-full ios-skeleton" />
+                      <div className="w-52 h-[12px] rounded-full ios-skeleton" />
                     </div>
-                    <div className="w-20 h-[24px] rounded-[10px] ios-skeleton shrink-0" />
                   </div>
-                  {i < 2 && <div className="h-[0.5px] bg-[var(--ios-separator)] ml-[78px] mr-4" />}
-                </Fragment>
+                  <div className="w-20 h-[22px] rounded-full ios-skeleton shrink-0" />
+                </div>
               ))}
             </IosCard>
           </div>
         ) : viewMode === 'list' ? (
-          /* ======================== VIEW 1: CLEAN LAYERED LIST ======================== */
           filteredEvents.length === 0 ? (
-            <IosCard className="py-12 px-6 text-center flex flex-col items-center justify-center gap-3 mt-1 rounded-[22px]">
-              <div className="w-14 h-14 rounded-[18px] bg-[var(--bg-card-secondary)] flex items-center justify-center text-[var(--ios-secondary)] mb-1 shadow-xs">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                  <path d="m9 16 2 2 4-4" />
-                </svg>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-[17px] font-semibold text-[var(--ios-label)] tracking-tight">
-                  {searchQuery || hasCustomFilter
-                    ? (isEn ? 'No matching events found' : 'Brak pasujących wydarzeń')
-                    : (isEn ? 'All caught up!' : 'Wszystko zaliczone!')}
-                </span>
-                <p className="text-[13px] font-normal text-[var(--ios-secondary)] max-w-xs leading-relaxed">
-                  {searchQuery || hasCustomFilter
-                    ? (isEn ? 'No tests, quizzes or deadlines match your active filters or search terms.' : 'Żadne sprawdziany, kartkówki ani zadania nie pasują do wybranych filtrów.')
-                    : (isEn ? 'No upcoming tests, quizzes, or homework assignments recorded.' : 'Brak zaplanowanych sprawdzianów, kartkówek ani prac domowych w wybranym okresie.')}
-                </p>
-              </div>
+            <IosCard className="py-12 px-6 text-center flex flex-col items-center justify-center gap-2 mt-1">
+              <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-tight">
+                {searchQuery || hasCustomFilter
+                  ? (isEn ? 'No matching events' : 'Brak pasujących terminów')
+                  : (isEn ? 'No upcoming deadlines' : 'Brak nadchodzących terminów')}
+              </span>
+              <p className="text-[13px] font-normal text-[var(--ios-secondary)] max-w-xs leading-relaxed">
+                {searchQuery || hasCustomFilter
+                  ? (isEn ? 'Try changing your search query or active category filter.' : 'Zmień kryteria wyszukiwania lub wybrany filtr kategorii.')
+                  : (isEn ? 'No scheduled tests, quizzes, or assignments recorded.' : 'W terminarzu nie ma zaplanowanych sprawdzianów ani kartkówek.')}
+              </p>
               {(searchQuery || hasCustomFilter) && (
                 <button
                   type="button"
@@ -716,93 +606,72 @@ export function UpcomingEventsScreen({
                   }}
                   className="mt-2 px-4 py-2 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] text-[13px] font-semibold active:scale-95 transition-all cursor-pointer"
                 >
-                  {isEn ? 'Clear filters & search' : 'Wyczyść filtry i wyszukiwanie'}
+                  {isEn ? 'Reset filters' : 'Wyczyść filtry'}
                 </button>
               )}
             </IosCard>
           ) : (
             <div className="flex flex-col gap-2">
-              {/* 1. Today */}
               {layeredGroups.today.length > 0 && (
                 <div className="flex flex-col">
-                  {renderSectionHeader(isEn ? 'Today' : 'Dzisiaj', layeredGroups.today.length, 'today')}
-                  <IosCard className="overflow-hidden flex flex-col rounded-[22px] shadow-xs">
-                    {layeredGroups.today.map((ev, idx) =>
-                      renderEventRow(ev, idx === layeredGroups.today.length - 1)
-                    )}
+                  {renderSectionHeader(isEn ? 'Today' : 'Dzisiaj')}
+                  <IosCard className="overflow-hidden flex flex-col divide-y">
+                    {layeredGroups.today.map((ev) => renderEventRow(ev))}
                   </IosCard>
                 </div>
               )}
 
-              {/* 2. Tomorrow */}
               {layeredGroups.tomorrow.length > 0 && (
                 <div className="flex flex-col">
-                  {renderSectionHeader(isEn ? 'Tomorrow' : 'Jutro', layeredGroups.tomorrow.length, 'tomorrow')}
-                  <IosCard className="overflow-hidden flex flex-col rounded-[22px] shadow-xs">
-                    {layeredGroups.tomorrow.map((ev, idx) =>
-                      renderEventRow(ev, idx === layeredGroups.tomorrow.length - 1)
-                    )}
+                  {renderSectionHeader(isEn ? 'Tomorrow' : 'Jutro')}
+                  <IosCard className="overflow-hidden flex flex-col divide-y">
+                    {layeredGroups.tomorrow.map((ev) => renderEventRow(ev))}
                   </IosCard>
                 </div>
               )}
 
-              {/* 3. This Week */}
               {layeredGroups.thisWeek.length > 0 && (
                 <div className="flex flex-col">
-                  {renderSectionHeader(isEn ? 'This Week' : 'W tym tygodniu', layeredGroups.thisWeek.length, 'week')}
-                  <IosCard className="overflow-hidden flex flex-col rounded-[22px] shadow-xs">
-                    {layeredGroups.thisWeek.map((ev, idx) =>
-                      renderEventRow(ev, idx === layeredGroups.thisWeek.length - 1)
-                    )}
+                  {renderSectionHeader(isEn ? 'This Week' : 'W tym tygodniu')}
+                  <IosCard className="overflow-hidden flex flex-col divide-y">
+                    {layeredGroups.thisWeek.map((ev) => renderEventRow(ev))}
                   </IosCard>
                 </div>
               )}
 
-              {/* 4. Next Week */}
               {layeredGroups.nextWeek.length > 0 && (
                 <div className="flex flex-col">
-                  {renderSectionHeader(isEn ? 'Next Week' : 'W przyszłym tygodniu', layeredGroups.nextWeek.length, 'week')}
-                  <IosCard className="overflow-hidden flex flex-col rounded-[22px] shadow-xs">
-                    {layeredGroups.nextWeek.map((ev, idx) =>
-                      renderEventRow(ev, idx === layeredGroups.nextWeek.length - 1)
-                    )}
+                  {renderSectionHeader(isEn ? 'Next Week' : 'W przyszłym tygodniu')}
+                  <IosCard className="overflow-hidden flex flex-col divide-y">
+                    {layeredGroups.nextWeek.map((ev) => renderEventRow(ev))}
                   </IosCard>
                 </div>
               )}
 
-              {/* 5. Later Months */}
               {layeredGroups.laterMonths.map((mGroup) => (
                 <div key={mGroup.key} className="flex flex-col">
-                  {renderSectionHeader(mGroup.label, mGroup.events.length, 'month')}
-                  <IosCard className="overflow-hidden flex flex-col rounded-[22px] shadow-xs">
-                    {mGroup.events.map((ev, idx) =>
-                      renderEventRow(ev, idx === mGroup.events.length - 1)
-                    )}
+                  {renderSectionHeader(mGroup.label)}
+                  <IosCard className="overflow-hidden flex flex-col divide-y">
+                    {mGroup.events.map((ev) => renderEventRow(ev))}
                   </IosCard>
                 </div>
               ))}
 
-              {/* 6. Past Events (Archive) */}
               {showArchived && layeredGroups.past.length > 0 && (
                 <div className="flex flex-col">
-                  {renderSectionHeader(isEn ? 'Past Events (Archive)' : 'Archiwum / Przeszłe terminy', layeredGroups.past.length, 'past')}
-                  <IosCard className="overflow-hidden flex flex-col rounded-[22px] shadow-xs opacity-85">
-                    {layeredGroups.past.map((ev, idx) =>
-                      renderEventRow(ev, idx === layeredGroups.past.length - 1)
-                    )}
+                  {renderSectionHeader(isEn ? 'Past Events' : 'Przeszłe terminy')}
+                  <IosCard className="overflow-hidden flex flex-col divide-y opacity-80">
+                    {layeredGroups.past.map((ev) => renderEventRow(ev))}
                   </IosCard>
                 </div>
               )}
             </div>
           )
         ) : (
-          /* ======================== VIEW 2: CLEAN CALENDAR ======================== */
           <div className="flex flex-col gap-3">
-            {/* Calendar Card */}
-            <IosCard className="p-4 flex flex-col gap-3 rounded-[22px] shadow-xs">
-              {/* Month Header */}
+            <IosCard className="p-4 flex flex-col gap-3">
               <div className="flex items-center justify-between px-1">
-                <span className="text-[17px] font-bold text-[var(--ios-label)] tracking-tight">
+                <span className="text-[17px] font-semibold text-[var(--ios-label)] tracking-tight">
                   {calMonthTitle}
                 </span>
 
@@ -820,7 +689,7 @@ export function UpcomingEventsScreen({
                   <button
                     type="button"
                     onClick={handlePrevMonth}
-                    className="w-8 h-8 rounded-full bg-[var(--bg-card-secondary)] text-[var(--ios-label)] flex items-center justify-center active:scale-90 transition-all cursor-pointer"
+                    className="w-8 h-8 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center active:scale-90 transition-all cursor-pointer"
                     aria-label="Previous month"
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -831,7 +700,7 @@ export function UpcomingEventsScreen({
                   <button
                     type="button"
                     onClick={handleNextMonth}
-                    className="w-8 h-8 rounded-full bg-[var(--bg-card-secondary)] text-[var(--ios-label)] flex items-center justify-center active:scale-90 transition-all cursor-pointer"
+                    className="w-8 h-8 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center active:scale-90 transition-all cursor-pointer"
                     aria-label="Next month"
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -841,8 +710,7 @@ export function UpcomingEventsScreen({
                 </div>
               </div>
 
-              {/* Weekdays */}
-              <div className="grid grid-cols-7 gap-1 text-center text-[12px] font-semibold uppercase text-[var(--ios-tertiary)] tracking-wider pt-0.5">
+              <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase text-[var(--ios-tertiary)] tracking-wider pt-0.5">
                 <span>{isEn ? 'Mo' : 'Pn'}</span>
                 <span>{isEn ? 'Tu' : 'Wt'}</span>
                 <span>{isEn ? 'We' : 'Śr'}</span>
@@ -852,7 +720,6 @@ export function UpcomingEventsScreen({
                 <span>{isEn ? 'Su' : 'Nd'}</span>
               </div>
 
-              {/* Days Grid */}
               <div className="grid grid-cols-7 gap-1 pt-0.5">
                 {calendarGrid.map((cell, idx) => {
                   if (!cell.dayNum || !cell.iso) {
@@ -870,19 +737,18 @@ export function UpcomingEventsScreen({
                       type="button"
                       onClick={() => setSelectedDateIso(cell.iso!)}
                       className={cn(
-                        'h-11 rounded-[14px] flex flex-col items-center justify-center relative transition-all duration-150 cursor-pointer select-none',
+                        'h-11 rounded-[12px] flex flex-col items-center justify-center relative transition-all duration-150 cursor-pointer select-none',
                         isSelected
-                          ? 'bg-[var(--ios-blue)] text-white shadow-sm font-bold scale-[1.02]'
+                          ? 'bg-[var(--ios-blue)] text-white font-semibold'
                           : isToday
-                          ? 'bg-[var(--bg-card-secondary)] text-[var(--ios-blue)] font-bold ring-1.5 ring-[var(--ios-blue)]'
-                          : 'text-[var(--ios-label)] hover:bg-[var(--bg-card-secondary)] font-medium active:scale-95'
+                          ? 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] font-semibold'
+                          : 'text-[var(--ios-label)] hover:bg-[var(--bg-card-secondary)] font-normal active:scale-95'
                       )}
                     >
                       <span className="text-[14px] tabular-nums leading-none">
                         {cell.dayNum}
                       </span>
 
-                      {/* Indicator dots for events */}
                       {hasEvents && (
                         <div className="flex items-center gap-0.5 mt-1 h-1.5">
                           {dayEvs.slice(0, 3).map((ev, dIdx) => (
@@ -902,35 +768,18 @@ export function UpcomingEventsScreen({
               </div>
             </IosCard>
 
-            {/* Events for Selected Day */}
             <div className="flex flex-col">
               {renderSectionHeader(
-                `${isEn ? 'Events on' : 'Wydarzenia w dniu'} ${formatHumanPolishDate(selectedDateIso, false, lang)}`,
-                selectedDayEvents.length
+                (isEn ? 'Events on ' : 'Wydarzenia w dniu ') + formatHumanPolishDate(selectedDateIso, false, lang)
               )}
 
               {selectedDayEvents.length > 0 ? (
-                <IosCard className="overflow-hidden flex flex-col rounded-[22px] shadow-xs">
-                  {selectedDayEvents.map((ev, idx) =>
-                    renderEventRow(ev, idx === selectedDayEvents.length - 1)
-                  )}
+                <IosCard className="overflow-hidden flex flex-col divide-y">
+                  {selectedDayEvents.map((ev) => renderEventRow(ev))}
                 </IosCard>
               ) : (
-                <IosCard className="p-8 text-center flex flex-col items-center justify-center gap-2 rounded-[22px] shadow-xs">
-                  <div className="w-10 h-10 rounded-[14px] bg-[var(--bg-card-secondary)] flex items-center justify-center text-[var(--ios-tertiary)] mb-0.5">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                      <line x1="16" y1="2" x2="16" y2="6" />
-                      <line x1="8" y1="2" x2="8" y2="6" />
-                      <line x1="3" y1="10" x2="21" y2="10" />
-                    </svg>
-                  </div>
-                  <span className="text-[14px] font-semibold text-[var(--ios-label)]">
-                    {isEn ? 'No events for this day' : 'Brak wydarzeń w tym dniu'}
-                  </span>
-                  <p className="text-[12px] font-normal text-[var(--ios-secondary)] max-w-xs">
-                    {isEn ? 'You have no scheduled exams, quizzes, or tasks on this date.' : 'Brak zaplanowanych sprawdzianów, kartkówek ani prac domowych w wybranym terminie.'}
-                  </p>
+                <IosCard className="p-8 text-center text-[14px] font-normal text-[var(--ios-secondary)]">
+                  {isEn ? 'No events for this day' : 'Brak wydarzeń w tym dniu'}
                 </IosCard>
               )}
             </div>

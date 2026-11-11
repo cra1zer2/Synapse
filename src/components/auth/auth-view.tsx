@@ -83,7 +83,7 @@ export function AuthView({
       'w-full flex flex-col justify-between max-w-[480px] mx-auto box-border select-none',
       isSubView
         ? 'pt-1 pb-6 min-h-full'
-        : 'min-h-screen bg-[var(--ios-bg)] px-5 sm:px-6 pt-[max(calc(env(safe-area-inset-top,0px)+1rem),1.75rem)] pb-[max(calc(env(safe-area-inset-bottom,0px)+1rem),1.75rem)]'
+        : 'fixed inset-0 w-screen h-[100dvh] overflow-y-auto touch-pan-y md:static md:w-full md:h-auto md:min-h-screen bg-[var(--ios-bg)] px-5 sm:px-6 pt-[max(calc(env(safe-area-inset-top,0px)+1rem),1.75rem)] pb-[max(calc(env(safe-area-inset-bottom,0px)+1rem),1.75rem)]'
     )}>
       <header className="w-full h-[44px] flex items-center justify-between relative shrink-0">
         {authStep === 'preview' ? (

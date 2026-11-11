@@ -51,6 +51,7 @@ export interface SmartTimetableResult {
     weekStart: string
     weekEnd: string
     schedule: DaySchedule[]
+    nextUpcomingDay?: DaySchedule
     allAbsentTeachers: AbsentTeacherItem[]
     calendarEvents: TimetableEvent[]
 }

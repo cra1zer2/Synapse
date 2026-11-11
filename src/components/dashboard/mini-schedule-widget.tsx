@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, Fragment } from 'react'
 import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
 import { parseLessonTimeRange, calculateBreakDuration, getCurrentTimeMinutes, getBreakRemainingMinutes } from '@/utils/time.util'
 import { formatSubjectName } from '@/utils/text.util'
+import { formatPolishDayDate } from '@/utils/date.util'
 import { TextClampOption } from '@/hooks/settings.hook'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard, IosBreakDivider } from '@/components/ios/ios-ui'
@@ -22,6 +23,35 @@ export interface MiniScheduleWidgetProps {
   showAllLessons?: boolean
   onSelectLesson?: (lesson: LessonItem) => void
   onOpenFullSchedule: (targetDay?: string, targetIsoDate?: string) => void
+}
+
+const WEEKDAY_LABELS_PL: Record<string, string> = {
+  Monday: 'Poniedziałek',
+  Tuesday: 'Wtorek',
+  Wednesday: 'Środa',
+  Thursday: 'Czwartek',
+  Friday: 'Piątek',
+  Saturday: 'Sobota',
+  Sunday: 'Niedziela'
+}
+
+const WEEKDAY_LABELS_EN: Record<string, string> = {
+  Monday: 'Monday',
+  Tuesday: 'Tuesday',
+  Wednesday: 'Wednesday',
+  Thursday: 'Thursday',
+  Friday: 'Friday',
+  Saturday: 'Saturday',
+  Sunday: 'Sunday'
+}
+
+function getDaysDiff(fromIso: string, toIso: string): number {
+  const p1 = fromIso.split('-').map(Number)
+  const p2 = toIso.split('-').map(Number)
+  if (p1.length !== 3 || p2.length !== 3) return 1
+  const d1 = new Date(p1[0], p1[1] - 1, p1[2])
+  const d2 = new Date(p2[0], p2[1] - 1, p2[2])
+  return Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24))
 }
 
 function MiniLessonSkeleton({
@@ -174,34 +204,40 @@ export function MiniScheduleWidget({
   }, [timetableData, realTodayIso, todayDayName, isWeekend])
 
   const nextUpcomingDaySchedule = useMemo(() => {
-    if (!timetableData?.schedule || timetableData.schedule.length === 0) return null
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    if (!timetableData) return null
+    const schedule = timetableData.schedule || []
 
+    const futureDaysInSchedule = schedule
+      .filter((d) => d.isoDate > realTodayIso && d.lessons.some((l) => !l.isCancelled))
+      .sort((a, b) => a.isoDate.localeCompare(b.isoDate))
+
+    if (futureDaysInSchedule.length > 0) {
+      return futureDaysInSchedule[0]
+    }
+
+    if (timetableData.nextUpcomingDay && timetableData.nextUpcomingDay.lessons.some((l) => !l.isCancelled)) {
+      return timetableData.nextUpcomingDay
+    }
+
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
     if (isWeekend) {
-      const monday = timetableData.schedule.find((d) => d.dayName === 'Monday')
-      if (monday && monday.lessons.length > 0) return monday
       for (const day of days) {
-        const found = timetableData.schedule.find((d) => d.dayName === day && d.lessons.length > 0)
+        const found = schedule.find((d) => d.dayName === day && d.lessons.some((l) => !l.isCancelled))
         if (found) return found
       }
-      return monday || timetableData.schedule[0] || null
-    }
-
-    const currentDay = todaySchedule?.dayName || todayDayName
-    const currentIdx = days.indexOf(currentDay)
-    if (currentIdx !== -1) {
-      for (let i = currentIdx + 1; i < days.length; i++) {
-        const nextDay = timetableData.schedule.find((d) => d.dayName === days[i])
-        if (nextDay && nextDay.lessons.length > 0) return nextDay
+    } else {
+      const currentDay = todaySchedule?.dayName || todayDayName
+      const currentIdx = days.indexOf(currentDay)
+      if (currentIdx !== -1) {
+        for (let i = currentIdx + 1; i < days.length; i++) {
+          const nextDay = schedule.find((d) => d.dayName === days[i])
+          if (nextDay && nextDay.lessons.some((l) => !l.isCancelled)) return nextDay
+        }
       }
     }
 
-    return (
-      timetableData.schedule.find((d) => d.dayName === 'Monday' && d.lessons.length > 0) ||
-      timetableData.schedule.find((d) => d.dayName === 'Monday') ||
-      null
-    )
-  }, [timetableData, isWeekend, todaySchedule, todayDayName])
+    return null
+  }, [timetableData, realTodayIso, isWeekend, todaySchedule, todayDayName])
 
   const todayLessons = useMemo(() => todaySchedule?.lessons || [], [todaySchedule])
   const activeTodayLessons = useMemo(() => todayLessons.filter((l) => !l.isCancelled), [todayLessons])
@@ -218,11 +254,10 @@ export function MiniScheduleWidget({
   }, [activeTodayLessons])
 
   const scheduleState = useMemo(() => {
-    if (isWeekend) {
-      return { mode: 'next_day' as const, currentLesson: null, nextLesson: null, breakMinutes: 0 }
-    }
-
-    if (activeTodayLessons.length === 0) {
+    if (isWeekend || activeTodayLessons.length === 0) {
+      if (activeNextDayLessons.length > 0) {
+        return { mode: 'next_day' as const, currentLesson: null, nextLesson: null, breakMinutes: 0 }
+      }
       return { mode: 'empty' as const, currentLesson: null, nextLesson: null, breakMinutes: 0 }
     }
 
@@ -260,17 +295,20 @@ export function MiniScheduleWidget({
   const shouldShowNextDay = scheduleState.mode === 'next_day' && activeNextDayLessons.length > 0
 
   const badgeLabel = useMemo(() => {
-    if (shouldShowNextDay) {
-      if (isWeekend || nextUpcomingDaySchedule?.dayName === 'Monday') {
-        return lang === 'en' ? 'Monday' : 'Poniedziałek'
+    if (shouldShowNextDay && nextUpcomingDaySchedule) {
+      const diffDays = getDaysDiff(realTodayIso, nextUpcomingDaySchedule.isoDate)
+      if (diffDays > 7) {
+        const dInfo = formatPolishDayDate(nextUpcomingDaySchedule.isoDate, lang)
+        return dInfo.dayNum + ' ' + dInfo.monthName
       }
-      return lang === 'en' ? 'Tomorrow' : 'Jutro'
+      const map = lang === 'en' ? WEEKDAY_LABELS_EN : WEEKDAY_LABELS_PL
+      return map[nextUpcomingDaySchedule.dayName] || nextUpcomingDaySchedule.dayName
     }
     if (todaySchedule) {
       return lang === 'en' ? 'Today' : 'Dzisiaj'
     }
     return null
-  }, [shouldShowNextDay, isWeekend, nextUpcomingDaySchedule, todaySchedule, lang])
+  }, [shouldShowNextDay, nextUpcomingDaySchedule, realTodayIso, todaySchedule, lang])
 
   const handleCardClick = () => {
     if (shouldShowNextDay && nextUpcomingDaySchedule) {
@@ -287,13 +325,13 @@ export function MiniScheduleWidget({
   const displayLessons = useMemo(() => {
     const list = shouldShowNextDay ? nextDayLessons : todayLessons
     if (showAllLessons) return list
-    if (scheduleState.currentLesson || scheduleState.nextLesson) {
+    if (!shouldShowNextDay && (scheduleState.currentLesson || scheduleState.nextLesson)) {
       const res: LessonItem[] = []
       if (scheduleState.currentLesson) res.push(scheduleState.currentLesson)
       if (scheduleState.nextLesson) res.push(scheduleState.nextLesson)
       return res
     }
-    return list.slice(0, 2)
+    return list.filter((l) => !l.isCancelled).slice(0, 2)
   }, [shouldShowNextDay, nextDayLessons, todayLessons, showAllLessons, scheduleState.currentLesson, scheduleState.nextLesson])
 
   return (

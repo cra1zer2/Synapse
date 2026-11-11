@@ -43,12 +43,83 @@ function getWeekDates(pivotDate: Date): { monday: Date; friday: Date; weekDates:
         const m = String(d.getMonth() + 1).padStart(2, '0')
         const dayNum = String(d.getDate()).padStart(2, '0')
         weekDates[name] = {
-            dateStr: `${dayNum}.${m}.${y}`,
-            isoStr: `${y}-${m}-${dayNum}`
+            dateStr: dayNum + '.' + m + '.' + y,
+            isoStr: y + '-' + m + '-' + dayNum
         }
     })
 
     return { monday, friday, weekDates }
+}
+
+function parseRawDayLessons(
+    periodsRaw: any,
+    userNames: Map<number, string>,
+    classroomMap: Map<number, string>,
+    dayRealized: Record<number, string>
+): LessonItem[] {
+    const dayLessons: LessonItem[] = []
+    const periods = Array.isArray(periodsRaw) ? periodsRaw : (periodsRaw && typeof periodsRaw === 'object' ? Object.values(periodsRaw) : [])
+
+    periods.forEach((period: any, pIdx: number) => {
+        const slots = Array.isArray(period) ? period : (period && typeof period === 'object' ? [period] : [])
+        slots.forEach((slot: any) => {
+            if (!slot) return
+
+            const subjectName = String(slot.Subject?.Name || slot.Subject?.Short || 'Zajęcia szkolne').trim()
+            const newFirst = String(slot.Teacher?.FirstName || '').trim()
+            const newLast = String(slot.Teacher?.LastName || '').trim()
+            const newTeacher = [newFirst, newLast].filter(Boolean).join(' ')
+
+            const isCancelled = Boolean(slot.IsCanceled)
+            const isSubstitution = Boolean(slot.IsSubstitutionClass)
+
+            let finalTeacherName = newTeacher
+            let teacherAbsenceReason: string | undefined = undefined
+
+            if (isSubstitution) {
+                const orgTeacherId = slot.OrgTeacher?.Id ? Number(slot.OrgTeacher.Id) : undefined
+                const orgTeacherName = orgTeacherId && userNames.has(orgTeacherId) ? userNames.get(orgTeacherId) : undefined
+
+                finalTeacherName = newTeacher || orgTeacherName || ''
+                if (orgTeacherName && newTeacher && newTeacher !== orgTeacherName) {
+                    teacherAbsenceReason = 'Zastępstwo za: ' + orgTeacherName
+                } else {
+                    teacherAbsenceReason = 'Zastępstwo'
+                }
+            }
+
+            const hourFrom = String(slot.HourFrom || '').trim()
+            const hourTo = String(slot.HourTo || '').trim()
+            const timeStr = hourFrom && hourTo ? hourFrom + ' - ' + hourTo : ''
+
+            const lessonNum = Number(slot.LessonNo ?? (pIdx + 1))
+            const { durationMinutes, isShortened } = calculateDuration(timeStr)
+
+            const classroomId = slot.Classroom ? Number(slot.Classroom.Id) : undefined
+            const resolvedRoom = (classroomId && classroomMap.get(classroomId)) || slot.Classroom?.Symbol || ''
+
+            const realizedTopic = dayRealized[lessonNum] || ''
+
+            dayLessons.push({
+                number: lessonNum,
+                subject: subjectName,
+                teacher: finalTeacherName,
+                room: resolvedRoom,
+                time: timeStr,
+                durationMinutes,
+                isShortened,
+                isCancelled,
+                isSubstitution,
+                flag: isCancelled ? 'Odwołane' : isSubstitution ? 'Zastępstwo' : null,
+                teacherAbsent: isCancelled,
+                teacherAbsenceReason,
+                topic: realizedTopic || undefined
+            })
+        })
+    })
+
+    dayLessons.sort((a, b) => a.number - b.number)
+    return dayLessons
 }
 
 export async function fetchSmartTimetable(
@@ -71,7 +142,7 @@ export async function fetchSmartTimetable(
             const y = d.getFullYear()
             const m = String(d.getMonth() + 1).padStart(2, '0')
             const dayNum = String(d.getDate()).padStart(2, '0')
-            return `${y}-${m}-${dayNum}`
+            return y + '-' + m + '-' + dayNum
         }
 
         const mondayIso = formatIso(monday)
@@ -79,7 +150,7 @@ export async function fetchSmartTimetable(
         const daysIso = Object.values(weekDates).map((w) => w.isoStr)
 
         const [gatewayTimetableRes, usersRes, meRes, subjectsRes, ...realizationsList] = await Promise.all([
-            fetchGatewayEndpoint(username, pass, `gateway/api/2.0/Timetables?weekStart=${mondayIso}`).catch((err) => {
+            fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Timetables?weekStart=' + mondayIso).catch((err) => {
                 console.error('[Timetable] API error:', err?.message || err)
                 return null
             }),
@@ -90,7 +161,7 @@ export async function fetchSmartTimetable(
                 const timeoutPromise = new Promise<{ iso: string; data: null }>((resolve) =>
                     setTimeout(() => resolve({ iso, data: null }), 2500)
                 )
-                const fetchPromise = fetchGatewayEndpoint(username, pass, `gateway/api/2.0/Realizations?date=${iso}`)
+                const fetchPromise = fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Realizations?date=' + iso)
                     .then((res) => ({ iso, data: res }))
                     .catch(() => ({ iso, data: null }))
                 return Promise.race([fetchPromise, timeoutPromise])
@@ -139,45 +210,102 @@ export async function fetchSmartTimetable(
         const classroomIds = new Set<number>()
         const rawWeekTimetable = (gatewayTimetableRes?.Timetable && typeof gatewayTimetableRes.Timetable === 'object') ? gatewayTimetableRes.Timetable : {}
 
+        const collectClassroomsFromTimetable = (rawTable: any, isoList: string[]) => {
+            for (const iso of isoList) {
+                const periodsRaw = rawTable[iso]
+                const periods = Array.isArray(periodsRaw) ? periodsRaw : (periodsRaw && typeof periodsRaw === 'object' ? Object.values(periodsRaw) : [])
+                for (const period of periods) {
+                    const slots = Array.isArray(period) ? period : (period && typeof period === 'object' ? [period] : [])
+                    for (const slot of slots) {
+                        if (!slot) continue
+                        const sId = Number(slot.Subject?.Id)
+                        const sName = String(slot.Subject?.Name || slot.Subject?.Short || '').trim()
+                        if (sId && sName && !subjectNames.has(sId)) {
+                            subjectNames.set(sId, sName)
+                        }
+
+                        const tId = Number(slot.Teacher?.Id)
+                        const tFirst = String(slot.Teacher?.FirstName || '').trim()
+                        const tLast = String(slot.Teacher?.LastName || '').trim()
+                        const tFull = [tFirst, tLast].filter(Boolean).join(' ')
+                        if (tId && tFull && !userNames.has(tId)) {
+                            userNames.set(tId, tFull)
+                        }
+
+                        const cId = Number(slot.Classroom?.Id)
+                        if (!isNaN(cId) && cId > 0) {
+                            classroomIds.add(cId)
+                        }
+                        const orgCId = Number(slot.OrgClassroom?.Id)
+                        if (!isNaN(orgCId) && orgCId > 0) {
+                            classroomIds.add(orgCId)
+                        }
+                    }
+                }
+            }
+        }
+
+        collectClassroomsFromTimetable(rawWeekTimetable, daysIso)
+
+        const todayIso = formatIso(new Date())
+        let hasActiveFutureOrTodayInCurrentWeek = false
         for (const iso of daysIso) {
+            if (iso < todayIso) continue
             const periodsRaw = rawWeekTimetable[iso]
             const periods = Array.isArray(periodsRaw) ? periodsRaw : (periodsRaw && typeof periodsRaw === 'object' ? Object.values(periodsRaw) : [])
             for (const period of periods) {
                 const slots = Array.isArray(period) ? period : (period && typeof period === 'object' ? [period] : [])
-                for (const slot of slots) {
-                    if (!slot) continue
-                    const sId = Number(slot.Subject?.Id)
-                    const sName = String(slot.Subject?.Name || slot.Subject?.Short || '').trim()
-                    if (sId && sName && !subjectNames.has(sId)) {
-                        subjectNames.set(sId, sName)
-                    }
-
-                    const tId = Number(slot.Teacher?.Id)
-                    const tFirst = String(slot.Teacher?.FirstName || '').trim()
-                    const tLast = String(slot.Teacher?.LastName || '').trim()
-                    const tFull = [tFirst, tLast].filter(Boolean).join(' ')
-                    if (tId && tFull && !userNames.has(tId)) {
-                        userNames.set(tId, tFull)
-                    }
-
-                    const cId = Number(slot.Classroom?.Id)
-                    if (!isNaN(cId) && cId > 0) {
-                        classroomIds.add(cId)
-                    }
-                    const orgCId = Number(slot.OrgClassroom?.Id)
-                    if (!isNaN(orgCId) && orgCId > 0) {
-                        classroomIds.add(orgCId)
+                if (slots.some((s: any) => s && !s.IsCanceled)) {
+                    if (iso > todayIso) {
+                        hasActiveFutureOrTodayInCurrentWeek = true
                     }
                 }
+            }
+        }
+
+        let futureCandidateRaw: { dayName: string; dateStr: string; isoStr: string; periodsRaw: any } | null = null
+        if (!hasActiveFutureOrTodayInCurrentWeek && fridayIso >= todayIso) {
+            for (let weekOffset = 1; weekOffset <= 3; weekOffset++) {
+                const nextPivot = new Date(monday)
+                nextPivot.setDate(monday.getDate() + weekOffset * 7)
+                const nextInfo = getWeekDates(nextPivot)
+                const nextMondayIso = formatIso(nextInfo.monday)
+                const nextRes = await fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Timetables?weekStart=' + nextMondayIso).catch(() => null)
+                const nextTable = (nextRes?.Timetable && typeof nextRes.Timetable === 'object') ? nextRes.Timetable : null
+                if (!nextTable) continue
+
+                const nextIsos = Object.values(nextInfo.weekDates).map((w) => w.isoStr)
+                collectClassroomsFromTimetable(nextTable, nextIsos)
+
+                for (const dName of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) {
+                    const slotInfo = nextInfo.weekDates[dName]
+                    if (slotInfo.isoStr <= todayIso) continue
+                    const pRaw = nextTable[slotInfo.isoStr]
+                    const pArr = Array.isArray(pRaw) ? pRaw : (pRaw && typeof pRaw === 'object' ? Object.values(pRaw) : [])
+                    const hasActive = pArr.some((period: any) => {
+                        const slots = Array.isArray(period) ? period : (period && typeof period === 'object' ? [period] : [])
+                        return slots.some((s: any) => s && !s.IsCanceled)
+                    })
+                    if (hasActive) {
+                        futureCandidateRaw = {
+                            dayName: dName,
+                            dateStr: slotInfo.dateStr,
+                            isoStr: slotInfo.isoStr,
+                            periodsRaw: pRaw
+                        }
+                        break
+                    }
+                }
+                if (futureCandidateRaw) break
             }
         }
 
         const classroomMap = new Map<number, string>()
         if (classroomIds.size > 0) {
             const idsList = Array.from(classroomIds).join(',')
-            const classroomsRes = await fetchGatewayEndpoint(username, pass, `gateway/api/2.0/Classrooms/${idsList}`).catch(() => null)
-            const rawClassrooms = Array.isArray(classroomsRes?.Classrooms) 
-                ? classroomsRes.Classrooms 
+            const classroomsRes = await fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Classrooms/' + idsList).catch(() => null)
+            const rawClassrooms = Array.isArray(classroomsRes?.Classrooms)
+                ? classroomsRes.Classrooms
                 : (classroomsRes?.Classroom ? [classroomsRes.Classroom] : [])
             for (const c of rawClassrooms) {
                 const id = Number(c.Id)
@@ -194,7 +322,7 @@ export async function fetchSmartTimetable(
         const pivotYear = pivotDate.getFullYear()
 
         const calendarRes = !isNaN(classId) && classId > 0
-            ? await fetchGatewayEndpoint(username, pass, `gateway/api/2.0/Calendars/${classId}?month=${pivotMonth}&year=${pivotYear}`).catch(() => null)
+            ? await fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Calendars/' + classId + '?month=' + pivotMonth + '&year=' + pivotYear).catch(() => null)
             : null
         const rawHomeWorks = Array.isArray(calendarRes?.Calendar?.HomeWorks) ? calendarRes.Calendar.HomeWorks : []
         const homeworkIds = rawHomeWorks.map((hw: any) => Number(hw.Id)).filter((id: number) => !isNaN(id) && id > 0)
@@ -208,7 +336,7 @@ export async function fetchSmartTimetable(
             }
             const hwResponses = await Promise.all(
                 chunks.map((chunk) =>
-                    fetchGatewayEndpoint(username, pass, `gateway/api/2.0/HomeWorks/${chunk.join(',')}`).catch(() => null)
+                    fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/HomeWorks/' + chunk.join(',')).catch(() => null)
                 )
             )
             const items = hwResponses.flatMap((res) => Array.isArray(res?.HomeWorks) ? res.HomeWorks : (res?.HomeWork ? [res.HomeWork] : []))
@@ -231,7 +359,7 @@ export async function fetchSmartTimetable(
                 const catRes = await fetchGatewayEndpoint(
                     username,
                     pass,
-                    `gateway/api/2.0/HomeWorks/Categories/${Array.from(missingCategoryIds).join(',')}`
+                    'gateway/api/2.0/HomeWorks/Categories/' + Array.from(missingCategoryIds).join(',')
                 ).catch(() => null)
                 const extraCats = Array.isArray(catRes?.Categories) ? catRes.Categories : (catRes?.Category ? [catRes.Category] : [])
                 for (const c of extraCats) {
@@ -245,7 +373,7 @@ export async function fetchSmartTimetable(
                 const missingSubjRes = await fetchGatewayEndpoint(
                     username,
                     pass,
-                    `gateway/api/2.0/Subjects/${Array.from(missingSubjectIds).join(',')}`
+                    'gateway/api/2.0/Subjects/' + Array.from(missingSubjectIds).join(',')
                 ).catch(() => null)
                 const extraSubjs = Array.isArray(missingSubjRes?.Subjects) ? missingSubjRes.Subjects : (missingSubjRes?.Subject ? [missingSubjRes.Subject] : [])
                 for (const s of extraSubjs) {
@@ -259,7 +387,7 @@ export async function fetchSmartTimetable(
                 const missingUserRes = await fetchGatewayEndpoint(
                     username,
                     pass,
-                    `gateway/api/2.0/Users/${Array.from(missingUserIds).join(',')}`
+                    'gateway/api/2.0/Users/' + Array.from(missingUserIds).join(',')
                 ).catch(() => null)
                 const extraUsers = Array.isArray(missingUserRes?.Users) ? missingUserRes.Users : (missingUserRes?.User ? [missingUserRes.User] : [])
                 for (const u of extraUsers) {
@@ -314,14 +442,14 @@ export async function fetchSmartTimetable(
                 const resolvedSubject = (sId && subjectNames.get(sId)) || (hw.Subject?.Name ? String(hw.Subject.Name).trim() : '')
 
                 const uId = Number(hw.CreatedBy?.Id)
-                const resolvedTeacher = (uId && userNames.get(uId)) || (hw.CreatedBy ? `${hw.CreatedBy.FirstName || ''} ${hw.CreatedBy.LastName || ''}`.trim() : undefined)
+                const resolvedTeacher = (uId && userNames.get(uId)) || (hw.CreatedBy ? ((hw.CreatedBy.FirstName || '') + ' ' + (hw.CreatedBy.LastName || '')).trim() : undefined)
 
                 let timeStr: string | undefined = undefined
                 if (hw.TimeFrom && hw.TimeTo) {
                     const from = String(hw.TimeFrom).slice(0, 5)
                     const to = String(hw.TimeTo).slice(0, 5)
                     if (from && to) {
-                        timeStr = `${from} - ${to}`
+                        timeStr = from + ' - ' + to
                     }
                 }
 
@@ -345,76 +473,13 @@ export async function fetchSmartTimetable(
         }
 
         const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-        const todayIso = formatIso(new Date())
         const schedule: DaySchedule[] = []
 
         dayNames.forEach((dName) => {
             const { dateStr, isoStr } = weekDates[dName]
-            const dayLessons: LessonItem[] = []
             const dayRealized = topicsMap[isoStr] || {}
             const periodsRaw = rawWeekTimetable[isoStr]
-            const periods = Array.isArray(periodsRaw) ? periodsRaw : (periodsRaw && typeof periodsRaw === 'object' ? Object.values(periodsRaw) : [])
-
-            periods.forEach((period: any, pIdx: number) => {
-                const slots = Array.isArray(period) ? period : (period && typeof period === 'object' ? [period] : [])
-                slots.forEach((slot: any) => {
-                    if (!slot) return
-
-                    const subjectName = String(slot.Subject?.Name || slot.Subject?.Short || 'Zajęcia szkolne').trim()
-                    
-                    const newFirst = String(slot.Teacher?.FirstName || '').trim()
-                    const newLast = String(slot.Teacher?.LastName || '').trim()
-                    const newTeacher = [newFirst, newLast].filter(Boolean).join(' ')
-
-                    const isCancelled = Boolean(slot.IsCanceled)
-                    const isSubstitution = Boolean(slot.IsSubstitutionClass)
-
-                    let finalTeacherName = newTeacher
-                    let teacherAbsenceReason: string | undefined = undefined
-
-                    if (isSubstitution) {
-                        const orgTeacherId = slot.OrgTeacher?.Id ? Number(slot.OrgTeacher.Id) : undefined
-                        const orgTeacherName = orgTeacherId && userNames.has(orgTeacherId) ? userNames.get(orgTeacherId) : undefined
-
-                        finalTeacherName = newTeacher || orgTeacherName || ''
-                        if (orgTeacherName && newTeacher && newTeacher !== orgTeacherName) {
-                            teacherAbsenceReason = `Zastępstwo za: ${orgTeacherName}`
-                        } else {
-                            teacherAbsenceReason = 'Zastępstwo'
-                        }
-                    }
-
-                    const hourFrom = String(slot.HourFrom || '').trim()
-                    const hourTo = String(slot.HourTo || '').trim()
-                    const timeStr = hourFrom && hourTo ? `${hourFrom} - ${hourTo}` : ''
-
-                    const lessonNum = Number(slot.LessonNo ?? (pIdx + 1))
-                    const { durationMinutes, isShortened } = calculateDuration(timeStr)
-
-                    const classroomId = slot.Classroom ? Number(slot.Classroom.Id) : undefined
-                    const resolvedRoom = (classroomId && classroomMap.get(classroomId)) || slot.Classroom?.Symbol || ''
-
-                    const realizedTopic = dayRealized[lessonNum] || ''
-
-                    dayLessons.push({
-                        number: lessonNum,
-                        subject: subjectName,
-                        teacher: finalTeacherName,
-                        room: resolvedRoom,
-                        time: timeStr,
-                        durationMinutes,
-                        isShortened,
-                        isCancelled,
-                        isSubstitution,
-                        flag: isCancelled ? 'Odwołane' : isSubstitution ? 'Zastępstwo' : null,
-                        teacherAbsent: isCancelled,
-                        teacherAbsenceReason,
-                        topic: realizedTopic || undefined
-                    })
-                })
-            })
-
-            dayLessons.sort((a, b) => a.number - b.number)
+            const dayLessons = parseRawDayLessons(periodsRaw, userNames, classroomMap, dayRealized)
 
             const dayEvents = (eventsByDate[isoStr] || []).map((ev) => {
                 if (ev.lessonNumber !== undefined && ev.lessonNumber !== null) {
@@ -445,6 +510,19 @@ export async function fetchSmartTimetable(
             })
         })
 
+        let nextUpcomingDay: DaySchedule | undefined = undefined
+        if (futureCandidateRaw) {
+            const nextLessons = parseRawDayLessons(futureCandidateRaw.periodsRaw, userNames, classroomMap, {})
+            nextUpcomingDay = {
+                dayName: futureCandidateRaw.dayName,
+                date: futureCandidateRaw.dateStr,
+                isoDate: futureCandidateRaw.isoStr,
+                isToday: false,
+                events: eventsByDate[futureCandidateRaw.isoStr] || [],
+                lessons: nextLessons
+            }
+        }
+
         const allCalendarEvents = Object.values(eventsByDate)
             .flat()
             .sort((a, b) => a.isoDate.localeCompare(b.isoDate))
@@ -461,6 +539,12 @@ export async function fetchSmartTimetable(
                     if (e.subjectName) textsToTranslate.add(e.subjectName)
                 })
             })
+            if (nextUpcomingDay) {
+                nextUpcomingDay.lessons.forEach((l) => {
+                    if (l.subject) textsToTranslate.add(l.subject)
+                    if (l.topic) textsToTranslate.add(l.topic)
+                })
+            }
             allCalendarEvents.forEach((e) => {
                 if (e.title) textsToTranslate.add(e.title)
                 if (e.subjectName) textsToTranslate.add(e.subjectName)
@@ -476,6 +560,12 @@ export async function fetchSmartTimetable(
                     if (e.subjectName && translatedMap[e.subjectName]) e.subjectName = translatedMap[e.subjectName]
                 })
             })
+            if (nextUpcomingDay) {
+                nextUpcomingDay.lessons.forEach((l) => {
+                    if (translatedMap[l.subject]) l.subject = translatedMap[l.subject]
+                    if (l.topic && translatedMap[l.topic]) l.topic = translatedMap[l.topic]
+                })
+            }
             allCalendarEvents.forEach((e) => {
                 if (translatedMap[e.title]) e.title = translatedMap[e.title]
                 if (e.subjectName && translatedMap[e.subjectName]) e.subjectName = translatedMap[e.subjectName]
@@ -488,6 +578,7 @@ export async function fetchSmartTimetable(
                 weekStart: mondayIso,
                 weekEnd: fridayIso,
                 schedule,
+                nextUpcomingDay,
                 allAbsentTeachers: [],
                 calendarEvents: allCalendarEvents.length > 0 ? allCalendarEvents : schedule.flatMap((d) => d.events)
             }

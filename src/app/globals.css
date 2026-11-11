@@ -333,3 +333,12 @@ html.is-standalone .ios-header {
 .ios-spinner {
   animation: ios-spinner-spin 0.8s steps(8) infinite;
 }
+
+@media (max-width: 767px) {
+  html,
+  body {
+    overflow: hidden !important;
+    height: 100dvh !important;
+    touch-action: none !important;
+  }
+}

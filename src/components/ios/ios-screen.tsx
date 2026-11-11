@@ -439,7 +439,7 @@ export function IosScreen({
           )
         )}
 
-        <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-4 pt-3 max-w-[480px] mx-auto w-full pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
+        <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[calc(100dvh+1px)] pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
           {!hideHeader && largeTitle && !isDesktop && (
             <div className="pt-2 pb-3 select-none">
               <h1 className="text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
@@ -540,8 +540,7 @@ export function IosScreen({
             WebkitBackfaceVisibility: 'hidden',
             backfaceVisibility: 'hidden',
             touchAction: 'pan-y',
-            overflowY: 'scroll',
-            WebkitOverflowScrolling: 'touch',
+            overflowY: 'auto',
             transform: panelTransform,
             transition: IOS_PANEL_TRANSITION,
             pointerEvents: isReceded ? 'none' : 'auto'
@@ -554,7 +553,7 @@ export function IosScreen({
             </header>
           )}
 
-          <div className={contentClassName ?? 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[calc(100dvh-36px)] pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
+          <div className={contentClassName ?? 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[calc(100dvh+1px)] pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
             {!hideHeader && largeTitle && (
               <div className="pt-2 pb-3 select-none">
                 <h1 className="text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">

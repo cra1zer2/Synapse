@@ -79,7 +79,7 @@
   --ios-spring: cubic-bezier(0.32, 0.72, 0, 1);
 
   --ios-nav-bg: #f2f2f7;
-  --ios-header-bg: #f2f2f7;
+  --ios-header-bg: rgba(242, 242, 247, 0.82);
   --ios-ambient-bg: #f2f2f7;
 }
 
@@ -149,7 +149,7 @@
   --ios-room-bg: rgba(0, 145, 255, 0.16);
   --ios-room-text: #40aeff;
   --ios-nav-bg: #000000;
-  --ios-header-bg: #000000;
+  --ios-header-bg: rgba(0, 0, 0, 0.82);
   --ios-ambient-bg: #000000;
 }
 
@@ -203,36 +203,6 @@ body {
   overscroll-behavior-y: contain;
 }
 
-.ios-status-shield {
-  display: none;
-}
-
-html.is-standalone .ios-status-shield {
-  display: block;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 14px;
-  background-color: var(--ios-bg);
-  z-index: 9999;
-  pointer-events: none;
-}
-
-@media (display-mode: standalone) {
-  .ios-status-shield {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 14px;
-    background-color: var(--ios-bg);
-    z-index: 9999;
-    pointer-events: none;
-  }
-}
-
 .ios-header {
   position: sticky;
   top: 0;
@@ -242,7 +212,9 @@ html.is-standalone .ios-status-shield {
   padding-bottom: 6px;
   padding-left: 1rem;
   padding-right: 1rem;
-  background-color: var(--ios-bg);
+  background-color: var(--ios-header-bg);
+  -webkit-backdrop-filter: saturate(190%) blur(24px);
+  backdrop-filter: saturate(190%) blur(24px);
   border-bottom: 0.5px solid transparent;
 }
 

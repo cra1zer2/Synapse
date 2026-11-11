@@ -59,7 +59,6 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-[100dvh] flex flex-col bg-[var(--ios-bg)] text-[var(--ios-label)] antialiased" suppressHydrationWarning>
-        <div className="ios-status-shield" aria-hidden="true" />
         {children}
       </body>
     </html>

@@ -449,7 +449,7 @@ export default function Home() {
         }}
       >
         <header className="ios-header md:hidden">
-          <div className="relative flex items-center justify-between w-full max-w-[480px] mx-auto h-[40px]">
+          <div className="relative flex items-center justify-between w-full max-w-[480px] mx-auto h-[44px]">
             <div className="z-10 flex items-center min-w-[70px] h-full">
               <div className="relative w-9 h-9 flex items-center justify-center">
                 <div className={'absolute inset-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none ' + ((timetable.isUpdating || isManualRefreshing) ? 'opacity-100' : 'opacity-0')}>

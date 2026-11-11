@@ -208,24 +208,36 @@ body {
   top: 0;
   z-index: 30;
   width: 100%;
-  padding-top: max(env(safe-area-inset-top, 0px), 8px);
-  padding-bottom: 6px;
+  padding-top: max(calc(env(safe-area-inset-top, 0px) + 14px), 14px);
+  padding-bottom: 8px;
   padding-left: 1rem;
   padding-right: 1rem;
-  background-color: var(--ios-header-bg);
-  -webkit-backdrop-filter: saturate(190%) blur(24px);
-  backdrop-filter: saturate(190%) blur(24px);
+  background-color: var(--ios-bg);
   border-bottom: 0.5px solid transparent;
 }
 
+html.is-iphone .ios-header {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+  padding-bottom: 8px;
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 440px) and (orientation: portrait) {
+    .ios-header {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+      padding-bottom: 8px;
+    }
+  }
+}
+
 html.is-standalone .ios-header {
-  padding-top: max(calc(env(safe-area-inset-top, 0px) + 4px), 12px);
+  padding-top: max(calc(env(safe-area-inset-top, 0px) + 10px), 14px);
   padding-bottom: 8px;
 }
 
 @media (display-mode: standalone) {
   .ios-header {
-    padding-top: max(calc(env(safe-area-inset-top, 0px) + 4px), 12px);
+    padding-top: max(calc(env(safe-area-inset-top, 0px) + 10px), 14px);
     padding-bottom: 8px;
   }
 }
@@ -334,57 +346,11 @@ html.is-standalone .ios-header {
   animation: ios-spinner-spin 0.8s steps(8) infinite;
 }
 
-.ios-toolbar-spacer {
-  display: none;
-}
-
-.ios-status-shield {
-  display: none;
-}
-
 @media (max-width: 767px) {
-  /*
-   * iOS 26 Safari applies a blurred "scroll edge effect" under the status bar
-   * unless it finds a fixed element with a solid background touching the top
-   * edge — then it tints the status bar with that color instead. Our headers
-   * are sticky inside fixed scroll panels, so Safari doesn't detect them;
-   * this shield gives it a fixed top element to sample. It must receive hit
-   * testing (no pointer-events: none) and reach slightly below the safe area,
-   * because Safari probes just under the status bar.
-   */
-  html:not(.is-standalone) .ios-status-shield {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: calc(env(safe-area-inset-top, 0px) + 2px);
-    background-color: var(--ios-bg);
-    z-index: 9999;
-  }
   html,
   body {
     overflow: hidden !important;
     height: 100dvh !important;
     touch-action: none !important;
-  }
-
-  /*
-   * Safari renders backdrop-filter inside transformed / scrolling layers with
-   * smeared edges and re-blurs it on every frame of a slide transition, which
-   * causes visible glitches and dropped frames. Use an opaque bar on phones.
-   */
-  .ios-header {
-    background-color: var(--ios-bg);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
-  /* Panels are 100lvh tall so they extend under Safari's bottom toolbar;
-     this keeps the last items reachable above it. */
-  .ios-toolbar-spacer {
-    display: block;
-    height: calc(100lvh - 100dvh);
-    pointer-events: none;
   }
 }

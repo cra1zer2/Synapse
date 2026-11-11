@@ -625,8 +625,6 @@ export function IosScreen({
             )}
             {children}
           </div>
-          {/* Compensates for the part of the panel hidden behind Safari's bottom toolbar */}
-          <div aria-hidden="true" className="ios-toolbar-spacer" />
         </div>
       )}
     </>,

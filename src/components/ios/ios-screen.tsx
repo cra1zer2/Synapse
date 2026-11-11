@@ -127,31 +127,43 @@ export function IosScreen({
       setIsStackedOnDesktop(stacked)
       setIsRendered(true)
 
-      raf1 = requestAnimationFrame(() => {
+      const startEnter = () => {
+        if (panelRef.current) {
+          panelRef.current.style.transition = isDesktop
+            ? (stacked ? 'opacity 0.16s ease' : 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease')
+            : IOS_PANEL_TRANSITION
+          if (!isDesktop) {
+            panelRef.current.style.transform = isReceded
+              ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)'
+              : 'translate3d(0, 0, 0)'
+          }
+        }
+        if (backdropRef.current) {
+          backdropRef.current.style.transition = isDesktop ? 'opacity 0.2s ease' : IOS_BACKDROP_TRANSITION
+          backdropRef.current.style.opacity = isDesktop
+            ? (!stacked ? '1' : '0')
+            : (!isReceded ? '1' : '0')
+        }
+        setIsVisible(true)
+      }
+
+      const prepareAndEnter = () => {
         if (panelRef.current && !isDesktop) {
           panelRef.current.style.transition = 'none'
           panelRef.current.style.transform = 'translate3d(100%, 0, 0)'
           void panelRef.current.offsetWidth
         }
-        raf2 = requestAnimationFrame(() => {
-          if (panelRef.current) {
-            panelRef.current.style.transition = isDesktop
-              ? (stacked ? 'opacity 0.16s ease' : 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease')
-              : IOS_PANEL_TRANSITION
-            if (!isDesktop) {
-              panelRef.current.style.transform = isReceded
-                ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)'
-                : 'translate3d(0, 0, 0)'
-            }
-          }
-          if (backdropRef.current) {
-            backdropRef.current.style.transition = isDesktop ? 'opacity 0.2s ease' : IOS_BACKDROP_TRANSITION
-            backdropRef.current.style.opacity = isDesktop
-              ? (!stacked ? '1' : '0')
-              : (!isReceded ? '1' : '0')
-          }
-          setIsVisible(true)
-        })
+        startEnter()
+      }
+
+      // Start in the very next frame when the panel is already mounted, so the
+      // subview moves in sync with the receding root panel (no 2-frame lag).
+      raf1 = requestAnimationFrame(() => {
+        if (panelRef.current) {
+          prepareAndEnter()
+        } else {
+          raf2 = requestAnimationFrame(prepareAndEnter)
+        }
       })
     } else if (swipedClosedRef.current) {
       swipedClosedRef.current = false
@@ -243,7 +255,7 @@ export function IosScreen({
       swipedClosedRef.current = true
       if (underPanelRef.current) {
         underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
-        underPanelRef.current.style.transform = ''
+        underPanelRef.current.style.transform = 'translate3d(0, 0, 0)'
       }
       setIsVisible(false)
       setIsRendered(false)
@@ -370,7 +382,7 @@ export function IosScreen({
         swipedClosedRef.current = true
         if (underPanelRef.current) {
           underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
-          underPanelRef.current.style.transform = ''
+          underPanelRef.current.style.transform = 'translate3d(0, 0, 0)'
         }
         setIsVisible(false)
         setIsRendered(false)
@@ -400,7 +412,6 @@ export function IosScreen({
         if (backdropRef.current) backdropRef.current.style.transition = IOS_BACKDROP_TRANSITION
         if (underPanelRef.current) {
           underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
-          underPanelRef.current.style.transform = ''
         }
       }, snapDurationMs)
     }
@@ -490,7 +501,7 @@ export function IosScreen({
           )
         )}
 
-        <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[102dvh] flex flex-col pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
+        <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[calc(100dvh+1px)] pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
           {!hideHeader && largeTitle && !isDesktop && (
             <div className="pt-2 pb-3 select-none">
               <h1 className="text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
@@ -499,7 +510,6 @@ export function IosScreen({
             </div>
           )}
           {children}
-          {!isDesktop && <div aria-hidden="true" className="mt-auto h-[2px] w-full bg-[var(--ios-card-solid)] opacity-[0.01] pointer-events-none shrink-0" />}
         </div>
       </div>
     )
@@ -515,6 +525,7 @@ export function IosScreen({
         style={{
           position: 'fixed',
           inset: 0,
+          height: isDesktop ? undefined : '100lvh',
           zIndex: resolvedZIndex - 1,
           backgroundColor: isDesktop
             ? (isStackedOnDesktop ? 'transparent' : 'var(--ios-subview-backdrop)')
@@ -581,7 +592,7 @@ export function IosScreen({
             position: 'fixed',
             inset: 0,
             width: '100vw',
-            height: '100dvh',
+            height: '100lvh',
             zIndex: resolvedZIndex,
             backgroundColor: 'var(--ios-bg)',
             willChange: 'transform',
@@ -589,6 +600,7 @@ export function IosScreen({
             backfaceVisibility: 'hidden',
             touchAction: 'pan-y',
             overflowY: 'auto',
+            overscrollBehavior: 'contain',
             transform: isVisible
               ? (isReceded ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'translate3d(0, 0, 0)')
               : 'translate3d(100%, 0, 0)',
@@ -603,7 +615,7 @@ export function IosScreen({
             </header>
           )}
 
-          <div className={contentClassName ?? 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[102dvh] flex flex-col pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
+          <div className={contentClassName ?? 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[calc(100dvh+1px)] pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
             {!hideHeader && largeTitle && (
               <div className="pt-2 pb-3 select-none">
                 <h1 className="text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
@@ -612,8 +624,9 @@ export function IosScreen({
               </div>
             )}
             {children}
-            <div aria-hidden="true" className="mt-auto h-[2px] w-full bg-[var(--ios-card-solid)] opacity-[0.01] pointer-events-none shrink-0" />
           </div>
+          {/* Compensates for the part of the panel hidden behind Safari's bottom toolbar */}
+          <div aria-hidden="true" className="ios-toolbar-spacer" />
         </div>
       )}
     </>,

@@ -438,7 +438,7 @@ export default function Home() {
     <div className="w-full min-h-screen bg-[var(--ios-bg)] relative overflow-x-hidden">
       <div
         data-ios-root-panel="true"
-        className="fixed inset-0 w-screen h-[100dvh] overflow-y-auto touch-pan-y block md:relative md:inset-auto md:w-full md:h-auto md:min-h-screen md:overflow-visible md:flex md:flex-col bg-[var(--ios-bg)]"
+        className="fixed inset-0 w-screen h-[100lvh] overflow-y-auto overscroll-contain touch-pan-y block md:relative md:inset-auto md:w-full md:h-auto md:min-h-screen md:overflow-visible md:flex md:flex-col bg-[var(--ios-bg)]"
         style={{
           transform: (!isDesktop && isAnyOverlayActive) ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'translate3d(0, 0, 0)',
           WebkitBackfaceVisibility: 'hidden',
@@ -566,7 +566,7 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="w-full min-h-[102dvh] md:min-h-0 md:flex-1 pt-3 md:pt-5 pb-32 px-4 md:px-5 max-w-[480px] md:max-w-[860px] mx-auto flex flex-col gap-3.5 md:gap-4 box-border">
+        <main className="w-full min-h-[calc(100dvh+1px)] md:min-h-0 md:flex-1 pt-3 md:pt-5 pb-32 px-4 md:px-5 max-w-[480px] md:max-w-[860px] mx-auto flex flex-col gap-3.5 md:gap-4 box-border">
           {showLuckyNumberBanner &&
             account.profile?.luckyNumber !== null &&
             account.profile?.luckyNumber !== undefined &&
@@ -614,8 +614,6 @@ export default function Home() {
           <div className="flex md:hidden flex-col gap-3.5 w-full">
             {visibleMobileIds.map((id) => renderWidget(id, false))}
           </div>
-
-          <div aria-hidden="true" className="mt-auto h-[2px] w-full bg-[var(--ios-card-solid)] opacity-[0.01] pointer-events-none shrink-0 md:hidden" />
         </main>
       </div>
 

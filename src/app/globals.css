@@ -334,11 +334,34 @@ html.is-standalone .ios-header {
   animation: ios-spinner-spin 0.8s steps(8) infinite;
 }
 
+.ios-toolbar-spacer {
+  display: none;
+}
+
 @media (max-width: 767px) {
   html,
   body {
     overflow: hidden !important;
     height: 100dvh !important;
     touch-action: none !important;
+  }
+
+  /*
+   * Safari renders backdrop-filter inside transformed / scrolling layers with
+   * smeared edges and re-blurs it on every frame of a slide transition, which
+   * causes visible glitches and dropped frames. Use an opaque bar on phones.
+   */
+  .ios-header {
+    background-color: var(--ios-bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* Panels are 100lvh tall so they extend under Safari's bottom toolbar;
+     this keeps the last items reachable above it. */
+  .ios-toolbar-spacer {
+    display: block;
+    height: calc(100lvh - 100dvh);
+    pointer-events: none;
   }
 }

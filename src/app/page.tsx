@@ -197,80 +197,12 @@ export default function Home() {
   )
 
   const isAnySheetActive = Boolean(selectedLesson || selectedEvent || selectedGradeDetail)
-  const hasAnyActiveLayer = isAnyOverlayActive || isAnySheetActive
-  const historyGuardRef = useRef(false)
 
-  useBodyScrollLock(hasAnyActiveLayer)
+  useBodyScrollLock(isAnyOverlayActive || isAnySheetActive)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (hasAnyActiveLayer && !historyGuardRef.current) {
-      window.history.pushState({ synapseLayer: true }, '')
-      historyGuardRef.current = true
-    } else if (!hasAnyActiveLayer) {
-      historyGuardRef.current = false
-    }
-  }, [hasAnyActiveLayer])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const handlePopState = () => {
-      if (selectedLesson || selectedEvent || selectedGradeDetail) {
-        setSelectedLesson(null)
-        setSelectedEvent(null)
-        setSelectedGradeDetail(null)
-        if (isAnyOverlayActive) {
-          window.history.pushState({ synapseLayer: true }, '')
-          historyGuardRef.current = true
-        } else {
-          historyGuardRef.current = false
-        }
-        return
-      }
-
-      if (showLiveJustifications) {
-        setShowLiveJustifications(false)
-        window.history.pushState({ synapseLayer: true }, '')
-        historyGuardRef.current = true
-        return
-      }
-
-      if (showManualExcuse) {
-        setShowManualExcuse(false)
-        window.history.pushState({ synapseLayer: true }, '')
-        historyGuardRef.current = true
-        return
-      }
-
-      if (selectedSubjectDetail) {
-        setSelectedSubjectDetail(null)
-        window.history.pushState({ synapseLayer: true }, '')
-        historyGuardRef.current = true
-        return
-      }
-
-      if (showComposeInHeader) {
-        setShowComposeInHeader(false)
-        window.history.pushState({ synapseLayer: true }, '')
-        historyGuardRef.current = true
-        return
-      }
-
-      if (isAnyOverlayActive) {
-        setShowSettings(false)
-        setShowFullGrades(false)
-        setShowFullSchedule(false)
-        setShowFullUpcoming(false)
-        setShowFullAttendance(false)
-        setShowMessagesScreen(false)
-        setShowAnnouncementsScreen(false)
-        setIsMessagesSubViewOpen(false)
-        setDirectMessageToOpen(null)
-        setDirectAnnouncementToOpen(null)
-        historyGuardRef.current = false
-        return
-      }
-
+    const handleDeepLinking = () => {
       try {
         const params = new URLSearchParams(window.location.search)
         const tab = params.get('tab')
@@ -281,29 +213,10 @@ export default function Home() {
         else if (tab === 'attendance') setShowFullAttendance(true)
       } catch {}
     }
-
-    try {
-      const params = new URLSearchParams(window.location.search)
-      const tab = params.get('tab')
-      if (tab === 'grades') setShowFullGrades(true)
-      else if (tab === 'messages') setShowMessagesScreen(true)
-      else if (tab === 'schedule') setShowFullSchedule(true)
-      else if (tab === 'upcoming' || tab === 'events') setShowFullUpcoming(true)
-      else if (tab === 'attendance') setShowFullAttendance(true)
-    } catch {}
-
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [
-    selectedLesson,
-    selectedEvent,
-    selectedGradeDetail,
-    showLiveJustifications,
-    showManualExcuse,
-    selectedSubjectDetail,
-    showComposeInHeader,
-    isAnyOverlayActive
-  ])
+    handleDeepLinking()
+    window.addEventListener('popstate', handleDeepLinking)
+    return () => window.removeEventListener('popstate', handleDeepLinking)
+  }, [])
 
   const onLanguageChange = (newLang: AppLanguage) => {
     settings.handleSelectLanguage(newLang, (l) => {
@@ -653,7 +566,7 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="w-full min-h-[calc(100dvh+1px)] md:min-h-0 md:flex-1 pt-3 md:pt-5 pb-32 px-4 md:px-5 max-w-[480px] md:max-w-[860px] mx-auto flex flex-col gap-3.5 md:gap-4 box-border">
+        <main className="w-full min-h-[102dvh] md:min-h-0 md:flex-1 pt-3 md:pt-5 pb-32 px-4 md:px-5 max-w-[480px] md:max-w-[860px] mx-auto flex flex-col gap-3.5 md:gap-4 box-border">
           {showLuckyNumberBanner &&
             account.profile?.luckyNumber !== null &&
             account.profile?.luckyNumber !== undefined &&
@@ -701,6 +614,8 @@ export default function Home() {
           <div className="flex md:hidden flex-col gap-3.5 w-full">
             {visibleMobileIds.map((id) => renderWidget(id, false))}
           </div>
+
+          <div aria-hidden="true" className="mt-auto h-[2px] w-full bg-[var(--ios-card-solid)] opacity-[0.01] pointer-events-none shrink-0 md:hidden" />
         </main>
       </div>
 

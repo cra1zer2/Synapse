@@ -4,7 +4,7 @@ import { ReactNode, useRef, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 
 export const IOS_PARALLAX_PERCENT = 21
-export const IOS_TRANSITION_MS = 350
+export const IOS_TRANSITION_MS = 340
 export const IOS_TRANSITION_EASING = 'cubic-bezier(0.32, 0.72, 0, 1)'
 export const IOS_PANEL_TRANSITION = 'transform ' + IOS_TRANSITION_MS + 'ms ' + IOS_TRANSITION_EASING
 export const IOS_BACKDROP_TRANSITION = 'opacity ' + IOS_TRANSITION_MS + 'ms ' + IOS_TRANSITION_EASING
@@ -105,26 +105,53 @@ export function IosScreen({
   )
 
   useEffect(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+    if (snapTimerRef.current) {
+      clearTimeout(snapTimerRef.current)
+      snapTimerRef.current = null
+    }
+
     let raf1 = 0
+    let raf2 = 0
     let timer: ReturnType<typeof setTimeout> | null = null
 
     if (isOpen) {
       isClosingRef.current = false
       swipedClosedRef.current = false
+      isSwiping.current = false
+      hasLockedHorizontal.current = false
       const stacked = isDesktop && resolvedZIndex > 50 && hasLowerOpenSubview(resolvedZIndex)
       setIsStackedOnDesktop(stacked)
       setIsRendered(true)
+
       raf1 = requestAnimationFrame(() => {
-        if (panelRef.current) {
-          panelRef.current.style.transition = isDesktop
-            ? (stacked ? 'opacity 0.16s ease' : 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease')
-            : IOS_PANEL_TRANSITION
+        if (panelRef.current && !isDesktop) {
+          panelRef.current.style.transition = 'none'
+          panelRef.current.style.transform = 'translate3d(100%, 0, 0)'
           void panelRef.current.offsetWidth
         }
-        if (backdropRef.current) {
-          backdropRef.current.style.transition = isDesktop ? 'opacity 0.2s ease' : IOS_BACKDROP_TRANSITION
-        }
-        setIsVisible(true)
+        raf2 = requestAnimationFrame(() => {
+          if (panelRef.current) {
+            panelRef.current.style.transition = isDesktop
+              ? (stacked ? 'opacity 0.16s ease' : 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease')
+              : IOS_PANEL_TRANSITION
+            if (!isDesktop) {
+              panelRef.current.style.transform = isReceded
+                ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)'
+                : 'translate3d(0, 0, 0)'
+            }
+          }
+          if (backdropRef.current) {
+            backdropRef.current.style.transition = isDesktop ? 'opacity 0.2s ease' : IOS_BACKDROP_TRANSITION
+            backdropRef.current.style.opacity = isDesktop
+              ? (!stacked ? '1' : '0')
+              : (!isReceded ? '1' : '0')
+          }
+          setIsVisible(true)
+        })
       })
     } else if (swipedClosedRef.current) {
       swipedClosedRef.current = false
@@ -135,9 +162,13 @@ export function IosScreen({
         panelRef.current.style.transition = isDesktop
           ? (isStackedOnDesktop ? 'opacity 0.14s ease' : 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.16s ease')
           : IOS_PANEL_TRANSITION
+        if (!isDesktop) {
+          panelRef.current.style.transform = 'translate3d(100%, 0, 0)'
+        }
       }
       if (backdropRef.current) {
         backdropRef.current.style.transition = isDesktop ? 'opacity 0.18s ease' : IOS_BACKDROP_TRANSITION
+        backdropRef.current.style.opacity = '0'
       }
       setIsVisible(false)
       timer = setTimeout(() => {
@@ -147,9 +178,22 @@ export function IosScreen({
 
     return () => {
       cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
       if (timer) clearTimeout(timer)
     }
-  }, [isOpen, isDesktop, resolvedZIndex, isStackedOnDesktop])
+  }, [isOpen, isDesktop, resolvedZIndex])
+
+  useEffect(() => {
+    if (!isOpen || !isVisible || isDesktop || !panelRef.current) return
+    panelRef.current.style.transition = IOS_PANEL_TRANSITION
+    panelRef.current.style.transform = isReceded
+      ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)'
+      : 'translate3d(0, 0, 0)'
+    if (backdropRef.current) {
+      backdropRef.current.style.transition = IOS_BACKDROP_TRANSITION
+      backdropRef.current.style.opacity = isReceded ? '0' : '1'
+    }
+  }, [isReceded, isOpen, isVisible, isDesktop])
 
   useEffect(() => {
     return () => {
@@ -199,6 +243,7 @@ export function IosScreen({
       swipedClosedRef.current = true
       if (underPanelRef.current) {
         underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
+        underPanelRef.current.style.transform = ''
       }
       setIsVisible(false)
       setIsRendered(false)
@@ -251,7 +296,7 @@ export function IosScreen({
         isSwiping.current = false
         return
       }
-      if (deltaX < 2) return
+      if (deltaX < 3) return
       hasLockedHorizontal.current = true
       panelRef.current.style.transition = 'none'
       if (backdropRef.current) backdropRef.current.style.transition = 'none'
@@ -300,7 +345,7 @@ export function IosScreen({
     if (shouldClose && onClose) {
       isClosingRef.current = true
       const remaining = Math.max(0, 1 - progress)
-      const durationMs = Math.round(240 + remaining * 110)
+      const durationMs = Math.round(230 + remaining * 100)
       const panelTransition = 'transform ' + durationMs + 'ms ' + IOS_TRANSITION_EASING
       const backdropTransition = 'opacity ' + durationMs + 'ms ' + IOS_TRANSITION_EASING
 
@@ -323,13 +368,16 @@ export function IosScreen({
       closeTimerRef.current = setTimeout(() => {
         isClosingRef.current = false
         swipedClosedRef.current = true
-        if (underPanelRef.current) underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
+        if (underPanelRef.current) {
+          underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
+          underPanelRef.current.style.transform = ''
+        }
         setIsVisible(false)
         setIsRendered(false)
         onClose()
       }, durationMs)
     } else {
-      const snapDurationMs = Math.round(230 + progress * 100)
+      const snapDurationMs = Math.round(220 + progress * 90)
       const panelTransition = 'transform ' + snapDurationMs + 'ms ' + IOS_TRANSITION_EASING
       const backdropTransition = 'opacity ' + snapDurationMs + 'ms ' + IOS_TRANSITION_EASING
 
@@ -350,7 +398,10 @@ export function IosScreen({
       snapTimerRef.current = setTimeout(() => {
         if (panelRef.current) panelRef.current.style.transition = IOS_PANEL_TRANSITION
         if (backdropRef.current) backdropRef.current.style.transition = IOS_BACKDROP_TRANSITION
-        if (underPanelRef.current) underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
+        if (underPanelRef.current) {
+          underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
+          underPanelRef.current.style.transform = ''
+        }
       }, snapDurationMs)
     }
   }
@@ -439,7 +490,7 @@ export function IosScreen({
           )
         )}
 
-        <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[calc(100dvh+1px)] pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
+        <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[102dvh] flex flex-col pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
           {!hideHeader && largeTitle && !isDesktop && (
             <div className="pt-2 pb-3 select-none">
               <h1 className="text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
@@ -448,16 +499,13 @@ export function IosScreen({
             </div>
           )}
           {children}
+          {!isDesktop && <div aria-hidden="true" className="mt-auto h-[2px] w-full bg-[var(--ios-card-solid)] opacity-[0.01] pointer-events-none shrink-0" />}
         </div>
       </div>
     )
   }
 
   if (typeof document === 'undefined' || (!isRendered && !isOpen)) return null
-
-  const panelTransform = isVisible
-    ? (isReceded ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'translate3d(0, 0, 0)')
-    : 'translate3d(100%, 0, 0)'
 
   return createPortal(
     <>
@@ -541,7 +589,9 @@ export function IosScreen({
             backfaceVisibility: 'hidden',
             touchAction: 'pan-y',
             overflowY: 'auto',
-            transform: panelTransform,
+            transform: isVisible
+              ? (isReceded ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'translate3d(0, 0, 0)')
+              : 'translate3d(100%, 0, 0)',
             transition: IOS_PANEL_TRANSITION,
             pointerEvents: isReceded ? 'none' : 'auto'
           }}
@@ -553,7 +603,7 @@ export function IosScreen({
             </header>
           )}
 
-          <div className={contentClassName ?? 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[calc(100dvh+1px)] pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
+          <div className={contentClassName ?? 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[102dvh] flex flex-col pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
             {!hideHeader && largeTitle && (
               <div className="pt-2 pb-3 select-none">
                 <h1 className="text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
@@ -562,6 +612,7 @@ export function IosScreen({
               </div>
             )}
             {children}
+            <div aria-hidden="true" className="mt-auto h-[2px] w-full bg-[var(--ios-card-solid)] opacity-[0.01] pointer-events-none shrink-0" />
           </div>
         </div>
       )}

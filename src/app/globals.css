@@ -348,7 +348,9 @@ html.is-standalone .ios-header {
    * unless it finds a fixed element with a solid background touching the top
    * edge — then it tints the status bar with that color instead. Our headers
    * are sticky inside fixed scroll panels, so Safari doesn't detect them;
-   * this shield gives it a fixed top element to sample.
+   * this shield gives it a fixed top element to sample. It must receive hit
+   * testing (no pointer-events: none) and reach slightly below the safe area,
+   * because Safari probes just under the status bar.
    */
   html:not(.is-standalone) .ios-status-shield {
     display: block;
@@ -356,10 +358,9 @@ html.is-standalone .ios-header {
     top: 0;
     left: 0;
     right: 0;
-    height: max(env(safe-area-inset-top, 0px), 1px);
+    height: calc(env(safe-area-inset-top, 0px) + 2px);
     background-color: var(--ios-bg);
     z-index: 9999;
-    pointer-events: none;
   }
   html,
   body {

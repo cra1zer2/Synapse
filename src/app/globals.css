@@ -208,7 +208,7 @@ body {
   top: 0;
   z-index: 30;
   width: 100%;
-  padding-top: max(calc(env(safe-area-inset-top, 0px) + 14px), 14px);
+  padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 28px);
   padding-bottom: 8px;
   padding-left: 1rem;
   padding-right: 1rem;
@@ -217,27 +217,27 @@ body {
 }
 
 html.is-iphone .ios-header {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+  padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 28px);
   padding-bottom: 8px;
 }
 
 @supports (-webkit-touch-callout: none) {
   @media (max-width: 440px) and (orientation: portrait) {
     .ios-header {
-      padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+      padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 28px);
       padding-bottom: 8px;
     }
   }
 }
 
 html.is-standalone .ios-header {
-  padding-top: max(calc(env(safe-area-inset-top, 0px) + 10px), 14px);
+  padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 16px);
   padding-bottom: 8px;
 }
 
 @media (display-mode: standalone) {
   .ios-header {
-    padding-top: max(calc(env(safe-area-inset-top, 0px) + 10px), 14px);
+    padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 16px);
     padding-bottom: 8px;
   }
 }

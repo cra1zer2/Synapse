@@ -26,9 +26,9 @@ function isCacheableEndpoint(cleanPath: string): boolean {
 
 function getCacheTtlMs(cleanPath: string): number {
     const p = cleanPath.toLowerCase()
-    if (p.includes('gateway/api/2.0/realizations')) return 3 * 60 * 1000 // 3 min
-    if (p.includes('gateway/api/2.0/grades/comments')) return 2 * 60 * 1000 // 2 min
-    return 4 * 60 * 1000 // 4 min for static catalogs
+    if (p.includes('gateway/api/2.0/realizations')) return 3 * 60 * 1000
+    if (p.includes('gateway/api/2.0/grades/comments')) return 2 * 60 * 1000
+    return 4 * 60 * 1000
 }
 
 export function clearGatewayCache(username?: string): void {
@@ -55,7 +55,6 @@ export async function fetchGatewayEndpoint(username: string, pass: string, endpo
     const now = Date.now()
     const isCacheable = isCacheableEndpoint(cleanPath)
 
-    // 1. Check in-memory catalog cache
     if (isCacheable) {
         const cached = catalogCache.get(cacheKey)
         if (cached && cached.expiresAt > now) {
@@ -63,13 +62,11 @@ export async function fetchGatewayEndpoint(username: string, pass: string, endpo
         }
     }
 
-    // 2. Check in-flight promise deduplication
     const inFlight = inFlightRequests.get(cacheKey)
     if (inFlight) {
         return inFlight
     }
 
-    // 3. Execute request and share promise
     const execPromise = (async () => {
         try {
             const session = await getNativeLibrusSession(cleanUser, cleanPass)
@@ -108,7 +105,6 @@ export async function fetchGatewayEndpoint(username: string, pass: string, endpo
                 }
             }
 
-            // Save to cache if valid
             if (isCacheable && result && typeof result === 'object' && result.code === undefined) {
                 catalogCache.set(cacheKey, {
                     data: result,

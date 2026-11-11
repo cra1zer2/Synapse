@@ -156,8 +156,6 @@ export function IosScreen({
         startEnter()
       }
 
-      // Start in the very next frame when the panel is already mounted, so the
-      // subview moves in sync with the receding root panel (no 2-frame lag).
       raf1 = requestAnimationFrame(() => {
         if (panelRef.current) {
           prepareAndEnter()

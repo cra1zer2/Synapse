@@ -97,7 +97,6 @@ export function useMessagesInbox({ username, password }: { username: string; pas
             }
         }
 
-        // Stagger network fetch slightly if warm cache is available to give priority to main timetable sync
         const delayMs = cached ? 350 : 0
         const timer = setTimeout(() => {
             fetchBundle()

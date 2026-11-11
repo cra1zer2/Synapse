@@ -122,8 +122,6 @@ export async function fetchLiveJustificationsHistory(
             }
         }
 
-        // Student accounts must never scrape HTML /eusprawiedliwienia with /rodzic/index referer,
-        // because Synergia will immediately terminate student sessions.
         if (cleanUser.toLowerCase().endsWith('u')) {
             return { success: true, data: [] }
         }

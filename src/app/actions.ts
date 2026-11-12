@@ -209,10 +209,7 @@ export async function getStudentProfileAction(username: string, pass: string): P
         }
     } catch (error: any) {
         const msg = String(error?.message || error)
-        const friendly = msg.includes('401') || msg.includes('Błędny') || msg.includes('login')
-            ? 'Nieprawidłowy login lub hasło'
-            : msg
-        return { success: false, error: friendly }
+        return { success: false, error: msg }
     }
 }
 

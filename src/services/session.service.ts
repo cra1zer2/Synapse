@@ -137,7 +137,7 @@ export class NativeLibrusSession {
 
         const authJson: any = await res.json().catch(() => null)
         if (!authJson || authJson.status !== 'ok' || !authJson.goTo) {
-            throw new Error((authJson && authJson.message) || 'Nieprawidłowy login lub hasło')
+            throw new Error(await this.describeLoginFailure(res.status, authJson))
         }
 
         let currentTarget: string | null = authJson.goTo.startsWith('http') ? authJson.goTo : `https://api.librus.pl${authJson.goTo}`
@@ -167,6 +167,67 @@ export class NativeLibrusSession {
 
         this.isAuthenticated = true
         this.expiresAt = Date.now() + 20 * 60 * 1000
+    }
+
+    private async isCaptchaRequired(): Promise<boolean> {
+        try {
+            const res = await fetch('https://api.librus.pl/OAuth/Captcha', {
+                method: 'POST',
+                headers: {
+                    'User-Agent': UA,
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cookie': this.jar.getCookieHeader('api.librus.pl')
+                },
+                body: new URLSearchParams({ username: this.username, is_needed: '1' }).toString()
+            })
+            const json: any = await res.json().catch(() => null)
+            return Boolean(json?.is_needed)
+        } catch {
+            return false
+        }
+    }
+
+    private async describeLoginFailure(httpStatus: number, authJson: any): Promise<string> {
+        const site = 'synergia.librus.pl'
+
+        if (authJson?.status === 'actionRequired') {
+            const codes: string[] = (Array.isArray(authJson.actions) ? authJson.actions : [])
+                .map((a: any) => String(a?.code || ''))
+            if (codes.some((c) => c.startsWith('leakedPassword'))) {
+                return `Librus wykrył, że to hasło jest w publicznym rejestrze wycieków i wymaga zmiany. Zmień hasło na ${site} i zaloguj się tutaj nowym hasłem.`
+            }
+            if (codes.includes('passwordChangeRequired')) {
+                return `Librus wymaga ustawienia nowego hasła (pierwsze logowanie lub reset hasła). Zaloguj się na ${site}, ustaw nowe hasło i użyj go tutaj.`
+            }
+            if (codes.some((c) => c.includes('Rules') || c.includes('Accept') || c.includes('DataTransfer'))) {
+                return `Librus wymaga akceptacji regulaminu/zgód. Zaloguj się raz na ${site}, dokończ ten krok i spróbuj ponownie.`
+            }
+            if (codes.includes('emailRequired') || codes.includes('nameRequired')) {
+                return `Librus wymaga uzupełnienia danych konta. Zaloguj się raz na ${site}, uzupełnij dane i spróbuj ponownie.`
+            }
+            return `Librus wymaga dodatkowego kroku przy logowaniu (${codes.join(', ') || 'nieznany'}). Zaloguj się raz na ${site} i dokończ go.`
+        }
+
+        if (await this.isCaptchaRequired()) {
+            return `Za dużo nieudanych prób logowania — Librus wymaga weryfikacji Cloudflare dla tego loginu. Zaloguj się raz poprawnie na ${site}, odczekaj chwilę i spróbuj ponownie.`
+        }
+
+        const errors: any[] = Array.isArray(authJson?.errors) ? authJson.errors : []
+        const librusMessage = errors.map((e) => String(e?.message || e?.code || '')).filter(Boolean).join(' ')
+
+        if (librusMessage) {
+            const looksLikeBadCredentials = /nieprawid/i.test(librusMessage)
+            if (looksLikeBadCredentials && this.username.includes('@')) {
+                return `${librusMessage} Użyj loginu Synergii (np. 1234567u lub 1234567), a nie adresu e-mail Konta Librus.`
+            }
+            return librusMessage
+        }
+
+        if (httpStatus >= 500) {
+            return `Serwer Librusa nie odpowiada (HTTP ${httpStatus}). Spróbuj za chwilę.`
+        }
+        return `Nie udało się zalogować do Librusa (HTTP ${httpStatus}).`
     }
 
     async fetch(url: string, options: RequestInit = {}): Promise<Response> {

@@ -214,13 +214,17 @@ body {
   top: 0;
   z-index: 30;
   width: 100%;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
   padding-bottom: 8px;
   padding-left: 0.75rem;
   padding-right: 0.75rem;
-  background-color: var(--ios-header-bg);
-  backdrop-filter: saturate(185%) blur(24px);
-  -webkit-backdrop-filter: saturate(185%) blur(24px);
+  background-color: var(--ios-bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.ios-auth-topbar {
+  padding-top: max(env(safe-area-inset-top, 0px), 10px);
 }
 
 @media (min-width: 390px) {
@@ -231,24 +235,63 @@ body {
 }
 
 html.is-standalone .ios-header {
-  padding-top: calc(max(env(safe-area-inset-top, 0px), 20px) + 10px);
+  padding-top: calc(max(env(safe-area-inset-top, 0px), 20px) + 24px);
 }
 
 @media (display-mode: standalone) {
   .ios-header {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 20px) + 10px);
+    padding-top: calc(max(env(safe-area-inset-top, 0px), 20px) + 24px);
   }
 }
 
-@media (min-height: 760px) {
-  html.is-standalone .ios-header {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 12px);
+@media (orientation: portrait) {
+  html.is-tall-iphone .ios-header,
+  html.is-standalone.is-tall-iphone .ios-header {
+    padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 38px);
+  }
+
+  html.is-tall-iphone .ios-auth-topbar,
+  html.is-standalone.is-tall-iphone .ios-auth-topbar {
+    padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 32px);
   }
 }
 
-@media (display-mode: standalone) and (min-height: 760px) {
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 440px) and (orientation: portrait) and (min-device-height: 760px) {
+    .ios-header {
+      padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 38px);
+    }
+
+    .ios-auth-topbar {
+      padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 32px);
+    }
+  }
+}
+
+@media (display-mode: standalone) and (orientation: portrait) and (min-device-height: 760px) {
   .ios-header {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 12px);
+    padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 38px);
+  }
+
+  .ios-auth-topbar {
+    padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 32px);
+  }
+}
+
+.ios-status-shield {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  html.is-iphone:not(.is-standalone) .ios-status-shield {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(env(safe-area-inset-top, 0px) + 2px);
+    background-color: var(--ios-bg);
+    z-index: 25;
   }
 }
 

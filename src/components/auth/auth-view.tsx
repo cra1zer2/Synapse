@@ -200,10 +200,7 @@ export function AuthView({
       )}
     >
       {!isSubView && (
-        <div
-          className="w-full max-w-[380px] mx-auto flex justify-end shrink-0"
-          style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 8px)' }}
-        >
+        <div className="w-full max-w-[380px] mx-auto flex justify-end shrink-0 ios-auth-topbar">
           {onSelectLanguage && (
             <div className="ios-glass-control p-[3px] rounded-full flex items-center gap-0.5">
               <button

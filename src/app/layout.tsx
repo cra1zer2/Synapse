@@ -48,6 +48,9 @@ export default function RootLayout({
                 var ua = navigator.userAgent || '';
                 if (/iPhone|iPod/i.test(ua)) {
                   root.classList.add('is-iphone');
+                  if (window.screen && Math.max(window.screen.width, window.screen.height) >= 760) {
+                    root.classList.add('is-tall-iphone');
+                  }
                 }
                 var isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
                 if (isStandalone) {
@@ -59,6 +62,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-[var(--ios-bg)] text-[var(--ios-label)] antialiased" suppressHydrationWarning>
+        <div className="ios-status-shield" aria-hidden="true" />
         {children}
       </body>
     </html>

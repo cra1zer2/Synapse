@@ -67,6 +67,11 @@ export function useAppSettings() {
     } else {
       root.classList.add('light')
     }
+    const bgHex = isDark ? '#000000' : '#f2f2f7'
+    root.style.backgroundColor = bgHex
+    if (document.body) {
+      document.body.style.backgroundColor = bgHex
+    }
     syncMetaThemeColor(isDark)
   }, [])
 

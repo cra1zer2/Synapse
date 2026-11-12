@@ -202,11 +202,10 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  touch-action: pan-y;
+  overflow-x: clip;
+  overflow-y: visible;
+  touch-action: manipulation;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
 }
 
 .ios-header {
@@ -214,8 +213,9 @@ body {
   top: 0;
   z-index: 30;
   width: 100%;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
-  padding-bottom: 8px;
+  --ios-header-pad-top: max(env(safe-area-inset-top, 0px), 8px);
+  padding-top: var(--ios-header-pad-top);
+  padding-bottom: 6px;
   padding-left: 0.75rem;
   padding-right: 0.75rem;
   background-color: var(--ios-bg);
@@ -224,7 +224,7 @@ body {
 }
 
 .ios-auth-topbar {
-  padding-top: max(env(safe-area-inset-top, 0px), 10px);
+  padding-top: max(calc(env(safe-area-inset-top, 0px) + 6px), 12px);
 }
 
 @media (min-width: 390px) {
@@ -234,47 +234,27 @@ body {
   }
 }
 
-html.is-standalone .ios-header {
-  padding-top: calc(max(env(safe-area-inset-top, 0px), 20px) + 24px);
-}
-
-@media (display-mode: standalone) {
-  .ios-header {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 20px) + 24px);
-  }
-}
-
-@media (orientation: portrait) {
-  html.is-tall-iphone .ios-header,
-  html.is-standalone.is-tall-iphone .ios-header {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 38px);
+@media (max-width: 767px) {
+  [data-ios-root-panel="true"] {
+    --ios-header-pad-top: max(env(safe-area-inset-top, 0px), 8px);
+    padding-top: calc(var(--ios-header-pad-top) + 50px);
   }
 
-  html.is-tall-iphone .ios-auth-topbar,
-  html.is-standalone.is-tall-iphone .ios-auth-topbar {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 32px);
-  }
-}
-
-@supports (-webkit-touch-callout: none) {
-  @media (max-width: 440px) and (orientation: portrait) and (min-device-height: 760px) {
-    .ios-header {
-      padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 38px);
-    }
-
-    .ios-auth-topbar {
-      padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 32px);
-    }
-  }
-}
-
-@media (display-mode: standalone) and (orientation: portrait) and (min-device-height: 760px) {
-  .ios-header {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 38px);
+  [data-ios-root-panel="true"] header.ios-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
   }
 
-  .ios-auth-topbar {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 32px);
+  [data-ios-root-panel="true"][data-ios-receded="true"] header.ios-header {
+    top: var(--ios-locked-scroll-y, 0px);
+  }
+
+  [data-ios-subview-panel="true"] {
+    height: 100lvh !important;
+    min-height: calc(100dvh + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
@@ -283,15 +263,16 @@ html.is-standalone .ios-header {
 }
 
 @media (max-width: 767px) {
-  html.is-iphone:not(.is-standalone) .ios-status-shield {
+  .ios-status-shield {
     display: block;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    height: calc(env(safe-area-inset-top, 0px) + 2px);
+    height: env(safe-area-inset-top, 0px);
     background-color: var(--ios-bg);
-    z-index: 25;
+    pointer-events: none;
+    z-index: 85;
   }
 }
 
@@ -468,8 +449,11 @@ html.is-standalone .ios-header {
 @media (max-width: 767px) {
   html,
   body {
-    overflow: hidden !important;
-    height: 100% !important;
-    touch-action: none !important;
+    height: auto !important;
+    min-height: 100lvh;
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+    background-color: var(--ios-bg);
+    touch-action: manipulation !important;
   }
 }

@@ -254,7 +254,8 @@ export function IosScreen({
       swipedClosedRef.current = true
       if (underPanelRef.current) {
         underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
-        underPanelRef.current.style.transform = 'translate3d(0, 0, 0)'
+        underPanelRef.current.style.transform =
+          underPanelRef.current.dataset.iosRootPanel === 'true' ? 'none' : 'translate3d(0, 0, 0)'
       }
       setIsVisible(false)
       setIsRendered(false)
@@ -381,7 +382,8 @@ export function IosScreen({
         swipedClosedRef.current = true
         if (underPanelRef.current) {
           underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
-          underPanelRef.current.style.transform = 'translate3d(0, 0, 0)'
+          underPanelRef.current.style.transform =
+            underPanelRef.current.dataset.iosRootPanel === 'true' ? 'none' : 'translate3d(0, 0, 0)'
         }
         setIsVisible(false)
         setIsRendered(false)
@@ -566,7 +568,12 @@ export function IosScreen({
           onScroll={handleScroll}
           style={{
             position: 'fixed',
-            inset: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: '100lvh',
+            minHeight: 'calc(100dvh + env(safe-area-inset-bottom, 0px))',
             zIndex: resolvedZIndex,
             backgroundColor: 'var(--ios-bg)',
             willChange: 'transform',

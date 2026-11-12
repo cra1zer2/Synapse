@@ -258,7 +258,7 @@ export default function Home() {
       pullStartRef.current = null
       return
     }
-    const scrollTop = rootScrollRef.current?.scrollTop ?? 0
+    const scrollTop = isDesktop ? (rootScrollRef.current?.scrollTop ?? 0) : Math.max(0, window.scrollY)
     if (scrollTop <= 0) {
       pullStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
     } else {
@@ -268,7 +268,7 @@ export default function Home() {
 
   const handleRootTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!pullStartRef.current) return
-    const scrollTop = rootScrollRef.current?.scrollTop ?? 0
+    const scrollTop = isDesktop ? (rootScrollRef.current?.scrollTop ?? 0) : Math.max(0, window.scrollY)
     if (scrollTop > 0) {
       pullStartRef.current = null
       if (pullDistance > 0) setPullDistance(0)
@@ -505,21 +505,22 @@ export default function Home() {
     )
 
   return (
-    <div className="w-full min-h-screen bg-[var(--ios-bg)] relative overflow-x-hidden">
+    <div className="w-full min-h-[100lvh] md:min-h-screen bg-[var(--ios-bg)] relative overflow-x-clip">
       <div
         ref={rootScrollRef}
         data-ios-root-panel="true"
+        data-ios-receded={!isDesktop && isAnyOverlayActive ? 'true' : 'false'}
         onTouchStart={handleRootTouchStart}
         onTouchMove={handleRootTouchMove}
         onTouchEnd={handleRootTouchEnd}
-        className="fixed inset-0 w-full overflow-y-auto overscroll-contain touch-pan-y block md:relative md:inset-auto md:w-full md:h-auto md:min-h-screen md:overflow-visible md:flex md:flex-col bg-[var(--ios-bg)] ios-app-entrance"
+        className="relative w-full min-h-[100lvh] min-h-[100dvh] block md:inset-auto md:w-full md:h-auto md:min-h-screen md:overflow-visible md:flex md:flex-col bg-[var(--ios-bg)]"
         style={{
-          transform: !isDesktop && isAnyOverlayActive ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'translate3d(0, 0, 0)',
-          WebkitBackfaceVisibility: 'hidden',
-          backfaceVisibility: 'hidden',
+          transform: !isDesktop && isAnyOverlayActive ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'none',
+          WebkitBackfaceVisibility: !isDesktop && isAnyOverlayActive ? 'hidden' : undefined,
+          backfaceVisibility: !isDesktop && isAnyOverlayActive ? 'hidden' : undefined,
           transition: IOS_PANEL_TRANSITION,
           pointerEvents: isAnyOverlayActive ? 'none' : 'auto',
-          willChange: 'transform'
+          willChange: !isDesktop && isAnyOverlayActive ? 'transform' : 'auto'
         }}
       >
         <DashboardHeader

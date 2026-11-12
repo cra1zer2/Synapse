@@ -289,6 +289,7 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         setAuthStep,
         verifiedCandidate,
         authError,
+        setAuthError,
         handleStartVerification,
         handleConfirmLogin,
         handleSwitchAccount,

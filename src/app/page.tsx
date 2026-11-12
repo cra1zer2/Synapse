@@ -300,6 +300,7 @@ export default function Home() {
         password={account.password}
         setPassword={account.setPassword}
         authError={account.authError}
+        onClearError={() => account.setAuthError?.(null)}
         verifiedCandidate={account.verifiedCandidate}
         onStartVerification={account.handleStartVerification}
         onConfirmLogin={account.handleConfirmLogin}
@@ -438,7 +439,7 @@ export default function Home() {
     <div className="w-full min-h-screen bg-[var(--ios-bg)] relative overflow-x-hidden">
       <div
         data-ios-root-panel="true"
-        className="fixed inset-0 w-screen h-[100lvh] overflow-y-auto overscroll-contain touch-pan-y block md:relative md:inset-auto md:w-full md:h-auto md:min-h-screen md:overflow-visible md:flex md:flex-col bg-[var(--ios-bg)]"
+        className="fixed inset-0 w-screen h-[100lvh] overflow-y-auto overscroll-contain touch-pan-y block md:relative md:inset-auto md:w-full md:h-auto md:min-h-screen md:overflow-visible md:flex md:flex-col bg-[var(--ios-bg)] ios-app-entrance"
         style={{
           transform: (!isDesktop && isAnyOverlayActive) ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'translate3d(0, 0, 0)',
           WebkitBackfaceVisibility: 'hidden',
@@ -1013,6 +1014,7 @@ export default function Home() {
         setAddAccountStep={account.setAddAccountStep}
         addAccountCandidate={account.addAccountCandidate}
         addAccountError={account.addAccountError}
+        setAddAccountError={account.setAddAccountError}
         newUsername={account.newAccUser}
         setNewUsername={account.setNewAccUser}
         newPassword={account.newAccPass}

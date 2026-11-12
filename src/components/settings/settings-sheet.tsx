@@ -26,6 +26,7 @@ interface SettingsSheetProps {
   setAddAccountStep?: (s: 'input' | 'verifying' | 'preview') => void
   addAccountCandidate?: StudentProfile | null
   addAccountError?: string | null
+  setAddAccountError?: (err: string | null) => void
   newUsername: string
   setNewUsername: (u: string) => void
   newPassword: string
@@ -89,6 +90,7 @@ export function SettingsSheet({
   setAddAccountStep,
   addAccountCandidate = null,
   addAccountError = null,
+  setAddAccountError,
   newUsername,
   setNewUsername,
   newPassword,
@@ -398,12 +400,12 @@ export function SettingsSheet({
       <IosScreen
         isOpen={showAddForm}
         onClose={addAccountStep === 'preview' ? () => setAddAccountStep?.('input') : handleCloseAddForm}
-        title={t.addAccount}
-        backLabel={t.settingsTitle || t.backAction}
+        title={addAccountStep === 'preview' ? (t.accountVerified || t.addAccount) : t.addAccount}
+        backLabel={addAccountStep === 'preview' ? (t.backAction || 'Wróć') : (t.settingsTitle || t.backAction)}
         showBackButton={true}
-        hideHeader={true}
         isSubView={true}
         zIndex={70}
+        contentClassName="px-4 py-2 max-w-[480px] mx-auto w-full flex-1 flex flex-col justify-center"
       >
         <AuthView
           authStep={addAccountStep}
@@ -412,6 +414,9 @@ export function SettingsSheet({
           password={newPassword}
           setPassword={setNewPassword}
           authError={addAccountError}
+          onClearError={() => {
+            if (setAddAccountError) setAddAccountError(null)
+          }}
           verifiedCandidate={addAccountCandidate}
           onStartVerification={onAddAccount}
           onConfirmLogin={handleConfirmAdd}

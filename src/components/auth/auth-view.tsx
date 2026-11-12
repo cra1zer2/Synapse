@@ -14,6 +14,7 @@ interface AuthViewProps {
   password: string
   setPassword: (p: string) => void
   authError: string | null
+  onClearError?: () => void
   verifiedCandidate: StudentProfile | null
   onStartVerification: (e: React.FormEvent) => void
   onConfirmLogin: () => void
@@ -43,6 +44,58 @@ function resolveAccountTitle(fullName: string | undefined, username: string, rol
   return role === 'parent' ? t.parentRoleTitle : t.studentRoleTitle
 }
 
+function parseAuthErrorAction(error: string | null): { title: string; body: string; actionUrl: string | null; actionLabel: string | null } {
+  if (!error) return { title: 'Błąd logowania', body: '', actionUrl: null, actionLabel: null }
+  const lower = error.toLowerCase()
+
+  if (lower.includes('wyciek') || lower.includes('leaked')) {
+    return {
+      title: 'Wymagana zmiana hasła',
+      body: error,
+      actionUrl: 'https://synergia.librus.pl',
+      actionLabel: 'Otwórz synergia.librus.pl'
+    }
+  }
+  if (lower.includes('pierwsz') || lower.includes('nowego hasła') || lower.includes('reset')) {
+    return {
+      title: 'Wymagana zmiana hasła',
+      body: error,
+      actionUrl: 'https://synergia.librus.pl',
+      actionLabel: 'Otwórz synergia.librus.pl'
+    }
+  }
+  if (lower.includes('cloudflare') || lower.includes('turnstile') || lower.includes('za dużo nieudanych')) {
+    return {
+      title: 'Weryfikacja Cloudflare',
+      body: error,
+      actionUrl: 'https://synergia.librus.pl',
+      actionLabel: 'Przejdź do portalu'
+    }
+  }
+  if (lower.includes('regulamin') || lower.includes('zgód') || lower.includes('dokończ')) {
+    return {
+      title: 'Akceptacja w Synergii',
+      body: error,
+      actionUrl: 'https://synergia.librus.pl',
+      actionLabel: 'Otwórz synergia.librus.pl'
+    }
+  }
+  if (lower.includes('termin ważności') || lower.includes('nieaktywn')) {
+    return {
+      title: 'Konto nieaktywne',
+      body: error,
+      actionUrl: null,
+      actionLabel: null
+    }
+  }
+  return {
+    title: 'Błąd logowania',
+    body: error,
+    actionUrl: null,
+    actionLabel: null
+  }
+}
+
 export function AuthView({
   authStep,
   username,
@@ -50,6 +103,7 @@ export function AuthView({
   password,
   setPassword,
   authError,
+  onClearError,
   verifiedCandidate,
   onStartVerification,
   onConfirmLogin,
@@ -62,7 +116,25 @@ export function AuthView({
   const [showPassword, setShowPassword] = useState(false)
   const [isUsernameFocused, setIsUsernameFocused] = useState(false)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
+  const [dismissedError, setDismissedError] = useState<string | null>(null)
+  const [isExiting, setIsExiting] = useState(false)
   const isEn = lang === 'en'
+
+  const activeError = authError && authError !== dismissedError ? authError : null
+  const parsedError = parseAuthErrorAction(activeError)
+
+  const handleCloseErrorModal = () => {
+    if (authError) setDismissedError(authError)
+    if (onClearError) onClearError()
+  }
+
+  const handleAnimatedConfirmLogin = () => {
+    if (isExiting) return
+    setIsExiting(true)
+    setTimeout(() => {
+      onConfirmLogin()
+    }, 280)
+  }
 
   const avatarLetter = verifiedCandidate
     ? resolveAvatarLetter(verifiedCandidate.fullName, username, verifiedCandidate.role)
@@ -80,48 +152,48 @@ export function AuthView({
 
   return (
     <main className={cn(
-      'w-full flex flex-col justify-between max-w-[480px] mx-auto box-border select-none',
+      'w-full flex flex-col justify-between max-w-[480px] mx-auto box-border select-none relative',
       isSubView
-        ? 'pt-1 pb-6 min-h-full'
+        ? 'py-4 px-1 min-h-full flex-1'
         : 'fixed inset-0 w-screen h-[100dvh] overflow-y-auto touch-pan-y md:static md:w-full md:h-auto md:min-h-screen bg-[var(--ios-bg)] px-5 sm:px-6 pt-[max(calc(env(safe-area-inset-top,0px)+1rem),1.75rem)] pb-[max(calc(env(safe-area-inset-bottom,0px)+1rem),1.75rem)]'
     )}>
-      <header className="w-full h-[44px] flex items-center justify-between relative shrink-0">
-        {authStep === 'preview' ? (
-          <button
-            type="button"
-            onClick={onBackToInput}
-            className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
-          >
-            <svg className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            <span>{t.backAction}</span>
-          </button>
-        ) : onCancel ? (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
-          >
-            <svg className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            <span>{isSubView ? (t.settingsTitle || t.backAction) : t.backAction}</span>
-          </button>
-        ) : (
-          <div className="w-[70px] z-10" />
-        )}
+      {!isSubView && (
+        <header className="w-full h-[44px] flex items-center justify-between relative shrink-0">
+          {authStep === 'preview' ? (
+            <button
+              type="button"
+              onClick={onBackToInput}
+              className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
+            >
+              <svg className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              <span>{t.backAction}</span>
+            </button>
+          ) : onCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex items-center gap-1 text-[17px] text-[var(--ios-blue)] font-normal leading-none active:opacity-60 transition-opacity cursor-pointer select-none z-10 -ml-1 pr-2 h-full"
+            >
+              <svg className="w-5 h-5 -ml-1 text-[var(--ios-blue)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              <span>{t.cancel || t.backAction}</span>
+            </button>
+          ) : (
+            <div className="w-[70px] z-10" />
+          )}
 
-        {!isSubView && (
           <span className="absolute inset-0 flex items-center justify-center text-[17px] font-semibold tracking-[-0.4px] leading-none text-[var(--ios-label)] pointer-events-none">
             Synapse
           </span>
-        )}
 
-        <div className="w-[70px] z-10" />
-      </header>
+          <div className="w-[70px] z-10" />
+        </header>
+      )}
 
-      <section className={cn('w-full flex-1 flex flex-col justify-center', isSubView ? 'py-2' : 'py-4')}>
+      <section className={cn('w-full flex-1 flex flex-col justify-center', isSubView ? 'py-4' : 'py-6')}>
         {authStep === 'input' && (
           <div className="flex flex-col items-center text-center mb-6">
             <h1 className="text-[26px] font-bold text-[var(--ios-label)] tracking-[-0.5px] leading-tight">
@@ -130,12 +202,6 @@ export function AuthView({
             <p className="text-[14px] font-normal text-[var(--ios-secondary)] mt-1.5 leading-snug max-w-[280px]">
               {t.loginSubtitle}
             </p>
-          </div>
-        )}
-
-        {authError && authStep === 'input' && (
-          <div className="bg-[var(--ios-red-subtle)] text-[var(--ios-red)] text-[13px] font-normal p-3.5 rounded-[14px] mb-4 text-center">
-            {authError}
           </div>
         )}
 
@@ -283,7 +349,15 @@ export function AuthView({
         )}
 
         {authStep === 'preview' && verifiedCandidate && (
-          <div className="flex flex-col items-center gap-5 w-full">
+          <div
+            style={{
+              opacity: isExiting ? 0 : 1,
+              transform: isExiting ? 'scale3d(0.96, 0.96, 1)' : 'scale3d(1, 1, 1)',
+              transition: 'opacity 0.26s cubic-bezier(0.32, 0.72, 0, 1), transform 0.26s cubic-bezier(0.32, 0.72, 0, 1)',
+              willChange: 'opacity, transform'
+            }}
+            className="flex flex-col items-center gap-5 w-full animate-in fade-in zoom-in-95 duration-200"
+          >
             <div className="flex flex-col items-center text-center">
               <div className="relative mb-3.5">
                 <div className="w-20 h-20 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] flex items-center justify-center font-semibold text-[26px]">
@@ -353,7 +427,7 @@ export function AuthView({
             <div className="flex flex-col gap-2.5 w-full mt-2">
               <button
                 type="button"
-                onClick={onConfirmLogin}
+                onClick={handleAnimatedConfirmLogin}
                 className="h-[50px] w-full bg-[var(--ios-blue)] text-white text-[17px] font-semibold tracking-[-0.3px] rounded-full active:scale-[0.97] transition-transform duration-150 flex items-center justify-center cursor-pointer select-none"
               >
                 {t.confirmAndEnter}
@@ -382,6 +456,60 @@ export function AuthView({
               : 'Dane logowania zapisywane tylko na Twoim urządzeniu'}
           </span>
         </footer>
+      )}
+
+      {activeError && (
+        <div
+          onClick={handleCloseErrorModal}
+          className="fixed inset-0 z-[120] bg-black/45 flex items-center justify-center p-6 select-none ios-modal-backdrop-animate-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-[308px] bg-[var(--ios-card-solid)] rounded-[34px] p-[16px] pt-[22px] border border-[var(--ios-border)] flex flex-col gap-5 text-center -mt-10 md:-mt-14 shadow-2xl ios-modal-animate-in"
+          >
+            <div className="px-3 flex flex-col items-center gap-1.5">
+              <div className={cn(
+                'w-11 h-11 rounded-full flex items-center justify-center font-bold text-[18px] mb-1',
+                parsedError.actionUrl
+                  ? 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] border border-[var(--ios-blue)]/20'
+                  : 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] border border-[var(--ios-red)]/20'
+              )}>
+                {parsedError.actionUrl ? '!' : '!'}
+              </div>
+              <h3 className="text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px] leading-snug">
+                {parsedError.title}
+              </h3>
+              <p className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-snug">
+                {parsedError.body}
+              </p>
+            </div>
+
+            <div className={cn('flex flex-col gap-2', parsedError.actionUrl ? 'w-full' : 'w-full')}>
+              {parsedError.actionUrl && (
+                <a
+                  href={parsedError.actionUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-[48px] w-full rounded-full bg-[var(--ios-blue)] text-white text-[16px] font-semibold tracking-[-0.3px] active:scale-[0.96] active:opacity-85 transition-[transform,opacity] duration-150 flex items-center justify-center cursor-pointer select-none"
+                >
+                  {parsedError.actionLabel || 'Otwórz stronę'}
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={handleCloseErrorModal}
+                className={cn(
+                  'h-[48px] w-full rounded-full text-[16px] tracking-[-0.3px] active:scale-[0.96] transition-[transform,opacity] duration-150 flex items-center justify-center cursor-pointer select-none',
+                  parsedError.actionUrl
+                    ? 'bg-[var(--ios-element)] text-[var(--ios-label)] font-medium active:opacity-75'
+                    : 'bg-[var(--ios-blue)] text-white font-semibold active:opacity-85'
+                )}
+              >
+                {parsedError.actionUrl ? (t.close || 'Zamknij') : (t.gotIt || 'Rozumiem')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   )

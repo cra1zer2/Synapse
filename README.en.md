@@ -15,6 +15,19 @@ Unlike **Szkolny.eu**, Synapse is also **extremely light on API requests** — o
 
 ---
 
+## 📱 Try Without a Librus Account (Demo Mode / UI Preview)
+
+You do not need real Librus credentials to explore the interface and test all features! Synapse includes a built-in **Demo Mode** populated with a rich set of realistic sample data (smart timetable with substitutions, upcoming exams and deadlines, grades with weighted GPA, attendance with e-excuses, messages, and announcements):
+
+| Role | Username | Password | Description |
+| :--- | :--- | :--- | :--- |
+| **Student** *(default)* | `demo` *(or `demou`)* | `demo` | Full student view (Class 4T, lucky number #14) |
+| **Parent** | `demor` | `demo` | Parent view (with ability to submit excuses) |
+
+There is also a convenient one-tap **"Try Demo Mode"** button on the login screen. This mode is ideal for checking out the iOS-native design, gesture animations, or taking clean **screenshots for documentation**.
+
+---
+
 ## Use on Your Phone (No Coding Required)
 
 1. **Deploy your free private copy on Vercel**:
@@ -25,18 +38,19 @@ Unlike **Szkolny.eu**, Synapse is also **extremely light on API requests** — o
 2. **Add to Home Screen** (for fullscreen native look):
    - **iOS (Safari)**: Tap **Share** → **Add to Home Screen** (*Dodaj do ekranu początkowego*).
    - **Android (Chrome)**: Tap **⋮** → **Add to Home screen** / **Install app**.
-3. **Log in** with your Librus Synergia (`Uczeń` or `Rodzic`) credentials.
+3. **Log in** with your Librus Synergia (`Uczeń` or `Rodzic`) credentials or use the `demo` / `demo` account.
 
 ---
 
 ## Features
 
-- **Home Dashboard**: Current/next lesson, live bell countdowns, recent grades, attendance %, and unread messages.
-- **Smart Timetable**: Merges double lessons, shows classrooms, and highlights substitutions, cancellations, and tests.
-- **Weighted Averages (GPA)**: Instant semester/yearly weighted averages with a `+`/`-` modifier toggle — no paywalls.
-- **Attendance & 1-Tap Excuses (*e-Usprawiedliwienia*)**: Excuse selected `NB` hours or full date ranges in one tap.
-- **Messages (*Wiadomości*) & Announcements**: Read and send messages to teachers with a clean recipient picker.
-- **Multi-Account & Bilingual**: 1-tap switch between Student/Parent accounts, **PL / EN** languages, and Light/Dark mode.
+- **iOS-Native Home Dashboard**: Current/next lesson, live bell countdowns, recent grades, attendance %, and unread messages. Fluid Apple-like gesture transitions and parallax navigation.
+- **Smart Timetable**: Automatically merges double lessons, shows classrooms, and highlights substitutions, cancellations, and topics.
+- **Tests & Deadlines Screen**: Dedicated view for upcoming exams, quizzes, homework, and holidays in both chronological and calendar list formats.
+- **Weighted Averages (GPA) & Grade Simulator**: Instant semester/yearly weighted averages with a `+`/`-` modifier toggle, plus a target grade simulator.
+- **Attendance & 1-Tap Excuses (*e-Usprawiedliwienia*)**: Excuse selected `NB` hours or full date ranges in one tap with live status tracking.
+- **Messages (*Wiadomości*) & Announcements**: Read and send messages to teachers with a clean recipient picker and attachment support.
+- **Multi-Account & Bilingual**: 1-tap switch between Student/Parent accounts, **PL / EN** languages, and automatic Light/Dark mode.
 - **Ultra-Low Server Load**: Batch-fetches and caches locally instead of spamming background requests (e.g., 5x fewer requests for weekly lesson topics than the official portal).
 
 ---

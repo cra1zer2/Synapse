@@ -339,6 +339,19 @@ export function AuthView({
             >
               {t.verifyButton}
             </button>
+
+            <div className="flex flex-col items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('demo')
+                  setPassword('demo')
+                }}
+                className="text-[13px] font-medium text-[var(--ios-blue)] hover:opacity-85 active:scale-[0.98] transition-all cursor-pointer select-none py-1.5 px-3.5 rounded-full bg-[var(--ios-blue-subtle)] flex items-center gap-1.5"
+              >
+                <span>{isEn ? 'Try Demo Mode (demo / demo)' : 'Wypróbuj konto demo (demo / demo)'}</span>
+              </button>
+            </div>
           </form>
         )}
 

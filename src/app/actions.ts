@@ -19,8 +19,23 @@ import { MessagesActionResult } from '@/models/message.model'
 import { SmartTimetableResult } from '@/models/timetable.model'
 import { GradesResult } from '@/models/grade.model'
 import { AttendanceResult } from '@/models/attendance.model'
+import {
+    isDemoAccount,
+    getDemoStudentProfile,
+    getDemoSmartTimetable,
+    getDemoGrades,
+    getDemoAttendance,
+    getDemoMessagesBundle,
+    getDemoUnreadCounters,
+    getDemoReceivers,
+    getDemoMessageContent,
+    getDemoLiveJustifications
+} from '@/services/demo-data.service'
 
 export async function getJustificationsAction(username: string, pass: string, dateFrom: string, dateTo: string) {
+    if (isDemoAccount(username)) {
+        return { success: true, data: [] }
+    }
     try {
         return await fetchJustificationsHistory(username, pass, dateFrom, dateTo)
     } catch (error) {
@@ -29,6 +44,9 @@ export async function getJustificationsAction(username: string, pass: string, da
 }
 
 export async function createJustificationAction(username: string, pass: string, payload: JustificationPayload) {
+    if (isDemoAccount(username)) {
+        return { success: true, data: { status: 'ok', message: 'Wniosek demonstracyjny został przyjęty.' }, error: undefined }
+    }
     try {
         return await submitJustification(username, pass, payload)
     } catch (error) {
@@ -60,6 +78,24 @@ export async function syncAllUserDataAction(
         const cleanPass = String(pass || '').trim()
         if (!cleanUser || !cleanPass) {
             return { success: false, error: 'Brak danych logowania' }
+        }
+
+        if (isDemoAccount(cleanUser)) {
+            const demoTimetable = getDemoSmartTimetable(targetDateIso, translate)
+            const demoGrades = getDemoGrades(translate)
+            const demoAttendance = getDemoAttendance(translate)
+            return {
+                success: true,
+                serverTimings: {
+                    totalMs: 15,
+                    timetableMs: 5,
+                    gradesMs: 5,
+                    attendanceMs: 5
+                },
+                timetable: { success: true, data: demoTimetable },
+                grades: { success: true, data: demoGrades },
+                attendance: { success: true, data: demoAttendance }
+            }
         }
 
         let tTimetable = 0
@@ -137,6 +173,9 @@ export async function syncAllUserDataAction(
 }
 
 export async function getSmartTimetableAction(username: string, pass: string, translate: boolean, targetDateIso?: string) {
+    if (isDemoAccount(username)) {
+        return { success: true, data: getDemoSmartTimetable(targetDateIso, translate) }
+    }
     try {
         return await fetchSmartTimetable(username, pass, translate, targetDateIso)
     } catch (error: any) {
@@ -145,6 +184,9 @@ export async function getSmartTimetableAction(username: string, pass: string, tr
 }
 
 export async function getStudentGradesAction(username: string, pass: string, translate: boolean) {
+    if (isDemoAccount(username)) {
+        return { success: true, data: getDemoGrades(translate) }
+    }
     try {
         return await fetchStudentGrades(username, pass, translate)
     } catch (error: any) {
@@ -153,6 +195,9 @@ export async function getStudentGradesAction(username: string, pass: string, tra
 }
 
 export async function getAttendanceAction(username: string, pass: string, translate: boolean) {
+    if (isDemoAccount(username)) {
+        return { success: true, data: getDemoAttendance(translate) }
+    }
     try {
         return await fetchAttendanceMetrics(username, pass, translate)
     } catch (error: any) {
@@ -166,6 +211,13 @@ export async function getStudentProfileAction(username: string, pass: string): P
         const cleanPass = String(pass || '').trim()
         if (!cleanUser || !cleanPass) {
             return { success: false, error: 'Wprowadź login i hasło' }
+        }
+
+        if (isDemoAccount(cleanUser)) {
+            return {
+                success: true,
+                data: getDemoStudentProfile(cleanUser)
+            }
         }
 
         const meRes = await fetchGatewayEndpoint(cleanUser, cleanPass, 'gateway/api/2.0/Me')
@@ -217,10 +269,16 @@ export async function getMessagesAndAnnouncementsAction(
     username: string,
     pass: string
 ): Promise<MessagesActionResult> {
+    if (isDemoAccount(username)) {
+        return getDemoMessagesBundle()
+    }
     return fetchMessagesBundle(username, pass)
 }
 
 export async function getReceiversAction(username: string, pass: string) {
+    if (isDemoAccount(username)) {
+        return { success: true, receivers: getDemoReceivers() }
+    }
     try {
         const list = await fetchReceiversOnly(username, pass)
         return { success: true, receivers: list }
@@ -230,6 +288,9 @@ export async function getReceiversAction(username: string, pass: string) {
 }
 
 export async function readMessageAction(username: string, pass: string, messageId: number, folderId: number = 5) {
+    if (isDemoAccount(username)) {
+        return getDemoMessageContent(messageId)
+    }
     try {
         return await fetchMessageContent(username, pass, messageId, folderId)
     } catch (error) {
@@ -238,6 +299,9 @@ export async function readMessageAction(username: string, pass: string, messageI
 }
 
 export async function downloadAttachmentAction(username: string, pass: string, filePath: string, fileName: string) {
+    if (isDemoAccount(username)) {
+        return { success: false, error: 'W trybie demonstracyjnym pobieranie załączników jest wyłączone' }
+    }
     try {
         return await downloadMessageAttachment(username, pass, filePath, fileName)
     } catch (error) {
@@ -246,6 +310,9 @@ export async function downloadAttachmentAction(username: string, pass: string, f
 }
 
 export async function sendMessageAction(username: string, pass: string, receiverId: number | number[], title: string, body: string) {
+    if (isDemoAccount(username)) {
+        return { success: true, message: 'Wiadomość demonstracyjna została wysłana' }
+    }
     try {
         const ids = Array.isArray(receiverId) ? receiverId : [receiverId]
         if (ids.length === 0) {
@@ -258,6 +325,9 @@ export async function sendMessageAction(username: string, pass: string, receiver
 }
 
 export async function getUnreadCountsAction(username: string, pass: string) {
+    if (isDemoAccount(username)) {
+        return { success: true, ...getDemoUnreadCounters() }
+    }
     try {
         return await fetchUnreadCounters(username, pass)
     } catch (error) {
@@ -270,6 +340,9 @@ export async function getLiveJustificationsAction(
     pass: string,
     statusFilter: '0' | '1' | '2' | '3' = '0'
 ) {
+    if (isDemoAccount(username)) {
+        return { success: true, data: getDemoLiveJustifications(statusFilter) }
+    }
     try {
         return await fetchLiveJustificationsHistory(username, pass, statusFilter)
     } catch (error: any) {
@@ -308,6 +381,22 @@ export async function runDisplayDiagnosticsAction(
             totalDurationMs: 0,
             items: [],
             error: 'Brak danych logowania'
+        }
+    }
+
+    if (isDemoAccount(cleanUser)) {
+        return {
+            success: true,
+            timestamp: new Date().toISOString(),
+            totalDurationMs: 18,
+            items: [
+                { name: 'Profil i autoryzacja (Demo)', category: 'profile', durationMs: 2, status: 'ok', details: 'Aleksander Kowalski (4T)' },
+                { name: 'Plan lekcji (Timetable)', category: 'timetable', durationMs: 4, status: 'ok', details: 'Dni: 5, Lekcji: 32' },
+                { name: 'Oceny (Grades)', category: 'grades', durationMs: 3, status: 'ok', details: 'Przedmiotów: 10, Średnia: 4.97' },
+                { name: 'Frekwencja (Attendance)', category: 'attendance', durationMs: 3, status: 'ok', details: 'Obecność: 96.8%, Nb: 8' },
+                { name: 'Wiadomości i ogłoszenia', category: 'messages', durationMs: 3, status: 'ok', details: 'Wiadomości: 4, Ogłoszenia: 1' },
+                { name: 'Statusy usprawiedliwień', category: 'justifications', durationMs: 3, status: 'ok', details: 'Wpisów: 3' }
+            ]
         }
     }
 

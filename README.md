@@ -15,6 +15,19 @@ W przeciwieństwie do **Szkolny.eu**, Synapse generuje **minimalną liczbę zapy
 
 ---
 
+## 📱 Wypróbuj bez konta Librus (Konto demonstracyjne / UI Preview)
+
+Nie musisz podawać prawdziwych danych logowania, aby sprawdzić interfejs i przetestować działanie aplikacji! W Synapse wbudowany jest **tryb demonstracyjny** z pełnym zestawem realistycznych danych (plan lekcji z zastępstwami, sprawdziany i terminy, oceny ze średnią ważoną, frekwencja z e-usprawiedliwieniami, wiadomości i ogłoszenia):
+
+| Rola | Login | Hasło | Opis |
+| :--- | :--- | :--- | :--- |
+| **Uczeń** *(domyślne)* | `demo` *(lub `demou`)* | `demo` | Pełny widok ucznia (Klasa 4T, szczęśliwy numerek #14) |
+| **Rodzic** | `demor` | `demo` | Widok rodzica (z możliwością usprawiedliwiania nieobecności) |
+
+Na ekranie logowania znajduje się także przycisk szybkiego wypełnienia **„Wypróbuj konto demo”**. Konto demonstracyjne idealnie nadaje się do przetestowania projektu UI, animacji gestów iOS oraz do **wykonywania zrzutów ekranu**.
+
+---
+
 ## Jak zainstalować na telefonie (bez programowania)
 
 1. **Uruchom własną darmową kopię na Vercel**:
@@ -25,19 +38,20 @@ W przeciwieństwie do **Szkolny.eu**, Synapse generuje **minimalną liczbę zapy
 2. **Dodaj do ekranu głównego** (tryb pełnoekranowy jak zwykła aplikacja):
    - **iOS (Safari)**: Kliknij **Udostępnij** → **Dodaj do ekranu początkowego**.
    - **Android (Chrome)**: Kliknij **⋮** → **Dodaj do ekranu głównego** / **Zainstaluj aplikację**.
-3. **Zaloguj się** swoimi danymi do Librus Synergia (`Uczeń` lub `Rodzic`).
+3. **Zaloguj się** swoimi danymi do Librus Synergia (`Uczeń` lub `Rodzic`) albo skorzystaj z konta `demo` / `demo`.
 
 ---
 
 ## Główne funkcje
 
-- **Ekran główny**: Aktualna lub następna lekcja, odliczanie do dzwonka na żywo, najnowsze oceny, frekwencja % i nieprzeczytane wiadomości.
-- **Inteligentny plan lekcji**: Automatycznie łączy podwójne lekcje, pokazuje numery sal oraz wyróżnia zastępstwa, odwołane lekcje i sprawdziany.
-- **Średnie ważone**: Natychmiastowe wyliczanie średniej ważonej (semestralnej i rocznej) z przełącznikiem liczenia `+`/`-` — całkowicie za darmo.
-- **Frekwencja i szybkie *e-Usprawiedliwienia***: Usprawiedliwianie wybranych godzin `NB` lub całych zakresów dni jednym kliknięciem.
-- **Wiadomości i Ogłoszenia**: Odczytywanie i wysyłanie wiadomości do nauczycieli z wygodnym wyborem odbiorców.
-- **Wiele kont i języków**: Przełączanie między kontami Ucznia i Rodzica jednym tapnięciem, język **PL / EN** oraz tryb jasny i ciemny.
-- **Minimalne obciążenie serwerów**: Grupowanie zapytań i lokalny cache zamiast ciągłego odpytywania w tle (np. 5x mniej zapytań przy pobieraniu tematów lekcji niż w oficjalnym portalu).
+- **Ekran główny w stylu iOS**: Aktualna lub następna lekcja, odliczanie do dzwonka na żywo, najnowsze oceny, frekwencja % i nieprzeczytane wiadomości. Płynne natywne animacje i gesty przesunięcia wstecz.
+- **Inteligentny plan lekcji**: Automatycznie łączy podwójne lekcje, pokazuje numery sal oraz wyróżnia zastępstwa, odwołane lekcje i tematy.
+- **Sprawdziany i terminy**: Dedykowany ekran nadchodzących sprawdzianów, kartkówek, zadań domowych i dni wolnych w widoku chronologicznym oraz kalendarza.
+- **Średnie ważone (GPA) i symulator ocen**: Natychmiastowe wyliczanie średniej ważonej (semestralnej i rocznej) z przełącznikiem liczenia `+`/`-`, a także symulator pozwalający sprawdzić, jakie oceny są potrzebne do osiągnięcia pożądanej średniej.
+- **Frekwencja i szybkie *e-Usprawiedliwienia***: Usprawiedliwianie wybranych godzin `NB` lub całych zakresów dni jednym kliknięciem z podglądem statusów na żywo.
+- **Wiadomości i Ogłoszenia**: Odczytywanie i wysyłanie wiadomości do nauczycieli z wygodnym wyborem odbiorców i obsługą załączników.
+- **Wiele kont i języków**: Przełączanie między kontami Ucznia i Rodzica jednym tapnięciem, pełne wsparcie dla języków **PL / EN** oraz tryb jasny i ciemny dopasowany do motywu systemu.
+- **Minimalne obciążenie serwerów**: Grupowanie zapytań i inteligentny lokalny cache zamiast ciągłego odpytywania w tle (np. 5x mniej zapytań przy pobieraniu tematów lekcji niż w oficjalnym portalu).
 
 ---
 

@@ -523,7 +523,7 @@ export function IosScreen({
         style={{
           position: 'fixed',
           inset: 0,
-          height: isDesktop ? undefined : '100lvh',
+          height: isDesktop ? undefined : '100dvh',
           zIndex: resolvedZIndex - 1,
           backgroundColor: isDesktop
             ? (isStackedOnDesktop ? 'transparent' : 'var(--ios-subview-backdrop)')
@@ -590,7 +590,7 @@ export function IosScreen({
             position: 'fixed',
             inset: 0,
             width: '100vw',
-            height: '100lvh',
+            height: '100dvh',
             zIndex: resolvedZIndex,
             backgroundColor: 'var(--ios-bg)',
             willChange: 'transform',

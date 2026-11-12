@@ -59,7 +59,7 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         const savedPass = localStorage.getItem('synapse_pass') || ''
 
         if (loadedAccounts.length === 0 && savedUser && savedPass) {
-            const isStudent = savedUser.toLowerCase().endsWith('u')
+            const isStudent = savedUser.toLowerCase().endsWith('u') || savedUser.toLowerCase() === 'demo' || savedUser.toLowerCase() === 'test'
             const initialAccount: SavedAccount = {
                 id: savedUser.toLowerCase(),
                 username: savedUser,

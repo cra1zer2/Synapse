@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useId } from 'react'
+import { createPortal } from 'react-dom'
 import { Eye, EyeOff, Lock, User, GraduationCap, AlertTriangle } from 'lucide-react'
 import { StudentProfile } from '@/models/account.model'
 import { AppLanguage, AppDictionary } from '@/config/dictionary.config'
@@ -140,12 +141,17 @@ export function AuthView({
   const [showPassword, setShowPassword] = useState(false)
   const [isExiting, setIsExiting] = useState(false)
   const [dismissedError, setDismissedError] = useState(false)
+  const [isPortalReady, setIsPortalReady] = useState(false)
 
   const usernameInputId = useId()
   const passwordInputId = useId()
   const usernameRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
   const exitTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    setIsPortalReady(true)
+  }, [])
 
   useEffect(() => {
     setDismissedError(false)
@@ -189,7 +195,46 @@ export function AuthView({
 
   const containerClass = isSubView
     ? 'w-full bg-[var(--ios-bg)] text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 pt-3 pb-8 select-none'
-    : 'fixed inset-0 bg-[var(--ios-bg)] text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 sm:p-5 overflow-y-auto select-none'
+    : 'w-full min-h-[100lvh] min-h-[100dvh] md:fixed md:inset-0 bg-[var(--ios-bg)] text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 pt-[calc(max(calc(env(safe-area-inset-top,0px)+6px),8px)+44px)] sm:p-5 md:pt-5 md:overflow-y-auto select-none'
+
+  const languageToggle = onSelectLanguage ? (
+    <div className="ios-glass-control p-[3px] rounded-full flex items-center gap-0.5">
+      <button
+        type="button"
+        onClick={() => onSelectLanguage('pl')}
+        className={cn(
+          'h-[28px] px-3 rounded-full text-[12px] font-semibold transition-all cursor-pointer select-none',
+          lang === 'pl'
+            ? 'bg-[var(--ios-segmented-thumb)] text-[var(--ios-label)] shadow-[0_1px_4px_rgba(0,0,0,0.12)]'
+            : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
+        )}
+      >
+        PL
+      </button>
+      <button
+        type="button"
+        onClick={() => onSelectLanguage('en')}
+        className={cn(
+          'h-[28px] px-3 rounded-full text-[12px] font-semibold transition-all cursor-pointer select-none',
+          lang === 'en'
+            ? 'bg-[var(--ios-segmented-thumb)] text-[var(--ios-label)] shadow-[0_1px_4px_rgba(0,0,0,0.12)]'
+            : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
+        )}
+      >
+        EN
+      </button>
+    </div>
+  ) : null
+
+  const mobileAuthTopbar =
+    !isSubView && isPortalReady
+      ? createPortal(
+          <div className="ios-auth-topbar md:hidden">
+            <div className="w-full max-w-[380px] mx-auto flex justify-end">{languageToggle}</div>
+          </div>,
+          document.body
+        )
+      : null
 
   return (
     <div
@@ -199,36 +244,10 @@ export function AuthView({
         isExiting && 'opacity-0 scale-[0.98]'
       )}
     >
+      {mobileAuthTopbar}
       {!isSubView && (
-        <div className="w-full max-w-[380px] mx-auto flex justify-end shrink-0 ios-auth-topbar">
-          {onSelectLanguage && (
-            <div className="ios-glass-control p-[3px] rounded-full flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={() => onSelectLanguage('pl')}
-                className={cn(
-                  'h-[28px] px-3 rounded-full text-[12px] font-semibold transition-all cursor-pointer select-none',
-                  lang === 'pl'
-                    ? 'bg-[var(--ios-segmented-thumb)] text-[var(--ios-label)] shadow-[0_1px_4px_rgba(0,0,0,0.12)]'
-                    : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
-                )}
-              >
-                PL
-              </button>
-              <button
-                type="button"
-                onClick={() => onSelectLanguage('en')}
-                className={cn(
-                  'h-[28px] px-3 rounded-full text-[12px] font-semibold transition-all cursor-pointer select-none',
-                  lang === 'en'
-                    ? 'bg-[var(--ios-segmented-thumb)] text-[var(--ios-label)] shadow-[0_1px_4px_rgba(0,0,0,0.12)]'
-                    : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
-                )}
-              >
-                EN
-              </button>
-            </div>
-          )}
+        <div className="hidden md:flex w-full max-w-[380px] mx-auto justify-end shrink-0 ios-auth-topbar">
+          {languageToggle}
         </div>
       )}
 

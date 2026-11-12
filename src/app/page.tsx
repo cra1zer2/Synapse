@@ -531,6 +531,7 @@ export default function Home() {
           lastSyncedAt={timetable.lastSyncedAt}
           onRefresh={handleManualRefresh}
           onOpenSettings={() => setShowSettings(true)}
+          isReceded={!isDesktop && isAnyOverlayActive}
           t={t}
         />
 

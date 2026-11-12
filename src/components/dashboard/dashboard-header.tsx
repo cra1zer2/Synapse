@@ -1,10 +1,13 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { RefreshCw, Settings } from 'lucide-react'
 import { StudentProfile } from '@/models/account.model'
 import { AppDictionary } from '@/config/dictionary.config'
 import { IosIconButton } from '@/components/ios/ios-ui'
 import { IosSpinner } from '@/components/ios/ios-spinner'
+import { IOS_PANEL_TRANSITION, IOS_PARALLAX_PERCENT } from '@/components/ios/ios-screen'
 import { cn } from '@/utils/cn.util'
 
 interface DashboardHeaderProps {
@@ -15,6 +18,7 @@ interface DashboardHeaderProps {
   lastSyncedAt: number | null
   onRefresh: () => void
   onOpenSettings: () => void
+  isReceded?: boolean
   t: AppDictionary
 }
 
@@ -38,8 +42,15 @@ export function DashboardHeader({
   lastSyncedAt,
   onRefresh,
   onOpenSettings,
+  isReceded = false,
   t
 }: DashboardHeaderProps) {
+  const [isPortalReady, setIsPortalReady] = useState(false)
+
+  useEffect(() => {
+    setIsPortalReady(true)
+  }, [])
+
   const isBusy = isUpdating || isManualRefreshing
   const syncLabel = isBusy
     ? t.updatingStatus
@@ -52,49 +63,67 @@ export function DashboardHeader({
       ? profile.fullName
       : username || t.settingsTitle
 
+  const mobileHeader = isPortalReady
+    ? createPortal(
+        <header
+          data-ios-fixed-header="true"
+          data-ios-header-for="root"
+          className="ios-header md:hidden"
+          style={{
+            zIndex: 40,
+            transform: isReceded ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'none',
+            transition: IOS_PANEL_TRANSITION,
+            pointerEvents: isReceded ? 'none' : 'auto',
+            willChange: isReceded ? 'transform' : 'auto'
+          }}
+        >
+          <div className="relative flex items-center justify-between w-full max-w-[480px] mx-auto h-[44px]">
+            <div className="z-10 flex items-center min-w-[64px] h-full">
+              <IosIconButton
+                size="sm"
+                variant="subtle"
+                onClick={onRefresh}
+                disabled={isBusy}
+                aria-label={t.refresh}
+                icon={
+                  isBusy ? (
+                    <IosSpinner size="small" className="text-[var(--ios-secondary)]" />
+                  ) : (
+                    <RefreshCw className="w-[16px] h-[16px] text-[var(--ios-secondary)]" strokeWidth={2.2} />
+                  )
+                }
+              />
+            </div>
+
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-14 text-center">
+              <h2 className="text-[17px] font-semibold tracking-[-0.4px] leading-[1.28] text-[var(--ios-label)] truncate max-w-full">
+                Synapse
+              </h2>
+              {(isBusy || lastSyncedAt) && (
+                <span className="text-[10px] font-medium text-[var(--ios-secondary)] leading-[1.3] tabular-nums truncate max-w-full">
+                  {syncLabel}
+                </span>
+              )}
+            </div>
+
+            <div className="z-10 min-w-[64px] flex items-center justify-end h-full">
+              <IosIconButton
+                size="sm"
+                variant="subtle"
+                onClick={onOpenSettings}
+                aria-label={t.settingsTitle}
+                icon={<Settings className="w-[17px] h-[17px] text-[var(--ios-secondary)]" strokeWidth={2.2} />}
+              />
+            </div>
+          </div>
+        </header>,
+        document.body
+      )
+    : null
+
   return (
     <>
-      <header className="ios-header md:hidden">
-        <div className="relative flex items-center justify-between w-full max-w-[480px] mx-auto h-[44px]">
-          <div className="z-10 flex items-center min-w-[64px] h-full">
-            <IosIconButton
-              size="sm"
-              variant="subtle"
-              onClick={onRefresh}
-              disabled={isBusy}
-              aria-label={t.refresh}
-              icon={
-                isBusy ? (
-                  <IosSpinner size="small" className="text-[var(--ios-secondary)]" />
-                ) : (
-                  <RefreshCw className="w-[16px] h-[16px] text-[var(--ios-secondary)]" strokeWidth={2.2} />
-                )
-              }
-            />
-          </div>
-
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-14 text-center">
-            <h2 className="text-[17px] font-semibold tracking-[-0.4px] leading-[1.28] text-[var(--ios-label)] truncate max-w-full">
-              Synapse
-            </h2>
-            {(isBusy || lastSyncedAt) && (
-              <span className="text-[10px] font-medium text-[var(--ios-secondary)] leading-[1.3] tabular-nums truncate max-w-full">
-                {syncLabel}
-              </span>
-            )}
-          </div>
-
-          <div className="z-10 min-w-[64px] flex items-center justify-end h-full">
-            <IosIconButton
-              size="sm"
-              variant="subtle"
-              onClick={onOpenSettings}
-              aria-label={t.settingsTitle}
-              icon={<Settings className="w-[17px] h-[17px] text-[var(--ios-secondary)]" strokeWidth={2.2} />}
-            />
-          </div>
-        </div>
-      </header>
+      {mobileHeader}
 
       <header
         style={{

@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useRef, useState, useEffect, useCallback } from 'react'
+import { ReactNode, useRef, useState, useEffect, useLayoutEffect, useCallback, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { IosBackButton } from './ios-button'
 
@@ -8,6 +8,7 @@ export const IOS_PARALLAX_PERCENT = 21
 export const IOS_TRANSITION_MS = 340
 export const IOS_TRANSITION_EASING = 'cubic-bezier(0.32, 0.72, 0, 1)'
 export const IOS_PANEL_TRANSITION = 'transform ' + IOS_TRANSITION_MS + 'ms ' + IOS_TRANSITION_EASING
+export const IOS_HEADER_IDLE_TRANSITION = 'border-color 150ms ease'
 export const IOS_BACKDROP_TRANSITION = 'opacity ' + IOS_TRANSITION_MS + 'ms ' + IOS_TRANSITION_EASING
 
 function findUnderlyingPanel(currentPanel: HTMLElement | null): HTMLElement | null {
@@ -21,6 +22,54 @@ function findUnderlyingPanel(currentPanel: HTMLElement | null): HTMLElement | nu
     return openSubviews[idx - 1]
   }
   return document.querySelector<HTMLElement>('[data-ios-root-panel="true"]')
+}
+
+function findUnderlyingHeader(underPanel: HTMLElement | null): HTMLElement | null {
+  if (typeof document === 'undefined' || !underPanel) return null
+  if (underPanel.dataset.iosRootPanel === 'true') {
+    return document.querySelector<HTMLElement>('[data-ios-fixed-header="true"][data-ios-header-for="root"]')
+  }
+  const screenId = underPanel.dataset.iosScreenId
+  if (!screenId) return null
+  return document.querySelector<HTMLElement>(
+    '[data-ios-fixed-header="true"][data-ios-screen-id="' + screenId + '"]'
+  )
+}
+
+function syncLayerPair(
+  panelEl: HTMLElement | null,
+  headerEl: HTMLElement | null,
+  transition: string,
+  transform: string,
+  willChange?: string
+) {
+  if (panelEl) {
+    panelEl.style.transition = transition
+    panelEl.style.transform = transform
+    if (willChange !== undefined) panelEl.style.willChange = willChange
+  }
+  if (headerEl) {
+    headerEl.style.transition = transition
+    headerEl.style.transform = transform
+    if (willChange !== undefined) headerEl.style.willChange = willChange
+  }
+}
+
+function normalizeHeaderForTransform(headerEl: HTMLElement | null) {
+  if (!headerEl) return
+  if (headerEl.style.transform === 'none' || !headerEl.style.transform) {
+    headerEl.style.transition = 'none'
+    headerEl.style.transform = 'translate3d(0, 0, 0)'
+    void headerEl.offsetWidth
+  }
+}
+
+function restoreHeaderIdleState(headerEl: HTMLElement | null) {
+  if (!headerEl) return
+  headerEl.style.transition = IOS_HEADER_IDLE_TRANSITION
+  headerEl.style.transform = 'none'
+  headerEl.style.willChange = 'auto'
+  headerEl.style.pointerEvents = 'auto'
 }
 
 function hasLowerOpenSubview(resolvedZIndex: number): boolean {
@@ -65,6 +114,7 @@ export function IosScreen({
   hideHeader = false,
   contentClassName
 }: IosScreenProps) {
+  const screenId = useId()
   const [isVisible, setIsVisible] = useState(false)
   const [isRendered, setIsRendered] = useState(isOpen)
   const [isScrolled, setIsScrolled] = useState(false)
@@ -93,10 +143,60 @@ export function IosScreen({
   const swipedClosedRef = useRef(false)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const snapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const headerSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mobileHeaderMountedRef = useRef(false)
+  const isOpenRef = useRef(isOpen)
+  const isRecededRef = useRef(isReceded)
+  isOpenRef.current = isOpen
+  isRecededRef.current = isReceded
 
   const panelRef = useRef<HTMLDivElement | null>(null)
+  const headerRef = useRef<HTMLElement | null>(null)
   const backdropRef = useRef<HTMLDivElement | null>(null)
   const underPanelRef = useRef<HTMLDivElement | HTMLElement | null>(null)
+  const underHeaderRef = useRef<HTMLElement | null>(null)
+
+  const clearHeaderSettleTimer = useCallback(() => {
+    if (headerSettleTimerRef.current) {
+      clearTimeout(headerSettleTimerRef.current)
+      headerSettleTimerRef.current = null
+    }
+  }, [])
+
+  const scheduleHeaderSettle = useCallback(
+    (delayMs: number) => {
+      clearHeaderSettleTimer()
+      headerSettleTimerRef.current = setTimeout(() => {
+        if (
+          headerRef.current &&
+          isOpenRef.current &&
+          !isRecededRef.current &&
+          !isClosingRef.current &&
+          !isSwiping.current
+        ) {
+          headerRef.current.style.transition = IOS_HEADER_IDLE_TRANSITION
+          headerRef.current.style.transform = 'none'
+          headerRef.current.style.willChange = 'auto'
+          headerRef.current.style.pointerEvents = 'auto'
+        }
+      }, delayMs)
+    },
+    [clearHeaderSettleTimer]
+  )
+
+  useLayoutEffect(() => {
+    if (isDesktop || !isSubView || hideHeader || !isRendered) {
+      mobileHeaderMountedRef.current = false
+      return
+    }
+    if (!mobileHeaderMountedRef.current && headerRef.current) {
+      mobileHeaderMountedRef.current = true
+      headerRef.current.style.transition = 'none'
+      headerRef.current.style.transform = 'translate3d(100%, 0, 0)'
+      headerRef.current.style.willChange = 'transform'
+      headerRef.current.style.pointerEvents = 'none'
+    }
+  }, [isRendered, isDesktop, isSubView, hideHeader])
 
   const resolvedZIndex = zIndex ?? (
     className.includes('z-[80]') ? 80 :
@@ -114,6 +214,7 @@ export function IosScreen({
       clearTimeout(snapTimerRef.current)
       snapTimerRef.current = null
     }
+    clearHeaderSettleTimer()
 
     let raf1 = 0
     let raf2 = 0
@@ -129,30 +230,42 @@ export function IosScreen({
       setIsRendered(true)
 
       const startEnter = () => {
+        const enterTransform = isRecededRef.current
+          ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)'
+          : 'translate3d(0, 0, 0)'
+
         if (panelRef.current) {
           panelRef.current.style.transition = isDesktop
             ? (stacked ? 'opacity 0.16s ease' : 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease')
             : IOS_PANEL_TRANSITION
           if (!isDesktop) {
-            panelRef.current.style.transform = isReceded
-              ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)'
-              : 'translate3d(0, 0, 0)'
+            panelRef.current.style.transform = enterTransform
+          }
+        }
+        if (headerRef.current && !isDesktop) {
+          headerRef.current.style.transition = IOS_PANEL_TRANSITION
+          headerRef.current.style.transform = enterTransform
+          headerRef.current.style.willChange = 'transform'
+          headerRef.current.style.pointerEvents = isRecededRef.current ? 'none' : 'auto'
+          if (!isRecededRef.current) {
+            scheduleHeaderSettle(IOS_TRANSITION_MS + 30)
           }
         }
         if (backdropRef.current) {
           backdropRef.current.style.transition = isDesktop ? 'opacity 0.2s ease' : IOS_BACKDROP_TRANSITION
           backdropRef.current.style.opacity = isDesktop
             ? (!stacked ? '1' : '0')
-            : (!isReceded ? '1' : '0')
+            : (!isRecededRef.current ? '1' : '0')
         }
         setIsVisible(true)
       }
 
       const prepareAndEnter = () => {
-        if (panelRef.current && !isDesktop) {
-          panelRef.current.style.transition = 'none'
-          panelRef.current.style.transform = 'translate3d(100%, 0, 0)'
-          void panelRef.current.offsetWidth
+        if (!isDesktop) {
+          syncLayerPair(panelRef.current, headerRef.current, 'none', 'translate3d(100%, 0, 0)', 'transform')
+          if (headerRef.current) headerRef.current.style.pointerEvents = 'none'
+          if (panelRef.current) void panelRef.current.offsetWidth
+          else if (headerRef.current) void headerRef.current.offsetWidth
         }
         startEnter()
       }
@@ -177,6 +290,13 @@ export function IosScreen({
           panelRef.current.style.transform = 'translate3d(100%, 0, 0)'
         }
       }
+      if (headerRef.current && !isDesktop) {
+        normalizeHeaderForTransform(headerRef.current)
+        headerRef.current.style.transition = IOS_PANEL_TRANSITION
+        headerRef.current.style.transform = 'translate3d(100%, 0, 0)'
+        headerRef.current.style.willChange = 'transform'
+        headerRef.current.style.pointerEvents = 'none'
+      }
       if (backdropRef.current) {
         backdropRef.current.style.transition = isDesktop ? 'opacity 0.18s ease' : IOS_BACKDROP_TRANSITION
         backdropRef.current.style.opacity = '0'
@@ -192,35 +312,57 @@ export function IosScreen({
       cancelAnimationFrame(raf2)
       if (timer) clearTimeout(timer)
     }
-  }, [isOpen, isDesktop, resolvedZIndex])
+  }, [isOpen, isDesktop, resolvedZIndex, clearHeaderSettleTimer, scheduleHeaderSettle])
 
   useEffect(() => {
     if (!isOpen || !isVisible || isDesktop || !panelRef.current) return
-    panelRef.current.style.transition = IOS_PANEL_TRANSITION
-    panelRef.current.style.transform = isReceded
+    clearHeaderSettleTimer()
+    const targetTransform = isReceded
       ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)'
       : 'translate3d(0, 0, 0)'
+
+    panelRef.current.style.transition = IOS_PANEL_TRANSITION
+    panelRef.current.style.transform = targetTransform
+
+    if (headerRef.current) {
+      if (isReceded) {
+        normalizeHeaderForTransform(headerRef.current)
+      }
+      headerRef.current.style.transition = IOS_PANEL_TRANSITION
+      headerRef.current.style.transform = targetTransform
+      headerRef.current.style.willChange = 'transform'
+      headerRef.current.style.pointerEvents = isReceded ? 'none' : 'auto'
+      if (!isReceded) {
+        scheduleHeaderSettle(IOS_TRANSITION_MS + 30)
+      }
+    }
+
     if (backdropRef.current) {
       backdropRef.current.style.transition = IOS_BACKDROP_TRANSITION
       backdropRef.current.style.opacity = isReceded ? '0' : '1'
     }
-  }, [isReceded, isOpen, isVisible, isDesktop])
+  }, [isReceded, isOpen, isVisible, isDesktop, clearHeaderSettleTimer, scheduleHeaderSettle])
 
   useEffect(() => {
     return () => {
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
       if (snapTimerRef.current) clearTimeout(snapTimerRef.current)
+      clearHeaderSettleTimer()
     }
-  }, [])
+  }, [clearHeaderSettleTimer])
 
   const handleRequestClose = useCallback(() => {
     if (isClosingRef.current || !onClose) return
     isClosingRef.current = true
+    clearHeaderSettleTimer()
 
     const panel = panelRef.current
+    const header = headerRef.current
     const backdrop = backdropRef.current
     const underPanel = isDesktop ? null : findUnderlyingPanel(panel)
+    const underHeader = isDesktop ? null : findUnderlyingHeader(underPanel)
     underPanelRef.current = underPanel
+    underHeaderRef.current = underHeader
 
     if (panel) {
       panel.style.pointerEvents = 'none'
@@ -238,15 +380,19 @@ export function IosScreen({
         panel.style.transform = 'translate3d(100%, 0, 0)'
       }
     }
+    if (header && !isDesktop) {
+      normalizeHeaderForTransform(header)
+      header.style.pointerEvents = 'none'
+      header.style.transition = IOS_PANEL_TRANSITION
+      header.style.transform = 'translate3d(100%, 0, 0)'
+      header.style.willChange = 'transform'
+    }
     if (backdrop) {
       backdrop.style.pointerEvents = 'none'
       backdrop.style.transition = isDesktop ? 'opacity 0.18s ease' : IOS_BACKDROP_TRANSITION
       backdrop.style.opacity = '0'
     }
-    if (underPanel) {
-      underPanel.style.transition = IOS_PANEL_TRANSITION
-      underPanel.style.transform = 'translate3d(0, 0, 0)'
-    }
+    syncLayerPair(underPanel, underHeader, IOS_PANEL_TRANSITION, 'translate3d(0, 0, 0)', 'transform')
 
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
     closeTimerRef.current = setTimeout(() => {
@@ -257,11 +403,12 @@ export function IosScreen({
         underPanelRef.current.style.transform =
           underPanelRef.current.dataset.iosRootPanel === 'true' ? 'none' : 'translate3d(0, 0, 0)'
       }
+      restoreHeaderIdleState(underHeaderRef.current)
       setIsVisible(false)
       setIsRendered(false)
       onClose()
     }, isDesktop ? (isStackedOnDesktop ? 150 : 190) : IOS_TRANSITION_MS)
-  }, [onClose, isDesktop, isStackedOnDesktop])
+  }, [onClose, isDesktop, isStackedOnDesktop, clearHeaderSettleTimer])
 
   useEffect(() => {
     if (!isOpen || !onClose || isReceded) return
@@ -283,6 +430,7 @@ export function IosScreen({
       clearTimeout(snapTimerRef.current)
       snapTimerRef.current = null
     }
+    clearHeaderSettleTimer()
 
     const now = performance.now()
     touchStartX.current = touch.clientX
@@ -295,6 +443,7 @@ export function IosScreen({
     isSwiping.current = true
     hasLockedHorizontal.current = false
     underPanelRef.current = findUnderlyingPanel(panelRef.current)
+    underHeaderRef.current = findUnderlyingHeader(underPanelRef.current)
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -310,9 +459,18 @@ export function IosScreen({
       }
       if (deltaX < 3) return
       hasLockedHorizontal.current = true
+      normalizeHeaderForTransform(headerRef.current)
       panelRef.current.style.transition = 'none'
+      if (headerRef.current) {
+        headerRef.current.style.transition = 'none'
+        headerRef.current.style.willChange = 'transform'
+      }
       if (backdropRef.current) backdropRef.current.style.transition = 'none'
       if (underPanelRef.current) underPanelRef.current.style.transition = 'none'
+      if (underHeaderRef.current) {
+        underHeaderRef.current.style.transition = 'none'
+        underHeaderRef.current.style.willChange = 'transform'
+      }
     }
 
     const now = performance.now()
@@ -329,9 +487,14 @@ export function IosScreen({
     const progress = Math.min(1, deltaX / width)
     const underOffset = -IOS_PARALLAX_PERCENT * (1 - progress)
 
-    panelRef.current.style.transform = 'translate3d(' + deltaX + 'px, 0, 0)'
+    syncLayerPair(panelRef.current, headerRef.current, 'none', 'translate3d(' + deltaX + 'px, 0, 0)')
     if (backdropRef.current) backdropRef.current.style.opacity = String(1 - progress)
-    if (underPanelRef.current) underPanelRef.current.style.transform = 'translate3d(' + underOffset + '%, 0, 0)'
+    syncLayerPair(
+      underPanelRef.current,
+      underHeaderRef.current,
+      'none',
+      'translate3d(' + underOffset + '%, 0, 0)'
+    )
   }
 
   const handleTouchEnd = () => {
@@ -351,8 +514,10 @@ export function IosScreen({
       (progress > 0.28 || (deltaX > 32 && (releaseVelocity > 0.35 || avgVelocity > 0.42)))
 
     const panel = panelRef.current
+    const header = headerRef.current
     const backdrop = backdropRef.current
     const underPanel = underPanelRef.current
+    const underHeader = underHeaderRef.current
 
     if (shouldClose && onClose) {
       isClosingRef.current = true
@@ -362,8 +527,8 @@ export function IosScreen({
       const backdropTransition = 'opacity ' + durationMs + 'ms ' + IOS_TRANSITION_EASING
 
       panel.style.pointerEvents = 'none'
-      panel.style.transition = panelTransition
-      panel.style.transform = 'translate3d(100%, 0, 0)'
+      if (header) header.style.pointerEvents = 'none'
+      syncLayerPair(panel, header, panelTransition, 'translate3d(100%, 0, 0)', 'transform')
 
       if (backdrop) {
         backdrop.style.pointerEvents = 'none'
@@ -371,10 +536,7 @@ export function IosScreen({
         backdrop.style.opacity = '0'
       }
 
-      if (underPanel) {
-        underPanel.style.transition = panelTransition
-        underPanel.style.transform = 'translate3d(0, 0, 0)'
-      }
+      syncLayerPair(underPanel, underHeader, panelTransition, 'translate3d(0, 0, 0)', 'transform')
 
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
       closeTimerRef.current = setTimeout(() => {
@@ -385,6 +547,7 @@ export function IosScreen({
           underPanelRef.current.style.transform =
             underPanelRef.current.dataset.iosRootPanel === 'true' ? 'none' : 'translate3d(0, 0, 0)'
         }
+        restoreHeaderIdleState(underHeaderRef.current)
         setIsVisible(false)
         setIsRendered(false)
         onClose()
@@ -394,25 +557,31 @@ export function IosScreen({
       const panelTransition = 'transform ' + snapDurationMs + 'ms ' + IOS_TRANSITION_EASING
       const backdropTransition = 'opacity ' + snapDurationMs + 'ms ' + IOS_TRANSITION_EASING
 
-      panel.style.transition = panelTransition
-      panel.style.transform = 'translate3d(0, 0, 0)'
+      syncLayerPair(panel, header, panelTransition, 'translate3d(0, 0, 0)', 'transform')
 
       if (backdrop) {
         backdrop.style.transition = backdropTransition
         backdrop.style.opacity = '1'
       }
 
-      if (underPanel) {
-        underPanel.style.transition = panelTransition
-        underPanel.style.transform = 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)'
-      }
+      syncLayerPair(
+        underPanel,
+        underHeader,
+        panelTransition,
+        'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)',
+        'transform'
+      )
 
       if (snapTimerRef.current) clearTimeout(snapTimerRef.current)
       snapTimerRef.current = setTimeout(() => {
         if (panelRef.current) panelRef.current.style.transition = IOS_PANEL_TRANSITION
+        restoreHeaderIdleState(headerRef.current)
         if (backdropRef.current) backdropRef.current.style.transition = IOS_BACKDROP_TRANSITION
         if (underPanelRef.current) {
           underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
+        }
+        if (underHeaderRef.current) {
+          underHeaderRef.current.style.transition = IOS_PANEL_TRANSITION
         }
       }, snapDurationMs)
     }
@@ -469,28 +638,50 @@ export function IosScreen({
     </header>
   )
 
+  const mobileFixedHeader = !hideHeader ? (
+    <header
+      ref={isSubView ? headerRef : undefined}
+      data-ios-fixed-header="true"
+      data-ios-header-for={isSubView ? 'subview' : 'inline'}
+      data-ios-screen-id={screenId}
+      data-ios-open={isOpen ? 'true' : 'false'}
+      data-ios-z-index={String(resolvedZIndex)}
+      style={{
+        zIndex: isSubView ? resolvedZIndex + 1 : 40,
+        backgroundColor: 'var(--ios-bg)'
+      }}
+      className={'ios-header transition-[border-color] duration-150 ' + (isScrolled ? 'border-b border-[var(--ios-separator)]' : 'border-b border-transparent')}
+    >
+      {headerContent}
+    </header>
+  ) : null
+
   if (!isSubView) {
     return (
-      <div onScroll={handleScroll} className={'w-full min-h-full bg-[var(--ios-bg-primary)] overflow-y-auto ' + className}>
-        {!hideHeader && (
-          isDesktop ? desktopHeader : (
-            <header className={'ios-header transition-[border-color] duration-150 ' + (isScrolled ? 'border-b border-[var(--ios-separator)]' : 'border-b border-transparent')}>
-              {headerContent}
-            </header>
-          )
-        )}
+      <>
+        {!isDesktop && typeof document !== 'undefined' && mobileFixedHeader ? createPortal(mobileFixedHeader, document.body) : null}
+        <div
+          onScroll={handleScroll}
+          className={
+            'w-full min-h-full bg-[var(--ios-bg-primary)] overflow-y-auto ' +
+            (!hideHeader && !isDesktop ? 'pt-[calc(max(calc(env(safe-area-inset-top,0px)+6px),8px)+48px)] ' : '') +
+            className
+          }
+        >
+          {!hideHeader && isDesktop && desktopHeader}
 
-        <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-3.5 sm:px-4 pt-3 max-w-[480px] mx-auto w-full min-h-full pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
-          {!hideHeader && largeTitle && !isDesktop && (
-            <div className="pt-2 pb-3 select-none">
-              <h1 className="text-[30px] sm:text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
-                {title}
-              </h1>
-            </div>
-          )}
-          {children}
+          <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-3.5 sm:px-4 pt-3 max-w-[480px] mx-auto w-full min-h-full pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
+            {!hideHeader && largeTitle && !isDesktop && (
+              <div className="pt-2 pb-3 select-none">
+                <h1 className="text-[30px] sm:text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
+                  {title}
+                </h1>
+              </div>
+            )}
+            {children}
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
@@ -556,57 +747,56 @@ export function IosScreen({
           </div>
         </div>
       ) : (
-        <div
-          ref={panelRef}
-          data-ios-subview-panel="true"
-          data-ios-open={isOpen ? 'true' : 'false'}
-          data-ios-z-index={String(resolvedZIndex)}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchEnd}
-          onScroll={handleScroll}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: '100lvh',
-            minHeight: 'calc(100dvh + env(safe-area-inset-bottom, 0px))',
-            zIndex: resolvedZIndex,
-            backgroundColor: 'var(--ios-bg)',
-            willChange: 'transform',
-            WebkitBackfaceVisibility: 'hidden',
-            backfaceVisibility: 'hidden',
-            touchAction: 'pan-y',
-            overflowY: 'auto',
-            overscrollBehavior: 'contain',
-            transform: isVisible
-              ? (isReceded ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'translate3d(0, 0, 0)')
-              : 'translate3d(100%, 0, 0)',
-            transition: IOS_PANEL_TRANSITION,
-            pointerEvents: isReceded ? 'none' : 'auto'
-          }}
-          className={className}
-        >
-          {!hideHeader && (
-            <header className={'ios-header transition-[border-color] duration-150 ' + (isScrolled ? 'border-b border-[var(--ios-separator)]' : 'border-b border-transparent')}>
-              {headerContent}
-            </header>
-          )}
-
-          <div className={contentClassName ?? 'px-3.5 sm:px-4 pt-3 max-w-[480px] mx-auto w-full min-h-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
-            {!hideHeader && largeTitle && (
-              <div className="pt-2 pb-3 select-none">
-                <h1 className="text-[30px] sm:text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
-                  {title}
-                </h1>
-              </div>
-            )}
-            {children}
+        <>
+          <div
+            ref={panelRef}
+            data-ios-subview-panel="true"
+            data-ios-screen-id={screenId}
+            data-ios-has-header={hideHeader ? 'false' : 'true'}
+            data-ios-open={isOpen ? 'true' : 'false'}
+            data-ios-z-index={String(resolvedZIndex)}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            onScroll={handleScroll}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: '100lvh',
+              minHeight: 'calc(100dvh + env(safe-area-inset-bottom, 0px))',
+              zIndex: resolvedZIndex,
+              backgroundColor: 'var(--ios-bg)',
+              willChange: 'transform',
+              WebkitBackfaceVisibility: 'hidden',
+              backfaceVisibility: 'hidden',
+              touchAction: 'pan-y',
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
+              transform: isVisible
+                ? (isReceded ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'translate3d(0, 0, 0)')
+                : 'translate3d(100%, 0, 0)',
+              transition: IOS_PANEL_TRANSITION,
+              pointerEvents: isReceded ? 'none' : 'auto'
+            }}
+            className={className}
+          >
+            <div className={contentClassName ?? 'px-3.5 sm:px-4 pt-3 max-w-[480px] mx-auto w-full min-h-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
+              {!hideHeader && largeTitle && (
+                <div className="pt-2 pb-3 select-none">
+                  <h1 className="text-[30px] sm:text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
+                    {title}
+                  </h1>
+                </div>
+              )}
+              {children}
+            </div>
           </div>
-        </div>
+          {mobileFixedHeader}
+        </>
       )}
     </>,
     document.body

@@ -213,7 +213,7 @@ body {
   top: 0;
   z-index: 30;
   width: 100%;
-  --ios-header-pad-top: max(env(safe-area-inset-top, 0px), 8px);
+  --ios-header-pad-top: max(calc(env(safe-area-inset-top, 0px) + 6px), 8px);
   padding-top: var(--ios-header-pad-top);
   padding-bottom: 6px;
   padding-left: 0.75rem;
@@ -236,7 +236,7 @@ body {
 
 @media (max-width: 767px) {
   [data-ios-root-panel="true"] {
-    --ios-header-pad-top: max(env(safe-area-inset-top, 0px), 8px);
+    --ios-header-pad-top: max(calc(env(safe-area-inset-top, 0px) + 6px), 8px);
     padding-top: calc(var(--ios-header-pad-top) + 50px);
   }
 
@@ -269,10 +269,9 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: env(safe-area-inset-top, 0px);
+    height: calc(env(safe-area-inset-top, 0px) + 2px);
     background-color: var(--ios-bg);
-    pointer-events: none;
-    z-index: 85;
+    z-index: 9999;
   }
 }
 

@@ -1,8 +1,9 @@
 'use client'
 
 import { ReactNode, useState } from 'react'
+import { Download, Paperclip, Reply } from 'lucide-react'
 import { MessageItem, MessageAttachment } from '@/models/message.model'
-import { AppDictionary } from '@/config/dictionary.config'
+import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { cleanSenderName } from '@/utils/text.util'
 import { formatHumanPolishDate } from '@/utils/date.util'
 import { IosScreen } from '@/components/ios/ios-screen'
@@ -20,6 +21,7 @@ interface MessageReaderScreenProps {
   onClose: () => void
   onReply: (message: MessageItem) => void
   renderContent: (text: string) => ReactNode
+  lang?: AppLanguage
   t: AppDictionary
 }
 
@@ -34,15 +36,16 @@ export function MessageReaderScreen({
   onClose,
   onReply,
   renderContent,
+  lang = 'pl',
   t
 }: MessageReaderScreenProps) {
   const [downloadingPath, setDownloadingPath] = useState<string | null>(null)
+  const isEn = lang === 'en'
 
   const isNoReply = Boolean(
-    message && (
-      /e-usprawiedliwienia|system|powiadomienie|no-reply|noreply|librus/i.test(message.sender) ||
-      /prosimy na nią nie odpowiadać|nie odpowiadaj/i.test(content)
-    )
+    message &&
+      (/e-usprawiedliwienia|system|powiadomienie|no-reply|noreply|librus/i.test(message.sender) ||
+        /prosimy na nią nie odpowiadać|nie odpowiadaj|do not reply/i.test(content))
   )
 
   const handleDownload = async (att: MessageAttachment) => {
@@ -70,12 +73,9 @@ export function MessageReaderScreen({
           <button
             type="button"
             onClick={() => onReply(message)}
-            className="flex items-center gap-1 text-[17px] font-normal leading-none text-[var(--ios-blue)] active:opacity-60 transition-opacity select-none h-full cursor-pointer"
+            className="flex items-center gap-1 text-[16px] font-normal leading-none text-[var(--ios-blue)] active:opacity-60 transition-opacity select-none h-full cursor-pointer"
           >
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 17 4 12 9 7" />
-              <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
-            </svg>
+            <Reply className="w-[18px] h-[18px]" strokeWidth={2.2} />
             <span>{t.replyAction}</span>
           </button>
         ) : null
@@ -90,7 +90,7 @@ export function MessageReaderScreen({
                   {cleanSenderName(message.sender)}
                 </span>
                 <span className="text-[11px] font-normal text-[var(--ios-secondary)] tabular-nums shrink-0">
-                  {formatHumanPolishDate(message.date, true)}
+                  {formatHumanPolishDate(message.date, true, lang)}
                 </span>
               </div>
 
@@ -118,7 +118,7 @@ export function MessageReaderScreen({
                 {attachments.length > 0 && (
                   <div className="flex flex-col gap-1.5">
                     <span className="text-[12px] font-semibold uppercase text-[var(--ios-secondary)] tracking-[0.03em] px-4">
-                      Załączniki ({attachments.length})
+                      {isEn ? `Attachments (${attachments.length})` : `Załączniki (${attachments.length})`}
                     </span>
                     <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
                       {attachments.map((att, idx) => {
@@ -133,9 +133,7 @@ export function MessageReaderScreen({
                           >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
                               <div className="w-8 h-8 rounded-[8px] bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] flex items-center justify-center shrink-0">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                                </svg>
+                                <Paperclip className="w-4 h-4" strokeWidth={2.2} />
                               </div>
                               <span className="text-[14px] font-medium text-[var(--ios-label)] truncate">
                                 {att.name}
@@ -146,12 +144,8 @@ export function MessageReaderScreen({
                                 <IosSpinner size="small" className="text-[var(--ios-blue)]" />
                               ) : (
                                 <>
-                                  <span>Pobierz</span>
-                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                    <polyline points="7 10 12 15 17 10" />
-                                    <line x1="12" x2="12" y1="15" y2="3" />
-                                  </svg>
+                                  <span>{isEn ? 'Download' : 'Pobierz'}</span>
+                                  <Download className="w-[15px] h-[15px]" strokeWidth={2.2} />
                                 </>
                               )}
                             </div>

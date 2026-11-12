@@ -46,18 +46,37 @@ export function extractTimeInterval(text: string): { cleanText: string; timeBadg
     return { cleanText: text, timeBadge: null }
 }
 
+const WARSAW_TZ = 'Europe/Warsaw'
+
 export function getTodayIsoString(): string {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = String(now.getMonth() + 1).padStart(2, '0')
-    const d = String(now.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
+    try {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: WARSAW_TZ,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(new Date())
+    } catch {
+        const now = new Date()
+        const y = now.getFullYear()
+        const m = String(now.getMonth() + 1).padStart(2, '0')
+        const d = String(now.getDate()).padStart(2, '0')
+        return `${y}-${m}-${d}`
+    }
 }
 
 export function getTodayDayName(): string {
-    const dayMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    const name = dayMap[new Date().getDay()]
-    return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(name) ? name : 'Monday'
+    try {
+        const name = new Intl.DateTimeFormat('en-US', {
+            timeZone: WARSAW_TZ,
+            weekday: 'long'
+        }).format(new Date())
+        return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(name) ? name : 'Monday'
+    } catch {
+        const dayMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        const name = dayMap[new Date().getDay()]
+        return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(name) ? name : 'Monday'
+    }
 }
 
 export function normalizeToMondayIso(dateStr: string): string {
@@ -91,11 +110,14 @@ export function getSchoolWeekMondayIso(dateStr?: string): string {
 }
 
 export function getDatesList(startIso: string, endIso: string): string[] {
-    const result: string[] = []
-    const start = new Date(startIso)
-    const end = new Date(endIso)
+    const sp = startIso.split('-').map(Number)
+    const ep = endIso.split('-').map(Number)
+    if (sp.length !== 3 || ep.length !== 3) return [startIso]
+    const start = new Date(sp[0], sp[1] - 1, sp[2])
+    const end = new Date(ep[0], ep[1] - 1, ep[2])
     if (start > end) return [startIso]
 
+    const result: string[] = []
     const cur = new Date(start)
     while (cur <= end) {
         const y = cur.getFullYear()
@@ -204,8 +226,11 @@ export function formatHumanPolishDate(
         date = new Date(raw > 1e11 ? raw : raw * 1000)
     } else if (typeof raw === 'string') {
         const str = raw.trim()
+        const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})$/)
         const dotMatch = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2}))?/)
-        if (dotMatch) {
+        if (isoMatch) {
+            date = new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10))
+        } else if (dotMatch) {
             const d = parseInt(dotMatch[1], 10)
             const m = parseInt(dotMatch[2], 10) - 1
             const y = parseInt(dotMatch[3], 10)
@@ -244,4 +269,6 @@ export function formatHumanPolishDate(
 
     return dateStr
 }
+
+export const formatHumanDate = formatHumanPolishDate
 

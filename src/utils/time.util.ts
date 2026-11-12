@@ -17,6 +17,22 @@ export function parseLessonTimeRange(timeStr: string): ParsedTimeRange {
 }
 
 export function getCurrentTimeMinutes(): number {
+    try {
+        const parts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Europe/Warsaw',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).formatToParts(new Date())
+        const hourPart = parts.find((p) => p.type === 'hour')?.value
+        const minutePart = parts.find((p) => p.type === 'minute')?.value
+        const h = Number(hourPart)
+        const m = Number(minutePart)
+        if (Number.isFinite(h) && Number.isFinite(m)) {
+            return (h === 24 ? 0 : h) * 60 + m
+        }
+    } catch {
+    }
     const now = new Date()
     return now.getHours() * 60 + now.getMinutes()
 }

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { Check, ChevronRight, Users } from 'lucide-react'
 import { ReceiverItem } from '@/models/message.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
-import { IosCard, IosSearchBar } from '@/components/ios/ios-ui'
+import { IosCard, IosEmptyState, IosSearchBar } from '@/components/ios/ios-ui'
 import { IosScreen } from '@/components/ios/ios-screen'
 import { cn } from '@/utils/cn.util'
 
@@ -41,7 +42,7 @@ export function RecipientPickerScreen({
   const [openCategory, setOpenCategory] = useState<string | null>(null)
   const isEn = lang === 'en'
 
-  const capitalize = (str: string) => str ? str.charAt(0).toUpperCase() + str.slice(1) : ''
+  const capitalize = (str: string) => (str ? str.charAt(0).toUpperCase() + str.slice(1) : '')
 
   const grouped = useMemo(() => {
     const map: Record<string, ReceiverItem[]> = {}
@@ -104,23 +105,26 @@ export function RecipientPickerScreen({
                       <span className="text-[15px] font-medium text-[var(--ios-label)] truncate">{r.name}</span>
                       <span className="text-[12px] text-[var(--ios-secondary)]">{capitalize(r.group)}</span>
                     </div>
-                    <div className={cn(
-                      'w-[22px] h-[22px] rounded-full flex items-center justify-center border transition-all',
-                      isSelected ? 'bg-[var(--ios-blue)] border-[var(--ios-blue)] text-white' : 'border-[var(--ios-separator)] bg-[var(--bg-card-secondary)]'
-                    )}>
-                      {isSelected && (
-                        <svg className="w-3.5 h-3.5 stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
+                    <div
+                      className={cn(
+                        'w-[22px] h-[22px] rounded-full flex items-center justify-center border transition-all shrink-0',
+                        isSelected
+                          ? 'bg-[var(--ios-blue)] border-[var(--ios-blue)] text-white'
+                          : 'border-[var(--ios-separator)] bg-[var(--bg-card-secondary)]'
                       )}
+                    >
+                      {isSelected && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
                     </div>
                   </div>
                 )
               })
             ) : (
-              <div className="p-8 text-center text-[15px] font-normal text-[var(--ios-secondary)]">
-                {isEn ? 'No matches found' : 'Brak wyników'}
-              </div>
+              <IosEmptyState
+                compact
+                iconTone="neutral"
+                icon={<Users className="w-[20px] h-[20px]" strokeWidth={1.9} />}
+                title={isEn ? 'No matches found' : 'Brak wyników'}
+              />
             )}
           </IosCard>
         ) : (
@@ -136,35 +140,35 @@ export function RecipientPickerScreen({
                     onClick={() => setOpenCategory(isCategoryOpen ? null : cat)}
                     className="p-3.5 px-4 flex items-center justify-between gap-3 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] cursor-pointer transition-colors duration-150"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="text-[15px] font-semibold text-[var(--ios-label)]">{cat}</span>
-                      <span className="text-[12px] text-[var(--ios-secondary)] tabular-nums">({items.length})</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[15px] font-semibold text-[var(--ios-label)] truncate">{cat}</span>
+                      <span className="text-[12px] text-[var(--ios-secondary)] tabular-nums shrink-0">
+                        ({items.length})
+                      </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       {selectedCount > 0 && (
                         <span className="px-2 py-0.5 rounded-full bg-[var(--ios-blue)] text-white text-[11px] font-bold tabular-nums">
                           {selectedCount}
                         </span>
                       )}
-                      <svg
-                        width="14"
-                        height="14"
-                        className={cn('text-[var(--ios-secondary)] transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]', isCategoryOpen && 'rotate-90')}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                      >
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
+                      <ChevronRight
+                        className={cn(
+                          'w-3.5 h-3.5 text-[var(--ios-secondary)] transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]',
+                          isCategoryOpen && 'rotate-90'
+                        )}
+                        strokeWidth={2.5}
+                      />
                     </div>
                   </div>
 
-                  <div className={cn(
-                    'grid transition-all duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]',
-                    isCategoryOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                  )}>
+                  <div
+                    className={cn(
+                      'grid transition-all duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]',
+                      isCategoryOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                    )}
+                  >
                     <div className="overflow-hidden divide-y divide-[var(--ios-separator)] bg-[var(--bg-card-secondary)] border-t border-[var(--ios-separator)]">
                       {items.map((r) => {
                         const isSelected = selectedRecipients.some((x) => x.id === r.id)
@@ -175,15 +179,15 @@ export function RecipientPickerScreen({
                             className="py-2.5 px-4 pl-6 flex items-center justify-between gap-3 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150 cursor-pointer"
                           >
                             <span className="text-[15px] font-normal text-[var(--ios-label)] truncate">{r.name}</span>
-                            <div className={cn(
-                              'w-[22px] h-[22px] rounded-full flex items-center justify-center border transition-all',
-                              isSelected ? 'bg-[var(--ios-blue)] border-[var(--ios-blue)] text-white' : 'border-[var(--ios-separator)] bg-[var(--ios-card-solid)]'
-                            )}>
-                              {isSelected && (
-                                <svg className="w-3.5 h-3.5 stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                  <polyline points="20 6 9 17 4 12" />
-                                </svg>
+                            <div
+                              className={cn(
+                                'w-[22px] h-[22px] rounded-full flex items-center justify-center border transition-all shrink-0',
+                                isSelected
+                                  ? 'bg-[var(--ios-blue)] border-[var(--ios-blue)] text-white'
+                                  : 'border-[var(--ios-separator)] bg-[var(--ios-card-solid)]'
                               )}
+                            >
+                              {isSelected && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
                             </div>
                           </div>
                         )

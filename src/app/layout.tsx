@@ -58,7 +58,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-[100dvh] flex flex-col bg-[var(--ios-bg)] text-[var(--ios-label)] antialiased" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col bg-[var(--ios-bg)] text-[var(--ios-label)] antialiased" suppressHydrationWarning>
         {children}
       </body>
     </html>

@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { AlertCircle, Check } from 'lucide-react'
 import { AttendanceResult, AbsenceDetail } from '@/models/attendance.model'
 import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosScreen } from '@/components/ios/ios-screen'
-import { IosCard, IosSegmentedControl } from '@/components/ios/ios-ui'
+import { IosButton, IosCard, IosSegmentedControl } from '@/components/ios/ios-ui'
 import { IosSpinner } from '@/components/ios/ios-spinner'
-import { formatSubjectName } from '@/utils/text.util'
 import {
   getPendingJustifications,
   savePendingJustification,
@@ -15,8 +15,11 @@ import {
   isLessonJustificationPending,
   PendingJustificationRecord
 } from '@/utils/justification.util'
-import { getDatesList } from '@/utils/date.util'
-import { cn } from '@/utils/cn.util'
+import { getDatesList, getTodayIsoString } from '@/utils/date.util'
+import { formatPolishPlural } from '@/utils/text.util'
+import { ExcuseNbTab } from './excuse-nb-tab'
+import { ExcuseRangeTab } from './excuse-range-tab'
+import { ExcuseHoursTab } from './excuse-hours-tab'
 
 interface ManualExcuseScreenProps {
   isOpen: boolean
@@ -25,7 +28,12 @@ interface ManualExcuseScreenProps {
   timetableData: SmartTimetableResult | null
   canSubmitExcuse?: boolean
   showFullSubjectNames?: boolean
-  onSubmitJustification: (payload: { dateFrom: string; dateTo: string; lessons: number[]; message: string }) => Promise<{ ok: boolean; error?: string }>
+  onSubmitJustification: (payload: {
+    dateFrom: string
+    dateTo: string
+    lessons: number[]
+    message: string
+  }) => Promise<{ ok: boolean; error?: string }>
   lang?: AppLanguage
   t: AppDictionary
   initialModeTab?: 'nb' | 'range' | 'hours'
@@ -49,6 +57,7 @@ export function ManualExcuseScreen({
   const [modeTab, setModeTab] = useState<ModeTab>(initialModeTab)
   const [status, setStatus] = useState<ScreenStatus>('form')
   const [parentMessage, setParentMessage] = useState('')
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (isOpen && initialModeTab) {
@@ -56,17 +65,17 @@ export function ManualExcuseScreen({
     }
   }, [isOpen, initialModeTab])
 
-  const [pendingList, setPendingList] = useState<PendingJustificationRecord[]>(() => {
-    return reconcilePendingJustifications(attendanceData.subjects)
-  })
-
-  const todayIso = useMemo(() => {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = String(now.getMonth() + 1).padStart(2, '0')
-    const d = String(now.getDate()).padStart(2, '0')
-    return y + '-' + m + '-' + d
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    }
   }, [])
+
+  const [pendingList, setPendingList] = useState<PendingJustificationRecord[]>(() =>
+    reconcilePendingJustifications(attendanceData.subjects)
+  )
+
+  const todayIso = useMemo(() => getTodayIsoString(), [])
 
   const [dateFrom, setDateFrom] = useState(todayIso)
   const [dateTo, setDateTo] = useState(todayIso)
@@ -120,9 +129,8 @@ export function ManualExcuseScreen({
   const selectedNbCount = useMemo(() => {
     return Object.entries(selectedNbMap).filter(([key, checked]) => {
       if (!checked) return false
-      const parts = key.split('_')
-      const date = parts[0]
-      const num = Number(parts[1])
+      const [date, numStr] = key.split('_')
+      const num = Number(numStr)
       const group = groupedNbDays.find((g) => g.date === date)
       if (!group) return false
       return !isLessonJustificationPending(pendingList, group.isoDate, date, num)
@@ -183,14 +191,14 @@ export function ManualExcuseScreen({
   const dayLessons = useMemo(() => {
     if (timetableData?.schedule) {
       const matchedDay = timetableData.schedule.find((d) => d.isoDate === selectedDayIso)
-      if (matchedDay && matchedDay.lessons && matchedDay.lessons.length > 0) {
+      if (matchedDay?.lessons && matchedDay.lessons.length > 0) {
         return matchedDay.lessons
       }
     }
 
     return Array.from({ length: 8 }, (_, i) => ({
       number: i + 1,
-      subject: 'Lekcja ' + (i + 1),
+      subject: t.lessonNumberLabel(i + 1),
       time: '',
       room: '',
       teacher: '',
@@ -201,16 +209,12 @@ export function ManualExcuseScreen({
       flag: null,
       teacherAbsent: false
     })) as LessonItem[]
-  }, [timetableData, selectedDayIso])
+  }, [timetableData, selectedDayIso, t])
 
   const toggleHour = (lessonNum: number) => {
     if (excusedLessonNumbers.has(lessonNum)) return
     if (isLessonJustificationPending(pendingList, selectedDayIso, selectedDayIso, lessonNum)) return
-
-    setSelectedHoursMap((prev) => ({
-      ...prev,
-      [lessonNum]: !prev[lessonNum]
-    }))
+    setSelectedHoursMap((prev) => ({ ...prev, [lessonNum]: !prev[lessonNum] }))
   }
 
   const selectedLessonsArray = useMemo(() => {
@@ -253,9 +257,10 @@ export function ManualExcuseScreen({
           .filter((num) => !isLessonJustificationPending(pendingList, dIso, dDisplay, num))
       } else {
         const matchedDay = timetableData?.schedule.find((s) => s.isoDate === dIso)
-        const candidates = matchedDay?.lessons && matchedDay.lessons.length > 0
-          ? matchedDay.lessons.map((l) => l.number)
-          : [1, 2, 3, 4, 5, 6, 7]
+        const candidates =
+          matchedDay?.lessons && matchedDay.lessons.length > 0
+            ? matchedDay.lessons.map((l) => l.number)
+            : [1, 2, 3, 4, 5, 6, 7]
         lessonNums = candidates.filter((num) => !isLessonJustificationPending(pendingList, dIso, dDisplay, num))
       }
 
@@ -270,7 +275,8 @@ export function ManualExcuseScreen({
 
   const handleClose = () => {
     onClose()
-    setTimeout(() => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    closeTimerRef.current = setTimeout(() => {
       setStatus('form')
       setProgressCurrent(0)
       setProgressTotal(0)
@@ -285,6 +291,7 @@ export function ManualExcuseScreen({
     if (modeTab === 'range' && rangePlan.totalLessons === 0) return
     if (modeTab === 'hours' && selectedLessonsArray.length === 0) return
 
+    const unknownErrorLabel = lang === 'en' ? 'Unknown error' : 'Nieznany błąd'
     const totalToSubmit =
       modeTab === 'nb'
         ? selectedNbCount
@@ -300,6 +307,32 @@ export function ManualExcuseScreen({
     const failed: Array<{ date: string; lessons: number[]; error: string }> = []
     setFailures([])
 
+    const runDaySubmission = async (dateIso: string, dateDisplay: string, lessons: number[]) => {
+      const { ok, error } = await onSubmitJustification({
+        dateFrom: dateIso,
+        dateTo: dateIso,
+        lessons,
+        message: parentMessage
+      })
+
+      if (ok) {
+        savePendingJustification({
+          dateIso,
+          dateDisplay,
+          lessons,
+          message: parentMessage
+        })
+      } else {
+        failed.push({ date: dateDisplay, lessons, error: error || unknownErrorLabel })
+      }
+
+      for (let i = 0; i < lessons.length; i++) {
+        progressCount++
+        setProgressCurrent(progressCount)
+        await new Promise((r) => setTimeout(r, 60))
+      }
+    }
+
     if (modeTab === 'nb') {
       for (const group of groupedNbDays) {
         const selectedLessons = group.lessons
@@ -310,81 +343,16 @@ export function ManualExcuseScreen({
           .map((l) => l.lessonNumber)
 
         if (selectedLessons.length > 0) {
-          const { ok, error } = await onSubmitJustification({
-            dateFrom: group.isoDate,
-            dateTo: group.isoDate,
-            lessons: selectedLessons,
-            message: parentMessage
-          })
-
-          if (ok) {
-            savePendingJustification({
-              dateIso: group.isoDate,
-              dateDisplay: group.date,
-              lessons: selectedLessons,
-              message: parentMessage
-            })
-          } else {
-            failed.push({ date: group.date, lessons: selectedLessons, error: error || 'Nieznany błąd' })
-          }
-
-          for (let i = 0; i < selectedLessons.length; i++) {
-            progressCount++
-            setProgressCurrent(progressCount)
-            await new Promise((r) => setTimeout(r, 60))
-          }
+          await runDaySubmission(group.isoDate, group.date, selectedLessons)
         }
       }
     } else if (modeTab === 'range') {
       for (const day of rangePlan.days) {
-        const { ok, error } = await onSubmitJustification({
-          dateFrom: day.dateIso,
-          dateTo: day.dateIso,
-          lessons: day.lessons,
-          message: parentMessage
-        })
-
-        if (ok) {
-          savePendingJustification({
-            dateIso: day.dateIso,
-            dateDisplay: day.dateDisplay,
-            lessons: day.lessons,
-            message: parentMessage
-          })
-        } else {
-          failed.push({ date: day.dateDisplay, lessons: day.lessons, error: error || 'Nieznany błąd' })
-        }
-
-        for (let i = 0; i < day.lessons.length; i++) {
-          progressCount++
-          setProgressCurrent(progressCount)
-          await new Promise((r) => setTimeout(r, 60))
-        }
+        await runDaySubmission(day.dateIso, day.dateDisplay, day.lessons)
       }
     } else {
       const displayDate = selectedDayIso.split('-').reverse().join('.')
-      const { ok, error } = await onSubmitJustification({
-        dateFrom: selectedDayIso,
-        dateTo: selectedDayIso,
-        lessons: selectedLessonsArray,
-        message: parentMessage
-      })
-
-      if (ok) {
-        savePendingJustification({
-          dateIso: selectedDayIso,
-          dateDisplay: displayDate,
-          lessons: selectedLessonsArray,
-          message: parentMessage
-        })
-      } else {
-        failed.push({ date: displayDate, lessons: selectedLessonsArray, error: error || 'Nieznany błąd' })
-      }
-
-      for (let i = 1; i <= selectedLessonsArray.length; i++) {
-        setProgressCurrent(i)
-        await new Promise((r) => setTimeout(r, 60))
-      }
+      await runDaySubmission(selectedDayIso, displayDate, selectedLessonsArray)
     }
 
     setFailures(failed)
@@ -395,6 +363,18 @@ export function ManualExcuseScreen({
   }
 
   const pageTitle = lang === 'en' ? 'Justifications' : 'Usprawiedliwienia'
+  const submitLabel =
+    modeTab === 'nb'
+      ? lang === 'en'
+        ? `Excuse selected (${selectedNbCount})`
+        : `Usprawiedliw zaznaczone (${selectedNbCount})`
+      : modeTab === 'range'
+        ? lang === 'en'
+          ? `Excuse range (${rangePlan.totalLessons} ${rangePlan.totalLessons === 1 ? 'period' : 'periods'})`
+          : `Usprawiedliw okres (${rangePlan.totalLessons} ${formatPolishPlural(rangePlan.totalLessons, 'lekcja', 'lekcje', 'lekcji')})`
+        : lang === 'en'
+          ? `Excuse selected (${selectedLessonsArray.length})`
+          : `Usprawiedliw zaznaczone (${selectedLessonsArray.length})`
 
   return (
     <IosScreen
@@ -428,265 +408,48 @@ export function ManualExcuseScreen({
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {modeTab === 'nb' ? (
-                <div className="flex flex-col gap-3.5">
-                  <IosCard className="p-4 flex items-center justify-between">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight">
-                        {lang === 'en' ? 'Unexcused Lessons' : 'Nieusprawiedliwione godziny'}
-                      </span>
-                      <h2 className="text-[28px] font-semibold text-[var(--ios-red)] tracking-tight leading-none mt-0.5 tabular-nums">
-                        {attendanceData.unexcusedAbsences.length} nb
-                      </h2>
-                    </div>
-
-                    {selectableNbCount > 0 ? (
-                      <button
-                        type="button"
-                        onClick={toggleSelectAllNb}
-                        className="flex items-center gap-2 py-1.5 px-3 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] active:scale-[0.96] transition-transform cursor-pointer"
-                      >
-                        <span className="text-[13px] font-medium tracking-tight">
-                          {lang === 'en' ? 'Select all' : 'Zaznacz wszystkie'}
-                        </span>
-                        <div className={cn(
-                          'w-5 h-5 rounded-full flex items-center justify-center transition-colors shrink-0',
-                          isAllNbSelected
-                            ? 'bg-[var(--ios-blue)] text-white'
-                            : 'border border-[var(--ios-separator)] bg-[var(--ios-card-solid)]'
-                        )}>
-                          {isAllNbSelected && (
-                            <svg className="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          )}
-                        </div>
-                      </button>
-                    ) : (
-                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]">
-                        {t.pendingJustification}
-                      </span>
-                    )}
-                  </IosCard>
-
-                  {groupedNbDays.length > 0 ? (
-                    groupedNbDays.map((group) => (
-                      <div key={group.date} className="flex flex-col gap-1.5">
-                        <div className="flex items-center justify-between px-4 text-[13px] text-[var(--ios-secondary)]">
-                          <span className="font-semibold tracking-tight text-[var(--ios-label)]">
-                            {group.date}
-                          </span>
-                          <span className="tabular-nums">
-                            {group.lessons.length} {lang === 'en' ? 'periods' : 'lekcji'}
-                          </span>
-                        </div>
-
-                        <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
-                          {group.lessons.map((lesson) => {
-                            const isPending = isLessonJustificationPending(
-                              pendingList,
-                              group.isoDate,
-                              group.date,
-                              lesson.lessonNumber
-                            )
-                            const key = group.date + '_' + lesson.lessonNumber
-                            const isChecked = Boolean(selectedNbMap[key]) && !isPending
-
-                            return (
-                              <div
-                                key={lesson.lessonNumber}
-                                onClick={() => !isPending && canSubmitExcuse && toggleNbLesson(group.date, lesson.lessonNumber)}
-                                className={cn(
-                                  'px-4 py-3 flex items-center justify-between gap-3 transition-colors duration-100',
-                                  isPending
-                                    ? 'opacity-50 cursor-not-allowed'
-                                    : 'cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]'
-                                )}
-                              >
-                                <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                  {isPending ? (
-                                    <div className="w-[22px] h-[22px] rounded-full bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] flex items-center justify-center shrink-0 text-[11px] font-bold">
-                                      •
-                                    </div>
-                                  ) : (
-                                    <div className={cn(
-                                      'w-[22px] h-[22px] rounded-full flex items-center justify-center transition-colors shrink-0',
-                                      isChecked
-                                        ? 'bg-[var(--ios-blue)] text-white'
-                                        : 'border border-[var(--ios-separator)] bg-[var(--bg-card-secondary)]'
-                                    )}>
-                                      {isChecked && (
-                                        <svg className="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                          <polyline points="20 6 9 17 4 12" />
-                                        </svg>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  <div className="min-w-0 flex-1">
-                                    <h4 className="text-[15px] font-medium text-[var(--ios-label)] tracking-[-0.2px] truncate leading-snug">
-                                      {formatSubjectName(lesson.subject, showFullSubjectNames)}
-                                    </h4>
-                                    <p className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-[16px] tabular-nums mt-0.5">
-                                      {t.lessonNumberLabel(lesson.lessonNumber)} {lesson.time ? '• ' + lesson.time : ''}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <span className={cn(
-                                  'text-[11px] font-semibold px-2 py-0.5 rounded-full tabular-nums',
-                                  isPending
-                                    ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
-                                    : 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
-                                )}>
-                                  {isPending ? t.pendingJustification : 'NB'}
-                                </span>
-                              </div>
-                            )
-                          })}
-                        </IosCard>
-                      </div>
-                    ))
-                  ) : (
-                    <IosCard className="p-8 text-center text-[15px] font-normal text-[var(--ios-secondary)]">
-                      {lang === 'en' ? 'All absences are excused' : 'Wszystkie nieobecności są usprawiedliwione'}
-                    </IosCard>
-                  )}
-                </div>
+                <ExcuseNbTab
+                  totalUnexcusedCount={attendanceData.unexcusedAbsences.length}
+                  groupedNbDays={groupedNbDays}
+                  selectableNbCount={selectableNbCount}
+                  isAllNbSelected={isAllNbSelected}
+                  selectedNbMap={selectedNbMap}
+                  pendingList={pendingList}
+                  canSubmitExcuse={canSubmitExcuse}
+                  showFullSubjectNames={showFullSubjectNames}
+                  onToggleSelectAll={toggleSelectAllNb}
+                  onToggleLesson={toggleNbLesson}
+                  lang={lang}
+                  t={t}
+                />
               ) : modeTab === 'range' ? (
-                <IosCard className="p-4 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[15px] font-normal text-[var(--ios-label)]">
-                      {lang === 'en' ? 'From' : 'Od dnia'}
-                    </span>
-                    <input
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => setDateFrom(e.target.value)}
-                      className="bg-[var(--ios-input)] text-[var(--ios-label)] text-[13px] font-medium px-3 py-1.5 rounded-full outline-none tabular-nums"
-                      required
-                    />
-                  </div>
-
-                  <div className="h-[1px] bg-[var(--ios-separator)]" />
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[15px] font-normal text-[var(--ios-label)]">
-                      {lang === 'en' ? 'To' : 'Do dnia'}
-                    </span>
-                    <input
-                      type="date"
-                      value={dateTo}
-                      onChange={(e) => setDateTo(e.target.value)}
-                      className="bg-[var(--ios-input)] text-[var(--ios-label)] text-[13px] font-medium px-3 py-1.5 rounded-full outline-none tabular-nums"
-                      required
-                    />
-                  </div>
-
-                  <div className="pt-1 flex items-center justify-between text-[11px] text-[var(--ios-secondary)]">
-                    <span>{rangePlan.days.length} {lang === 'en' ? 'days' : 'dni w wybranym okresie'}</span>
-                    <span className="font-medium text-[var(--ios-label)]">{rangePlan.totalLessons} {lang === 'en' ? 'periods' : 'lekcji do wysłania'}</span>
-                  </div>
-                </IosCard>
+                <ExcuseRangeTab
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  daysCount={rangePlan.days.length}
+                  totalLessons={rangePlan.totalLessons}
+                  onChangeDateFrom={setDateFrom}
+                  onChangeDateTo={setDateTo}
+                  lang={lang}
+                />
               ) : (
-                <div className="flex flex-col gap-3">
-                  <IosCard className="p-3.5 px-4 flex items-center justify-between">
-                    <span className="text-[15px] font-normal text-[var(--ios-label)]">
-                      {lang === 'en' ? 'Day' : 'Wybierz dzień'}
-                    </span>
-                    <input
-                      type="date"
-                      value={selectedDayIso}
-                      onChange={(e) => {
-                        setSelectedDayIso(e.target.value)
-                        setSelectedHoursMap({})
-                      }}
-                      className="bg-[var(--ios-input)] text-[var(--ios-label)] text-[13px] font-medium px-3 py-1.5 rounded-full outline-none tabular-nums"
-                      required
-                    />
-                  </IosCard>
-
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between px-4 pb-1.5 text-[12px] font-semibold uppercase tracking-[0.03em] text-[var(--ios-secondary)]">
-                      <span>{lang === 'en' ? 'Select lesson periods' : 'Wybierz godziny lekcyjne'}</span>
-                      <span className="tabular-nums normal-case">
-                        {selectedLessonsArray.length} {lang === 'en' ? 'selected' : 'zaznaczonych'}
-                      </span>
-                    </div>
-
-                    <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
-                      {dayLessons.map((lesson) => {
-                        const isExcused = excusedLessonNumbers.has(lesson.number)
-                        const isPending = isLessonJustificationPending(
-                          pendingList,
-                          selectedDayIso,
-                          selectedDayIso,
-                          lesson.number
-                        )
-                        const isChecked = Boolean(selectedHoursMap[lesson.number]) && !isExcused && !isPending
-                        const isBlocked = isExcused || isPending
-
-                        return (
-                          <div
-                            key={lesson.number}
-                            onClick={() => !isBlocked && canSubmitExcuse && toggleHour(lesson.number)}
-                            className={cn(
-                              'px-4 py-3 flex items-center justify-between gap-3 transition-colors duration-100',
-                              isBlocked
-                                ? 'opacity-50 cursor-not-allowed'
-                                : 'cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]'
-                            )}
-                          >
-                            <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                              {isPending ? (
-                                <div className="w-[22px] h-[22px] rounded-full bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] flex items-center justify-center shrink-0 text-[11px] font-bold">
-                                  •
-                                </div>
-                              ) : isExcused ? (
-                                <div className="w-[22px] h-[22px] rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center shrink-0 text-[11px] font-bold">
-                                  ✓
-                                </div>
-                              ) : (
-                                <div className={cn(
-                                  'w-[22px] h-[22px] rounded-full flex items-center justify-center transition-colors shrink-0',
-                                  isChecked
-                                    ? 'bg-[var(--ios-blue)] text-white'
-                                    : 'border border-[var(--ios-separator)] bg-[var(--bg-card-secondary)]'
-                                )}>
-                                  {isChecked && (
-                                    <svg className="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                      <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                  )}
-                                </div>
-                              )}
-
-                              <div className="min-w-0 flex-1">
-                                <h4 className="text-[15px] font-medium text-[var(--ios-label)] tracking-[-0.2px] truncate leading-snug">
-                                  {formatSubjectName(lesson.subject, showFullSubjectNames)}
-                                </h4>
-                                <p className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-[16px] tabular-nums mt-0.5">
-                                  {t.lessonNumberLabel(lesson.number)} {lesson.time ? '• ' + lesson.time : ''}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="shrink-0 flex items-center">
-                              {isPending ? (
-                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] tabular-nums">
-                                  {t.pendingJustification}
-                                </span>
-                              ) : isExcused ? (
-                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] tabular-nums">
-                                  usprawiedliwione
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </IosCard>
-                  </div>
-                </div>
+                <ExcuseHoursTab
+                  selectedDayIso={selectedDayIso}
+                  dayLessons={dayLessons}
+                  selectedHoursMap={selectedHoursMap}
+                  selectedCount={selectedLessonsArray.length}
+                  excusedLessonNumbers={excusedLessonNumbers}
+                  pendingList={pendingList}
+                  canSubmitExcuse={canSubmitExcuse}
+                  showFullSubjectNames={showFullSubjectNames}
+                  onChangeDayIso={(iso) => {
+                    setSelectedDayIso(iso)
+                    setSelectedHoursMap({})
+                  }}
+                  onToggleHour={toggleHour}
+                  lang={lang}
+                  t={t}
+                />
               )}
 
               <IosCard className="p-3.5 flex flex-col gap-1.5">
@@ -702,22 +465,21 @@ export function ManualExcuseScreen({
                 />
               </IosCard>
 
-              <button
+              <IosButton
                 type="submit"
+                variant="primary"
+                size="lg"
+                fullWidth
                 disabled={
                   !canSubmitExcuse ||
                   (modeTab === 'nb' && selectedNbCount === 0) ||
                   (modeTab === 'range' && rangePlan.totalLessons === 0) ||
                   (modeTab === 'hours' && selectedLessonsArray.length === 0)
                 }
-                className="h-[48px] w-full bg-[var(--ios-blue)] text-white text-[16px] font-semibold tracking-[-0.3px] rounded-full active:scale-[0.98] disabled:opacity-40 transition-all duration-150 flex items-center justify-center gap-2 mt-1 cursor-pointer"
+                className="mt-1"
               >
-                {modeTab === 'nb'
-                  ? (lang === 'en' ? 'Excuse selected (' + selectedNbCount + ')' : 'Usprawiedliw zaznaczone (' + selectedNbCount + ')')
-                  : modeTab === 'range'
-                    ? (lang === 'en' ? 'Excuse range (' + rangePlan.totalLessons + ' periods)' : 'Usprawiedliw okres (' + rangePlan.totalLessons + ' lekcji)')
-                    : (lang === 'en' ? 'Excuse selected (' + selectedLessonsArray.length + ')' : 'Usprawiedliw zaznaczone (' + selectedLessonsArray.length + ')')}
-              </button>
+                {submitLabel}
+              </IosButton>
             </form>
           </>
         )}
@@ -744,8 +506,8 @@ export function ManualExcuseScreen({
 
         {status === 'completed' && failures.length > 0 && (
           <IosCard className="p-6 flex flex-col items-center justify-center gap-4 text-center my-auto min-h-[300px]">
-            <div className="w-14 h-14 rounded-full bg-[var(--ios-red-subtle)] text-[var(--ios-red)] flex items-center justify-center text-[28px] font-bold">
-              !
+            <div className="w-14 h-14 rounded-full bg-[var(--ios-red-subtle)] text-[var(--ios-red)] flex items-center justify-center">
+              <AlertCircle className="w-7 h-7" strokeWidth={2.2} />
             </div>
             <div className="flex flex-col gap-1">
               <h3 className="text-[17px] font-medium text-[var(--ios-label)] tracking-tight">
@@ -753,8 +515,12 @@ export function ManualExcuseScreen({
               </h3>
               <p className="text-[13px] font-normal text-[var(--ios-secondary)]">
                 {lang === 'en'
-                  ? failures.length + ' day(s) rejected by Librus.'
-                  : 'Librus odrzucił ' + failures.length + ' dzień/dni.'}
+                  ? failures.length + (failures.length === 1 ? ' day rejected by Librus.' : ' days rejected by Librus.')
+                  : 'Librus odrzucił ' +
+                    failures.length +
+                    ' ' +
+                    formatPolishPlural(failures.length, 'dzień', 'dni', 'dni') +
+                    '.'}
               </p>
             </div>
             <div className="w-full flex flex-col gap-2 text-left">
@@ -767,37 +533,37 @@ export function ManualExcuseScreen({
                 </div>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={handleClose}
-              className="h-[48px] px-8 bg-[var(--ios-element)] text-[var(--ios-label)] text-[16px] font-medium tracking-tight rounded-full active:scale-[0.96] transition-transform duration-150 mt-2 cursor-pointer"
-            >
+            <IosButton variant="secondary" size="lg" onClick={handleClose} className="mt-2 px-8">
               {t.done}
-            </button>
+            </IosButton>
           </IosCard>
         )}
 
         {status === 'completed' && failures.length === 0 && (
           <IosCard className="p-8 flex flex-col items-center justify-center gap-4 text-center my-auto min-h-[300px]">
-            <div className="w-14 h-14 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center text-[26px] font-bold">
-              ✓
+            <div className="w-14 h-14 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center">
+              <Check className="w-7 h-7" strokeWidth={2.5} />
             </div>
             <div className="flex flex-col gap-1">
               <h3 className="text-[17px] font-medium text-[var(--ios-label)] tracking-tight">
                 {lang === 'en' ? 'Justification Submitted' : 'Usprawiedliwiono pomyślnie'}
               </h3>
               <p className="text-[13px] font-normal text-[var(--ios-secondary)]">
-                {lang === 'en' ? 'Sent ' + progressTotal + ' justifications to teacher.' : 'Wysłano ' + progressTotal + ' usprawiedliwień do wychowawcy.'}
+                {lang === 'en'
+                  ? 'Sent ' +
+                    progressTotal +
+                    (progressTotal === 1 ? ' justification to teacher.' : ' justifications to teacher.')
+                  : 'Wysłano ' +
+                    progressTotal +
+                    ' ' +
+                    formatPolishPlural(progressTotal, 'usprawiedliwienie', 'usprawiedliwienia', 'usprawiedliwień') +
+                    ' do wychowawcy.'}
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handleClose}
-              className="h-[48px] px-8 bg-[var(--ios-element)] text-[var(--ios-label)] text-[16px] font-medium tracking-tight rounded-full active:scale-[0.96] transition-transform duration-150 mt-2 cursor-pointer"
-            >
+            <IosButton variant="secondary" size="lg" onClick={handleClose} className="mt-2 px-8">
               {t.done}
-            </button>
+            </IosButton>
           </IosCard>
         )}
       </div>

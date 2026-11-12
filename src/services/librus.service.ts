@@ -2,6 +2,7 @@ import Librus from 'librus-api'
 
 interface CachedSession {
     client: Librus
+    password: string
     expiresAt: number
 }
 
@@ -16,7 +17,7 @@ export async function getAuthenticatedClient(username: string, pass: string): Pr
     const now = Date.now()
 
     const existing = sessionStore.get(key)
-    if (existing && existing.expiresAt > now) {
+    if (existing && existing.expiresAt > now && existing.password === cleanPass) {
         return existing.client
     }
 
@@ -36,6 +37,7 @@ export async function getAuthenticatedClient(username: string, pass: string): Pr
             ])
             sessionStore.set(key, {
                 client,
+                password: cleanPass,
                 expiresAt: Date.now() + SESSION_TTL_MS
             })
             return client

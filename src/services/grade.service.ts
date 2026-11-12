@@ -189,7 +189,10 @@ export async function fetchStudentGrades(
         for (const c of rawCategories) {
             const cId = Number(c.Id)
             const name = String(c.Name || 'Ocena').trim()
-            const weight = Number(c.Weight) || 1
+            const parsedWeight = Number(c.Weight)
+            const weight = c.Weight !== undefined && c.Weight !== null && c.Weight !== '' && !Number.isNaN(parsedWeight)
+                ? parsedWeight
+                : 1
             const countToAvg = c.CountToTheAverage !== false && c.CountToTheAverage !== '0'
             if (!isNaN(cId)) {
                 categoryMap.set(cId, { name, weight, countToAvg })
@@ -284,7 +287,7 @@ export async function fetchStudentGrades(
 
                 if (sub.finalAverage < 2.0) {
                     failingSubjectsCount++
-                    const relevantGrades = sub.semester2.length > 0 ? sub.semester2 : sub.semester1
+                    const relevantGrades = [...sub.semester1, ...sub.semester2]
                     sub.warning = generateFixOptions(relevantGrades)
                 }
             }
@@ -329,12 +332,18 @@ export async function fetchStudentGrades(
             })
         }
 
+        const toDateSortKey = (d: string) => {
+            const dot = d.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/)
+            if (dot) return `${dot[3]}-${dot[2].padStart(2, '0')}-${dot[1].padStart(2, '0')}`
+            return d
+        }
+
         return {
             success: true,
             data: {
                 subjects: subjectsList,
                 overallAverage,
-                recentGrades: recentGrades.sort((a, b) => b.date.localeCompare(a.date)),
+                recentGrades: recentGrades.sort((a, b) => toDateSortKey(b.date).localeCompare(toDateSortKey(a.date))),
                 globalWarning
             }
         }

@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react'
 import { AnnouncementItem } from '@/models/message.model'
-import { AppDictionary } from '@/config/dictionary.config'
+import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { cleanSenderName } from '@/utils/text.util'
 import { formatHumanPolishDate } from '@/utils/date.util'
 import { IosScreen } from '@/components/ios/ios-screen'
@@ -13,6 +13,7 @@ interface AnnouncementReaderScreenProps {
   isOpen: boolean
   onClose: () => void
   renderContent: (text: string) => ReactNode
+  lang?: AppLanguage
   t: AppDictionary
 }
 
@@ -21,6 +22,7 @@ export function AnnouncementReaderScreen({
   isOpen,
   onClose,
   renderContent,
+  lang = 'pl',
   t
 }: AnnouncementReaderScreenProps) {
   const hasTime = Boolean(announcement?.date && /\d{1,2}:\d{2}/.test(announcement.date))
@@ -39,16 +41,16 @@ export function AnnouncementReaderScreen({
         {announcement ? (
           <>
             <IosCard className="p-5 flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-semibold text-[var(--ios-purple)] tracking-tight">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[12px] font-semibold text-[var(--ios-purple)] tracking-tight truncate">
                   {cleanSenderName(announcement.author)}
                 </span>
-                <span className="text-[12px] font-normal text-[var(--ios-secondary)] tabular-nums">
-                  {formatHumanPolishDate(announcement.date, hasTime)}
+                <span className="text-[12px] font-normal text-[var(--ios-secondary)] tabular-nums shrink-0">
+                  {formatHumanPolishDate(announcement.date, hasTime, lang)}
                 </span>
               </div>
 
-              <h2 className="text-[19px] sm:text-[20px] font-bold text-[var(--ios-label)] tracking-tight leading-snug mt-0.5">
+              <h2 className="text-[19px] sm:text-[20px] font-bold text-[var(--ios-label)] tracking-tight leading-snug mt-0.5 break-words">
                 {announcement.title}
               </h2>
             </IosCard>

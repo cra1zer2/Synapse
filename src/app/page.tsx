@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { AlertCircle, ArrowDown, X } from 'lucide-react'
 import { createJustificationAction, getLiveJustificationsAction } from './actions'
 import { LiveJustificationItem } from '@/models/justification.model'
 import { LessonItem, TimetableEvent } from '@/models/timetable.model'
 import { SubjectAttendance } from '@/models/attendance.model'
-import { MessageItem, AnnouncementItem } from '@/models/message.model'
 import { GradeItem } from '@/models/grade.model'
 import { getDictionary, AppLanguage } from '@/config/dictionary.config'
 
@@ -14,10 +14,12 @@ import { useTimetableSync } from '@/hooks/timetable-sync.hook'
 import { useBodyScrollLock } from '@/hooks/scroll-lock.hook'
 import { useMessagesInbox } from '@/hooks/messages.hook'
 import { useAppSettings, TextClampOption, DashboardWidgetId } from '@/hooks/settings.hook'
-import { normalizeToMondayIso, formatHumanPolishDate } from '@/utils/date.util'
+import { isStudentUsername } from '@/utils/account.util'
+import { normalizeToMondayIso } from '@/utils/date.util'
 import { addRequestLog } from '@/utils/request-logger.util'
 
 import { AuthView } from '@/components/auth/auth-view'
+import { DashboardHeader } from '@/components/dashboard/dashboard-header'
 import { ScheduleWidget } from '@/components/schedule/schedule-widget'
 import { UpcomingEventsScreen } from '@/components/schedule/upcoming-events-screen'
 import { LessonDetailModal } from '@/components/schedule/lesson-detail-modal'
@@ -26,6 +28,7 @@ import { AttendanceWidget } from '@/components/attendance/attendance-widget'
 import { AttendanceDetailModal } from '@/components/attendance/attendance-detail-modal'
 import { LegacyAttendanceView } from '@/components/attendance/legacy-attendance-screen'
 import { ManualExcuseScreen } from '@/components/attendance/manual-excuse-screen'
+import { LiveJustificationsScreen } from '@/components/attendance/live-justifications-screen'
 import { GradesWidget } from '@/components/grades/grades-widget'
 import { GradeDetailModal } from '@/components/grades/grade-detail-modal'
 import { MessagesWidget } from '@/components/messages/messages-widget'
@@ -37,7 +40,7 @@ import { MiniMessagesWidget } from '@/components/dashboard/mini-messages-widget'
 import { MiniUpcomingEventsWidget } from '@/components/dashboard/mini-upcoming-events-widget'
 import { IosScreen, IOS_PARALLAX_PERCENT, IOS_PANEL_TRANSITION } from '@/components/ios/ios-screen'
 import { IosSpinner } from '@/components/ios/ios-spinner'
-import { IosCard, IosSegmentedControl } from '@/components/ios/ios-ui'
+import { IosEmptyState, IosSegmentedControl } from '@/components/ios/ios-ui'
 
 export type { TextClampOption, DashboardWidgetId }
 
@@ -50,10 +53,11 @@ export default function Home() {
     theme,
     textClamp,
     showFullSubjectNames,
-    ignoreGradeModifiers,
+    gradeModifierMode,
     allowStudentJustifications,
     enableGradeSimulator,
     showHomeworks,
+    showMobileTodayAttendance,
     dashboardOrder,
     dashboardVisible,
     showLuckyNumberBanner,
@@ -80,9 +84,6 @@ export default function Home() {
   const [showComposeInHeader, setShowComposeInHeader] = useState(false)
   const [showFullGrades, setShowFullGrades] = useState(false)
   const [isManualRefreshing, setIsManualRefreshing] = useState(false)
-
-  const [directMessageToOpen, setDirectMessageToOpen] = useState<MessageItem | null>(null)
-  const [directAnnouncementToOpen, setDirectAnnouncementToOpen] = useState<AnnouncementItem | null>(null)
   const [isMessagesSubViewOpen, setIsMessagesSubViewOpen] = useState(false)
 
   const [showLiveJustifications, setShowLiveJustifications] = useState(false)
@@ -90,8 +91,20 @@ export default function Home() {
   const [isLoadingLiveJust, setIsLoadingLiveJust] = useState(false)
   const [liveJustFilter, setLiveJustFilter] = useState<'0' | '1' | '2' | '3'>('0')
 
+  const rootScrollRef = useRef<HTMLDivElement>(null)
+  const pullStartRef = useRef<{ x: number; y: number } | null>(null)
+  const [pullDistance, setPullDistance] = useState(0)
+
+  const postSubmitSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const t = getDictionary(lang)
   const account = useAccountSession({ lang, t })
+
+  useEffect(() => {
+    return () => {
+      if (postSubmitSyncTimerRef.current) clearTimeout(postSubmitSyncTimerRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     setShowSettings(false)
@@ -107,8 +120,6 @@ export default function Home() {
     setSelectedEvent(null)
     setSelectedSubjectDetail(null)
     setSelectedGradeDetail(null)
-    setDirectMessageToOpen(null)
-    setDirectAnnouncementToOpen(null)
     setIsMessagesSubViewOpen(false)
   }, [account.username])
 
@@ -129,9 +140,10 @@ export default function Home() {
     setShowLiveJustifications(true)
     setIsLoadingLiveJust(true)
     const t0 = performance.now()
+    const logTitle = lang === 'en' ? 'Load justification statuses' : 'Pobranie statusów usprawiedliwień'
     try {
       const parentAcc = account.savedAccounts.find(
-        (a) => a.role === 'parent' || (Boolean(a.username) && !a.username.trim().toLowerCase().endsWith('u'))
+        (a) => a.role === 'parent' || (Boolean(a.username) && !isStudentUsername(a.username))
       )
       const targetUser = parentAcc ? parentAcc.username : account.username
       const targetPass = parentAcc ? parentAcc.password : account.password
@@ -140,60 +152,63 @@ export default function Home() {
       if (res.success) {
         setLiveJustifications(res.data)
         addRequestLog({
-          name: 'Pobranie statusów usprawiedliwień',
+          name: logTitle,
           clientDurationMs,
           status: 'ok',
-          details: 'Filtr: ' + status + ', Elementy: ' + res.data.length
+          details: 'Filter: ' + status + ', Items: ' + res.data.length
         })
       } else {
         addRequestLog({
-          name: 'Pobranie statusów usprawiedliwień',
+          name: logTitle,
           clientDurationMs,
           status: 'error',
           error: res.error,
-          details: 'Filtr: ' + status
+          details: 'Filter: ' + status
         })
       }
-    } catch (err: any) {
-      const clientDurationMs = Math.round(performance.now() - t0)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ''
       addRequestLog({
-        name: 'Pobranie statusów usprawiedliwień',
-        clientDurationMs,
+        name: logTitle,
+        clientDurationMs: Math.round(performance.now() - t0),
         status: 'error',
-        error: err?.message || 'Nieznany błąd',
-        details: 'Filtr: ' + status
+        error: msg || (lang === 'en' ? 'Unknown error' : 'Nieznany błąd'),
+        details: 'Filter: ' + status
       })
     } finally {
       setIsLoadingLiveJust(false)
     }
   }
 
-  const findSubjectForGrade = useCallback((grade: GradeItem): string => {
-    if (grade.subject) return grade.subject
-    if (!timetable.gradesData) return ''
-    for (const s of timetable.gradesData.subjects) {
-      if (s.semester1.some((g) => g.id === grade.id || (g.date === grade.date && g.category === grade.category && g.grade === grade.grade))) {
-        return s.subject
+  const findSubjectForGrade = useCallback(
+    (grade: GradeItem): string => {
+      if (grade.subject) return grade.subject
+      if (!timetable.gradesData) return ''
+      for (const s of timetable.gradesData.subjects) {
+        const match = (g: GradeItem) =>
+          g.id === grade.id ||
+          (g.date === grade.date && g.category === grade.category && g.grade === grade.grade)
+        if (s.semester1.some(match) || s.semester2.some(match)) {
+          return s.subject
+        }
       }
-      if (s.semester2.some((g) => g.id === grade.id || (g.date === grade.date && g.category === grade.category && g.grade === grade.grade))) {
-        return s.subject
-      }
-    }
-    return ''
-  }, [timetable.gradesData])
+      return ''
+    },
+    [timetable.gradesData]
+  )
 
   const isAnyOverlayActive = Boolean(
     showFullGrades ||
-    showFullSchedule ||
-    showFullUpcoming ||
-    showFullAttendance ||
-    showMessagesScreen ||
-    showAnnouncementsScreen ||
-    showSettings ||
-    showManualExcuse ||
-    showLiveJustifications ||
-    selectedSubjectDetail ||
-    isMessagesSubViewOpen
+      showFullSchedule ||
+      showFullUpcoming ||
+      showFullAttendance ||
+      showMessagesScreen ||
+      showAnnouncementsScreen ||
+      showSettings ||
+      showManualExcuse ||
+      showLiveJustifications ||
+      selectedSubjectDetail ||
+      isMessagesSubViewOpen
   )
 
   const isAnySheetActive = Boolean(selectedLesson || selectedEvent || selectedGradeDetail)
@@ -204,8 +219,7 @@ export default function Home() {
     if (typeof window === 'undefined') return
     const handleDeepLinking = () => {
       try {
-        const params = new URLSearchParams(window.location.search)
-        const tab = params.get('tab')
+        const tab = new URLSearchParams(window.location.search).get('tab')
         if (tab === 'grades') setShowFullGrades(true)
         else if (tab === 'messages') setShowMessagesScreen(true)
         else if (tab === 'schedule') setShowFullSchedule(true)
@@ -239,14 +253,52 @@ export default function Home() {
     }
   }
 
-  const postSubmitSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleRootTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (isDesktop || isAnyOverlayActive || isAnySheetActive || isManualRefreshing || timetable.isUpdating) {
+      pullStartRef.current = null
+      return
+    }
+    const scrollTop = rootScrollRef.current?.scrollTop ?? 0
+    if (scrollTop <= 0) {
+      pullStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    } else {
+      pullStartRef.current = null
+    }
+  }
+
+  const handleRootTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!pullStartRef.current) return
+    const scrollTop = rootScrollRef.current?.scrollTop ?? 0
+    if (scrollTop > 0) {
+      pullStartRef.current = null
+      if (pullDistance > 0) setPullDistance(0)
+      return
+    }
+    const dy = e.touches[0].clientY - pullStartRef.current.y
+    const dx = Math.abs(e.touches[0].clientX - pullStartRef.current.x)
+    if (dx > dy) {
+      pullStartRef.current = null
+      if (pullDistance > 0) setPullDistance(0)
+      return
+    }
+    if (dy > 8) {
+      setPullDistance(Math.min(78, Math.round((dy - 8) * 0.42)))
+    }
+  }
+
+  const handleRootTouchEnd = () => {
+    if (pullDistance >= 54) {
+      handleManualRefresh()
+    }
+    pullStartRef.current = null
+    setPullDistance(0)
+  }
 
   const isCurrentStudent = (() => {
     const role = account.activeAccount?.role || account.profile?.role
     if (role === 'parent') return false
     if (role === 'student') return true
-    const user = String(account.activeAccount?.username || account.username || '').trim().toLowerCase()
-    return user.endsWith('u') || user.includes('u')
+    return isStudentUsername(account.activeAccount?.username || account.username)
   })()
 
   const canSubmitExcuse = isCurrentStudent ? allowStudentJustifications : true
@@ -260,17 +312,14 @@ export default function Home() {
   }): Promise<{ ok: boolean; error?: string }> => {
     try {
       const parentAcc = account.savedAccounts.find(
-        (a) => a.role === 'parent' || (Boolean(a.username) && !a.username.trim().toLowerCase().endsWith('u'))
+        (a) => a.role === 'parent' || (Boolean(a.username) && !isStudentUsername(a.username))
       )
       const targetUser = parentAcc ? parentAcc.username : account.username
       const targetPass = parentAcc ? parentAcc.password : account.password
 
-      const from = payload.dateFrom || payload.dateIso || ''
-      const to = payload.dateTo || payload.dateIso || ''
-
       const res = await createJustificationAction(targetUser, targetPass, {
-        dateFrom: from,
-        dateTo: to,
+        dateFrom: payload.dateFrom || payload.dateIso || '',
+        dateTo: payload.dateTo || payload.dateIso || '',
         lessons: payload.lessons,
         messageFromParent: payload.message,
         sendNotify: false
@@ -283,9 +332,12 @@ export default function Home() {
         }, 800)
         return { ok: true }
       }
-      return { ok: false, error: res.error || 'Błąd wysyłania usprawiedliwienia' }
-    } catch (err: any) {
-      return { ok: false, error: String(err?.message || err) }
+      return {
+        ok: false,
+        error: res.error || (lang === 'en' ? 'Failed to send justification' : 'Błąd wysyłania usprawiedliwienia')
+      }
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
   }
 
@@ -321,8 +373,8 @@ export default function Home() {
         return (
           <MiniScheduleWidget
             key="schedule"
-            timetableData={isManualRefreshing ? null : activeTodayData}
-            isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
+            timetableData={activeTodayData}
+            isLoading={timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError}
             error={timetable.timetableError}
             onRetry={handleManualRefresh}
             textClamp={textClamp}
@@ -338,9 +390,7 @@ export default function Home() {
                   timetable.queueWeekChange(targetMonday)
                 }
               }
-              if (targetDay) {
-                timetable.setSelectedDay(targetDay)
-              }
+              if (targetDay) timetable.setSelectedDay(targetDay)
               setShowFullSchedule(true)
             }}
           />
@@ -349,24 +399,26 @@ export default function Home() {
         return (
           <MiniGradesWidget
             key="grades"
-            gradesData={isManualRefreshing ? null : timetable.gradesData}
-            ignoreGradeModifiers={ignoreGradeModifiers}
-            isLoading={isManualRefreshing || (!timetable.gradesData && timetable.isUpdating && !timetable.gradesError)}
+            gradesData={timetable.gradesData}
+            gradeModifierMode={gradeModifierMode}
+            isLoading={!timetable.gradesData && timetable.isUpdating && !timetable.gradesError}
             error={timetable.gradesError}
             onRetry={handleManualRefresh}
             lang={lang}
             t={t}
             isDesktop={desktopMode}
             onOpenGrades={() => setShowFullGrades(true)}
-            onSelectGrade={(g) => setSelectedGradeDetail({ grade: g, subject: desktopMode ? findSubjectForGrade(g) : (g.subject || '') })}
+            onSelectGrade={(g) =>
+              setSelectedGradeDetail({ grade: g, subject: desktopMode ? findSubjectForGrade(g) : g.subject || '' })
+            }
           />
         )
       case 'upcoming':
         return (
           <MiniUpcomingEventsWidget
             key="upcoming"
-            timetableData={isManualRefreshing ? null : (activeTodayData || timetable.timetableData)}
-            isLoading={isManualRefreshing || (timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError)}
+            timetableData={activeTodayData || timetable.timetableData}
+            isLoading={timetable.isLoadingWeek && !activeTodayData && !timetable.timetableError}
             showHomeworks={showHomeworks}
             showFullSubjectNames={showFullSubjectNames}
             lang={lang}
@@ -380,14 +432,15 @@ export default function Home() {
         return (
           <MiniAttendanceWidget
             key="attendance"
-            attendanceData={isManualRefreshing ? null : timetable.attendanceData}
-            timetableData={isManualRefreshing ? null : activeTodayData}
-            isLoading={isManualRefreshing || (!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError)}
+            attendanceData={timetable.attendanceData}
+            timetableData={activeTodayData}
+            isLoading={!timetable.attendanceData && timetable.isUpdating && !timetable.attendanceError}
             error={timetable.attendanceError}
             onRetry={handleManualRefresh}
             lang={lang}
             t={t}
             isDesktop={desktopMode}
+            showTodayLine={desktopMode || showMobileTodayAttendance}
             onOpenAttendance={() => {
               setAttendanceViewTab('summary')
               setShowFullAttendance(true)
@@ -404,21 +457,16 @@ export default function Home() {
             key="messages"
             unreadCount={messagesInbox.messages.filter((m) => !m.isRead).length}
             announcementsCount={messagesInbox.announcements.length}
-            isLoading={isManualRefreshing || (messagesInbox.isLoadingMessages && messagesInbox.messages.length === 0 && messagesInbox.announcements.length === 0 && !messagesInbox.messagesError)}
+            isLoading={
+              messagesInbox.isLoadingMessages &&
+              messagesInbox.messages.length === 0 &&
+              messagesInbox.announcements.length === 0 &&
+              !messagesInbox.messagesError
+            }
             error={messagesInbox.messagesError}
             onRetry={messagesInbox.reloadMessages}
             lang={lang}
             t={t}
-            latestMessage={messagesInbox.messages[0] || null}
-            latestAnnouncement={messagesInbox.announcements[0] || null}
-            onOpenMessageDetail={(msg) => {
-              setDirectMessageToOpen(msg)
-              setShowMessagesScreen(true)
-            }}
-            onOpenAnnouncementDetail={(ann) => {
-              setDirectAnnouncementToOpen(ann)
-              setShowAnnouncementsScreen(true)
-            }}
             onOpenMessages={() => setShowMessagesScreen(true)}
             onOpenAnnouncements={() => setShowAnnouncementsScreen(true)}
           />
@@ -435,13 +483,38 @@ export default function Home() {
     ? nonScheduleDesktopIds
     : nonScheduleDesktopIds.filter((_, idx) => idx % 2 === 1)
 
+  const renderLoadingOrError = (err: string | null) =>
+    err ? (
+      <IosEmptyState
+        iconTone="red"
+        icon={<AlertCircle className="w-[22px] h-[22px]" strokeWidth={2} />}
+        title={err}
+        action={{
+          label: t.refresh,
+          onClick: handleManualRefresh
+        }}
+        className="my-12"
+      />
+    ) : (
+      <div className="py-24 flex flex-col items-center justify-center gap-3">
+        <IosSpinner size="large" className="text-[var(--ios-blue)]" />
+        <span className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-tight">
+          {t.loadingTimetable}
+        </span>
+      </div>
+    )
+
   return (
     <div className="w-full min-h-screen bg-[var(--ios-bg)] relative overflow-x-hidden">
       <div
+        ref={rootScrollRef}
         data-ios-root-panel="true"
-        className="fixed inset-0 w-screen h-[100dvh] overflow-y-auto overscroll-contain touch-pan-y block md:relative md:inset-auto md:w-full md:h-auto md:min-h-screen md:overflow-visible md:flex md:flex-col bg-[var(--ios-bg)] ios-app-entrance"
+        onTouchStart={handleRootTouchStart}
+        onTouchMove={handleRootTouchMove}
+        onTouchEnd={handleRootTouchEnd}
+        className="fixed inset-0 w-full overflow-y-auto overscroll-contain touch-pan-y block md:relative md:inset-auto md:w-full md:h-auto md:min-h-screen md:overflow-visible md:flex md:flex-col bg-[var(--ios-bg)] ios-app-entrance"
         style={{
-          transform: (!isDesktop && isAnyOverlayActive) ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'translate3d(0, 0, 0)',
+          transform: !isDesktop && isAnyOverlayActive ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'translate3d(0, 0, 0)',
           WebkitBackfaceVisibility: 'hidden',
           backfaceVisibility: 'hidden',
           transition: IOS_PANEL_TRANSITION,
@@ -449,125 +522,44 @@ export default function Home() {
           willChange: 'transform'
         }}
       >
-        <header className="ios-header md:hidden">
-          <div className="relative flex items-center justify-between w-full max-w-[480px] mx-auto h-[44px]">
-            <div className="z-10 flex items-center min-w-[70px] h-full">
-              <div className="relative w-9 h-9 flex items-center justify-center">
-                <div className={'absolute inset-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none ' + ((timetable.isUpdating || isManualRefreshing) ? 'opacity-100' : 'opacity-0')}>
-                  <IosSpinner size="small" className="text-[var(--ios-secondary)]" />
-                </div>
+        <DashboardHeader
+          profile={account.profile}
+          username={account.username}
+          isUpdating={timetable.isUpdating}
+          isManualRefreshing={isManualRefreshing}
+          lastSyncedAt={timetable.lastSyncedAt}
+          onRefresh={handleManualRefresh}
+          onOpenSettings={() => setShowSettings(true)}
+          t={t}
+        />
 
-                <button
-                  type="button"
-                  onClick={handleManualRefresh}
-                  disabled={timetable.isUpdating || isManualRefreshing}
-                  className={'w-9 h-9 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:opacity-60 transition-all duration-300 select-none ' + ((timetable.isUpdating || isManualRefreshing) ? 'opacity-0 pointer-events-none scale-90' : 'opacity-100 scale-100 cursor-pointer')}
-                  aria-label="Refresh"
-                >
-                  <svg width="17" height="17" className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                    <path d="M21 3v5h-5" />
-                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                    <path d="M3 21v-5h5" />
-                  </svg>
-                </button>
-              </div>
+        <main className="w-full min-h-full md:min-h-0 md:flex-1 pt-3 md:pt-5 pb-32 px-4 md:px-5 max-w-[480px] md:max-w-[860px] mx-auto flex flex-col gap-3.5 md:gap-4 box-border">
+          {(pullDistance > 0 || isManualRefreshing) && !isDesktop && (
+            <div
+              style={{ height: (isManualRefreshing ? 36 : Math.min(48, pullDistance * 0.65)) + 'px' }}
+              className="flex items-center justify-center gap-2 overflow-hidden transition-[height] duration-150 select-none md:hidden"
+            >
+              {isManualRefreshing ? (
+                <IosSpinner size="small" className="text-[var(--ios-blue)]" />
+              ) : (
+                <ArrowDown
+                  className={
+                    'w-4 h-4 text-[var(--ios-secondary)] transition-transform duration-150 ' +
+                    (pullDistance >= 54 ? 'rotate-180 text-[var(--ios-blue)]' : '')
+                  }
+                  strokeWidth={2.2}
+                />
+              )}
+              <span className="text-[12px] font-medium text-[var(--ios-secondary)]">
+                {isManualRefreshing
+                  ? t.updatingStatus
+                  : pullDistance >= 54
+                    ? t.releaseToRefreshHint
+                    : t.pullToRefreshHint}
+              </span>
             </div>
+          )}
 
-            <h2 className="absolute inset-0 flex items-center justify-center text-[17px] font-semibold tracking-[-0.4px] leading-none text-[var(--ios-label)] pointer-events-none px-20 truncate text-center">
-              Synapse
-            </h2>
-
-            <div className="z-10 min-w-[70px] flex items-center justify-end h-full">
-              <button
-                type="button"
-                onClick={() => setShowSettings(true)}
-                className="w-9 h-9 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:opacity-60 transition-opacity cursor-pointer"
-                aria-label="Settings"
-              >
-                <svg width="19" height="19" className="w-[19px] h-[19px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <header style={{ backgroundColor: "var(--ios-header-bg)", WebkitBackdropFilter: "saturate(190%) blur(24px)", backdropFilter: "saturate(190%) blur(24px)" }} className="hidden md:block sticky top-0 z-30 w-full border-b border-[var(--ios-separator)] select-none">
-          <div className="relative flex items-center justify-between w-full max-w-[860px] mx-auto px-5 h-[52px]">
-            <div className="flex items-center gap-2 min-w-0 z-10">
-              <button
-                type="button"
-                onClick={() => setShowSettings(true)}
-                className="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--ios-card-solid)] hover:opacity-85 active:scale-[0.97] transition-all cursor-pointer"
-                title={t.settingsTitle}
-              >
-                <span className="text-[13px] font-medium text-[var(--ios-label)] truncate max-w-[180px]">
-                  {account.profile?.fullName && account.profile.fullName !== 'Konto Librus'
-                    ? account.profile.fullName
-                    : (account.username || t.settingsTitle)}
-                </span>
-                {account.profile?.className && (
-                  <span className="text-[12px] font-normal text-[var(--ios-secondary)]">
-                    {account.profile.className}
-                  </span>
-                )}
-                {account.profile?.luckyNumber !== null && account.profile?.luckyNumber !== undefined && (
-                  <span className="text-[11px] font-semibold text-[var(--ios-blue)] bg-[var(--ios-blue-subtle)] px-2 py-0.5 rounded-full tabular-nums" title={t.luckyNumber}>
-                    #{account.profile.luckyNumber}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            <h1 className="absolute inset-0 flex items-center justify-center text-[17px] font-semibold tracking-[-0.4px] text-[var(--ios-label)] pointer-events-none">
-              Synapse
-            </h1>
-
-            <div className="flex items-center gap-2 z-10">
-              <div className="flex items-center gap-1.5 text-[12px] text-[var(--ios-secondary)] font-normal pr-1">
-                <div className={'w-3.5 h-3.5 flex items-center justify-center transition-opacity duration-300 ' + ((timetable.isUpdating || isManualRefreshing) ? 'opacity-100' : 'opacity-0')}>
-                  <IosSpinner size="small" className="text-[var(--ios-secondary)]" />
-                </div>
-                <span className="tabular-nums hidden lg:inline">
-                  {timetable.isUpdating || isManualRefreshing ? t.updatingStatus : t.syncedStatus}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleManualRefresh}
-                disabled={timetable.isUpdating || isManualRefreshing}
-                className="w-8 h-8 rounded-full bg-[var(--ios-element)] hover:opacity-80 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-[0.94] transition-all flex items-center justify-center cursor-pointer select-none"
-                title={t.refresh}
-                aria-label="Refresh"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                  <path d="M21 3v5h-5" />
-                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                  <path d="M3 21v-5h5" />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowSettings(true)}
-                className="w-8 h-8 rounded-full bg-[var(--ios-element)] hover:opacity-80 text-[var(--ios-secondary)] hover:text-[var(--ios-label)] active:scale-[0.94] transition-all flex items-center justify-center cursor-pointer select-none"
-                title={t.settingsTitle}
-                aria-label="Settings"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <main className="w-full min-h-[calc(100dvh+1px)] md:min-h-0 md:flex-1 pt-3 md:pt-5 pb-32 px-4 md:px-5 max-w-[480px] md:max-w-[860px] mx-auto flex flex-col gap-3.5 md:gap-4 box-border">
           {showLuckyNumberBanner &&
             account.profile?.luckyNumber !== null &&
             account.profile?.luckyNumber !== undefined &&
@@ -593,23 +585,16 @@ export default function Home() {
                   type="button"
                   onClick={settings.handleDismissLuckyBanner}
                   className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer"
-                  aria-label="Zamknij"
+                  aria-label={t.closeLabel}
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
+                  <X className="w-3.5 h-3.5" strokeWidth={2.4} />
                 </button>
               </div>
             )}
 
           <div className="hidden md:grid md:grid-cols-2 gap-4 items-start w-full">
-            <div className="flex flex-col gap-4 w-full">
-              {leftDesktopIds.map((id) => renderWidget(id, true))}
-            </div>
-            <div className="flex flex-col gap-4 w-full">
-              {rightDesktopIds.map((id) => renderWidget(id, true))}
-            </div>
+            <div className="flex flex-col gap-4 w-full">{leftDesktopIds.map((id) => renderWidget(id, true))}</div>
+            <div className="flex flex-col gap-4 w-full">{rightDesktopIds.map((id) => renderWidget(id, true))}</div>
           </div>
 
           <div className="flex md:hidden flex-col gap-3.5 w-full">
@@ -634,32 +619,14 @@ export default function Home() {
           <GradesWidget
             gradesData={timetable.gradesData}
             showFullSubjectNames={showFullSubjectNames}
-            ignoreGradeModifiers={ignoreGradeModifiers}
+            gradeModifierMode={gradeModifierMode}
             enableGradeSimulator={enableGradeSimulator}
             lang={lang}
             t={t}
             onSelectGrade={(grade, subject) => setSelectedGradeDetail({ grade, subject })}
           />
-        ) : timetable.gradesError ? (
-          <div className="py-24 flex flex-col items-center justify-center gap-3 px-6 text-center">
-            <span className="text-[15px] font-normal text-[var(--ios-red)] tracking-tight">
-              {timetable.gradesError}
-            </span>
-            <button
-              type="button"
-              onClick={handleManualRefresh}
-              className="text-[14px] font-medium text-[var(--ios-blue)] active:opacity-60 cursor-pointer"
-            >
-              {t.refresh}
-            </button>
-          </div>
         ) : (
-          <div className="py-24 flex flex-col items-center justify-center gap-3">
-            <IosSpinner size="large" className="text-[var(--ios-blue)]" />
-            <span className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-tight">
-              {t.loadingTimetable}
-            </span>
-          </div>
+          renderLoadingOrError(timetable.gradesError)
         )}
       </IosScreen>
 
@@ -687,26 +654,8 @@ export default function Home() {
             lang={lang}
             t={t}
           />
-        ) : timetable.timetableError ? (
-          <div className="py-24 flex flex-col items-center justify-center gap-3 px-6 text-center">
-            <span className="text-[15px] font-normal text-[var(--ios-red)] tracking-tight">
-              {timetable.timetableError}
-            </span>
-            <button
-              type="button"
-              onClick={handleManualRefresh}
-              className="text-[14px] font-medium text-[var(--ios-blue)] active:opacity-60 cursor-pointer"
-            >
-              {t.refresh}
-            </button>
-          </div>
         ) : (
-          <div className="py-24 flex flex-col items-center justify-center gap-3">
-            <IosSpinner size="large" className="text-[var(--ios-blue)]" />
-            <span className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-tight">
-              {t.loadingTimetable}
-            </span>
-          </div>
+          renderLoadingOrError(timetable.timetableError)
         )}
       </IosScreen>
 
@@ -794,6 +743,7 @@ export default function Home() {
         gradeDetail={selectedGradeDetail}
         isOpen={Boolean(selectedGradeDetail)}
         onClose={() => setSelectedGradeDetail(null)}
+        lang={lang}
         t={t}
       />
 
@@ -801,6 +751,7 @@ export default function Home() {
         lesson={selectedLesson}
         onClose={() => setSelectedLesson(null)}
         isToday={Boolean(currentDaySchedule?.isToday)}
+        lang={lang}
         t={t}
       />
 
@@ -808,6 +759,7 @@ export default function Home() {
         event={selectedEvent}
         isOpen={Boolean(selectedEvent)}
         onClose={() => setSelectedEvent(null)}
+        lang={lang}
         t={t}
       />
 
@@ -840,7 +792,6 @@ export default function Home() {
           setShowMessagesScreen(false)
           setIsMessagesSubViewOpen(false)
           setShowComposeInHeader(false)
-          setDirectMessageToOpen(null)
           if (typeof window !== 'undefined' && window.location.search.includes('tab=messages')) {
             window.history.replaceState({}, '', window.location.pathname)
           }
@@ -853,9 +804,9 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setShowComposeInHeader(true)}
-            className="text-[var(--ios-blue)] text-[17px] font-normal leading-none active:opacity-60 select-none h-full flex items-center pl-2 cursor-pointer"
+            className="text-[var(--ios-blue)] text-[16px] font-normal leading-none active:opacity-60 select-none h-full flex items-center pl-2 cursor-pointer"
           >
-            {t.writeNewMessage || 'Napisz'}
+            {t.writeNewMessage}
           </button>
         }
       >
@@ -880,12 +831,12 @@ export default function Home() {
             onCloseCompose={() => setShowComposeInHeader(false)}
             onLoadReceivers={messagesInbox.ensureReceivers}
             onOpenMessage={messagesInbox.handleOpenMessage}
+            onMarkMessageRead={messagesInbox.markMessageLocal}
             onDownloadAttachment={messagesInbox.handleDownloadAttachment}
             onSendMessage={messagesInbox.handleSendMessage}
             isLoading={messagesInbox.isLoadingMessages}
             lang={lang}
             t={t}
-            initialSelectedMessage={directMessageToOpen}
             onSubViewChange={setIsMessagesSubViewOpen}
           />
         </div>
@@ -896,7 +847,6 @@ export default function Home() {
         onClose={() => {
           setShowAnnouncementsScreen(false)
           setIsMessagesSubViewOpen(false)
-          setDirectAnnouncementToOpen(null)
         }}
         title={t.messagesAnnouncements}
         backLabel={t.backAction}
@@ -909,97 +859,26 @@ export default function Home() {
           announcements={messagesInbox.announcements}
           receivers={messagesInbox.receivers}
           onOpenMessage={messagesInbox.handleOpenMessage}
+          onMarkMessageRead={messagesInbox.markMessageLocal}
           onSendMessage={messagesInbox.handleSendMessage}
           isLoading={messagesInbox.isLoadingMessages}
           lang={lang}
           t={t}
-          initialSelectedAnnouncement={directAnnouncementToOpen}
           onSubViewChange={setIsMessagesSubViewOpen}
         />
       </IosScreen>
 
-      <IosScreen
+      <LiveJustificationsScreen
         isOpen={showLiveJustifications}
         onClose={() => setShowLiveJustifications(false)}
-        title={lang === 'en' ? 'Justification statuses' : 'Statusy usprawiedliwień'}
-        backLabel={t.backAction}
-        showBackButton={true}
-        isSubView={true}
-        className="z-[75]"
-        trailing={
-          <button
-            type="button"
-            onClick={() => handleOpenLiveJustifications(liveJustFilter)}
-            className="text-[var(--ios-blue)] text-[17px] font-normal leading-none active:opacity-60 select-none h-full flex items-center cursor-pointer"
-          >
-            {t.refresh}
-          </button>
-        }
-      >
-        <div className="flex flex-col gap-3.5 pb-16 select-none w-full">
-          <IosSegmentedControl<'0' | '1' | '2' | '3'>
-            value={liveJustFilter}
-            onChange={(id) => handleOpenLiveJustifications(id)}
-            options={[
-              { id: '0', label: lang === 'en' ? 'All' : 'Wszystkie' },
-              { id: '1', label: lang === 'en' ? 'Sent' : 'Wysłane' },
-              { id: '2', label: lang === 'en' ? 'Accepted' : 'Przyjęte' },
-              { id: '3', label: lang === 'en' ? 'Rejected' : 'Odrzucone' }
-            ]}
-          />
-
-          {isLoadingLiveJust ? (
-            <div className="py-24 flex flex-col items-center justify-center gap-3">
-              <IosSpinner size="large" className="text-[var(--ios-blue)]" />
-              <span className="text-[13px] font-normal text-[var(--ios-secondary)]">Wczytywanie historii z Synergii...</span>
-            </div>
-          ) : liveJustifications.length > 0 ? (
-            <div className="flex flex-col gap-2.5">
-              {liveJustifications.map((item) => (
-                <IosCard key={item.id} className="p-4 flex flex-col gap-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[15px] font-semibold text-[var(--ios-label)] leading-snug">
-                        {item.periodStr}
-                      </span>
-                      <span className="text-[12px] font-normal text-[var(--ios-secondary)] mt-0.5">
-                        {item.count} {item.count === 1 ? 'nieobecność' : 'nieobecności'} • Wysłano: {formatHumanPolishDate(item.sentAt, true)}
-                      </span>
-                    </div>
-
-                    <span className={'text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 ' + (
-                      item.statusCode === 'accepted'
-                        ? 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
-                        : item.statusCode === 'rejected'
-                        ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
-                        : 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
-                    )}>
-                      {item.statusCode === 'accepted' ? 'Przyjęte' : item.statusCode === 'rejected' ? 'Odrzucone' : 'Oczekuje'}
-                    </span>
-                  </div>
-
-                  {item.comment && (
-                    <div className="bg-[var(--bg-card-secondary)] p-3 rounded-[16px] text-[13px] text-[var(--ios-label)]">
-                      <span className="text-[var(--ios-secondary)]">Uzasadnienie: </span>{item.comment}
-                    </div>
-                  )}
-
-                  {item.teacher && (
-                    <div className="text-[12px] text-[var(--ios-secondary)] flex items-center justify-between pt-1.5 border-t border-[var(--ios-separator)]">
-                      <span>Wychowawca:</span>
-                      <span className="text-[var(--ios-label)] font-medium">{item.teacher}</span>
-                    </div>
-                  )}
-                </IosCard>
-              ))}
-            </div>
-          ) : (
-            <IosCard className="p-8 text-center text-[15px] font-normal text-[var(--ios-secondary)]">
-              Brak wpisów dla wybranego filtra
-            </IosCard>
-          )}
-        </div>
-      </IosScreen>
+        isLoading={isLoadingLiveJust}
+        filter={liveJustFilter}
+        onChangeFilter={(id) => handleOpenLiveJustifications(id)}
+        onRefresh={() => handleOpenLiveJustifications(liveJustFilter)}
+        items={liveJustifications}
+        lang={lang}
+        t={t}
+      />
 
       <SettingsSheet
         isOpen={showSettings}
@@ -1024,12 +903,12 @@ export default function Home() {
         onSelectLang={onLanguageChange}
         currentTheme={theme}
         onSelectTheme={settings.handleSelectTheme}
-        textClamp={textClamp}
-        onSelectTextClamp={settings.handleSelectTextClamp}
         showFullSubjectNames={showFullSubjectNames}
         onToggleShowFullSubjectNames={settings.handleToggleShowFullSubjectNames}
-        ignoreGradeModifiers={ignoreGradeModifiers}
-        onToggleIgnoreGradeModifiers={settings.handleToggleIgnoreGradeModifiers}
+        showMobileTodayAttendance={showMobileTodayAttendance}
+        onToggleMobileTodayAttendance={settings.handleToggleMobileTodayAttendance}
+        gradeModifierMode={gradeModifierMode}
+        onSelectGradeModifierMode={settings.handleSelectGradeModifierMode}
         enableGradeSimulator={enableGradeSimulator}
         onToggleEnableGradeSimulator={settings.handleToggleEnableGradeSimulator}
         showHomeworks={showHomeworks}

@@ -15,7 +15,15 @@ export function useMessagesInbox({ username, password }: { username: string; pas
     const [messagesError, setMessagesError] = useState<string | null>(null)
 
     useEffect(() => {
-        if (!username || !password) return
+        if (!username || !password) {
+            setMessages([])
+            setSentMessages([])
+            setAnnouncements([])
+            setReceivers([])
+            setMessagesError(null)
+            setIsLoadingMessages(false)
+            return
+        }
 
         const cacheKey = `synapse_msg_${username}`
         const cached = localStorage.getItem(cacheKey)
@@ -120,6 +128,35 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         return receivers
     }, [username, password, receivers])
 
+    const markMessageLocal = useCallback(
+        (
+            msgId: number | string,
+            folder: 'inbox' | 'sent',
+            content?: string,
+            attachments?: MessageAttachment[]
+        ) => {
+            const idNum = Number(msgId)
+            const updater = (prev: MessageItem[]) =>
+                prev.map((m) =>
+                    Number(m.id) === idNum
+                        ? {
+                              ...m,
+                              isRead: true,
+                              ...(content !== undefined ? { content } : {}),
+                              ...(attachments !== undefined ? { attachments } : {})
+                          }
+                        : m
+                )
+
+            if (folder === 'inbox') {
+                setMessages(updater)
+            } else {
+                setSentMessages(updater)
+            }
+        },
+        []
+    )
+
     const handleOpenMessage = async (
         msgId: number | string,
         folder: 'inbox' | 'sent' = 'inbox'
@@ -154,10 +191,12 @@ export function useMessagesInbox({ username, password }: { username: string; pas
             error: res.error,
             details: `Folder: ${folder}, Załączników: ${res.attachments?.length || 0}`
         })
-        return {
-            content: res.content || '',
-            attachments: res.attachments || []
+        const content = res.content || ''
+        const attachments = res.attachments || []
+        if (content || attachments.length > 0) {
+            markMessageLocal(idNum, folder, content, attachments)
         }
+        return { content, attachments }
     }
 
     const handleDownloadAttachment = async (att: MessageAttachment): Promise<boolean> => {
@@ -191,7 +230,7 @@ export function useMessagesInbox({ username, password }: { username: string; pas
             document.body.appendChild(a)
             a.click()
             document.body.removeChild(a)
-            setTimeout(() => URL.revokeObjectURL(url), 10000)
+            setTimeout(() => URL.revokeObjectURL(url), 30000)
             return true
         } catch {
             return false
@@ -267,6 +306,7 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         isLoadingMessages,
         messagesError,
         handleOpenMessage,
+        markMessageLocal,
         handleDownloadAttachment,
         handleSendMessage,
         reloadMessages

@@ -5,6 +5,9 @@ import { cn } from '@/utils/cn.util'
 
 export { IosCell } from './ios-list'
 export { IosBadge } from './ios-badge'
+export { IosButton, IosIconButton, IosBackButton } from './ios-button'
+export { IosAlert } from './ios-alert'
+export { IosEmptyState } from './ios-empty-state'
 
 export function IosCard({
   children,
@@ -44,17 +47,22 @@ export function IosSegmentedControl<T extends string | number>({
   options: IosSegmentOption<T>[]
   value: T
   onChange: (value: T) => void
-  size?: 'compact' | 'regular'
+  size?: 'compact' | 'regular' | 'large'
   className?: string
 }) {
   const activeIndex = Math.max(0, options.findIndex((o) => o.id === value))
   const count = Math.max(options.length, 1)
-  const heightClass = size === 'compact' ? 'h-[32px]' : 'h-[36px]'
+  const heightClass =
+    size === 'compact'
+      ? 'h-[32px] p-[3px]'
+      : size === 'large'
+        ? 'h-[46px] p-[4px]'
+        : 'h-[36px] p-[3px]'
 
   return (
     <div
       className={cn(
-        'relative bg-[var(--ios-segmented-track)] p-[3px] rounded-full flex items-center select-none',
+        'relative bg-[var(--ios-segmented-track)] rounded-full flex items-center select-none',
         heightClass,
         className
       )}
@@ -63,7 +71,8 @@ export function IosSegmentedControl<T extends string | number>({
         className="pointer-events-none absolute top-[3px] bottom-[3px] left-[3px] rounded-full bg-[var(--ios-segmented-thumb)] transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform"
         style={{
           width: 'calc((100% - 6px) / ' + count + ')',
-          transform: 'translate3d(' + (activeIndex * 100) + '%, 0, 0)'
+          transform: 'translate3d(' + (activeIndex * 100) + '%, 0, 0)',
+          boxShadow: 'var(--ios-segmented-shadow)'
         }}
       />
       {options.map((opt) => {
@@ -91,7 +100,7 @@ export function IosSegmentedControl<T extends string | number>({
 export function IosSearchBar({
   value,
   onChange,
-  placeholder = 'Szukaj...',
+  placeholder = 'Search...',
   className = ''
 }: {
   value: string
@@ -102,7 +111,7 @@ export function IosSearchBar({
   return (
     <div
       className={cn(
-        'w-full h-[42px] bg-[var(--ios-element)] rounded-full px-4 flex items-center gap-2.5 select-none',
+        'w-full h-[42px] bg-[var(--ios-element)] border border-[var(--ios-card-border)] rounded-full px-4 flex items-center gap-2.5 select-none',
         className
       )}
     >
@@ -149,11 +158,13 @@ export function IosSearchBar({
 export function IosBreakDivider({
   minutes,
   isCountdown = false,
-  countdownText
+  countdownText,
+  label = 'Przerwa'
 }: {
   minutes: number
   isCountdown?: boolean
   countdownText?: string
+  label?: string
 }) {
   return (
     <div className="w-full flex items-center gap-3 px-4 py-1">
@@ -166,7 +177,11 @@ export function IosBreakDivider({
             : 'text-[var(--ios-tertiary)] px-1'
         )}
       >
-        {isCountdown && countdownText ? countdownText : minutes > 0 ? 'Przerwa ' + minutes + ' min' : 'Przerwa'}
+        {isCountdown && countdownText
+          ? countdownText
+          : minutes > 0
+            ? label + ' ' + minutes + ' min'
+            : label}
       </span>
       <div className="h-[0.5px] flex-1 bg-[var(--ios-separator)]" />
     </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { AppLanguage, AppDictionary } from '@/config/dictionary.config'
 import { getStudentProfileAction } from '@/app/actions'
+import { isStudentUsername } from '@/utils/account.util'
 
 interface UseAccountSessionOptions {
     lang: AppLanguage
@@ -59,7 +60,7 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         const savedPass = localStorage.getItem('synapse_pass') || ''
 
         if (loadedAccounts.length === 0 && savedUser && savedPass) {
-            const isStudent = savedUser.toLowerCase().endsWith('u') || savedUser.toLowerCase() === 'demo' || savedUser.toLowerCase() === 'test'
+            const isStudent = isStudentUsername(savedUser)
             const initialAccount: SavedAccount = {
                 id: savedUser.toLowerCase(),
                 username: savedUser,
@@ -252,13 +253,20 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
     }
 
     const handleLogout = () => {
+        const storedUser = localStorage.getItem('synapse_user')
+        const usernames = new Set<string>(
+            [username, storedUser || '', ...savedAccounts.map((a) => a.username)].filter(Boolean)
+        )
+        usernames.forEach((u) => {
+            localStorage.removeItem(`synapse_cache_${u}`)
+            localStorage.removeItem(`synapse_week_cache_${u}`)
+            localStorage.removeItem(`synapse_msg_${u}`)
+        })
         localStorage.removeItem('synapse_user')
         localStorage.removeItem('synapse_pass')
         localStorage.removeItem('synapse_accounts')
         localStorage.removeItem('synapse_cache')
         localStorage.removeItem('synapse_week_cache')
-        localStorage.removeItem('synapse_theme')
-        localStorage.removeItem('synapse_text_clamp')
         localStorage.removeItem('synapse_allow_student_justifications')
         setUsername('')
         setPassword('')

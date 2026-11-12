@@ -4,11 +4,14 @@ import { useMemo } from 'react'
 import { GradesResult, GradeItem } from '@/models/grade.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
+import { calculateSubjectWeightedAverage, GradeModifierMode } from '@/utils/grade.util'
+import { getGradeBadgeStyle } from '@/utils/badge.util'
 import { cn } from '@/utils/cn.util'
 
 interface MiniGradesWidgetProps {
   gradesData: GradesResult | null
   ignoreGradeModifiers?: boolean
+  gradeModifierMode?: GradeModifierMode
   isLoading?: boolean
   error?: string | null
   onRetry?: () => void
@@ -19,17 +22,10 @@ interface MiniGradesWidgetProps {
   isDesktop?: boolean
 }
 
-function getGradeBadgeStyle(gradeStr: string): string {
-  const g = gradeStr.trim().toLowerCase()
-  if (g.startsWith('0') || g.startsWith('1') || g === 'nb' || g === 'np') {
-    return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
-  }
-  return 'bg-[var(--ios-element)] text-[var(--ios-label)] font-medium'
-}
-
 export function MiniGradesWidget({
   gradesData,
   ignoreGradeModifiers = false,
+  gradeModifierMode,
   isLoading = false,
   error = null,
   onRetry,
@@ -39,6 +35,8 @@ export function MiniGradesWidget({
   onSelectGrade
 }: MiniGradesWidgetProps) {
   const isPending = isLoading || (!gradesData && !error)
+  const resolvedMode: GradeModifierMode =
+    gradeModifierMode || (ignoreGradeModifiers ? 'none' : 'standard')
 
   const avg = useMemo(() => {
     if (!gradesData) return null
@@ -50,26 +48,21 @@ export function MiniGradesWidget({
     let count = 0
 
     for (const sub of gradesData.subjects) {
-      const allGrades = [...(sub.semester1 || []), ...(sub.semester2 || [])]
-      let totalScore = 0
-      let totalWeight = 0
-
-      for (const g of allGrades) {
-        if (g.numericValue === null || g.weight <= 0) continue
-        const val = ignoreGradeModifiers ? Math.floor(g.numericValue) : g.numericValue
-        totalScore += val * g.weight
-        totalWeight += g.weight
-      }
-
-      if (totalWeight > 0) {
-        sum += Math.round((totalScore / totalWeight) * 100) / 100
+      const allGrades = [...(sub.semester1 || []), ...(sub.semester2 || [])].map((g) => ({
+        value: g.grade,
+        weight: g.weight,
+        countsToAverage: g.numericValue !== null
+      }))
+      const subAvg = calculateSubjectWeightedAverage(allGrades, resolvedMode)
+      if (subAvg !== null) {
+        sum += subAvg
         count++
       }
     }
 
     if (count === 0) return gradesData.overallAverage
     return Math.round((sum / count) * 100) / 100
-  }, [gradesData, ignoreGradeModifiers])
+  }, [gradesData, resolvedMode])
 
   const formattedAvg = avg !== null && avg !== undefined ? avg.toFixed(2) : '—'
   const isDanger = typeof avg === 'number' && avg < 2.0
@@ -99,64 +92,69 @@ export function MiniGradesWidget({
           <span className="text-[13px] font-normal text-[var(--ios-label)] px-2">{error}</span>
           {onRetry && (
             <button type="button" onClick={onRetry} className="text-[13px] font-medium text-[var(--ios-blue)] active:opacity-60 cursor-pointer">
-              {t.refresh || 'Spróbuj ponownie'}
+              {t.refresh || (lang === 'en' ? 'Try again' : 'Spróbuj ponownie')}
             </button>
           )}
         </div>
       ) : isPending ? (
-        <div className="px-4 py-3.5 flex items-start justify-between min-h-[76px]">
-          <div className="flex flex-col">
+        <div className="px-4 py-3.5 flex items-start justify-between gap-3 min-h-[76px]">
+          <div className="flex flex-col shrink-0">
             <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight leading-tight">
               {t.gpaTitle}
             </span>
             <div className="w-[74px] h-[34px] rounded-[8px] ios-skeleton mt-1.5" />
           </div>
-          <div className="flex flex-col items-end">
+          <div className="flex flex-col items-end min-w-0">
             <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-tight leading-tight mb-1.5 text-right">
               {lang === 'en' ? 'Recent' : 'Ostatnie'}
             </span>
             <div className="flex items-center gap-1.5">
-              <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
-              <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
-              <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
-              <div className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
+              <div className="w-[26px] sm:w-[28px] h-[26px] sm:h-[28px] rounded-[8px] ios-skeleton" />
+              <div className="w-[26px] sm:w-[28px] h-[26px] sm:h-[28px] rounded-[8px] ios-skeleton" />
+              <div className="w-[26px] sm:w-[28px] h-[26px] sm:h-[28px] rounded-[8px] ios-skeleton" />
+              <div className="w-[26px] sm:w-[28px] h-[26px] sm:h-[28px] rounded-[8px] ios-skeleton" />
             </div>
           </div>
         </div>
       ) : (
-        <div className="px-4 py-3.5 flex items-start justify-between min-h-[76px] ios-reveal">
-          <div className="flex flex-col">
+        <div className="px-4 py-3.5 flex items-start justify-between gap-3 min-h-[76px] ios-reveal">
+          <div className="flex flex-col shrink-0">
             <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight">
               {t.gpaTitle}
             </span>
-            <span className={cn('text-[34px] font-semibold tracking-[-0.8px] leading-none mt-1.5 tabular-nums', isDanger ? 'text-[var(--ios-red)]' : 'text-[var(--ios-label)]')}>
+            <span className={cn('text-[32px] sm:text-[34px] font-semibold tracking-[-0.8px] leading-none mt-1.5 tabular-nums', isDanger ? 'text-[var(--ios-red)]' : 'text-[var(--ios-label)]')}>
               {formattedAvg}
             </span>
           </div>
 
           {recentGrades.length > 0 && (
-            <div className="flex flex-col items-end">
+            <div className="flex flex-col items-end min-w-0">
               <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight mb-1.5 text-right">
                 {lang === 'en' ? 'Recent' : 'Ostatnie'}
               </span>
-              <div className="flex items-center gap-1.5">
-                {recentGrades.map((g, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onSelectGrade?.(g)
-                    }}
-                    title={(g.subject || '') + ': ' + g.grade + (g.category ? ' (' + g.category + ')' : '')}
-                    className={cn(
-                      'min-w-[28px] h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] tabular-nums cursor-pointer hover:opacity-80 active:scale-[0.92] transition-all select-none',
-                      getGradeBadgeStyle(g.grade)
-                    )}
-                  >
-                    {g.grade}
-                  </button>
-                ))}
+              <div className="flex items-center justify-end flex-wrap gap-1.5">
+                {recentGrades.map((g, idx) => {
+                  const style = getGradeBadgeStyle(g.grade)
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSelectGrade?.(g)
+                      }}
+                      title={(g.subject || '') + ': ' + g.grade + (g.category ? ' (' + g.category + ')' : '')}
+                      className={cn(
+                        'min-w-[26px] sm:min-w-[28px] h-[26px] sm:h-[28px] px-1.5 rounded-[8px] flex items-center justify-center text-[13px] font-semibold tabular-nums cursor-pointer hover:opacity-80 active:scale-[0.92] transition-all select-none',
+                        idx === 4 && 'hidden sm:flex',
+                        style.bg,
+                        style.text
+                      )}
+                    >
+                      {g.grade}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}

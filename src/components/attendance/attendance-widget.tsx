@@ -1,12 +1,13 @@
 'use client'
 
 import { useMemo } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { formatSubjectName } from '@/utils/text.util'
 import { IosListSection, IosCell } from '@/components/ios/ios-list'
-import { IosCard } from '@/components/ios/ios-ui'
-import { getPendingJustifications, isLessonJustificationPending } from '@/utils/justification.util'
+import { IosCard, IosEmptyState } from '@/components/ios/ios-ui'
+import { reconcilePendingJustifications, isLessonJustificationPending } from '@/utils/justification.util'
 import { cn } from '@/utils/cn.util'
 
 interface AttendanceWidgetProps {
@@ -62,8 +63,8 @@ export function AttendanceWidget({
   }, [attendanceData.subjects])
 
   const pendingList = useMemo(() => {
-    return getPendingJustifications()
-  }, [])
+    return reconcilePendingJustifications(attendanceData.subjects)
+  }, [attendanceData.subjects])
 
   const nbCount = useMemo(() => {
     return attendanceData.unexcusedAbsences.filter((abs) => {
@@ -191,47 +192,56 @@ export function AttendanceWidget({
       )}
 
       <IosListSection header={t.subjectsSection}>
-        {sortedSubjects.map((sub) => {
-          const formattedTitle = formatSubjectName(sub.subject, showFullSubjectNames)
-          const activeUnexcusedCount = sub.absences.filter((a) => {
-            const aIso = a.date.includes('.') ? a.date.split('.').reverse().join('-') : a.date
-            return a.isUnexcused && !isLessonJustificationPending(pendingList, aIso, a.date, a.lessonNumber)
-          }).length
+        {sortedSubjects.length > 0 ? (
+          sortedSubjects.map((sub) => {
+            const formattedTitle = formatSubjectName(sub.subject, showFullSubjectNames)
+            const activeUnexcusedCount = sub.absences.filter((a) => {
+              const aIso = a.date.includes('.') ? a.date.split('.').reverse().join('-') : a.date
+              return a.isUnexcused && !isLessonJustificationPending(pendingList, aIso, a.date, a.lessonNumber)
+            }).length
 
-          const isBelowHalf = sub.percentage < 50.0
+            const isBelowHalf = sub.percentage < 50.0
 
-          return (
-            <IosCell
-              key={sub.subject}
-              onClick={() => onSelectSubject(sub)}
-              chevron={true}
-              size="tall"
-              title={
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-[15px] font-medium leading-snug tracking-[-0.2px] truncate text-[var(--ios-label)]">
-                    {formattedTitle}
-                  </span>
-                  {activeUnexcusedCount > 0 && (
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--ios-red)] shrink-0 tabular-nums">
-                      {activeUnexcusedCount} nb
+            return (
+              <IosCell
+                key={sub.subject}
+                onClick={() => onSelectSubject(sub)}
+                chevron={true}
+                size="tall"
+                title={
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[15px] font-medium leading-snug tracking-[-0.2px] truncate text-[var(--ios-label)]">
+                      {formattedTitle}
                     </span>
-                  )}
-                </div>
-              }
-              subtitle={t.missedLessonsCount(sub.absentLessons) + ' ' + t.ofScheduled(sub.totalLessons)}
-              trailing={
-                <span
-                  className={cn(
-                    'text-[16px] tabular-nums tracking-[-0.2px]',
-                    isBelowHalf ? 'text-[var(--ios-red)] font-semibold' : 'text-[var(--ios-label)] font-medium'
-                  )}
-                >
-                  {sub.percentage}%
-                </span>
-              }
-            />
-          )
-        })}
+                    {activeUnexcusedCount > 0 && (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--ios-red)] shrink-0 tabular-nums">
+                        {activeUnexcusedCount} nb
+                      </span>
+                    )}
+                  </div>
+                }
+                subtitle={t.missedLessonsCount(sub.absentLessons) + ' ' + t.ofScheduled(sub.totalLessons)}
+                trailing={
+                  <span
+                    className={cn(
+                      'text-[16px] tabular-nums tracking-[-0.2px]',
+                      isBelowHalf ? 'text-[var(--ios-red)] font-semibold' : 'text-[var(--ios-label)] font-medium'
+                    )}
+                  >
+                    {sub.percentage}%
+                  </span>
+                }
+              />
+            )
+          })
+        ) : (
+          <IosEmptyState
+            compact
+            iconTone="green"
+            icon={<CheckCircle2 className="w-[20px] h-[20px]" strokeWidth={1.9} />}
+            title={t.noAbsencesRecorded}
+          />
+        )}
       </IosListSection>
     </div>
   )

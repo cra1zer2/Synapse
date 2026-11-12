@@ -8,6 +8,7 @@ export interface IosSheetProps {
   isOpen: boolean
   onClose: () => void
   title?: ReactNode
+  closeLabel?: string
   children: ReactNode
   maxWidthClass?: string
 }
@@ -18,6 +19,7 @@ export function IosSheet({
   isOpen,
   onClose,
   title,
+  closeLabel,
   children,
   maxWidthClass = 'md:max-w-[380px]'
 }: IosSheetProps) {
@@ -127,13 +129,19 @@ export function IosSheet({
     touchStartY.current = e.touches[0].clientY
     currentDeltaY.current = 0
     isDragging.current = true
-    sheetRef.current.style.transition = 'none'
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging.current || !sheetRef.current) return
-    const deltaY = Math.max(0, e.touches[0].clientY - touchStartY.current)
+    const rawDeltaY = e.touches[0].clientY - touchStartY.current
+    if (rawDeltaY <= 6 && currentDeltaY.current === 0) return
+    if (sheetRef.current.scrollTop > 0 && currentDeltaY.current === 0) {
+      isDragging.current = false
+      return
+    }
+    const deltaY = Math.max(0, rawDeltaY - 6)
     currentDeltaY.current = deltaY
+    sheetRef.current.style.transition = 'none'
     sheetRef.current.style.transform = 'translate3d(0, ' + deltaY + 'px, 0)'
   }
 
@@ -167,7 +175,7 @@ export function IosSheet({
         pointerEvents: isVisible ? 'auto' : 'none',
         transition: 'opacity 240ms ' + SHEET_SPRING
       }}
-      className="fixed inset-0 z-[95] bg-black/45 flex items-end md:items-center justify-center p-0 md:p-6 select-none"
+      className="fixed inset-0 z-[95] bg-black/55 flex items-end md:items-center justify-center p-0 md:p-6 select-none"
     >
       <div
         ref={sheetRef}
@@ -182,17 +190,17 @@ export function IosSheet({
           willChange: 'transform, opacity'
         }}
         className={cn(
-          'relative w-full max-w-[480px] bg-[var(--ios-card-solid)] rounded-t-[34px] md:rounded-[32px] p-4 pt-3 pb-[max(calc(env(safe-area-inset-bottom,0px)+16px),20px)] md:p-5 border-t md:border border-[var(--ios-border)] flex flex-col gap-4 max-h-[85dvh] overflow-y-auto',
+          'relative w-full max-w-[480px] ios-glass-modal rounded-t-[34px] md:rounded-[34px] p-4 pt-3 pb-[max(calc(env(safe-area-inset-bottom,0px)+16px),22px)] md:p-5 flex flex-col gap-4 max-h-[86%] md:max-h-[85dvh] overflow-y-auto',
           maxWidthClass
         )}
       >
-        <div className="w-9 h-[5px] rounded-full bg-[var(--ios-tertiary)] opacity-45 mx-auto shrink-0 md:hidden" />
+        <div className="w-[60px] h-[4px] rounded-full bg-[var(--ios-tertiary)] opacity-45 mx-auto shrink-0 md:hidden" />
 
         <div className="flex items-center justify-between gap-3 min-h-[30px]">
           <div className="text-[15px] font-semibold text-[var(--ios-secondary)] tracking-[-0.2px] truncate pl-1">
             {title}
           </div>
-          <IosSheetCloseButton onClick={handleDismiss} />
+          <IosSheetCloseButton onClick={handleDismiss} ariaLabel={closeLabel} />
         </div>
 
         {children}
@@ -202,13 +210,19 @@ export function IosSheet({
   )
 }
 
-export function IosSheetCloseButton({ onClick }: { onClick: () => void }) {
+export function IosSheetCloseButton({
+  onClick,
+  ariaLabel = 'Close'
+}: {
+  onClick: () => void
+  ariaLabel?: string
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-[30px] h-[30px] rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] cursor-pointer active:scale-90 transition-all flex items-center justify-center shrink-0 select-none"
-      aria-label="Zamknij"
+      className="w-[32px] h-[32px] rounded-full ios-glass-control text-[var(--ios-secondary)] hover:text-[var(--ios-label)] cursor-pointer active:scale-90 transition-all flex items-center justify-center shrink-0 select-none"
+      aria-label={ariaLabel}
     >
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="6" x2="6" y2="18" />

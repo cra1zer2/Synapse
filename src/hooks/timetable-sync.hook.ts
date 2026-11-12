@@ -31,7 +31,7 @@ interface UseTimetableSyncOptions {
 export function useTimetableSync({ username, password, lang, isConfigured }: UseTimetableSyncOptions) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [isLoadingWeek, setIsLoadingWeek] = useState(false)
-  const [hasNewUpdate, setHasNewUpdate] = useState(false)
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
   const [currentWeekPivot, setCurrentWeekPivot] = useState(getInitialWeekPivot)
 
   const [timetableData, setTimetableData] = useState<SmartTimetableResult | null>(null)
@@ -133,12 +133,16 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
         }
 
         if (typeof window !== 'undefined' && isTargetTodayWeek && (tRes?.data || gRes?.data || aRes?.data)) {
+          const syncedAt = Date.now()
+          setLastSyncedAt(syncedAt)
           localStorage.setItem(
             `synapse_cache_${u}`,
             JSON.stringify({
               t: tRes?.data,
               g: gRes?.data,
-              a: aRes?.data
+              a: aRes?.data,
+              lang: currentAppLang,
+              lastSyncedAt: syncedAt
             })
           )
         }
@@ -153,7 +157,23 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
   )
 
   useEffect(() => {
-    if (!isConfigured || !username || !password) return
+    if (!isConfigured || !username || !password) {
+      activeRequestCounter.current++
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      lastUsernameRef.current = ''
+      weekCacheRef.current = {}
+      setTimetableData(null)
+      setTodayTimetableData(null)
+      setGradesData(null)
+      setAttendanceData(null)
+      setTimetableError(null)
+      setGradesError(null)
+      setAttendanceError(null)
+      setLastSyncedAt(null)
+      setIsUpdating(false)
+      setIsLoadingWeek(false)
+      return
+    }
 
     let hasWarmCache = false
     const isAccountSwitch = lastUsernameRef.current !== username
@@ -186,6 +206,13 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
 
           if (parsed.a) setAttendanceData(parsed.a)
           else if (isAccountSwitch) setAttendanceData(null)
+
+          if (typeof parsed.lastSyncedAt === 'number') setLastSyncedAt(parsed.lastSyncedAt)
+          else if (isAccountSwitch) setLastSyncedAt(null)
+
+          if (parsed.lang && parsed.lang !== lang) {
+            hasWarmCache = true
+          }
         } catch {
           if (isAccountSwitch) {
             setTimetableData(null)
@@ -240,7 +267,7 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
   return {
     isUpdating,
     isLoadingWeek,
-    hasNewUpdate,
+    lastSyncedAt,
     currentWeekPivot,
     timetableData,
     todayTimetableData,
@@ -253,7 +280,6 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
     setSelectedDay,
     queueWeekChange,
     shiftWeek,
-    applyPendingUpdates: () => {},
     executeSync
   }
 }

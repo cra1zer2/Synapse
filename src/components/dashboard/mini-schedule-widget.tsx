@@ -7,7 +7,7 @@ import { formatSubjectName } from '@/utils/text.util'
 import { formatPolishDayDate } from '@/utils/date.util'
 import { TextClampOption } from '@/hooks/settings.hook'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
-import { IosCard, IosBreakDivider } from '@/components/ios/ios-ui'
+import { IosCard, IosBreakDivider, IosBadge } from '@/components/ios/ios-ui'
 import { cn } from '@/utils/cn.util'
 
 export interface MiniScheduleWidgetProps {
@@ -334,23 +334,36 @@ export function MiniScheduleWidget({
     return list.filter((l) => !l.isCancelled).slice(0, 2)
   }, [shouldShowNextDay, nextDayLessons, todayLessons, showAllLessons, scheduleState.currentLesson, scheduleState.nextLesson])
 
+  const targetDayLessons = shouldShowNextDay ? nextDayLessons : todayLessons
+  const hasAnyActiveLesson = targetDayLessons.some((l) => !l.isCancelled)
+  const hasLaterStart = Boolean(hasAnyActiveLesson && targetDayLessons[0]?.isCancelled)
+  const hasEarlierFinish = Boolean(
+    hasAnyActiveLesson &&
+      targetDayLessons.length > 1 &&
+      targetDayLessons[targetDayLessons.length - 1]?.isCancelled
+  )
+
   return (
     <IosCard className="overflow-hidden flex flex-col select-none">
       <div
         onClick={handleCardClick}
-        className="px-4 h-[46px] flex items-center justify-between border-b border-[var(--ios-separator)] cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150"
+        className="px-4 h-[46px] flex items-center justify-between gap-2 border-b border-[var(--ios-separator)] cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150"
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
           <span className="text-[15px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] truncate">
             {t.schedule}
           </span>
           {(isLoading || !timetableData) ? (
             <div className="w-16 h-[20px] rounded-full ios-skeleton shrink-0" />
           ) : badgeLabel ? (
-            <span className="text-[11px] font-semibold text-[var(--ios-secondary)] bg-[var(--ios-element)] px-2.5 py-0.5 rounded-full shrink-0">
-              {badgeLabel}
-            </span>
+            <IosBadge variant="neutral" size="sm" text={badgeLabel} />
           ) : null}
+          {!isLoading && timetableData && hasLaterStart && (
+            <IosBadge variant="orange" size="xs" text={t.laterStartLabel} className="hidden sm:inline-flex" />
+          )}
+          {!isLoading && timetableData && hasEarlierFinish && (
+            <IosBadge variant="blue" size="xs" text={t.earlierFinishLabel} className="hidden sm:inline-flex" />
+          )}
         </div>
 
         <svg width="16" height="16" className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -459,6 +472,7 @@ export function MiniScheduleWidget({
                           minutes={breakMinutes || 10}
                           isCountdown={Boolean(isBreakActive && breakRemaining > 0)}
                           countdownText={t.breakCountdownLabel(breakRemaining)}
+                          label={t.breakWord}
                         />
                       ) : (
                         isBreakActive && breakRemaining > 0 ? (
@@ -466,6 +480,7 @@ export function MiniScheduleWidget({
                             minutes={breakMinutes}
                             isCountdown={true}
                             countdownText={t.breakCountdownLabel(breakRemaining)}
+                            label={t.breakWord}
                           />
                         ) : (
                           <div className="h-[1px] bg-[var(--ios-separator)] mx-4" />

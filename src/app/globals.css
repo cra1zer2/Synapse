@@ -22,7 +22,7 @@
   --ios-card-border: transparent;
   --ios-modal-bg: #f2f2f7;
   --ios-modal-card: #ffffff;
-  --ios-modal-shadow: 0 24px 68px rgba(0, 0, 0, 0.22);
+  --ios-modal-shadow: 0 24px 64px rgba(0, 0, 0, 0.16);
   --ios-element: rgba(118, 118, 128, 0.12);
   --ios-row-hover: rgba(118, 118, 128, 0.06);
   --ios-row-active: rgba(118, 118, 128, 0.12);
@@ -34,9 +34,12 @@
 
   --ios-segmented-track: rgba(118, 118, 128, 0.12);
   --ios-segmented-thumb: #ffffff;
-  --ios-segmented-shadow: none;
+  --ios-segmented-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 
-  --ios-glass-border: transparent;
+  --ios-glass-surface: rgba(255, 255, 255, 0.72);
+  --ios-glass-surface-strong: rgba(255, 255, 255, 0.96);
+  --ios-glass-border: rgba(60, 60, 67, 0.12);
+  --ios-glass-shadow: 0 4px 16px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.95);
   --ios-card-shadow: none;
   --ios-subview-shadow: none;
   --ios-subview-backdrop: rgba(0, 0, 0, 0.42);
@@ -79,7 +82,7 @@
   --ios-spring: cubic-bezier(0.32, 0.72, 0, 1);
 
   --ios-nav-bg: #f2f2f7;
-  --ios-header-bg: rgba(242, 242, 247, 0.82);
+  --ios-header-bg: rgba(242, 242, 247, 0.76);
   --ios-ambient-bg: #f2f2f7;
 }
 
@@ -113,9 +116,12 @@
 
   --ios-segmented-track: #1c1c1e;
   --ios-segmented-thumb: #3a3a3c;
-  --ios-segmented-shadow: none;
+  --ios-segmented-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), inset 0 0.5px 0 rgba(255, 255, 255, 0.16);
 
-  --ios-glass-border: transparent;
+  --ios-glass-surface: rgba(34, 34, 36, 0.68);
+  --ios-glass-surface-strong: rgba(28, 28, 30, 0.96);
+  --ios-glass-border: rgba(255, 255, 255, 0.12);
+  --ios-glass-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), inset 0 0.5px 0 rgba(255, 255, 255, 0.18);
   --ios-card-shadow: none;
   --ios-subview-shadow: none;
   --ios-subview-backdrop: rgba(0, 0, 0, 0.65);
@@ -149,7 +155,7 @@
   --ios-room-bg: rgba(0, 145, 255, 0.16);
   --ios-room-text: #40aeff;
   --ios-nav-bg: #000000;
-  --ios-header-bg: rgba(0, 0, 0, 0.82);
+  --ios-header-bg: rgba(0, 0, 0, 0.72);
   --ios-ambient-bg: #000000;
 }
 
@@ -208,46 +214,70 @@ body {
   top: 0;
   z-index: 30;
   width: 100%;
-  padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 28px);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
   padding-bottom: 8px;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  background-color: var(--ios-bg);
-  border-bottom: 0.5px solid transparent;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  background-color: var(--ios-header-bg);
+  backdrop-filter: saturate(185%) blur(24px);
+  -webkit-backdrop-filter: saturate(185%) blur(24px);
 }
 
-html.is-iphone .ios-header {
-  padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 28px);
-  padding-bottom: 8px;
-}
-
-@supports (-webkit-touch-callout: none) {
-  @media (max-width: 440px) and (orientation: portrait) {
-    .ios-header {
-      padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 28px);
-      padding-bottom: 8px;
-    }
+@media (min-width: 390px) {
+  .ios-header {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
 
 html.is-standalone .ios-header {
-  padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 16px);
-  padding-bottom: 8px;
+  padding-top: calc(max(env(safe-area-inset-top, 0px), 20px) + 10px);
 }
 
 @media (display-mode: standalone) {
   .ios-header {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 16px);
-    padding-bottom: 8px;
+    padding-top: calc(max(env(safe-area-inset-top, 0px), 20px) + 10px);
   }
+}
+
+@media (min-height: 760px) {
+  html.is-standalone .ios-header {
+    padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 12px);
+  }
+}
+
+@media (display-mode: standalone) and (min-height: 760px) {
+  .ios-header {
+    padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 12px);
+  }
+}
+
+.ios-glass-control {
+  background-color: var(--ios-glass-surface);
+  border: 0.5px solid var(--ios-glass-border);
+  box-shadow: var(--ios-glass-shadow);
+  backdrop-filter: saturate(185%) blur(20px);
+  -webkit-backdrop-filter: saturate(185%) blur(20px);
+}
+
+.ios-glass-modal {
+  background-color: var(--ios-glass-surface-strong);
+  border: 0.5px solid var(--ios-glass-border);
+  box-shadow: var(--ios-modal-shadow);
+  backdrop-filter: saturate(190%) blur(34px);
+  -webkit-backdrop-filter: saturate(190%) blur(34px);
 }
 
 .ios-card {
   background-color: var(--ios-card-solid);
   border-radius: var(--ios-radius-card);
-  border: none;
-  box-shadow: none;
+  border: 0.5px solid var(--ios-card-border);
+  box-shadow: var(--ios-card-shadow);
   overflow: hidden;
+}
+
+.ios-safe-bottom-pad {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
 }
 
 .divide-y > * {
@@ -396,7 +426,7 @@ html.is-standalone .ios-header {
   html,
   body {
     overflow: hidden !important;
-    height: 100dvh !important;
+    height: 100% !important;
     touch-action: none !important;
   }
 }

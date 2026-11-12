@@ -10,6 +10,7 @@ import {
 import { fetchGatewayEndpoint } from '@/services/gateway.service'
 import { fetchLiveJustificationsHistory } from '@/services/justification.service'
 import { translateBatch } from '@/services/translation.service'
+import { isStudentUsername } from '@/utils/account.util'
 
 export async function fetchAttendanceMetrics(
     username: string,
@@ -176,8 +177,29 @@ export async function fetchAttendanceMetrics(
                 }
             }
 
+            if (!dayMap[dateStr]) {
+                dayMap[dateStr] = {
+                    date: dateStr,
+                    isoDate,
+                    weekday: '',
+                    lessons: {},
+                    uCount: 0,
+                    nuCount: 0,
+                    totalCount: 0,
+                    spCount: 0,
+                    zwCount: 0,
+                    slCount: 0
+                }
+            }
+
             if (typeInfo.isPresence) {
                 subjectStats[subjectName].presences++
+                if (!dayMap[dateStr].lessons[lessonNo]) {
+                    dayMap[dateStr].lessons[lessonNo] = {
+                        symbol: 'OB',
+                        type: 'ob'
+                    }
+                }
             } else {
                 const detail: AbsenceDetail = {
                     id: item.Id || `${isoDate}-${lessonNo}`,
@@ -200,21 +222,6 @@ export async function fetchAttendanceMetrics(
                     subjectStats[subjectName].unjustified++
                 } else if (typeInfo.type === 'sp') {
                     subjectStats[subjectName].lates++
-                }
-
-                if (!dayMap[dateStr]) {
-                    dayMap[dateStr] = {
-                        date: dateStr,
-                        isoDate,
-                        weekday: '',
-                        lessons: {},
-                        uCount: 0,
-                        nuCount: 0,
-                        totalCount: 0,
-                        spCount: 0,
-                        zwCount: 0,
-                        slCount: 0
-                    }
                 }
 
                 dayMap[dateStr].lessons[lessonNo] = {
@@ -240,11 +247,16 @@ export async function fetchAttendanceMetrics(
             }
         }
 
+        const toIsoSort = (d: string) => {
+            const m = d.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
+            return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : d
+        }
+
         const subjects: SubjectAttendance[] = Object.entries(subjectStats).map(([subject, stats]) => {
             const totalAbsences = stats.justified + stats.unjustified
             const totalLessons = stats.presences + totalAbsences
-            const percentage = totalLessons > 0 
-                ? Math.floor((stats.presences / totalLessons) * 100) 
+            const percentage = totalLessons > 0
+                ? Math.round((stats.presences / totalLessons) * 100)
                 : 100
 
             const status: 'danger' | 'warning' | 'safe' = percentage < 50 ? 'danger' : percentage < 75 ? 'warning' : 'safe'
@@ -257,7 +269,7 @@ export async function fetchAttendanceMetrics(
                 unexcusedCount: stats.unjustified,
                 percentage,
                 status,
-                absences: stats.absences.sort((a, b) => b.date.localeCompare(a.date) || a.lessonNumber - b.lessonNumber)
+                absences: stats.absences.sort((a, b) => toIsoSort(b.date).localeCompare(toIsoSort(a.date)) || a.lessonNumber - b.lessonNumber)
             }
         })
 
@@ -282,7 +294,7 @@ export async function fetchAttendanceMetrics(
         }
 
         let liveExcusedSet = new Set<string>()
-        const isStudentAccount = String(username || '').trim().toLowerCase().endsWith('u')
+        const isStudentAccount = isStudentUsername(username)
         if (!isStudentAccount) {
             try {
                 const liveRes = await fetchLiveJustificationsHistory(username, pass, '0')
@@ -306,9 +318,15 @@ export async function fetchAttendanceMetrics(
 
         const unexcusedAbsences = parsedAbsences.filter((a) => {
             if (!a.isUnexcused) return false
+            const isoDateKey = a.date.includes('.') ? a.date.split('.').reverse().join('-') : a.date
             const keyWithLesson = `${a.date}_${a.lessonNumber}`
-            const isoKeyWithLesson = a.date.includes('.') ? `${a.date.split('.').reverse().join('-')}_${a.lessonNumber}` : keyWithLesson
-            return !liveExcusedSet.has(keyWithLesson) && !liveExcusedSet.has(isoKeyWithLesson)
+            const isoKeyWithLesson = `${isoDateKey}_${a.lessonNumber}`
+            return (
+                !liveExcusedSet.has(keyWithLesson) &&
+                !liveExcusedSet.has(isoKeyWithLesson) &&
+                !liveExcusedSet.has(a.date) &&
+                !liveExcusedSet.has(isoDateKey)
+            )
         })
 
         if (translate) {

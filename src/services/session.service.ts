@@ -288,11 +288,12 @@ const activeSessions = new Map<string, NativeLibrusSession>()
 const pendingLogins = new Map<string, Promise<NativeLibrusSession>>()
 
 export async function getNativeLibrusSession(username: string, password: string): Promise<NativeLibrusSession> {
+    const cleanPass = String(password || '').trim()
     const key = String(username || '').trim().toLowerCase()
     const now = Date.now()
 
     const existing = activeSessions.get(key)
-    if (existing && existing.isAuthenticated && existing.expiresAt > now) {
+    if (existing && existing.isAuthenticated && existing.expiresAt > now && existing.password === cleanPass) {
         return existing
     }
 

@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { Calendar } from 'lucide-react'
 import { AttendanceResult, LegacyAttendanceDay, AbsenceDetail } from '@/models/attendance.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosScreen } from '@/components/ios/ios-screen'
-import { IosCard } from '@/components/ios/ios-ui'
+import { IosCard, IosEmptyState } from '@/components/ios/ios-ui'
+import { getAttendanceTypeStyle } from '@/utils/badge.util'
 import { formatPolishDayDate } from '@/utils/date.util'
 import { formatSubjectName } from '@/utils/text.util'
 import { cn } from '@/utils/cn.util'
@@ -36,7 +38,9 @@ export function LegacyAttendanceView({
 
   const days: LegacyAttendanceDay[] = useMemo(() => {
     if (table?.days && table.days.length > 0) {
-      return table.days
+      return table.days.filter((day) =>
+        Object.values(day.lessons || {}).some((lesson) => lesson.type !== 'ob')
+      )
     }
 
     const dayMap: Record<string, LegacyAttendanceDay> = {}
@@ -209,39 +213,32 @@ export function LegacyAttendanceView({
                       </span>
                     </div>
 
-                    <div
-                      className="grid gap-1 flex-1 items-center"
-                      style={{
-                        gridTemplateColumns: 'repeat(' + lessonCols.length + ', minmax(0, 1fr))'
-                      }}
-                    >
+                    <div className="flex flex-wrap gap-1 flex-1 min-w-0 items-center">
                       {lessonCols.map((col) => {
                         const lesson = day.lessons[col]
                         if (!lesson) {
                           return (
                             <div
                               key={col}
-                              className="h-[26px] rounded-[8px] bg-[var(--bg-card-secondary)] flex items-center justify-center text-[10px] text-[var(--ios-quaternary)] font-medium tabular-nums"
+                              className="w-[22px] sm:w-[24px] h-[24px] rounded-[7px] bg-[var(--bg-card-secondary)] flex items-center justify-center text-[10px] text-[var(--ios-quaternary)] font-medium tabular-nums shrink-0"
                             >
                               {col}
                             </div>
                           )
                         }
 
-                        const lType = lesson.type
-                        const isNu = lType === 'nb'
-                        const isSpOrSl = lType === 'sp' || lType === 'sl'
-
-                        const badgeClass = isNu
-                          ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
-                          : isSpOrSl
-                            ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] font-semibold'
-                            : 'bg-[var(--ios-element)] text-[var(--ios-secondary)] font-medium'
+                        const style = getAttendanceTypeStyle(lesson.type)
+                        const isEmphasized = lesson.type === 'nb' || lesson.type === 'sp' || lesson.type === 'sl'
 
                         return (
                           <div
                             key={col}
-                            className={cn('h-[26px] rounded-[8px] flex items-center justify-center text-[10px] leading-none tracking-tight', badgeClass)}
+                            className={cn(
+                              'w-[22px] sm:w-[24px] h-[24px] rounded-[7px] flex items-center justify-center text-[10px] leading-none tracking-tight shrink-0',
+                              style.bgClass,
+                              style.textClass,
+                              isEmphasized ? 'font-semibold' : 'font-medium'
+                            )}
                           >
                             {lesson.symbol}
                           </div>
@@ -265,9 +262,12 @@ export function LegacyAttendanceView({
               })}
             </IosCard>
           ) : (
-            <IosCard className="p-8 text-center text-[15px] font-normal text-[var(--ios-secondary)]">
-              {t.noAbsencesRecorded}
-            </IosCard>
+            <IosEmptyState
+              inCard
+              icon={<Calendar className="w-[22px] h-[22px]" strokeWidth={1.9} />}
+              iconTone="green"
+              title={t.noAbsencesRecorded}
+            />
           )}
         </div>
       </div>
@@ -306,22 +306,28 @@ export function LegacyAttendanceView({
                         )}
                       </div>
 
-                      <span className={cn(
-                        'text-[12px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 tabular-nums',
-                        item.type === 'sl' || item.type === 'sp'
-                          ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
-                          : item.isUnexcused
-                            ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
-                            : 'bg-[var(--ios-element)] text-[var(--ios-secondary)]'
-                      )}>
-                        {item.type === 'sl' ? 'sL' : item.type.toUpperCase()}
-                      </span>
+                      {(() => {
+                        const badgeStyle = getAttendanceTypeStyle(
+                          item.type === 'nb' && !item.isUnexcused ? 'u' : item.type
+                        )
+                        return (
+                          <span className={cn(
+                            'text-[12px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 tabular-nums',
+                            badgeStyle.bgClass,
+                            badgeStyle.textClass
+                          )}>
+                            {item.type === 'sl' ? 'sL' : item.type.toUpperCase()}
+                          </span>
+                        )
+                      })()}
                     </div>
                   ))
                 ) : (
-                  <div className="p-8 text-center text-[15px] text-[var(--ios-secondary)] font-normal">
-                    Brak szczegółów lekcji dla tego dnia.
-                  </div>
+                  <IosEmptyState
+                    compact
+                    icon={<Calendar className="w-[20px] h-[20px]" strokeWidth={1.9} />}
+                    title={t.noAbsencesRecorded}
+                  />
                 )}
               </IosCard>
             </div>

@@ -2,6 +2,7 @@
 
 import { ReactNode, useRef, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { IosBackButton } from './ios-button'
 
 export const IOS_PARALLAX_PERCENT = 21
 export const IOS_TRANSITION_MS = 340
@@ -422,27 +423,16 @@ export function IosScreen({
   }
 
   const headerContent = (
-    <div className="relative flex items-center justify-between w-full max-w-[480px] mx-auto h-[40px]">
-      <div className="z-10 flex items-center min-w-[70px] h-full">
-        {onClose && (
-          <button
-            type="button"
-            onClick={handleRequestClose}
-            className="flex items-center gap-1 text-[var(--ios-blue)] text-[17px] font-normal leading-none active:opacity-55 transition-opacity -ml-1 h-full pr-2 select-none cursor-pointer"
-          >
-            <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            <span className="max-w-[96px] truncate">{backLabel}</span>
-          </button>
-        )}
+    <div className="relative flex items-center justify-between w-full max-w-[480px] mx-auto h-[42px]">
+      <div className="z-10 flex items-center min-w-[68px] h-full">
+        {onClose && <IosBackButton label={backLabel} onClick={handleRequestClose} />}
       </div>
 
-      <div className={'absolute inset-0 flex items-center justify-center text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px] leading-none px-[74px] text-center transition-opacity duration-200 pointer-events-none ' + (largeTitle && !isScrolled ? 'opacity-0' : 'opacity-100')}>
-        {titleView ? <div className="pointer-events-auto">{titleView}</div> : <span className="truncate max-w-full">{title}</span>}
+      <div className={'absolute inset-0 flex items-center justify-center text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px] leading-snug px-[92px] text-center transition-opacity duration-200 pointer-events-none ' + (largeTitle && !isScrolled ? 'opacity-0' : 'opacity-100')}>
+        {titleView ? <div className="pointer-events-auto">{titleView}</div> : <span className="truncate max-w-full leading-snug py-0.5">{title}</span>}
       </div>
 
-      <div className="z-10 min-w-[70px] flex items-center justify-end h-full">
+      <div className="z-10 min-w-[68px] flex items-center justify-end h-full">
         {trailing}
       </div>
     </div>
@@ -455,27 +445,16 @@ export function IosScreen({
         WebkitBackdropFilter: 'saturate(190%) blur(24px)',
         backdropFilter: 'saturate(190%) blur(24px)'
       }}
-      className={'relative sticky top-0 z-30 w-full px-6 pt-3 pb-2 h-[54px] flex items-center justify-between shrink-0 transition-[border-color] duration-150 ' + (isScrolled ? 'border-b border-[var(--ios-separator)]' : 'border-b border-transparent')}
+      className={'relative sticky top-0 z-30 w-full px-6 pt-3 pb-2 h-[56px] flex items-center justify-between shrink-0 transition-[border-color] duration-150 ' + (isScrolled ? 'border-b border-[var(--ios-separator)]' : 'border-b border-transparent')}
     >
       <div className="z-10 flex items-center gap-2 min-w-[90px] h-full">
-        {onClose && (
-          <button
-            type="button"
-            onClick={handleRequestClose}
-            className="flex items-center gap-1 text-[17px] font-normal text-[var(--ios-blue)] hover:opacity-80 pr-2 h-full -ml-1 active:opacity-55 transition-opacity select-none cursor-pointer shrink-0"
-          >
-            <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            <span className="max-w-[130px] truncate">{backLabel}</span>
-          </button>
-        )}
+        {onClose && <IosBackButton label={backLabel} onClick={handleRequestClose} />}
       </div>
 
       <div className="absolute inset-0 pt-1 flex items-center justify-center pointer-events-none px-28">
         <div className="pointer-events-auto flex items-center justify-center max-w-full">
           {titleView ? titleView : (
-            <h3 className="text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px] truncate text-center">
+            <h3 className="text-[17px] font-semibold text-[var(--ios-label)] tracking-[-0.4px] leading-snug py-0.5 truncate text-center">
               {title}
             </h3>
           )}
@@ -490,7 +469,7 @@ export function IosScreen({
 
   if (!isSubView) {
     return (
-      <div onScroll={handleScroll} className={'w-full min-h-[100dvh] bg-[var(--ios-bg-primary)] overflow-y-auto ' + className}>
+      <div onScroll={handleScroll} className={'w-full min-h-full bg-[var(--ios-bg-primary)] overflow-y-auto ' + className}>
         {!hideHeader && (
           isDesktop ? desktopHeader : (
             <header className={'ios-header transition-[border-color] duration-150 ' + (isScrolled ? 'border-b border-[var(--ios-separator)]' : 'border-b border-transparent')}>
@@ -499,10 +478,10 @@ export function IosScreen({
           )
         )}
 
-        <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[calc(100dvh+1px)] pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
+        <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-3.5 sm:px-4 pt-3 max-w-[480px] mx-auto w-full min-h-full pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
           {!hideHeader && largeTitle && !isDesktop && (
             <div className="pt-2 pb-3 select-none">
-              <h1 className="text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
+              <h1 className="text-[30px] sm:text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
                 {title}
               </h1>
             </div>
@@ -523,7 +502,6 @@ export function IosScreen({
         style={{
           position: 'fixed',
           inset: 0,
-          height: isDesktop ? undefined : '100dvh',
           zIndex: resolvedZIndex - 1,
           backgroundColor: isDesktop
             ? (isStackedOnDesktop ? 'transparent' : 'var(--ios-subview-backdrop)')
@@ -589,8 +567,6 @@ export function IosScreen({
           style={{
             position: 'fixed',
             inset: 0,
-            width: '100vw',
-            height: '100dvh',
             zIndex: resolvedZIndex,
             backgroundColor: 'var(--ios-bg)',
             willChange: 'transform',
@@ -613,10 +589,10 @@ export function IosScreen({
             </header>
           )}
 
-          <div className={contentClassName ?? 'px-4 pt-3 max-w-[480px] mx-auto w-full min-h-[calc(100dvh+1px)] pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
+          <div className={contentClassName ?? 'px-3.5 sm:px-4 pt-3 max-w-[480px] mx-auto w-full min-h-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
             {!hideHeader && largeTitle && (
               <div className="pt-2 pb-3 select-none">
-                <h1 className="text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
+                <h1 className="text-[30px] sm:text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
                   {title}
                 </h1>
               </div>

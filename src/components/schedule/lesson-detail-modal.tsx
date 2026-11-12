@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { LessonItem } from '@/models/timetable.model'
-import { AppDictionary } from '@/config/dictionary.config'
+import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { parseLessonTimeRange, getCurrentTimeMinutes } from '@/utils/time.util'
 import { cn } from '@/utils/cn.util'
 import { IosSheet } from '@/components/ios/ios-sheet'
@@ -11,6 +11,7 @@ interface LessonDetailModalProps {
   lesson: LessonItem | null
   onClose: () => void
   isToday: boolean
+  lang?: AppLanguage
   t: AppDictionary
 }
 
@@ -18,10 +19,12 @@ export function LessonDetailModal({
   lesson,
   onClose,
   isToday,
+  lang = 'pl',
   t
 }: LessonDetailModalProps) {
   const [cached, setCached] = useState<LessonItem | null>(lesson)
   const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
+  const isEn = lang === 'en'
 
   useEffect(() => {
     if (lesson) {
@@ -38,7 +41,13 @@ export function LessonDetailModal({
 
   const activeData = lesson || cached
   const range = activeData ? parseLessonTimeRange(activeData.time) : { startMinutes: 0, endMinutes: 0, isValid: false }
-  const isActive = Boolean(activeData && isToday && range.isValid && currentMinutes >= range.startMinutes && currentMinutes <= range.endMinutes)
+  const isActive = Boolean(
+    activeData &&
+      isToday &&
+      range.isValid &&
+      currentMinutes >= range.startMinutes &&
+      currentMinutes <= range.endMinutes
+  )
   const minutesLeft = isActive && range.isValid ? range.endMinutes - currentMinutes : null
 
   return (
@@ -46,6 +55,7 @@ export function LessonDetailModal({
       isOpen={Boolean(lesson)}
       onClose={onClose}
       title={activeData ? t.lessonNumberLabel(activeData.number) : t.lessonDetails}
+      closeLabel={t.closeLabel}
       maxWidthClass="md:max-w-[380px]"
     >
       {activeData && (
@@ -68,10 +78,10 @@ export function LessonDetailModal({
             </p>
           </div>
 
-          <div className="bg-[var(--bg-card-secondary)] rounded-[20px] overflow-hidden divide-y">
-            <div className="p-3 px-4 flex items-center justify-between text-[14px]">
-              <span className="text-[var(--ios-secondary)]">{t.teacherLabel}</span>
-              <span className="text-[var(--ios-label)] font-medium text-right truncate max-w-[200px]">
+          <div className="bg-[var(--bg-card-secondary)] rounded-[20px] overflow-hidden divide-y divide-[var(--ios-separator)]">
+            <div className="p-3 px-4 flex items-center justify-between gap-3 text-[14px]">
+              <span className="text-[var(--ios-secondary)] shrink-0">{t.teacherLabel}</span>
+              <span className="text-[var(--ios-label)] font-medium text-right truncate">
                 {activeData.teacher || t.notSpecified}
               </span>
             </div>
@@ -79,7 +89,12 @@ export function LessonDetailModal({
             {activeData.room && (
               <div className="p-3 px-4 flex items-center justify-between text-[14px]">
                 <span className="text-[var(--ios-secondary)]">{t.roomLabel}</span>
-                <span className={cn('font-semibold', activeData.isSubstitution ? 'text-[var(--ios-purple)]' : 'text-[var(--ios-label)]')}>
+                <span
+                  className={cn(
+                    'font-semibold',
+                    activeData.isSubstitution ? 'text-[var(--ios-purple)]' : 'text-[var(--ios-label)]'
+                  )}
+                >
                   {activeData.room}
                 </span>
               </div>
@@ -89,7 +104,12 @@ export function LessonDetailModal({
               <div className="p-3 px-4 flex items-center justify-between text-[14px]">
                 <span className="text-[var(--ios-secondary)]">{t.durationLabel}</span>
                 <span className="text-[var(--ios-label)] font-medium tabular-nums">
-                  {activeData.durationMinutes} min {isActive && minutesLeft !== null ? '(pozostało ' + minutesLeft + ' min)' : ''}
+                  {activeData.durationMinutes} min{' '}
+                  {isActive && minutesLeft !== null
+                    ? isEn
+                      ? `(${minutesLeft} min left)`
+                      : `(pozostało ${minutesLeft} min)`
+                    : ''}
                 </span>
               </div>
             )}

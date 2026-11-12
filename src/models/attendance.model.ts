@@ -34,7 +34,7 @@ export interface LegacyAttendanceDay {
     date: string
     isoDate: string
     weekday: string
-    lessons: Record<number, { symbol: string; type: 'nb' | 'u' | 'sp' | 'zw' | 'sl' | 'other' }>
+    lessons: Record<number, { symbol: string; type: 'nb' | 'u' | 'sp' | 'zw' | 'sl' | 'ob' | 'other' }>
     uCount: number
     nuCount: number
     totalCount: number

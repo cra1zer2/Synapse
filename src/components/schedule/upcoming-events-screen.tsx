@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Check, Filter } from 'lucide-react'
 import { TimetableEvent, SmartTimetableResult } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard, IosSearchBar, IosSegmentedControl } from '@/components/ios/ios-ui'
-import { formatSubjectName } from '@/utils/text.util'
-import { formatHumanPolishDate, formatPolishDayDate, getTodayIsoString } from '@/utils/date.util'
+import { getTodayIsoString } from '@/utils/date.util'
 import { cn } from '@/utils/cn.util'
+import { EventsListView, LayeredEventGroups, MonthEventGroup } from './events-list-view'
+import { EventsCalendarView } from './events-calendar-view'
 
 export interface UpcomingEventsScreenProps {
   timetableData?: SmartTimetableResult | null
@@ -22,67 +24,62 @@ export interface UpcomingEventsScreenProps {
 type ViewMode = 'list' | 'calendar'
 type CategoryFilter = 'all' | 'exam' | 'quiz' | 'homework' | 'other'
 
-interface MonthGroup {
-  key: string
-  label: string
-  events: TimetableEvent[]
+const MONTH_NAMES_PL = [
+  'Styczeń',
+  'Luty',
+  'Marzec',
+  'Kwiecień',
+  'Maj',
+  'Czerwiec',
+  'Lipiec',
+  'Sierpień',
+  'Wrzesień',
+  'Październik',
+  'Listopad',
+  'Grudzień'
+]
+
+const MONTH_NAMES_EN = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December'
+]
+
+function parseIsoUtcNoon(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(Date.UTC(y, (m || 1) - 1, d || 1, 12, 0, 0))
 }
 
-function getBadgeStyle(category: TimetableEvent['category']) {
-  switch (category) {
-    case 'exam':
-      return 'bg-[var(--ios-purple-subtle)] text-[var(--ios-purple)]'
-    case 'quiz':
-      return 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
-    case 'homework':
-      return 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)]'
-    case 'holiday':
-      return 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
-    default:
-      return 'bg-[var(--bg-card-secondary)] text-[var(--ios-secondary)]'
-  }
-}
-
-function getCategoryColor(category: TimetableEvent['category']) {
-  switch (category) {
-    case 'exam':
-      return 'bg-[var(--ios-purple)]'
-    case 'quiz':
-      return 'bg-[var(--ios-orange)]'
-    case 'homework':
-      return 'bg-[var(--ios-blue)]'
-    case 'holiday':
-      return 'bg-[var(--ios-green)]'
-    default:
-      return 'bg-[var(--ios-secondary)]'
-  }
-}
-
-function getCategoryShortLabel(category: TimetableEvent['category'], isEn: boolean) {
-  switch (category) {
-    case 'exam':
-      return isEn ? 'Exam' : 'Sprawdzian'
-    case 'quiz':
-      return isEn ? 'Quiz' : 'Kartkówka'
-    case 'homework':
-      return isEn ? 'Homework' : 'Zadanie'
-    case 'holiday':
-      return isEn ? 'Holiday' : 'Wolne'
-    default:
-      return isEn ? 'Notice' : 'Wydarzenie'
-  }
+function formatUtcIsoDate(dt: Date): string {
+  const y = dt.getUTCFullYear()
+  const m = String(dt.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(dt.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 export function UpcomingEventsScreen({
   timetableData,
   isLoading = false,
+  showHomeworks = false,
   showFullSubjectNames = false,
   lang = 'pl',
   onSelectEvent
 }: UpcomingEventsScreenProps) {
   const isEn = lang === 'en'
   const todayIso = useMemo(() => getTodayIsoString(), [])
-  const todayDate = useMemo(() => new Date(), [])
+  const [todayYear, todayMonthIndex] = useMemo(() => {
+    const parts = todayIso.split('-').map(Number)
+    return [parts[0], (parts[1] || 1) - 1]
+  }, [todayIso])
 
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
@@ -91,18 +88,28 @@ export function UpcomingEventsScreen({
 
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isFilterMounted, setIsFilterMounted] = useState(false)
+  const filterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    if (!showHomeworks && categoryFilter === 'homework') {
+      setCategoryFilter('all')
+    }
+  }, [showHomeworks, categoryFilter])
+
+  useEffect(() => {
+    if (filterTimerRef.current) clearTimeout(filterTimerRef.current)
     if (isFilterOpen) {
       setIsFilterMounted(true)
     } else if (isFilterMounted) {
-      const timer = setTimeout(() => setIsFilterMounted(false), 200)
-      return () => clearTimeout(timer)
+      filterTimerRef.current = setTimeout(() => setIsFilterMounted(false), 200)
+    }
+    return () => {
+      if (filterTimerRef.current) clearTimeout(filterTimerRef.current)
     }
   }, [isFilterOpen, isFilterMounted])
 
-  const [calYear, setCalYear] = useState<number>(() => todayDate.getFullYear())
-  const [calMonth, setCalMonth] = useState<number>(() => todayDate.getMonth())
+  const [calYear, setCalYear] = useState<number>(todayYear)
+  const [calMonth, setCalMonth] = useState<number>(todayMonthIndex)
   const [selectedDateIso, setSelectedDateIso] = useState<string>(todayIso)
 
   const allEvents = useMemo(() => {
@@ -117,7 +124,17 @@ export function UpcomingEventsScreen({
 
     for (const ev of rawList) {
       if (!ev || !ev.isoDate) continue
-      const key = ev.isoDate + '_' + (ev.lessonNumber || '') + '_' + ev.title + '_' + ev.category + '_' + (ev.subjectName || '')
+      if (!showHomeworks && ev.category === 'homework') continue
+      const key =
+        ev.isoDate +
+        '_' +
+        (ev.lessonNumber || '') +
+        '_' +
+        ev.title +
+        '_' +
+        ev.category +
+        '_' +
+        (ev.subjectName || '')
       if (seen.has(key)) continue
       seen.add(key)
       deduped.push(ev)
@@ -128,7 +145,7 @@ export function UpcomingEventsScreen({
       if (cmp !== 0) return cmp
       return (a.lessonNumber || 99) - (b.lessonNumber || 99)
     })
-  }, [timetableData])
+  }, [timetableData, showHomeworks])
 
   const categoryCounts = useMemo(() => {
     const counts = { all: 0, exam: 0, quiz: 0, homework: 0, other: 0 }
@@ -161,7 +178,9 @@ export function UpcomingEventsScreen({
       if (categoryFilter === 'exam' && ev.category !== 'exam') return false
       if (categoryFilter === 'quiz' && ev.category !== 'quiz') return false
       if (categoryFilter === 'homework' && ev.category !== 'homework') return false
-      if (categoryFilter === 'other' && (ev.category === 'exam' || ev.category === 'quiz' || ev.category === 'homework')) return false
+      if (categoryFilter === 'other' && (ev.category === 'exam' || ev.category === 'quiz' || ev.category === 'homework')) {
+        return false
+      }
 
       if (q) {
         const titleMatch = (ev.title || '').toLowerCase().includes(q)
@@ -179,52 +198,43 @@ export function UpcomingEventsScreen({
   }, [allEvents, showArchived, categoryFilter, searchQuery, todayIso])
 
   const tomorrowIso = useMemo(() => {
-    const tom = new Date()
-    tom.setDate(tom.getDate() + 1)
-    const y = tom.getFullYear()
-    const m = String(tom.getMonth() + 1).padStart(2, '0')
-    const d = String(tom.getDate()).padStart(2, '0')
-    return y + '-' + m + '-' + d
-  }, [])
+    const dt = parseIsoUtcNoon(todayIso)
+    dt.setUTCDate(dt.getUTCDate() + 1)
+    return formatUtcIsoDate(dt)
+  }, [todayIso])
 
-  const weekBuckets = useMemo(() => {
-    const now = new Date()
-    const currentDay = now.getDay()
-    const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay
-    const thisMonday = new Date(now)
-    thisMonday.setDate(now.getDate() + diffToMonday)
-    thisMonday.setHours(0, 0, 0, 0)
+  const weekIsoRanges = useMemo(() => {
+    const base = parseIsoUtcNoon(todayIso)
+    const day = base.getUTCDay()
+    const diffToMon = day === 0 ? -6 : 1 - day
+
+    const thisMonday = new Date(base)
+    thisMonday.setUTCDate(base.getUTCDate() + diffToMon)
 
     const thisSunday = new Date(thisMonday)
-    thisSunday.setDate(thisMonday.getDate() + 6)
-    thisSunday.setHours(23, 59, 59, 999)
+    thisSunday.setUTCDate(thisMonday.getUTCDate() + 6)
 
     const nextMonday = new Date(thisMonday)
-    nextMonday.setDate(thisMonday.getDate() + 7)
+    nextMonday.setUTCDate(thisMonday.getUTCDate() + 7)
 
     const nextSunday = new Date(thisMonday)
-    nextSunday.setDate(thisMonday.getDate() + 13)
-    nextSunday.setHours(23, 59, 59, 999)
+    nextSunday.setUTCDate(thisMonday.getUTCDate() + 13)
 
-    return { thisMonday, thisSunday, nextMonday, nextSunday }
-  }, [])
+    return {
+      thisMonIso: formatUtcIsoDate(thisMonday),
+      thisSunIso: formatUtcIsoDate(thisSunday),
+      nextMonIso: formatUtcIsoDate(nextMonday),
+      nextSunIso: formatUtcIsoDate(nextSunday)
+    }
+  }, [todayIso])
 
-  const layeredGroups = useMemo(() => {
+  const layeredGroups: LayeredEventGroups = useMemo(() => {
     const todayList: TimetableEvent[] = []
     const tomorrowList: TimetableEvent[] = []
     const thisWeekList: TimetableEvent[] = []
     const nextWeekList: TimetableEvent[] = []
-    const monthMap: Record<string, MonthGroup> = {}
+    const monthMap: Record<string, MonthEventGroup> = {}
     const pastList: TimetableEvent[] = []
-
-    const monthNamesPl = [
-      'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
-      'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'
-    ]
-    const monthNamesEn = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ]
 
     for (const ev of filteredEvents) {
       if (ev.isoDate < todayIso) {
@@ -240,17 +250,16 @@ export function UpcomingEventsScreen({
         continue
       }
 
-      const evDate = new Date(ev.isoDate + 'T12:00:00')
-      if (evDate >= weekBuckets.thisMonday && evDate <= weekBuckets.thisSunday) {
+      if (ev.isoDate >= weekIsoRanges.thisMonIso && ev.isoDate <= weekIsoRanges.thisSunIso) {
         thisWeekList.push(ev)
-      } else if (evDate >= weekBuckets.nextMonday && evDate <= weekBuckets.nextSunday) {
+      } else if (ev.isoDate >= weekIsoRanges.nextMonIso && ev.isoDate <= weekIsoRanges.nextSunIso) {
         nextWeekList.push(ev)
       } else {
         const mKey = ev.isoDate.slice(0, 7)
-        const y = evDate.getFullYear()
-        const mIdx = evDate.getMonth()
-        const mName = isEn ? monthNamesEn[mIdx] : monthNamesPl[mIdx]
-        const label = mName + ' ' + y
+        const [yStr, mStr] = mKey.split('-')
+        const mIdx = Math.max(0, Math.min(11, parseInt(mStr, 10) - 1))
+        const mName = isEn ? MONTH_NAMES_EN[mIdx] : MONTH_NAMES_PL[mIdx]
+        const label = `${mName} ${yStr}`
 
         if (!monthMap[mKey]) {
           monthMap[mKey] = { key: mKey, label, events: [] }
@@ -259,7 +268,9 @@ export function UpcomingEventsScreen({
       }
     }
 
-    const laterMonths = Object.keys(monthMap).sort().map((k) => monthMap[k])
+    const laterMonths = Object.keys(monthMap)
+      .sort()
+      .map((k) => monthMap[k])
     return {
       today: todayList,
       tomorrow: tomorrowList,
@@ -268,7 +279,7 @@ export function UpcomingEventsScreen({
       laterMonths,
       past: pastList
     }
-  }, [filteredEvents, todayIso, tomorrowIso, weekBuckets, isEn])
+  }, [filteredEvents, todayIso, tomorrowIso, weekIsoRanges, isEn])
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, TimetableEvent[]> = {}
@@ -280,9 +291,9 @@ export function UpcomingEventsScreen({
   }, [allEvents])
 
   const calendarGrid = useMemo(() => {
-    const firstDay = new Date(calYear, calMonth, 1)
-    const startingDayOfWeek = (firstDay.getDay() + 6) % 7
-    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
+    const firstDay = new Date(Date.UTC(calYear, calMonth, 1))
+    const startingDayOfWeek = (firstDay.getUTCDay() + 6) % 7
+    const daysInMonth = new Date(Date.UTC(calYear, calMonth + 1, 0)).getUTCDate()
 
     const cells: Array<{ dayNum: number | null; iso: string | null }> = []
     for (let i = 0; i < startingDayOfWeek; i++) {
@@ -291,25 +302,13 @@ export function UpcomingEventsScreen({
     for (let d = 1; d <= daysInMonth; d++) {
       const mStr = String(calMonth + 1).padStart(2, '0')
       const dStr = String(d).padStart(2, '0')
-      cells.push({ dayNum: d, iso: calYear + '-' + mStr + '-' + dStr })
+      cells.push({ dayNum: d, iso: `${calYear}-${mStr}-${dStr}` })
     }
     return cells
   }, [calYear, calMonth])
 
-  const calMonthTitle = useMemo(() => {
-    const monthNamesPl = [
-      'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
-      'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'
-    ]
-    const monthNamesEn = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ]
-    const mName = isEn ? monthNamesEn[calMonth] : monthNamesPl[calMonth]
-    return mName + ' ' + calYear
-  }, [calMonth, calYear, isEn])
-
-  const isCurrentCalMonth = calYear === todayDate.getFullYear() && calMonth === todayDate.getMonth()
+  const calMonthTitle = (isEn ? MONTH_NAMES_EN[calMonth] : MONTH_NAMES_PL[calMonth]) + ' ' + calYear
+  const isCurrentCalMonth = calYear === todayYear && calMonth === todayMonthIndex
 
   const handlePrevMonth = () => {
     if (calMonth === 0) {
@@ -330,86 +329,29 @@ export function UpcomingEventsScreen({
   }
 
   const handleJumpToToday = () => {
-    setCalYear(todayDate.getFullYear())
-    setCalMonth(todayDate.getMonth())
+    setCalYear(todayYear)
+    setCalMonth(todayMonthIndex)
     setSelectedDateIso(todayIso)
   }
 
-  const selectedDayEvents = useMemo(() => {
-    return eventsByDate[selectedDateIso] || []
-  }, [eventsByDate, selectedDateIso])
-
-  const renderEventRow = (ev: TimetableEvent) => {
-    const dateInfo = formatPolishDayDate(ev.isoDate, lang)
-    const subjLabel = ev.subjectName
-      ? formatSubjectName(ev.subjectName, showFullSubjectNames)
-      : ev.eventType || (isEn ? 'Event' : 'Wydarzenie')
-
-    const metaParts: string[] = []
-    if (ev.lessonNumber !== undefined) {
-      metaParts.push(isEn ? 'Period ' + ev.lessonNumber : 'Lekcja ' + ev.lessonNumber)
-    }
-    if (ev.time) {
-      metaParts.push(ev.time)
-    }
-    if (ev.teacher) {
-      metaParts.push(ev.teacher)
-    }
-
-    return (
-      <div
-        key={(ev.id || '') + '-' + ev.isoDate + '-' + (ev.lessonNumber || '') + '-' + ev.title}
-        onClick={() => onSelectEvent(ev)}
-        className="w-full px-4 py-3.5 flex items-start gap-3.5 hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150 cursor-pointer select-none"
-      >
-        <div className="w-[44px] h-[46px] shrink-0 rounded-[12px] bg-[var(--bg-card-secondary)] flex flex-col items-center justify-center mt-0.5">
-          <span className="text-[16px] font-semibold text-[var(--ios-label)] leading-none tabular-nums">
-            {dateInfo.dayNum}
-          </span>
-          <span className="text-[10px] font-medium text-[var(--ios-secondary)] lowercase mt-1 leading-none">
-            {dateInfo.monthName}
-          </span>
-        </div>
-
-        <div className="min-w-0 flex-1 flex flex-col">
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-[15px] font-semibold text-[var(--ios-label)] tracking-[-0.2px] leading-snug">
-              {subjLabel}
-            </span>
-
-            <span
-              className={cn(
-                'text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 leading-tight mt-0.5',
-                getBadgeStyle(ev.category)
-              )}
-            >
-              {ev.eventType || getCategoryShortLabel(ev.category, isEn)}
-            </span>
-          </div>
-
-          {ev.title && ev.title !== subjLabel && (
-            <p className="text-[13px] font-normal text-[var(--ios-secondary)] line-clamp-2 mt-0.5 leading-snug">
-              {ev.title}
-            </p>
-          )}
-
-          {metaParts.length > 0 && (
-            <span className="text-[12px] font-normal text-[var(--ios-tertiary)] tabular-nums truncate mt-1 leading-tight">
-              {metaParts.join(' • ')}
-            </span>
-          )}
-        </div>
-      </div>
-    )
+  const resetFilters = () => {
+    setCategoryFilter('all')
+    setShowArchived(false)
+    setSearchQuery('')
   }
 
-  const renderSectionHeader = (title: string) => (
-    <div className="px-4 pt-3 pb-1.5">
-      <span className="text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-[0.02em]">
-        {title}
-      </span>
-    </div>
-  )
+  const filterCategories = useMemo(() => {
+    const base: Array<{ id: CategoryFilter; label: string; count: number }> = [
+      { id: 'all', label: isEn ? 'All categories' : 'Wszystkie kategorie', count: categoryCounts.all },
+      { id: 'exam', label: isEn ? 'Exams' : 'Sprawdziany', count: categoryCounts.exam },
+      { id: 'quiz', label: isEn ? 'Quizzes' : 'Kartkówki', count: categoryCounts.quiz }
+    ]
+    if (showHomeworks) {
+      base.push({ id: 'homework', label: isEn ? 'Homework' : 'Zadania', count: categoryCounts.homework })
+    }
+    base.push({ id: 'other', label: isEn ? 'Other / Notices' : 'Inne / Wydarzenia', count: categoryCounts.other })
+    return base
+  }, [categoryCounts, isEn, showHomeworks])
 
   return (
     <div className="flex flex-col gap-3.5 pb-16 select-none w-full">
@@ -436,28 +378,15 @@ export function UpcomingEventsScreen({
           type="button"
           onClick={() => setIsFilterOpen((prev) => !prev)}
           className={cn(
-            'h-[42px] px-4 rounded-full flex items-center gap-1.5 shrink-0 transition-all duration-150 cursor-pointer select-none text-[13px] active:scale-95',
+            'h-[42px] px-3.5 sm:px-4 rounded-full flex items-center gap-1.5 shrink-0 transition-all duration-150 cursor-pointer select-none text-[13px] active:scale-95',
             hasCustomFilter
               ? 'bg-[var(--ios-blue)] text-white font-semibold'
               : 'bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] font-medium'
           )}
-          aria-label="Filter"
+          aria-label={isEn ? 'Filter' : 'Filtr'}
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-          </svg>
-          <span className="truncate max-w-[110px]">
-            {filterButtonLabel}
-          </span>
+          <Filter className="w-3.5 h-3.5 shrink-0" strokeWidth={2.2} />
+          <span className="truncate max-w-[100px]">{filterButtonLabel}</span>
         </button>
 
         {isFilterMounted && (
@@ -472,7 +401,7 @@ export function UpcomingEventsScreen({
             <div
               style={{ boxShadow: 'var(--ios-modal-shadow)' }}
               className={cn(
-                'absolute right-0 top-[50px] z-40 w-64 bg-[var(--ios-card-solid)] border border-[var(--ios-border)] rounded-[26px] p-2 flex flex-col gap-0.5 origin-top-right transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]',
+                'ios-glass-modal absolute right-0 top-[50px] z-40 w-64 rounded-[26px] p-2 flex flex-col gap-0.5 origin-top-right transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]',
                 isFilterOpen
                   ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
                   : 'opacity-0 scale-90 -translate-y-2 pointer-events-none'
@@ -482,20 +411,14 @@ export function UpcomingEventsScreen({
                 {isEn ? 'Category' : 'Kategoria'}
               </span>
 
-              {[
-                { id: 'all', label: isEn ? 'All categories' : 'Wszystkie kategorie', count: categoryCounts.all },
-                { id: 'exam', label: isEn ? 'Exams' : 'Sprawdziany', count: categoryCounts.exam },
-                { id: 'quiz', label: isEn ? 'Quizzes' : 'Kartkówki', count: categoryCounts.quiz },
-                { id: 'homework', label: isEn ? 'Homework' : 'Zadania', count: categoryCounts.homework },
-                { id: 'other', label: isEn ? 'Other / Notices' : 'Inne / Wydarzenia', count: categoryCounts.other }
-              ].map((item) => {
+              {filterCategories.map((item) => {
                 const isSelected = categoryFilter === item.id
                 return (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => {
-                      setCategoryFilter(item.id as CategoryFilter)
+                      setCategoryFilter(item.id)
                       setIsFilterOpen(false)
                     }}
                     className={cn(
@@ -510,11 +433,7 @@ export function UpcomingEventsScreen({
                       <span className="text-[12px] font-normal text-[var(--ios-secondary)] tabular-nums">
                         {item.count}
                       </span>
-                      {isSelected && (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ios-blue)]">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
+                      {isSelected && <Check className="w-3.5 h-3.5 text-[var(--ios-blue)]" strokeWidth={2.5} />}
                     </div>
                   </button>
                 )
@@ -535,20 +454,23 @@ export function UpcomingEventsScreen({
                     : 'text-[var(--ios-secondary)] hover:bg-[var(--ios-row-hover)]'
                 )}
               >
-                <span>{showArchived ? (isEn ? 'Past events included' : 'Przeszłe terminy włączone') : (isEn ? 'Include past events' : 'Pokaż przeszłe terminy')}</span>
-                {showArchived && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ios-blue)]">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
+                <span>
+                  {showArchived
+                    ? isEn
+                      ? 'Past events included'
+                      : 'Przeszłe terminy włączone'
+                    : isEn
+                      ? 'Include past events'
+                      : 'Pokaż przeszłe terminy'}
+                </span>
+                {showArchived && <Check className="w-3.5 h-3.5 text-[var(--ios-blue)]" strokeWidth={2.5} />}
               </button>
 
               {hasCustomFilter && (
                 <button
                   type="button"
                   onClick={() => {
-                    setCategoryFilter('all')
-                    setShowArchived(false)
+                    resetFilters()
                     setIsFilterOpen(false)
                   }}
                   className="w-full mt-0.5 px-3 py-2 rounded-[14px] text-center text-[13px] font-medium text-[var(--ios-red)] hover:bg-[var(--ios-red-subtle)] active:scale-[0.98] transition-all cursor-pointer"
@@ -568,7 +490,7 @@ export function UpcomingEventsScreen({
         {isLoading && allEvents.length === 0 ? (
           <div className="flex flex-col gap-2 pt-1">
             <div className="w-24 h-[12px] rounded-full ios-skeleton ml-4" />
-            <IosCard className="overflow-hidden flex flex-col divide-y">
+            <IosCard className="overflow-hidden flex flex-col divide-y divide-[var(--ios-separator)]">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="px-4 py-3.5 flex items-center justify-between gap-3.5">
                   <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -584,206 +506,33 @@ export function UpcomingEventsScreen({
             </IosCard>
           </div>
         ) : viewMode === 'list' ? (
-          filteredEvents.length === 0 ? (
-            <IosCard className="py-12 px-6 text-center flex flex-col items-center justify-center gap-2 mt-1">
-              <span className="text-[16px] font-semibold text-[var(--ios-label)] tracking-tight">
-                {searchQuery || hasCustomFilter
-                  ? (isEn ? 'No matching events' : 'Brak pasujących terminów')
-                  : (isEn ? 'No upcoming deadlines' : 'Brak nadchodzących terminów')}
-              </span>
-              <p className="text-[13px] font-normal text-[var(--ios-secondary)] max-w-xs leading-relaxed">
-                {searchQuery || hasCustomFilter
-                  ? (isEn ? 'Try changing your search query or active category filter.' : 'Zmień kryteria wyszukiwania lub wybrany filtr kategorii.')
-                  : (isEn ? 'No scheduled tests, quizzes, or assignments recorded.' : 'W terminarzu nie ma zaplanowanych sprawdzianów ani kartkówek.')}
-              </p>
-              {(searchQuery || hasCustomFilter) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCategoryFilter('all')
-                    setShowArchived(false)
-                    setSearchQuery('')
-                  }}
-                  className="mt-2 px-4 py-2 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] text-[13px] font-semibold active:scale-95 transition-all cursor-pointer"
-                >
-                  {isEn ? 'Reset filters' : 'Wyczyść filtry'}
-                </button>
-              )}
-            </IosCard>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {layeredGroups.today.length > 0 && (
-                <div className="flex flex-col">
-                  {renderSectionHeader(isEn ? 'Today' : 'Dzisiaj')}
-                  <IosCard className="overflow-hidden flex flex-col divide-y">
-                    {layeredGroups.today.map((ev) => renderEventRow(ev))}
-                  </IosCard>
-                </div>
-              )}
-
-              {layeredGroups.tomorrow.length > 0 && (
-                <div className="flex flex-col">
-                  {renderSectionHeader(isEn ? 'Tomorrow' : 'Jutro')}
-                  <IosCard className="overflow-hidden flex flex-col divide-y">
-                    {layeredGroups.tomorrow.map((ev) => renderEventRow(ev))}
-                  </IosCard>
-                </div>
-              )}
-
-              {layeredGroups.thisWeek.length > 0 && (
-                <div className="flex flex-col">
-                  {renderSectionHeader(isEn ? 'This Week' : 'W tym tygodniu')}
-                  <IosCard className="overflow-hidden flex flex-col divide-y">
-                    {layeredGroups.thisWeek.map((ev) => renderEventRow(ev))}
-                  </IosCard>
-                </div>
-              )}
-
-              {layeredGroups.nextWeek.length > 0 && (
-                <div className="flex flex-col">
-                  {renderSectionHeader(isEn ? 'Next Week' : 'W przyszłym tygodniu')}
-                  <IosCard className="overflow-hidden flex flex-col divide-y">
-                    {layeredGroups.nextWeek.map((ev) => renderEventRow(ev))}
-                  </IosCard>
-                </div>
-              )}
-
-              {layeredGroups.laterMonths.map((mGroup) => (
-                <div key={mGroup.key} className="flex flex-col">
-                  {renderSectionHeader(mGroup.label)}
-                  <IosCard className="overflow-hidden flex flex-col divide-y">
-                    {mGroup.events.map((ev) => renderEventRow(ev))}
-                  </IosCard>
-                </div>
-              ))}
-
-              {showArchived && layeredGroups.past.length > 0 && (
-                <div className="flex flex-col">
-                  {renderSectionHeader(isEn ? 'Past Events' : 'Przeszłe terminy')}
-                  <IosCard className="overflow-hidden flex flex-col divide-y opacity-80">
-                    {layeredGroups.past.map((ev) => renderEventRow(ev))}
-                  </IosCard>
-                </div>
-              )}
-            </div>
-          )
+          <EventsListView
+            filteredEvents={filteredEvents}
+            layeredGroups={layeredGroups}
+            showArchived={showArchived}
+            hasSearchOrFilter={Boolean(searchQuery || hasCustomFilter)}
+            showFullSubjectNames={showFullSubjectNames}
+            lang={lang}
+            onResetFilters={resetFilters}
+            onSelectEvent={onSelectEvent}
+          />
         ) : (
-          <div className="flex flex-col gap-3">
-            <IosCard className="p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between px-1">
-                <span className="text-[17px] font-semibold text-[var(--ios-label)] tracking-tight">
-                  {calMonthTitle}
-                </span>
-
-                <div className="flex items-center gap-1.5">
-                  {!isCurrentCalMonth && (
-                    <button
-                      type="button"
-                      onClick={handleJumpToToday}
-                      className="px-3 py-1 rounded-full text-[12px] font-semibold bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] active:scale-95 transition-all cursor-pointer mr-0.5"
-                    >
-                      {isEn ? 'Today' : 'Dzisiaj'}
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handlePrevMonth}
-                    className="w-8 h-8 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center active:scale-90 transition-all cursor-pointer"
-                    aria-label="Previous month"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="15 18 9 12 15 6" />
-                    </svg>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleNextMonth}
-                    className="w-8 h-8 rounded-full bg-[var(--ios-element)] text-[var(--ios-label)] flex items-center justify-center active:scale-90 transition-all cursor-pointer"
-                    aria-label="Next month"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase text-[var(--ios-tertiary)] tracking-wider pt-0.5">
-                <span>{isEn ? 'Mo' : 'Pn'}</span>
-                <span>{isEn ? 'Tu' : 'Wt'}</span>
-                <span>{isEn ? 'We' : 'Śr'}</span>
-                <span>{isEn ? 'Th' : 'Cz'}</span>
-                <span>{isEn ? 'Fr' : 'Pt'}</span>
-                <span>{isEn ? 'Sa' : 'So'}</span>
-                <span>{isEn ? 'Su' : 'Nd'}</span>
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 pt-0.5">
-                {calendarGrid.map((cell, idx) => {
-                  if (!cell.dayNum || !cell.iso) {
-                    return <div key={'empty-' + idx} className="h-11" />
-                  }
-
-                  const isSelected = cell.iso === selectedDateIso
-                  const isToday = cell.iso === todayIso
-                  const dayEvs = eventsByDate[cell.iso] || []
-                  const hasEvents = dayEvs.length > 0
-
-                  return (
-                    <button
-                      key={cell.iso}
-                      type="button"
-                      onClick={() => setSelectedDateIso(cell.iso!)}
-                      className={cn(
-                        'h-11 rounded-[12px] flex flex-col items-center justify-center relative transition-all duration-150 cursor-pointer select-none',
-                        isSelected
-                          ? 'bg-[var(--ios-blue)] text-white font-semibold'
-                          : isToday
-                          ? 'bg-[var(--ios-blue-subtle)] text-[var(--ios-blue)] font-semibold'
-                          : 'text-[var(--ios-label)] hover:bg-[var(--bg-card-secondary)] font-normal active:scale-95'
-                      )}
-                    >
-                      <span className="text-[14px] tabular-nums leading-none">
-                        {cell.dayNum}
-                      </span>
-
-                      {hasEvents && (
-                        <div className="flex items-center gap-0.5 mt-1 h-1.5">
-                          {dayEvs.slice(0, 3).map((ev, dIdx) => (
-                            <div
-                              key={dIdx}
-                              className={cn(
-                                'w-1.5 h-1.5 rounded-full shrink-0',
-                                isSelected ? 'bg-white' : getCategoryColor(ev.category)
-                              )}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </IosCard>
-
-            <div className="flex flex-col">
-              {renderSectionHeader(
-                (isEn ? 'Events on ' : 'Wydarzenia w dniu ') + formatHumanPolishDate(selectedDateIso, false, lang)
-              )}
-
-              {selectedDayEvents.length > 0 ? (
-                <IosCard className="overflow-hidden flex flex-col divide-y">
-                  {selectedDayEvents.map((ev) => renderEventRow(ev))}
-                </IosCard>
-              ) : (
-                <IosCard className="p-8 text-center text-[14px] font-normal text-[var(--ios-secondary)]">
-                  {isEn ? 'No events for this day' : 'Brak wydarzeń w tym dniu'}
-                </IosCard>
-              )}
-            </div>
-          </div>
+          <EventsCalendarView
+            calMonthTitle={calMonthTitle}
+            isCurrentCalMonth={isCurrentCalMonth}
+            calendarGrid={calendarGrid}
+            selectedDateIso={selectedDateIso}
+            todayIso={todayIso}
+            eventsByDate={eventsByDate}
+            selectedDayEvents={eventsByDate[selectedDateIso] || []}
+            showFullSubjectNames={showFullSubjectNames}
+            lang={lang}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+            onJumpToToday={handleJumpToToday}
+            onSelectDate={setSelectedDateIso}
+            onSelectEvent={onSelectEvent}
+          />
         )}
       </div>
     </div>

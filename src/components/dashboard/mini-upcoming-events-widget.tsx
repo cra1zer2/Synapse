@@ -4,6 +4,7 @@ import { useMemo, Fragment } from 'react'
 import { SmartTimetableResult, TimetableEvent } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
+import { getEventCategoryStyle } from '@/utils/badge.util'
 import { formatSubjectName } from '@/utils/text.util'
 import { formatPolishDayDate, getTodayIsoString } from '@/utils/date.util'
 import { cn } from '@/utils/cn.util'
@@ -62,19 +63,6 @@ export function MiniUpcomingEventsWidget({
   }, [timetableData, todayIso, showHomeworks])
 
   const previewList = upcomingEvents.slice(0, 4)
-
-  const getBadgeStyle = (category: TimetableEvent['category']) => {
-    switch (category) {
-      case 'exam':
-        return 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
-      case 'quiz':
-        return 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)]'
-      case 'holiday':
-        return 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
-      default:
-        return 'bg-[var(--ios-element)] text-[var(--ios-secondary)]'
-    }
-  }
 
   return (
     <IosCard
@@ -165,8 +153,29 @@ export function MiniUpcomingEventsWidget({
                     </div>
                   </div>
 
-                  <span className={cn('text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0', getBadgeStyle(ev.category))}>
-                    {ev.eventType || (ev.category === 'exam' ? 'Sprawdzian' : ev.category === 'quiz' ? 'Kartkówka' : ev.category === 'homework' ? 'Zadanie' : 'Info')}
+                  <span
+                    className={cn(
+                      'text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0',
+                      (() => {
+                        const s = getEventCategoryStyle(ev.eventType || ev.category)
+                        return `${s.bgClass} ${s.textClass}`
+                      })()
+                    )}
+                  >
+                    {ev.eventType ||
+                      (ev.category === 'exam'
+                        ? isEn
+                          ? 'Exam'
+                          : 'Sprawdzian'
+                        : ev.category === 'quiz'
+                          ? isEn
+                            ? 'Quiz'
+                            : 'Kartkówka'
+                          : ev.category === 'homework'
+                            ? isEn
+                              ? 'Homework'
+                              : 'Zadanie'
+                            : 'Info')}
                   </span>
                 </div>
                 {idx < previewList.length - 1 && (

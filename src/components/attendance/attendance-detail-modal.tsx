@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { SubjectAttendance, AbsenceDetail } from '@/models/attendance.model'
 import { AppDictionary } from '@/config/dictionary.config'
 import { IosScreen } from '@/components/ios/ios-screen'
-import { IosCard } from '@/components/ios/ios-ui'
+import { IosCard, IosEmptyState } from '@/components/ios/ios-ui'
 import { formatSubjectName } from '@/utils/text.util'
 import { getPendingJustifications, isLessonJustificationPending } from '@/utils/justification.util'
 import { cn } from '@/utils/cn.util'
@@ -70,7 +70,7 @@ export function AttendanceDetailModal({
 
           <div className="text-right">
             <span className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] tabular-nums">
-              {activeData?.absentLessons ?? 0} / {activeData?.totalLessons ?? 0} opuszczonych
+              {t.missedLessonsCount(activeData?.absentLessons ?? 0)} {t.ofScheduled(activeData?.totalLessons ?? 0)}
             </span>
           </div>
         </IosCard>
@@ -124,9 +124,7 @@ export function AttendanceDetailModal({
               })}
             </IosCard>
           ) : (
-            <IosCard className="p-8 text-center text-[15px] font-normal text-[var(--ios-secondary)]">
-              {t.noAbsencesRecorded}
-            </IosCard>
+            <IosEmptyState inCard compact title={t.noAbsencesRecorded} />
           )}
         </div>
       </div>

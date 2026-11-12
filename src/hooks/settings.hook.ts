@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { AppLanguage, AppTheme } from '@/config/dictionary.config'
 import { getTodayIsoString } from '@/utils/date.util'
+import { GradeModifierMode } from '@/utils/grade.util'
 
+export type { GradeModifierMode }
 export type TextClampOption = 'full' | '1' | '2'
 export type DashboardWidgetId = 'grades' | 'schedule' | 'upcoming' | 'messages' | 'attendance'
 
@@ -23,7 +25,7 @@ export const DEFAULT_DASHBOARD_VISIBLE: Record<DashboardWidgetId, boolean> = {
   attendance: true
 }
 
-function syncMetaThemeColor(isDark: boolean) {
+export function syncMetaThemeColor(isDark: boolean) {
   if (typeof document === 'undefined') return
   let meta = document.querySelector('meta[name="theme-color"]')
   const targetColor = isDark ? '#000000' : '#f2f2f7'
@@ -43,9 +45,11 @@ export function useAppSettings() {
   const [textClamp, setTextClamp] = useState<TextClampOption>('full')
   const [showFullSubjectNames, setShowFullSubjectNames] = useState(false)
   const [ignoreGradeModifiers, setIgnoreGradeModifiers] = useState(false)
+  const [gradeModifierMode, setGradeModifierMode] = useState<GradeModifierMode>('standard')
   const [allowStudentJustifications, setAllowStudentJustifications] = useState(false)
   const [enableGradeSimulator, setEnableGradeSimulator] = useState(false)
   const [showHomeworks, setShowHomeworks] = useState(false)
+  const [showMobileTodayAttendance, setShowMobileTodayAttendance] = useState(false)
   const [dashboardOrder, setDashboardOrder] = useState<DashboardWidgetId[]>(DEFAULT_DASHBOARD_ORDER)
   const [dashboardVisible, setDashboardVisible] = useState<Record<DashboardWidgetId, boolean>>(DEFAULT_DASHBOARD_VISIBLE)
   const [showLuckyNumberBanner, setShowLuckyNumberBanner] = useState(false)
@@ -82,9 +86,17 @@ export function useAppSettings() {
     const savedClamp = (localStorage.getItem('synapse_text_clamp') as TextClampOption) || 'full'
     const savedFull = localStorage.getItem('synapse_full_names') === 'true'
     const savedIgnore = localStorage.getItem('synapse_ignore_modifiers') === 'true'
+    const savedModMode = localStorage.getItem('synapse_grade_modifier_mode') as GradeModifierMode | null
+    const resolvedModMode: GradeModifierMode =
+      savedModMode && ['standard', 'symmetric', 'quarter', 'none'].includes(savedModMode)
+        ? savedModMode
+        : savedIgnore
+          ? 'none'
+          : 'standard'
     const savedStudentJust = localStorage.getItem('synapse_allow_student_justifications') === 'true'
     const savedSim = localStorage.getItem('synapse_grade_simulator') === 'true'
     const savedHw = localStorage.getItem('synapse_show_homeworks') === 'true'
+    const savedMobileTodayAtt = localStorage.getItem('synapse_mobile_today_attendance') === 'true'
     const savedLuckyBanner = localStorage.getItem('synapse_show_lucky_banner') === 'true'
     const savedLuckyDismissed = localStorage.getItem('synapse_lucky_dismissed_date') || ''
 
@@ -92,10 +104,12 @@ export function useAppSettings() {
     setTheme(savedTheme)
     setTextClamp(savedClamp)
     setShowFullSubjectNames(savedFull)
-    setIgnoreGradeModifiers(savedIgnore)
+    setGradeModifierMode(resolvedModMode)
+    setIgnoreGradeModifiers(resolvedModMode === 'none')
     setAllowStudentJustifications(savedStudentJust)
     setEnableGradeSimulator(savedSim)
     setShowHomeworks(savedHw)
+    setShowMobileTodayAttendance(savedMobileTodayAtt)
     setShowLuckyNumberBanner(savedLuckyBanner)
     setLuckyDismissedDate(savedLuckyDismissed)
 
@@ -157,8 +171,19 @@ export function useAppSettings() {
   }
 
   const handleToggleIgnoreGradeModifiers = (val: boolean) => {
+    const nextMode: GradeModifierMode = val ? 'none' : 'standard'
     setIgnoreGradeModifiers(val)
+    setGradeModifierMode(nextMode)
     localStorage.setItem('synapse_ignore_modifiers', String(val))
+    localStorage.setItem('synapse_grade_modifier_mode', nextMode)
+  }
+
+  const handleSelectGradeModifierMode = (mode: GradeModifierMode) => {
+    setGradeModifierMode(mode)
+    const ignore = mode === 'none'
+    setIgnoreGradeModifiers(ignore)
+    localStorage.setItem('synapse_grade_modifier_mode', mode)
+    localStorage.setItem('synapse_ignore_modifiers', String(ignore))
   }
 
   const handleToggleAllowStudentJustifications = (val: boolean) => {
@@ -174,6 +199,11 @@ export function useAppSettings() {
   const handleToggleShowHomeworks = (val: boolean) => {
     setShowHomeworks(val)
     localStorage.setItem('synapse_show_homeworks', String(val))
+  }
+
+  const handleToggleMobileTodayAttendance = (val: boolean) => {
+    setShowMobileTodayAttendance(val)
+    localStorage.setItem('synapse_mobile_today_attendance', String(val))
   }
 
   const handleChangeDashboardOrder = (newOrder: DashboardWidgetId[]) => {
@@ -208,9 +238,11 @@ export function useAppSettings() {
     textClamp,
     showFullSubjectNames,
     ignoreGradeModifiers,
+    gradeModifierMode,
     allowStudentJustifications,
     enableGradeSimulator,
     showHomeworks,
+    showMobileTodayAttendance,
     dashboardOrder,
     dashboardVisible,
     showLuckyNumberBanner,
@@ -221,9 +253,11 @@ export function useAppSettings() {
     handleSelectTextClamp,
     handleToggleShowFullSubjectNames,
     handleToggleIgnoreGradeModifiers,
+    handleSelectGradeModifierMode,
     handleToggleAllowStudentJustifications,
     handleToggleEnableGradeSimulator,
     handleToggleShowHomeworks,
+    handleToggleMobileTodayAttendance,
     handleChangeDashboardOrder,
     handleToggleDashboardWidget,
     handleToggleShowLuckyNumberBanner,

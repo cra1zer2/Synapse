@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useMemo, useEffect, ReactNode } from 'react'
+import { useState, useMemo, useEffect, useRef, ReactNode } from 'react'
+import { ChevronRight, Eye, Inbox, Megaphone, Paperclip } from 'lucide-react'
 import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { cleanSenderName } from '@/utils/text.util'
 import { formatHumanPolishDate } from '@/utils/date.util'
-import { IosCard, IosSearchBar } from '@/components/ios/ios-ui'
+import { IosCard, IosEmptyState, IosSearchBar } from '@/components/ios/ios-ui'
 import { MessageReaderScreen } from './message-reader-screen'
 import { AnnouncementReaderScreen } from './announcement-reader-screen'
 import { ComposeMessageScreen } from './compose-message-screen'
@@ -21,6 +22,12 @@ interface MessagesWidgetProps {
   onCloseCompose?: () => void
   onLoadReceivers?: () => void
   onOpenMessage: (id: number | string, folder?: 'inbox' | 'sent') => Promise<{ content: string; attachments: MessageAttachment[] }>
+  onMarkMessageRead?: (
+    msgId: number | string,
+    folder: 'inbox' | 'sent',
+    content?: string,
+    attachments?: MessageAttachment[]
+  ) => void
   onDownloadAttachment?: (att: MessageAttachment) => Promise<boolean>
   onSendMessage: (receiverId: number | number[], title: string, body: string) => Promise<boolean>
   isLoading?: boolean
@@ -92,7 +99,7 @@ function renderClickableText(text: string): ReactNode {
   })
 }
 
-function deduplicateReceivers(list: ReceiverItem[]): ReceiverItem[] {
+function deduplicateReceivers(list: ReceiverItem[], lang: AppLanguage): ReceiverItem[] {
   const map = new Map<number, ReceiverItem>()
   for (const item of list) {
     if (!item || !item.id) continue
@@ -100,7 +107,7 @@ function deduplicateReceivers(list: ReceiverItem[]): ReceiverItem[] {
       map.set(item.id, item)
     }
   }
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pl'))
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, lang === 'en' ? 'en' : 'pl'))
 }
 
 function hasExplicitTime(dateStr: string): boolean {
@@ -117,6 +124,7 @@ export function MessagesWidget({
   onCloseCompose,
   onLoadReceivers,
   onOpenMessage,
+  onMarkMessageRead,
   onDownloadAttachment,
   onSendMessage,
   isLoading = false,
@@ -128,6 +136,7 @@ export function MessagesWidget({
 }: MessagesWidgetProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [onlyUnread, setOnlyUnread] = useState(false)
+  const [localReadIds, setLocalReadIds] = useState<Record<string, boolean>>({})
   const [activeMessage, setActiveMessage] = useState<MessageItem | null>(null)
   const [cachedMessage, setCachedMessage] = useState<MessageItem | null>(null)
   const [readerContent, setReaderContent] = useState('')
@@ -141,15 +150,26 @@ export function MessagesWidget({
   const [composeInitialRecipients, setComposeInitialRecipients] = useState<ReceiverItem[]>([])
   const [composeInitialTitle, setComposeInitialTitle] = useState('')
 
+  const msgCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const annCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const isEn = lang === 'en'
   const isComposeActive = isComposeOpen || localCompose
 
-  const uniqueReceivers = useMemo(() => deduplicateReceivers(receivers), [receivers])
+  useEffect(() => {
+    return () => {
+      if (msgCloseTimerRef.current) clearTimeout(msgCloseTimerRef.current)
+      if (annCloseTimerRef.current) clearTimeout(annCloseTimerRef.current)
+    }
+  }, [])
+
+  const uniqueReceivers = useMemo(() => deduplicateReceivers(receivers, lang), [receivers, lang])
 
   const filteredMessages = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     return messages.filter((m) => {
-      if (folder !== 'sent' && onlyUnread && m.isRead) return false
+      const readState = m.isRead || Boolean(localReadIds[String(m.id)])
+      if (folder !== 'sent' && onlyUnread && readState) return false
       if (!q) return true
       return (
         m.subject.toLowerCase().includes(q) ||
@@ -158,7 +178,7 @@ export function MessagesWidget({
         m.date.toLowerCase().includes(q)
       )
     })
-  }, [messages, searchQuery, onlyUnread, folder])
+  }, [messages, searchQuery, onlyUnread, folder, localReadIds])
 
   const filteredAnnouncements = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
@@ -176,9 +196,14 @@ export function MessagesWidget({
   }
 
   const handleReadMessage = async (msg: MessageItem) => {
-    msg.isRead = true
+    setLocalReadIds((prev) => ({ ...prev, [String(msg.id)]: true }))
+    if (onMarkMessageRead) {
+      onMarkMessageRead(msg.id, folder)
+    }
+
     setActiveMessage(msg)
     setCachedMessage(msg)
+
     if (msg.content) {
       setReaderContent(msg.content)
       setReaderAttachments(msg.attachments || [])
@@ -186,26 +211,25 @@ export function MessagesWidget({
       notifySubView(true)
       const res = await onOpenMessage(msg.id, folder)
       if (res.content) {
-        msg.content = res.content
         setReaderContent(res.content)
       }
       if (res.attachments && res.attachments.length > 0) {
-        msg.attachments = res.attachments
         setReaderAttachments(res.attachments)
+      }
+      if (onMarkMessageRead && (res.content || (res.attachments && res.attachments.length > 0))) {
+        onMarkMessageRead(msg.id, folder, res.content || undefined, res.attachments || undefined)
       }
       return
     }
+
     setReaderContent('')
     setReaderAttachments([])
     setIsLoadingContent(true)
     notifySubView(true)
 
     const res = await onOpenMessage(msg.id, folder)
-    if (res.content) {
-      msg.content = res.content
-    }
-    if (res.attachments) {
-      msg.attachments = res.attachments
+    if (onMarkMessageRead) {
+      onMarkMessageRead(msg.id, folder, res.content || undefined, res.attachments || undefined)
     }
     setReaderContent(res.content)
     setReaderAttachments(res.attachments || [])
@@ -215,7 +239,8 @@ export function MessagesWidget({
   const handleCloseMessage = () => {
     setActiveMessage(null)
     notifySubView(false)
-    setTimeout(() => {
+    if (msgCloseTimerRef.current) clearTimeout(msgCloseTimerRef.current)
+    msgCloseTimerRef.current = setTimeout(() => {
       setCachedMessage(null)
       setReaderContent('')
       setReaderAttachments([])
@@ -243,7 +268,8 @@ export function MessagesWidget({
   const handleCloseAnnouncement = () => {
     setActiveAnnouncement(null)
     notifySubView(false)
-    setTimeout(() => {
+    if (annCloseTimerRef.current) clearTimeout(annCloseTimerRef.current)
+    annCloseTimerRef.current = setTimeout(() => {
       setCachedAnnouncement(null)
     }, 350)
   }
@@ -274,7 +300,17 @@ export function MessagesWidget({
           <IosSearchBar
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder={mode === 'messages' ? (folder === 'sent' ? (isEn ? 'Search sent messages...' : 'Szukaj w wysłanych...') : t.searchMessagesPlaceholder) : (isEn ? 'Search notices...' : 'Szukaj w ogłoszeniach...')}
+            placeholder={
+              mode === 'messages'
+                ? folder === 'sent'
+                  ? isEn
+                    ? 'Search sent messages...'
+                    : 'Szukaj w wysłanych...'
+                  : t.searchMessagesPlaceholder
+                : isEn
+                  ? 'Search notices...'
+                  : 'Szukaj w ogłoszeniach...'
+            }
           />
         </div>
         {mode === 'messages' && folder !== 'sent' && (
@@ -282,7 +318,7 @@ export function MessagesWidget({
             type="button"
             onClick={() => setOnlyUnread((prev) => !prev)}
             className={cn(
-              'h-[42px] px-4 rounded-full text-[13px] font-medium tracking-[-0.1px] shrink-0 transition-colors cursor-pointer select-none',
+              'h-[42px] px-3.5 sm:px-4 rounded-full text-[13px] font-medium tracking-[-0.1px] shrink-0 transition-colors cursor-pointer select-none',
               onlyUnread
                 ? 'bg-[var(--ios-blue)] text-white font-semibold'
                 : 'bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
@@ -294,7 +330,7 @@ export function MessagesWidget({
       </div>
 
       {mode === 'messages' ? (
-        <IosCard className="overflow-hidden divide-y">
+        <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
           {isLoading && messages.length === 0 ? (
             Array.from({ length: 4 }).map((_, idx) => (
               <div key={idx} className="w-full p-4 flex flex-col gap-2">
@@ -307,84 +343,71 @@ export function MessagesWidget({
               </div>
             ))
           ) : filteredMessages.length > 0 ? (
-            filteredMessages.map((msg, idx) => (
-              <div
-                key={msg.id + '-' + idx}
-                onClick={() => handleReadMessage(msg)}
-                className="w-full p-4 flex flex-col gap-1 transition-colors duration-150 cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    {folder !== 'sent' && !msg.isRead && (
-                      <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] shrink-0" />
-                    )}
-                    {folder === 'sent' && msg.isRead && (
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="text-[var(--ios-blue)] shrink-0"
-                      >
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                    <span className="text-[12px] font-semibold text-[var(--ios-blue)] tracking-tight truncate">
-                      {cleanSenderName(msg.sender)}
-                    </span>
+            filteredMessages.map((msg, idx) => {
+              const isReadState = msg.isRead || Boolean(localReadIds[String(msg.id)])
+              return (
+                <div
+                  key={msg.id + '-' + idx}
+                  onClick={() => handleReadMessage(msg)}
+                  className="w-full p-4 flex flex-col gap-1 transition-colors duration-150 cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {folder !== 'sent' && !isReadState && (
+                        <span className="w-2 h-2 rounded-full bg-[var(--ios-blue)] shrink-0" />
+                      )}
+                      {folder === 'sent' && isReadState && (
+                        <Eye className="w-3.5 h-3.5 text-[var(--ios-blue)] shrink-0" strokeWidth={2.2} />
+                      )}
+                      <span className="text-[12px] font-semibold text-[var(--ios-blue)] tracking-tight truncate">
+                        {cleanSenderName(msg.sender)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {msg.hasAttachments && (
+                        <Paperclip className="w-[13px] h-[13px] text-[var(--ios-secondary)] shrink-0" strokeWidth={2.2} />
+                      )}
+                      <span className="text-[12px] font-normal text-[var(--ios-secondary)] tabular-nums">
+                        {formatHumanPolishDate(msg.date, hasExplicitTime(msg.date), lang)}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-[var(--ios-tertiary)] shrink-0" strokeWidth={2.5} />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {msg.hasAttachments && (
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="text-[var(--ios-secondary)]"
-                      >
-                        <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                      </svg>
+
+                  <h3
+                    className={cn(
+                      'text-[15px] text-[var(--ios-label)] tracking-[-0.2px] leading-snug',
+                      !isReadState && folder !== 'sent' ? 'font-semibold' : 'font-medium'
                     )}
-                    <span className="text-[12px] font-normal text-[var(--ios-secondary)] tabular-nums">
-                      {formatHumanPolishDate(msg.date, hasExplicitTime(msg.date), lang)}
-                    </span>
-                    <svg className="w-3.5 h-3.5 text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </div>
+                  >
+                    {msg.subject}
+                  </h3>
+
+                  {msg.content && (
+                    <p className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] line-clamp-2 leading-relaxed">
+                      {msg.content}
+                    </p>
+                  )}
                 </div>
-
-                <h3 className={cn(
-                  'text-[15px] text-[var(--ios-label)] tracking-[-0.2px] leading-snug',
-                  !msg.isRead && folder !== 'sent' ? 'font-semibold' : 'font-medium'
-                )}>
-                  {msg.subject}
-                </h3>
-
-                {msg.content && (
-                  <p className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] line-clamp-2 leading-relaxed">
-                    {msg.content}
-                  </p>
-                )}
-              </div>
-            ))
+              )
+            })
           ) : (
-            <div className="p-8 text-center text-[15px] font-normal text-[var(--ios-secondary)]">
-              {folder === 'sent' ? (isEn ? 'No sent messages' : 'Brak wysłanych wiadomości') : t.noMessages}
-            </div>
+            <IosEmptyState
+              compact
+              iconTone="blue"
+              icon={<Inbox className="w-[20px] h-[20px]" strokeWidth={1.9} />}
+              title={
+                folder === 'sent'
+                  ? isEn
+                    ? 'No sent messages'
+                    : 'Brak wysłanych wiadomości'
+                  : t.noMessages
+              }
+            />
           )}
         </IosCard>
       ) : (
-        <IosCard className="overflow-hidden divide-y">
+        <IosCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
           {isLoading && announcements.length === 0 ? (
             Array.from({ length: 4 }).map((_, idx) => (
               <div key={idx} className="w-full p-4 flex flex-col gap-2">
@@ -411,9 +434,7 @@ export function MessagesWidget({
                     <span className="text-[12px] font-normal text-[var(--ios-secondary)] tabular-nums">
                       {formatHumanPolishDate(item.date, hasExplicitTime(item.date), lang)}
                     </span>
-                    <svg className="w-3.5 h-3.5 text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
+                    <ChevronRight className="w-3.5 h-3.5 text-[var(--ios-tertiary)] shrink-0" strokeWidth={2.5} />
                   </div>
                 </div>
 
@@ -427,9 +448,12 @@ export function MessagesWidget({
               </div>
             ))
           ) : (
-            <div className="p-8 text-center text-[15px] font-normal text-[var(--ios-secondary)]">
-              {isEn ? 'No announcements' : 'Brak ogłoszeń'}
-            </div>
+            <IosEmptyState
+              compact
+              iconTone="neutral"
+              icon={<Megaphone className="w-[20px] h-[20px]" strokeWidth={1.9} />}
+              title={isEn ? 'No announcements' : 'Brak ogłoszeń'}
+            />
           )}
         </IosCard>
       )}
@@ -445,6 +469,7 @@ export function MessagesWidget({
         onClose={handleCloseMessage}
         onReply={handleInitiateReply}
         renderContent={renderClickableText}
+        lang={lang}
         t={t}
       />
 
@@ -453,6 +478,7 @@ export function MessagesWidget({
         isOpen={Boolean(activeAnnouncement)}
         onClose={handleCloseAnnouncement}
         renderContent={renderClickableText}
+        lang={lang}
         t={t}
       />
 
@@ -466,6 +492,7 @@ export function MessagesWidget({
         onSend={async (ids, title, body) => {
           return await onSendMessage(ids, title, body)
         }}
+        lang={lang}
         t={t}
       />
     </div>

@@ -57,9 +57,22 @@ export function IosCell({
 
   return (
     <div
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      aria-disabled={disabled || undefined}
       onClick={isInteractive ? onClick : undefined}
+      onKeyDown={
+        isInteractive
+          ? (e) => {
+              if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
+                e.preventDefault()
+                onClick?.()
+              }
+            }
+          : undefined
+      }
       className={cn(
-        'relative px-4 flex items-center justify-between gap-3 select-none transition-colors duration-150',
+        'relative px-4 flex items-center justify-between gap-3 select-none transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[var(--ios-blue)]/40',
         heightClasses,
         isInteractive && 'cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]',
         disabled && 'opacity-40 pointer-events-none',
@@ -137,9 +150,12 @@ export function IosListSection({
       <div className={cn('ios-card rounded-[26px] overflow-hidden', cardClassName)}>
         {childArray.map((child, index) => {
           const isLastItem = index === totalChildren - 1
-          return React.cloneElement(child as ReactElement<IosCellProps>, {
-            isLast: isLastItem
-          })
+          if (typeof child.type === 'function') {
+            return React.cloneElement(child as ReactElement<IosCellProps>, {
+              isLast: isLastItem
+            })
+          }
+          return child
         })}
       </div>
 

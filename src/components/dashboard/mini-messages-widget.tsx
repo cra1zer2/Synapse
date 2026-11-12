@@ -1,14 +1,12 @@
 'use client'
 
-import { MessageItem, AnnouncementItem } from '@/models/message.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
+import { formatPolishPlural } from '@/utils/text.util'
 
 interface MiniMessagesWidgetProps {
   unreadCount: number
   announcementsCount: number
-  latestMessage?: MessageItem | null
-  latestAnnouncement?: AnnouncementItem | null
   isLoading?: boolean
   error?: string | null
   onRetry?: () => void
@@ -16,8 +14,6 @@ interface MiniMessagesWidgetProps {
   t: AppDictionary
   onOpenMessages: () => void
   onOpenAnnouncements: () => void
-  onOpenMessageDetail?: (msg: MessageItem) => void
-  onOpenAnnouncementDetail?: (ann: AnnouncementItem) => void
 }
 
 export function MiniMessagesWidget({
@@ -65,7 +61,9 @@ export function MiniMessagesWidget({
                   {unreadCount > 0
                     ? isEn
                       ? unreadCount + ' unread'
-                      : unreadCount + ' nieprzeczytanych'
+                      : unreadCount +
+                        ' ' +
+                        formatPolishPlural(unreadCount, 'nieprzeczytana', 'nieprzeczytane', 'nieprzeczytanych')
                     : isEn
                       ? 'No new messages'
                       : 'Brak nowych wiadomości'}
@@ -112,7 +110,17 @@ export function MiniMessagesWidget({
                 <div className="w-24 h-[12px] rounded-full ios-skeleton mt-1.5 mb-0.5" />
               ) : (
                 <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] truncate mt-0.5 tabular-nums">
-                  {announcementsCount} {isEn ? 'school notices' : 'ogłoszeń szkoły'}
+                  {announcementsCount}{' '}
+                  {isEn
+                    ? announcementsCount === 1
+                      ? 'school notice'
+                      : 'school notices'
+                    : formatPolishPlural(
+                        announcementsCount,
+                        'ogłoszenie szkoły',
+                        'ogłoszenia szkoły',
+                        'ogłoszeń szkoły'
+                      )}
                 </span>
               )}
             </div>
@@ -140,7 +148,7 @@ export function MiniMessagesWidget({
           <span className="text-[12px] font-normal text-[var(--ios-secondary)] truncate">{error}</span>
           {onRetry && (
             <button type="button" onClick={onRetry} className="text-[12px] font-medium text-[var(--ios-blue)] active:opacity-60 cursor-pointer shrink-0">
-              {t.refresh || 'Odśwież'}
+              {t.refresh || (isEn ? 'Refresh' : 'Odśwież')}
             </button>
           )}
         </div>

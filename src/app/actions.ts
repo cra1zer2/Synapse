@@ -15,6 +15,7 @@ import {
 } from '@/services/message.service'
 import { JustificationPayload } from '@/models/justification.model'
 import { StudentProfile } from '@/models/account.model'
+import { isStudentUsername } from '@/utils/account.util'
 import { MessagesActionResult } from '@/models/message.model'
 import { SmartTimetableResult } from '@/models/timetable.model'
 import { GradesResult } from '@/models/grade.model'
@@ -252,7 +253,7 @@ export async function getStudentProfileAction(username: string, pass: string): P
             ? Number(rawClassNum)
             : null
 
-        const isStudent = cleanUser.toLowerCase().includes('u')
+        const isStudent = isStudentUsername(cleanUser)
         const role: 'student' | 'parent' = isStudent ? 'student' : 'parent'
 
         return {

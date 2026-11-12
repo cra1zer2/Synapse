@@ -9,6 +9,7 @@ import {
 import { translateBatch } from '@/services/translation.service'
 import { fetchGatewayEndpoint } from '@/services/gateway.service'
 import { parseLessonTimeRange } from '@/utils/time.util'
+import { getTodayIsoString } from '@/utils/date.util'
 
 function calculateDuration(timeRange: string): { durationMinutes: number; isShortened: boolean } {
     const parsed = parseLessonTimeRange(timeRange)
@@ -134,7 +135,8 @@ export async function fetchSmartTimetable(
             const p = targetDateIso.split('-').map(Number)
             pivotDate = new Date(p[0], p[1] - 1, p[2])
         } else {
-            pivotDate = new Date()
+            const tp = getTodayIsoString().split('-').map(Number)
+            pivotDate = new Date(tp[0], tp[1] - 1, tp[2])
         }
         const { monday, friday, weekDates } = getWeekDates(pivotDate)
 
@@ -247,7 +249,7 @@ export async function fetchSmartTimetable(
 
         collectClassroomsFromTimetable(rawWeekTimetable, daysIso)
 
-        const todayIso = formatIso(new Date())
+        const todayIso = getTodayIsoString()
         let hasActiveFutureOrTodayInCurrentWeek = false
         for (const iso of daysIso) {
             if (iso < todayIso) continue
@@ -264,7 +266,7 @@ export async function fetchSmartTimetable(
         }
 
         let futureCandidateRaw: { dayName: string; dateStr: string; isoStr: string; periodsRaw: any } | null = null
-        if (!hasActiveFutureOrTodayInCurrentWeek && fridayIso >= todayIso) {
+        if (!hasActiveFutureOrTodayInCurrentWeek) {
             for (let weekOffset = 1; weekOffset <= 3; weekOffset++) {
                 const nextPivot = new Date(monday)
                 nextPivot.setDate(monday.getDate() + weekOffset * 7)
@@ -318,14 +320,39 @@ export async function fetchSmartTimetable(
 
         const rawClassId = meRes?.Me?.Class?.Id ?? meRes?.data?.Me?.Class?.Id
         const classId = Number(rawClassId)
-        const pivotMonth = pivotDate.getMonth() + 1
-        const pivotYear = pivotDate.getFullYear()
+        const futureWindowDate = new Date(monday)
+        futureWindowDate.setDate(monday.getDate() + 21)
 
-        const calendarRes = !isNaN(classId) && classId > 0
-            ? await fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Calendars/' + classId + '?month=' + pivotMonth + '&year=' + pivotYear).catch(() => null)
-            : null
-        const rawHomeWorks = Array.isArray(calendarRes?.Calendar?.HomeWorks) ? calendarRes.Calendar.HomeWorks : []
-        const homeworkIds = rawHomeWorks.map((hw: any) => Number(hw.Id)).filter((id: number) => !isNaN(id) && id > 0)
+        const calendarMonths: Array<{ month: number; year: number }> = [
+            { month: monday.getMonth() + 1, year: monday.getFullYear() }
+        ]
+        const endMonth = futureWindowDate.getMonth() + 1
+        const endYear = futureWindowDate.getFullYear()
+        if (endMonth !== calendarMonths[0].month || endYear !== calendarMonths[0].year) {
+            calendarMonths.push({ month: endMonth, year: endYear })
+        }
+
+        const calendarResponses = !isNaN(classId) && classId > 0
+            ? await Promise.all(
+                calendarMonths.map((cm) =>
+                    fetchGatewayEndpoint(
+                        username,
+                        pass,
+                        'gateway/api/2.0/Calendars/' + classId + '?month=' + cm.month + '&year=' + cm.year
+                    ).catch(() => null)
+                )
+            )
+            : []
+
+        const homeworkIdSet = new Set<number>()
+        for (const calendarRes of calendarResponses) {
+            const rawHomeWorks = Array.isArray(calendarRes?.Calendar?.HomeWorks) ? calendarRes.Calendar.HomeWorks : []
+            for (const hw of rawHomeWorks) {
+                const id = Number(hw?.Id)
+                if (!isNaN(id) && id > 0) homeworkIdSet.add(id)
+            }
+        }
+        const homeworkIds = Array.from(homeworkIdSet)
 
         const eventsByDate: Record<string, TimetableEvent[]> = {}
 
@@ -544,6 +571,10 @@ export async function fetchSmartTimetable(
                     if (l.subject) textsToTranslate.add(l.subject)
                     if (l.topic) textsToTranslate.add(l.topic)
                 })
+                nextUpcomingDay.events.forEach((e) => {
+                    if (e.title) textsToTranslate.add(e.title)
+                    if (e.subjectName) textsToTranslate.add(e.subjectName)
+                })
             }
             allCalendarEvents.forEach((e) => {
                 if (e.title) textsToTranslate.add(e.title)
@@ -564,6 +595,10 @@ export async function fetchSmartTimetable(
                 nextUpcomingDay.lessons.forEach((l) => {
                     if (translatedMap[l.subject]) l.subject = translatedMap[l.subject]
                     if (l.topic && translatedMap[l.topic]) l.topic = translatedMap[l.topic]
+                })
+                nextUpcomingDay.events.forEach((e) => {
+                    if (translatedMap[e.title]) e.title = translatedMap[e.title]
+                    if (e.subjectName && translatedMap[e.subjectName]) e.subjectName = translatedMap[e.subjectName]
                 })
             }
             allCalendarEvents.forEach((e) => {

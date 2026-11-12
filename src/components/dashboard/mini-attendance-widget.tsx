@@ -5,6 +5,7 @@ import { AttendanceResult } from '@/models/attendance.model'
 import { SmartTimetableResult } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage } from '@/config/dictionary.config'
 import { IosCard } from '@/components/ios/ios-ui'
+import { getAttendanceTypeStyle } from '@/utils/badge.util'
 import { cn } from '@/utils/cn.util'
 import { formatHumanPolishDate, getTodayIsoString } from '@/utils/date.util'
 
@@ -19,6 +20,7 @@ interface MiniAttendanceWidgetProps {
   onOpenAttendance: () => void
   onOpenLegacyAttendance?: (dateIso?: string) => void
   isDesktop?: boolean
+  showTodayLine?: boolean
 }
 
 export function MiniAttendanceWidget({
@@ -31,8 +33,10 @@ export function MiniAttendanceWidget({
   t,
   onOpenAttendance,
   onOpenLegacyAttendance,
-  isDesktop = false
+  isDesktop = false,
+  showTodayLine
 }: MiniAttendanceWidgetProps) {
+  const shouldShowTodayLine = showTodayLine ?? isDesktop
   const isPending = isLoading || (!attendanceData && !error)
   const isDanger = attendanceData?.overallStatus === 'danger'
   const isWarning = attendanceData?.overallStatus === 'warning'
@@ -179,7 +183,7 @@ export function MiniAttendanceWidget({
             <div className="w-full h-[6px] rounded-full ios-skeleton" />
           </div>
 
-          {isDesktop && (
+          {shouldShowTodayLine && (
             <div className="flex flex-col gap-2 px-4 py-3 border-t border-[var(--ios-separator)]">
               <div className="flex items-center justify-between">
                 <div className="w-28 h-[12px] rounded-full ios-skeleton" />
@@ -187,7 +191,7 @@ export function MiniAttendanceWidget({
               </div>
               <div className="flex items-center gap-1.5">
                 {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                  <div key={num} className="w-[28px] h-[28px] rounded-[8px] ios-skeleton" />
+                  <div key={num} className="w-[26px] sm:w-[28px] h-[26px] sm:h-[28px] rounded-[8px] ios-skeleton" />
                 ))}
               </div>
             </div>
@@ -199,18 +203,18 @@ export function MiniAttendanceWidget({
             'px-4 py-3.5 flex flex-col gap-2.5 transition-colors duration-150',
             canOpenAttendance && 'hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]'
           )}>
-            <div className="flex items-end justify-between min-h-[52px]">
-              <div className="flex flex-col">
+            <div className="flex items-end justify-between gap-2 flex-wrap min-h-[52px]">
+              <div className="flex flex-col min-w-0">
                 <span className="text-[12px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] leading-tight">
                   {t.attendanceRate}
                 </span>
-                <span className={cn('text-[34px] font-semibold tracking-[-0.8px] leading-none mt-1 tabular-nums', statusColor)}>
+                <span className={cn('text-[32px] sm:text-[34px] font-semibold tracking-[-0.8px] leading-none mt-1 tabular-nums', statusColor)}>
                   {attendanceData.overallPercentage}%
                 </span>
               </div>
 
-              <div className="text-right">
-                <span className="text-[13px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] tabular-nums">
+              <div className="text-right shrink-0">
+                <span className="text-[12px] sm:text-[13px] font-normal text-[var(--ios-secondary)] tracking-[-0.1px] tabular-nums">
                   {attendanceData.totalAbsent} / {attendanceData.totalScheduled} {lang === 'en' ? 'missed' : 'opuszczonych'}
                 </span>
               </div>
@@ -224,7 +228,7 @@ export function MiniAttendanceWidget({
             </div>
           </div>
 
-          {isDesktop && (
+          {shouldShowTodayLine && (
             <div
               onClick={(e) => {
                 e.stopPropagation()
@@ -252,28 +256,24 @@ export function MiniAttendanceWidget({
                       return (
                         <div
                           key={num}
-                          className="min-w-[28px] h-[28px] px-1.5 shrink-0 rounded-[8px] bg-[var(--ios-element)] flex items-center justify-center text-[11px] text-[var(--ios-tertiary)] font-medium tabular-nums select-none"
+                          className="min-w-[26px] sm:min-w-[28px] h-[26px] sm:h-[28px] px-1.5 shrink-0 rounded-[8px] bg-[var(--ios-element)] flex items-center justify-center text-[11px] text-[var(--ios-tertiary)] font-medium tabular-nums select-none"
                         >
                           {num}
                         </div>
                       )
                     }
 
-                    const isNu = record.type === 'nb'
-                    const isSp = record.type === 'sp'
-                    const isSl = record.type === 'sl'
-
-                    const badgeClass = isNu
-                      ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)] font-semibold'
-                      : isSp || isSl
-                      ? 'bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] font-semibold'
-                      : 'bg-[var(--ios-element)] text-[var(--ios-label)] font-medium'
+                    const typeStyle = getAttendanceTypeStyle(record.type)
+                    const badgeClass =
+                      record.type === 'other'
+                        ? 'bg-[var(--ios-element)] text-[var(--ios-label)] font-medium'
+                        : `${typeStyle.bgClass} ${typeStyle.textClass} font-semibold`
 
                     return (
                       <div
                         key={num}
                         className={cn(
-                          'min-w-[28px] h-[28px] px-1.5 shrink-0 rounded-[8px] flex items-center justify-center text-[11px] leading-none select-none',
+                          'min-w-[26px] sm:min-w-[28px] h-[26px] sm:h-[28px] px-1.5 shrink-0 rounded-[8px] flex items-center justify-center text-[11px] leading-none select-none',
                           badgeClass
                         )}
                       >

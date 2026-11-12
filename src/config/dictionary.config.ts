@@ -152,6 +152,36 @@ export interface AppDictionary {
     durationLabel: string
     statusLabel: string
     normalLesson: string
+    breakWord: string
+    justStatusPending: string
+    justStatusAccepted: string
+    justStatusRejected: string
+    justStatusPartial: string
+    liveJustificationsTitle: string
+    liveJustificationsEmpty: string
+    mobileTodayAttendanceTitle: string
+    mobileTodayAttendanceDesc: string
+    gradeModifierPresetTitle: string
+    gradeModifierPresetDesc: string
+    gradeModStandard: string
+    gradeModSymmetric: string
+    gradeModQuarter: string
+    gradeModNone: string
+    targetAverageLabel: string
+    targetSolverResult: (count: number, grade: number, weight: number, projected: number) => string
+    targetSolverAlreadyMet: string
+    targetSolverImpossible: string
+    laterStartLabel: string
+    earlierFinishLabel: string
+    exportCalendarIcs: string
+    pullToRefreshHint: string
+    releaseToRefreshHint: string
+    lastSyncedAtLabel: (timeStr: string) => string
+    offlineCachedLabel: string
+    demoStudentLabel: string
+    demoParentLabel: string
+    closeLabel: string
+    backLabel: string
 }
 
 export function getDictionary(lang: AppLanguage): AppDictionary {
@@ -306,7 +336,38 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
             roomLabel: 'Classroom',
             durationLabel: 'Duration',
             statusLabel: 'Status',
-            normalLesson: 'Regular period'
+            normalLesson: 'Regular period',
+            breakWord: 'Break',
+            justStatusPending: 'Pending',
+            justStatusAccepted: 'Accepted',
+            justStatusRejected: 'Rejected',
+            justStatusPartial: 'Partial',
+            liveJustificationsTitle: 'Librus Justifications',
+            liveJustificationsEmpty: 'No requests found in this status',
+            mobileTodayAttendanceTitle: "Show today's attendance on phone",
+            mobileTodayAttendanceDesc: "Adds today's lesson dots row to the compact dashboard widget",
+            gradeModifierPresetTitle: '+ / - modifier values',
+            gradeModifierPresetDesc: 'Adjust how plus and minus affect calculated averages',
+            gradeModStandard: 'Standard (+0.5 / -0.25)',
+            gradeModSymmetric: 'Symmetric (+0.5 / -0.5)',
+            gradeModQuarter: 'Quarter (+0.25 / -0.25)',
+            gradeModNone: 'Ignore (+0 / -0)',
+            targetAverageLabel: 'Target average',
+            targetSolverResult: (count, grade, weight, projected) =>
+                `Need ${count}x ${grade} (w.${weight}) -> ${projected.toFixed(2)}`,
+            targetSolverAlreadyMet: 'Target already reached',
+            targetSolverImpossible: 'Not reachable within 30 grades',
+            laterStartLabel: 'Later start',
+            earlierFinishLabel: 'Earlier finish',
+            exportCalendarIcs: 'Add to Calendar (.ics)',
+            pullToRefreshHint: 'Pull to refresh',
+            releaseToRefreshHint: 'Release to sync',
+            lastSyncedAtLabel: (timeStr) => `Synced at ${timeStr}`,
+            offlineCachedLabel: 'Cached offline view',
+            demoStudentLabel: 'Demo Student',
+            demoParentLabel: 'Demo Parent',
+            closeLabel: 'Close',
+            backLabel: 'Back'
         }
     }
 
@@ -468,6 +529,37 @@ export function getDictionary(lang: AppLanguage): AppDictionary {
         roomLabel: 'Sala / Gabinet',
         durationLabel: 'Czas trwania',
         statusLabel: 'Status',
-        normalLesson: 'Lekcja planowa'
+        normalLesson: 'Lekcja planowa',
+        breakWord: 'Przerwa',
+        justStatusPending: 'Oczekujące',
+        justStatusAccepted: 'Zaakceptowane',
+        justStatusRejected: 'Odrzucone',
+        justStatusPartial: 'Częściowe',
+        liveJustificationsTitle: 'Wnioski w Librusie',
+        liveJustificationsEmpty: 'Brak wniosków w tym statusie',
+        mobileTodayAttendanceTitle: 'Dzisiejsza obecność na telefonie',
+        mobileTodayAttendanceDesc: 'Pokazuje pasek lekcji z dzisiaj na karcie frekwencji',
+        gradeModifierPresetTitle: 'Wartości znaków + / -',
+        gradeModifierPresetDesc: 'Wybierz wpływ plusów i minusów na średnią ocen',
+        gradeModStandard: 'Standard (+0.5 / -0.25)',
+        gradeModSymmetric: 'Symetryczne (+0.5 / -0.5)',
+        gradeModQuarter: 'Ćwiartki (+0.25 / -0.25)',
+        gradeModNone: 'Ignoruj (+0 / -0)',
+        targetAverageLabel: 'Cel średniej',
+        targetSolverResult: (count, grade, weight, projected) =>
+            `Potrzeba ${count}× ${grade} (w.${weight}) -> ${projected.toFixed(2)}`,
+        targetSolverAlreadyMet: 'Cel już osiągnięty',
+        targetSolverImpossible: 'Nieosiągalne w 30 ocenach',
+        laterStartLabel: 'Późniejszy początek',
+        earlierFinishLabel: 'Wcześniejszy koniec',
+        exportCalendarIcs: 'Dodaj do Kalendarza (.ics)',
+        pullToRefreshHint: 'Pociągnij, aby odświeżyć',
+        releaseToRefreshHint: 'Puść, aby zsynchronizować',
+        lastSyncedAtLabel: (timeStr) => `Zsynchronizowano ${timeStr}`,
+        offlineCachedLabel: 'Tryb offline (pamięć)',
+        demoStudentLabel: 'Demo Uczeń',
+        demoParentLabel: 'Demo Rodzic',
+        closeLabel: 'Zamknij',
+        backLabel: 'Wróć'
     }
 }

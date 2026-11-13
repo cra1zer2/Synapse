@@ -213,29 +213,6 @@ body {
   --ios-header-pad-bottom: 6px;
 }
 
-@media (max-width: 767px) {
-  html.is-iphone.is-standalone {
-    --ios-header-pad-top: calc(env(safe-area-inset-top, 0px) + 34px);
-    --ios-header-pad-bottom: 3px;
-  }
-}
-
-@media (max-width: 767px) and (orientation: portrait) {
-  html.is-tall-iphone.is-standalone {
-    --ios-header-pad-top: calc(max(env(safe-area-inset-top, 0px), 47px) + 34px);
-    --ios-header-pad-bottom: 3px;
-  }
-}
-
-@supports (-webkit-touch-callout: none) {
-  @media (display-mode: standalone) and (orientation: portrait) and (max-width: 767px) and (min-device-height: 760px) {
-    :root {
-      --ios-header-pad-top: calc(max(env(safe-area-inset-top, 0px), 47px) + 34px);
-      --ios-header-pad-bottom: 3px;
-    }
-  }
-}
-
 .ios-header {
   position: fixed;
   top: 0;

@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: 'Smart Librus Synergia Client',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'Synapse'
   }
 }

@@ -68,7 +68,7 @@ export function IosSegmentedControl<T extends string | number>({
       )}
     >
       <div
-        className="pointer-events-none absolute top-[3px] bottom-[3px] left-[3px] rounded-full bg-[var(--ios-segmented-thumb)] transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform"
+        className="pointer-events-none absolute top-[3px] bottom-[3px] left-[3px] rounded-full bg-[var(--ios-segmented-thumb)] transition-transform duration-[260ms] ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform"
         style={{
           width: 'calc((100% - 6px) / ' + count + ')',
           transform: 'translate3d(' + (activeIndex * 100) + '%, 0, 0)',

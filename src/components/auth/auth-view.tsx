@@ -10,6 +10,7 @@ import { IosSpinner } from '@/components/ios/ios-spinner'
 import { IosAlert } from '@/components/ios/ios-alert'
 import { IosButton } from '@/components/ios/ios-button'
 import { IosBadge } from '@/components/ios/ios-badge'
+import { IosSegmentedControl } from '@/components/ios/ios-ui'
 import { resolveAvatarLetter as buildAvatarInitials } from '@/utils/account.util'
 import { cn } from '@/utils/cn.util'
 
@@ -137,7 +138,9 @@ export function AuthView({
   onSelectLanguage,
   t
 }: AuthViewProps) {
-  const isEn = lang === 'en'
+  const [displayLang, setDisplayLang] = useState<AppLanguage>(lang)
+  const [isLangFading, setIsLangFading] = useState(false)
+  const isDisplayEn = displayLang === 'en'
   const [showPassword, setShowPassword] = useState(false)
   const [isExiting, setIsExiting] = useState(false)
   const [dismissedError, setDismissedError] = useState(false)
@@ -148,10 +151,39 @@ export function AuthView({
   const usernameRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
   const exitTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const displayLangRef = useRef<AppLanguage>(lang)
+  const langTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const langRafRef = useRef<number | null>(null)
 
   useEffect(() => {
     setIsPortalReady(true)
   }, [])
+
+  useEffect(() => {
+    if (langTimerRef.current) clearTimeout(langTimerRef.current)
+    if (langRafRef.current !== null) cancelAnimationFrame(langRafRef.current)
+
+    if (lang === displayLangRef.current) {
+      setIsLangFading(false)
+      return
+    }
+
+    setIsLangFading(true)
+    langTimerRef.current = setTimeout(() => {
+      displayLangRef.current = lang
+      setDisplayLang(lang)
+      langRafRef.current = requestAnimationFrame(() => {
+        langRafRef.current = requestAnimationFrame(() => {
+          setIsLangFading(false)
+        })
+      })
+    }, 110)
+
+    return () => {
+      if (langTimerRef.current) clearTimeout(langTimerRef.current)
+      if (langRafRef.current !== null) cancelAnimationFrame(langRafRef.current)
+    }
+  }, [lang])
 
   useEffect(() => {
     setDismissedError(false)
@@ -193,37 +225,28 @@ export function AuthView({
     }, 240)
   }
 
+  const langTextClass = cn(
+    'transition-[opacity,transform]',
+    isLangFading
+      ? 'opacity-0 translate-y-[2px] duration-100 ease-out'
+      : 'opacity-100 translate-y-0 duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]'
+  )
+
   const containerClass = isSubView
     ? 'w-full bg-[var(--ios-bg)] text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 pt-3 pb-8 select-none'
     : 'w-full min-h-[100lvh] min-h-[100dvh] md:fixed md:inset-0 bg-[var(--ios-bg)] text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 pt-[calc(var(--ios-header-pad-top)+38px+var(--ios-header-pad-bottom))] sm:p-5 md:pt-5 md:overflow-y-auto select-none'
 
   const languageToggle = onSelectLanguage ? (
-    <div className="ios-glass-control p-[3px] rounded-full flex items-center gap-0.5">
-      <button
-        type="button"
-        onClick={() => onSelectLanguage('pl')}
-        className={cn(
-          'h-[28px] px-3 rounded-full text-[12px] font-semibold transition-all cursor-pointer select-none',
-          lang === 'pl'
-            ? 'bg-[var(--ios-segmented-thumb)] text-[var(--ios-label)] shadow-[0_1px_4px_rgba(0,0,0,0.12)]'
-            : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
-        )}
-      >
-        PL
-      </button>
-      <button
-        type="button"
-        onClick={() => onSelectLanguage('en')}
-        className={cn(
-          'h-[28px] px-3 rounded-full text-[12px] font-semibold transition-all cursor-pointer select-none',
-          lang === 'en'
-            ? 'bg-[var(--ios-segmented-thumb)] text-[var(--ios-label)] shadow-[0_1px_4px_rgba(0,0,0,0.12)]'
-            : 'text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
-        )}
-      >
-        EN
-      </button>
-    </div>
+    <IosSegmentedControl<AppLanguage>
+      size="compact"
+      value={lang}
+      onChange={onSelectLanguage}
+      options={[
+        { id: 'pl', label: 'PL' },
+        { id: 'en', label: 'EN' }
+      ]}
+      className="w-[100px] border border-[var(--ios-glass-border)] shadow-[var(--ios-glass-shadow)]"
+    />
   ) : null
 
   const mobileAuthTopbar =
@@ -257,14 +280,20 @@ export function AuthView({
             <GraduationCap className="w-8 h-8 stroke-[2]" />
           </div>
           <h1 className="text-[26px] sm:text-[28px] font-bold tracking-[-0.03em] text-[var(--ios-label)] leading-tight">
-            {isSubView ? (isEn ? 'Add Account' : 'Dodaj konto') : 'Synapse'}
+            {isSubView ? (
+              <span className={cn('inline-block', langTextClass)}>
+                {isDisplayEn ? 'Add Account' : 'Dodaj konto'}
+              </span>
+            ) : (
+              'Synapse'
+            )}
           </h1>
-          <p className="text-[13px] font-normal text-[var(--ios-secondary)] mt-1 max-w-[260px] leading-snug">
+          <p className={cn('text-[13px] font-normal text-[var(--ios-secondary)] mt-1 max-w-[260px] min-h-[36px] flex items-center justify-center leading-snug', langTextClass)}>
             {isSubView
-              ? isEn
+              ? isDisplayEn
                 ? 'Connect another Librus Synergia student or parent account.'
                 : 'Połącz kolejne konto ucznia lub rodzica z Librus Synergia.'
-              : isEn
+              : isDisplayEn
                 ? 'Your private, fast iOS-native dashboard for Librus Synergia.'
                 : 'Twój prywatny i szybki dziennik Librus Synergia.'}
           </p>
@@ -276,48 +305,74 @@ export function AuthView({
               <div className="relative px-4 h-[52px] flex items-center gap-3">
                 <User className="w-4 h-4 text-[var(--ios-secondary)] shrink-0" />
                 <label htmlFor={usernameInputId} className="sr-only">
-                  {isEn ? 'Username' : 'Login'}
+                  {isDisplayEn ? 'Username' : 'Login'}
                 </label>
-                <input
-                  id={usernameInputId}
-                  ref={usernameRef}
-                  type="text"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  autoComplete="username"
-                  spellCheck={false}
-                  disabled={isVerifying}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder={isEn ? 'Synergia login (e.g. 1234567u)' : 'Login Synergia (np. 1234567u)'}
-                  className="w-full bg-transparent text-[15px] text-[var(--ios-label)] placeholder-[var(--ios-tertiary)] outline-none disabled:opacity-50"
-                />
+                <div className="relative flex-1 flex items-center">
+                  <input
+                    id={usernameInputId}
+                    ref={usernameRef}
+                    type="text"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    autoComplete="username"
+                    spellCheck={false}
+                    disabled={isVerifying}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    aria-label={isDisplayEn ? 'Synergia login' : 'Login Synergia'}
+                    className="w-full bg-transparent text-[15px] text-[var(--ios-label)] outline-none disabled:opacity-50"
+                  />
+                  {username.length === 0 && (
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        'pointer-events-none absolute inset-0 flex items-center text-[15px] text-[var(--ios-tertiary)] truncate select-none',
+                        langTextClass
+                      )}
+                    >
+                      {isDisplayEn ? 'Synergia login (e.g. 1234567u)' : 'Login Synergia (np. 1234567u)'}
+                    </span>
+                  )}
+                </div>
                 <div className="absolute bottom-0 left-11 right-4 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none" />
               </div>
 
               <div className="relative px-4 h-[52px] flex items-center gap-3">
                 <Lock className="w-4 h-4 text-[var(--ios-secondary)] shrink-0" />
                 <label htmlFor={passwordInputId} className="sr-only">
-                  {isEn ? 'Password' : 'Hasło'}
+                  {isDisplayEn ? 'Password' : 'Hasło'}
                 </label>
-                <input
-                  id={passwordInputId}
-                  ref={passwordRef}
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  disabled={isVerifying}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={isEn ? 'Password' : 'Hasło'}
-                  className="w-full bg-transparent text-[15px] text-[var(--ios-label)] placeholder-[var(--ios-tertiary)] outline-none disabled:opacity-50"
-                />
+                <div className="relative flex-1 flex items-center">
+                  <input
+                    id={passwordInputId}
+                    ref={passwordRef}
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    disabled={isVerifying}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    aria-label={isDisplayEn ? 'Password' : 'Hasło'}
+                    className="w-full bg-transparent text-[15px] text-[var(--ios-label)] outline-none disabled:opacity-50"
+                  />
+                  {password.length === 0 && (
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        'pointer-events-none absolute inset-0 flex items-center text-[15px] text-[var(--ios-tertiary)] truncate select-none',
+                        langTextClass
+                      )}
+                    >
+                      {isDisplayEn ? 'Password' : 'Hasło'}
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   disabled={isVerifying}
                   className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-label)] cursor-pointer shrink-0 transition-colors"
                   aria-label={
-                    isEn
+                    isDisplayEn
                       ? showPassword
                         ? 'Hide password'
                         : 'Show password'
@@ -340,17 +395,19 @@ export function AuthView({
                 disabled={!canSubmit}
                 loading={isVerifying}
               >
-                {isVerifying
-                  ? isEn
-                    ? 'Verifying...'
-                    : 'Weryfikacja konta...'
-                  : isSubView
-                    ? isEn
-                      ? 'Add Account'
-                      : 'Dodaj konto'
-                    : isEn
-                      ? 'Sign In'
-                      : 'Zaloguj się'}
+                <span className={cn('inline-block', langTextClass)}>
+                  {isVerifying
+                    ? isDisplayEn
+                      ? 'Verifying...'
+                      : 'Weryfikacja konta...'
+                    : isSubView
+                      ? isDisplayEn
+                        ? 'Add Account'
+                        : 'Dodaj konto'
+                      : isDisplayEn
+                        ? 'Sign In'
+                        : 'Zaloguj się'}
+                </span>
               </IosButton>
 
               {isSubView && onCancel && (
@@ -362,7 +419,9 @@ export function AuthView({
                   onClick={onCancel}
                   disabled={isVerifying}
                 >
-                  {isEn ? 'Cancel' : 'Anuluj'}
+                  <span className={cn('inline-block', langTextClass)}>
+                    {isDisplayEn ? 'Cancel' : 'Anuluj'}
+                  </span>
                 </IosButton>
               )}
             </div>
@@ -379,42 +438,46 @@ export function AuthView({
               <h2 className="text-[21px] font-bold text-[var(--ios-label)] tracking-[-0.02em] leading-tight">
                 {verifiedCandidate.fullName}
               </h2>
-              <IosBadge
-                variant={verifiedCandidate.role === 'student' ? 'blue' : 'green'}
-                size="md"
-                text={
-                  verifiedCandidate.role === 'student'
-                    ? isEn
-                      ? 'Student Account'
-                      : 'Konto ucznia'
-                    : isEn
-                      ? 'Parent Account'
-                      : 'Konto rodzica'
-                }
-              />
+              <div className={langTextClass}>
+                <IosBadge
+                  variant={verifiedCandidate.role === 'student' ? 'blue' : 'green'}
+                  size="md"
+                  text={
+                    verifiedCandidate.role === 'student'
+                      ? isDisplayEn
+                        ? 'Student Account'
+                        : 'Konto ucznia'
+                      : isDisplayEn
+                        ? 'Parent Account'
+                        : 'Konto rodzica'
+                  }
+                />
+              </div>
             </div>
 
-            <IosListSection header={isEn ? 'Account details' : 'Dane konta'} className="w-full">
-              <IosCell
-                title={isEn ? 'Username' : 'Login'}
-                detail={username.trim()}
-                compact
-              />
-              {verifiedCandidate.className && (
+            <div className={cn('w-full', langTextClass)}>
+              <IosListSection header={isDisplayEn ? 'Account details' : 'Dane konta'} className="w-full">
                 <IosCell
-                  title={isEn ? 'Class' : 'Klasa'}
-                  detail={verifiedCandidate.className}
+                  title={isDisplayEn ? 'Username' : 'Login'}
+                  detail={username.trim()}
                   compact
                 />
-              )}
-              {verifiedCandidate.schoolName && (
-                <IosCell
-                  title={isEn ? 'School' : 'Szkoła'}
-                  subtitle={verifiedCandidate.schoolName}
-                  compact
-                />
-              )}
-            </IosListSection>
+                {verifiedCandidate.className && (
+                  <IosCell
+                    title={isDisplayEn ? 'Class' : 'Klasa'}
+                    detail={verifiedCandidate.className}
+                    compact
+                  />
+                )}
+                {verifiedCandidate.schoolName && (
+                  <IosCell
+                    title={isDisplayEn ? 'School' : 'Szkoła'}
+                    subtitle={verifiedCandidate.schoolName}
+                    compact
+                  />
+                )}
+              </IosListSection>
+            </div>
 
             <div className="w-full flex flex-col gap-2.5">
               <IosButton
@@ -424,13 +487,15 @@ export function AuthView({
                 onClick={handleConfirmClick}
                 disabled={isExiting}
               >
-                {isSubView
-                  ? isEn
-                    ? 'Save Account'
-                    : 'Zapisz konto'
-                  : isEn
-                    ? 'Continue'
-                    : 'Kontynuuj'}
+                <span className={cn('inline-block', langTextClass)}>
+                  {isSubView
+                    ? isDisplayEn
+                      ? 'Save Account'
+                      : 'Zapisz konto'
+                    : isDisplayEn
+                      ? 'Continue'
+                      : 'Kontynuuj'}
+                </span>
               </IosButton>
               <IosButton
                 variant="secondary"
@@ -439,7 +504,9 @@ export function AuthView({
                 onClick={onBackToInput}
                 disabled={isExiting}
               >
-                {isEn ? 'Change Account' : 'Zmień konto'}
+                <span className={cn('inline-block', langTextClass)}>
+                  {isDisplayEn ? 'Change Account' : 'Zmień konto'}
+                </span>
               </IosButton>
             </div>
           </div>
@@ -448,8 +515,8 @@ export function AuthView({
 
       {!isSubView && (
         <div className="w-full max-w-[380px] mx-auto text-center pb-[max(env(safe-area-inset-bottom,0px),12px)] pt-3 shrink-0">
-          <p className="text-[11px] font-normal text-[var(--ios-tertiary)] leading-relaxed">
-            {isEn
+          <p className={cn('text-[11px] font-normal text-[var(--ios-tertiary)] leading-relaxed min-h-[36px] flex items-center justify-center', langTextClass)}>
+            {isDisplayEn
               ? 'Credentials stay locally on this device and are sent only during Librus sync.'
               : 'Dane logowania pozostają wyłącznie na tym urządzeniu.'}
           </p>

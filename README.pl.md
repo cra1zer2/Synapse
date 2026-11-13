@@ -12,38 +12,25 @@
 
 ## Podgląd interfejsu
 
-<table>
-  <tr>
-    <td align="center" width="25%">
-      <a href="docs/screenshots/pl/dashboard-dark.png">
-        <img src="docs/screenshots/pl/dashboard-dark.png" width="190" alt="Pulpit Synapse w trybie mobilnym (Dark Mode)" />
-      </a>
-      <br /><sub><b>Pulpit na co dzień</b><br />Lekcja na żywo, średnia, poczta i obecność</sub>
-    </td>
-    <td align="center" width="25%">
-      <a href="docs/screenshots/pl/schedule-dark.png">
-        <img src="docs/screenshots/pl/schedule-dark.png" width="190" alt="Plan lekcji Synapse" />
-      </a>
-      <br /><sub><b>Plan lekcji</b><br />Zmiany sal, sprawdziany i przerwy</sub>
-    </td>
-    <td align="center" width="25%">
-      <a href="docs/screenshots/pl/grades-dark.png">
-        <img src="docs/screenshots/pl/grades-dark.png" width="190" alt="Oceny i kalkulator GPA Synapse" />
-      </a>
-      <br /><sub><b>Oceny i średnia</b><br />Średnia ważona i symulator „co jeśli”</sub>
-    </td>
-    <td align="center" width="25%">
-      <a href="docs/screenshots/pl/attendance-dark.png">
-        <img src="docs/screenshots/pl/attendance-dark.png" width="190" alt="Frekwencja Synapse" />
-      </a>
-      <br /><sub><b>Frekwencja</b><br />Progi przedmiotowe i nieobecności</sub>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <a href="docs/screenshots/pl/dashboard-dark.png" title="Pulpit na co dzień (Dark Mode)">
+    <img src="docs/screenshots/pl/dashboard-dark.png" width="168" alt="Pulpit Synapse w trybie mobilnym (Dark Mode)" />
+  </a>
+  <a href="docs/screenshots/pl/schedule-dark.png" title="Plan lekcji (Dark Mode)">
+    <img src="docs/screenshots/pl/schedule-dark.png" width="168" alt="Plan lekcji Synapse" />
+  </a>
+  <a href="docs/screenshots/pl/grades-dark.png" title="Oceny i kalkulator GPA (Dark Mode)">
+    <img src="docs/screenshots/pl/grades-dark.png" width="168" alt="Oceny i kalkulator GPA Synapse" />
+  </a>
+  <a href="docs/screenshots/pl/attendance-dark.png" title="Frekwencja (Dark Mode)">
+    <img src="docs/screenshots/pl/attendance-dark.png" width="168" alt="Frekwencja Synapse" />
+  </a>
+  <br /><sub><b>Wersja mobilna (Tryb ciemny):</b> Pulpit · Plan lekcji · Oceny i symulator · Frekwencja</sub>
+</p>
 
 <p align="center">
-  <a href="docs/screenshots/pl/desktop-light.png">
-    <img src="docs/screenshots/pl/desktop-light.png" width="760" alt="Układ desktopowy Synapse (Tryb jasny)" />
+  <a href="docs/screenshots/pl/desktop-light.png" title="Responsywny widok desktopowy (Tryb jasny)">
+    <img src="docs/screenshots/pl/desktop-light.png" width="684" alt="Układ desktopowy Synapse (Tryb jasny)" />
   </a>
   <br /><sub><b>Responsywny widok desktopowy (Tryb jasny)</b> — pełny plan dnia obok podsumowania ocen, wiadomości i frekwencji</sub>
 </p>

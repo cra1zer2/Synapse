@@ -12,38 +12,25 @@
 
 ## Visual Overview
 
-<table>
-  <tr>
-    <td align="center" width="25%">
-      <a href="docs/screenshots/en/dashboard-dark.png">
-        <img src="docs/screenshots/en/dashboard-dark.png" width="190" alt="Synapse Mobile Dashboard (Dark Mode)" />
-      </a>
-      <br /><sub><b>Daily Overview</b><br />Live classes, GPA, inbox &amp; presence</sub>
-    </td>
-    <td align="center" width="25%">
-      <a href="docs/screenshots/en/schedule-dark.png">
-        <img src="docs/screenshots/en/schedule-dark.png" width="190" alt="Synapse Schedule View" />
-      </a>
-      <br /><sub><b>Smart Timetable</b><br />Room changes, exams &amp; breaks</sub>
-    </td>
-    <td align="center" width="25%">
-      <a href="docs/screenshots/en/grades-dark.png">
-        <img src="docs/screenshots/en/grades-dark.png" width="190" alt="Synapse Grades and GPA Calculator" />
-      </a>
-      <br /><sub><b>Grades &amp; GPA</b><br />Weighted averages &amp; target simulator</sub>
-    </td>
-    <td align="center" width="25%">
-      <a href="docs/screenshots/en/attendance-dark.png">
-        <img src="docs/screenshots/en/attendance-dark.png" width="190" alt="Synapse Attendance Breakdown" />
-      </a>
-      <br /><sub><b>Attendance</b><br />Per-subject threshold &amp; absences</sub>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <a href="docs/screenshots/en/dashboard-dark.png" title="Daily Overview (Mobile Dark Mode)">
+    <img src="docs/screenshots/en/dashboard-dark.png" width="168" alt="Synapse Mobile Dashboard (Dark Mode)" />
+  </a>
+  <a href="docs/screenshots/en/schedule-dark.png" title="Smart Timetable (Mobile Dark Mode)">
+    <img src="docs/screenshots/en/schedule-dark.png" width="168" alt="Synapse Schedule View" />
+  </a>
+  <a href="docs/screenshots/en/grades-dark.png" title="Grades and GPA Calculator (Mobile Dark Mode)">
+    <img src="docs/screenshots/en/grades-dark.png" width="168" alt="Synapse Grades and GPA Calculator" />
+  </a>
+  <a href="docs/screenshots/en/attendance-dark.png" title="Attendance Breakdown (Mobile Dark Mode)">
+    <img src="docs/screenshots/en/attendance-dark.png" width="168" alt="Synapse Attendance Breakdown" />
+  </a>
+  <br /><sub><b>Mobile (Dark):</b> Daily Overview · Smart Timetable · Grades &amp; GPA · Attendance</sub>
+</p>
 
 <p align="center">
-  <a href="docs/screenshots/en/desktop-light.png">
-    <img src="docs/screenshots/en/desktop-light.png" width="760" alt="Synapse Adaptive Desktop Layout (Light Mode)" />
+  <a href="docs/screenshots/en/desktop-light.png" title="Adaptive Desktop Layout (Light Mode)">
+    <img src="docs/screenshots/en/desktop-light.png" width="684" alt="Synapse Adaptive Desktop Layout (Light Mode)" />
   </a>
   <br /><sub><b>Responsive Desktop Workspace (Light Mode)</b> — automatically adapts to wide screens with the full-day timetable side-by-side with metrics</sub>
 </p>

@@ -664,15 +664,15 @@ export function IosScreen({
           onScroll={handleScroll}
           className={
             'w-full min-h-full bg-[var(--ios-bg-primary)] overflow-y-auto ' +
-            (!hideHeader && !isDesktop ? 'pt-[calc(max(calc(env(safe-area-inset-top,0px)+6px),8px)+48px)] ' : '') +
+            (!hideHeader && !isDesktop ? 'pt-[calc(var(--ios-header-pad-top)+42px+var(--ios-header-pad-bottom))] ' : '') +
             className
           }
         >
           {!hideHeader && isDesktop && desktopHeader}
 
-          <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-3.5 sm:px-4 pt-3 max-w-[480px] mx-auto w-full min-h-full pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
+          <div className={contentClassName ?? (isDesktop ? 'px-6 pt-3 max-w-[860px] mx-auto w-full pb-10' : 'px-3.5 sm:px-4 pt-2 max-w-[480px] mx-auto w-full min-h-full pb-[max(calc(env(safe-area-inset-bottom,0px)+2rem),2.5rem)]')}>
             {!hideHeader && largeTitle && !isDesktop && (
-              <div className="pt-2 pb-3 select-none">
+              <div className="pt-1 pb-2.5 select-none">
                 <h1 className="text-[30px] sm:text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
                   {title}
                 </h1>
@@ -784,9 +784,9 @@ export function IosScreen({
             }}
             className={className}
           >
-            <div className={contentClassName ?? 'px-3.5 sm:px-4 pt-3 max-w-[480px] mx-auto w-full min-h-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
+            <div className={contentClassName ?? 'px-3.5 sm:px-4 pt-2 max-w-[480px] mx-auto w-full min-h-full pb-[max(calc(env(safe-area-inset-bottom,0px)+3rem),3.5rem)]'}>
               {!hideHeader && largeTitle && (
-                <div className="pt-2 pb-3 select-none">
+                <div className="pt-1 pb-2.5 select-none">
                   <h1 className="text-[30px] sm:text-[32px] font-bold text-[var(--ios-label)] tracking-[-0.4px] leading-tight">
                     {title}
                   </h1>

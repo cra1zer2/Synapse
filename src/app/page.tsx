@@ -535,7 +535,7 @@ export default function Home() {
           t={t}
         />
 
-        <main className="w-full min-h-full md:min-h-0 md:flex-1 pt-3 md:pt-5 pb-32 px-4 md:px-5 max-w-[480px] md:max-w-[860px] mx-auto flex flex-col gap-3.5 md:gap-4 box-border">
+        <main className="w-full min-h-full md:min-h-0 md:flex-1 pt-2 md:pt-5 pb-32 px-4 md:px-5 max-w-[480px] md:max-w-[860px] mx-auto flex flex-col gap-3.5 md:gap-4 box-border">
           {(pullDistance > 0 || isManualRefreshing) && !isDesktop && (
             <div
               style={{ height: (isManualRefreshing ? 36 : Math.min(48, pullDistance * 0.65)) + 'px' }}

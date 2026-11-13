@@ -195,7 +195,7 @@ export function AuthView({
 
   const containerClass = isSubView
     ? 'w-full bg-[var(--ios-bg)] text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 pt-3 pb-8 select-none'
-    : 'w-full min-h-[100lvh] min-h-[100dvh] md:fixed md:inset-0 bg-[var(--ios-bg)] text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 pt-[calc(max(calc(env(safe-area-inset-top,0px)+6px),8px)+44px)] sm:p-5 md:pt-5 md:overflow-y-auto select-none'
+    : 'w-full min-h-[100lvh] min-h-[100dvh] md:fixed md:inset-0 bg-[var(--ios-bg)] text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 pt-[calc(var(--ios-header-pad-top)+38px+var(--ios-header-pad-bottom))] sm:p-5 md:pt-5 md:overflow-y-auto select-none'
 
   const languageToggle = onSelectLanguage ? (
     <div className="ios-glass-control p-[3px] rounded-full flex items-center gap-0.5">

@@ -94,11 +94,31 @@ export default function Home() {
   const rootScrollRef = useRef<HTMLDivElement>(null)
   const pullStartRef = useRef<{ x: number; y: number } | null>(null)
   const [pullDistance, setPullDistance] = useState(0)
+  const [isPullDragging, setIsPullDragging] = useState(false)
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false)
 
   const postSubmitSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const t = getDictionary(lang)
   const account = useAccountSession({ lang, t })
+
+  useEffect(() => {
+    if (!account.isConfigured || typeof window === 'undefined') return
+    ;(document.activeElement as HTMLElement | null)?.blur?.()
+    const resetScroll = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      if (rootScrollRef.current) {
+        rootScrollRef.current.scrollTop = 0
+      }
+    }
+    resetScroll()
+    const rafId = requestAnimationFrame(resetScroll)
+    const timerId = setTimeout(resetScroll, 120)
+    return () => {
+      cancelAnimationFrame(rafId)
+      clearTimeout(timerId)
+    }
+  }, [account.isConfigured, account.username])
 
   useEffect(() => {
     return () => {
@@ -240,9 +260,10 @@ export default function Home() {
     })
   }
 
-  const handleManualRefresh = async () => {
+  const runRefresh = async (fromPull: boolean) => {
     if (timetable.isUpdating || isManualRefreshing || !account.username || !account.password) return
     setIsManualRefreshing(true)
+    if (fromPull) setIsPullRefreshing(true)
     try {
       await Promise.all([
         timetable.executeSync(account.username, account.password, lang, timetable.currentWeekPivot, false),
@@ -250,19 +271,25 @@ export default function Home() {
       ])
     } finally {
       setIsManualRefreshing(false)
+      setIsPullRefreshing(false)
     }
   }
+
+  const handleManualRefresh = () => runRefresh(false)
 
   const handleRootTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (isDesktop || isAnyOverlayActive || isAnySheetActive || isManualRefreshing || timetable.isUpdating) {
       pullStartRef.current = null
+      setIsPullDragging(false)
       return
     }
     const scrollTop = isDesktop ? (rootScrollRef.current?.scrollTop ?? 0) : Math.max(0, window.scrollY)
     if (scrollTop <= 0) {
       pullStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      setIsPullDragging(true)
     } else {
       pullStartRef.current = null
+      setIsPullDragging(false)
     }
   }
 
@@ -271,6 +298,7 @@ export default function Home() {
     const scrollTop = isDesktop ? (rootScrollRef.current?.scrollTop ?? 0) : Math.max(0, window.scrollY)
     if (scrollTop > 0) {
       pullStartRef.current = null
+      setIsPullDragging(false)
       if (pullDistance > 0) setPullDistance(0)
       return
     }
@@ -278,6 +306,7 @@ export default function Home() {
     const dx = Math.abs(e.touches[0].clientX - pullStartRef.current.x)
     if (dx > dy) {
       pullStartRef.current = null
+      setIsPullDragging(false)
       if (pullDistance > 0) setPullDistance(0)
       return
     }
@@ -287,11 +316,13 @@ export default function Home() {
   }
 
   const handleRootTouchEnd = () => {
-    if (pullDistance >= 54) {
-      handleManualRefresh()
-    }
+    const shouldRefresh = pullDistance >= 54
     pullStartRef.current = null
+    setIsPullDragging(false)
     setPullDistance(0)
+    if (shouldRefresh) {
+      runRefresh(true)
+    }
   }
 
   const isCurrentStudent = (() => {
@@ -504,6 +535,15 @@ export default function Home() {
       </div>
     )
 
+  const pullSlotHeight = !isDesktop
+    ? isPullRefreshing
+      ? 36
+      : pullDistance > 0
+        ? Math.min(48, Math.round(pullDistance * 0.65))
+        : 0
+    : 0
+  const isPullSlotVisible = pullSlotHeight > 0
+
   return (
     <div className="w-full min-h-[100lvh] md:min-h-screen bg-[var(--ios-bg)] relative overflow-x-clip">
       <div
@@ -513,6 +553,7 @@ export default function Home() {
         onTouchStart={handleRootTouchStart}
         onTouchMove={handleRootTouchMove}
         onTouchEnd={handleRootTouchEnd}
+        onTouchCancel={handleRootTouchEnd}
         className="relative w-full min-h-[100lvh] min-h-[100dvh] block md:inset-auto md:w-full md:h-auto md:min-h-screen md:overflow-visible md:flex md:flex-col bg-[var(--ios-bg)]"
         style={{
           transform: !isDesktop && isAnyOverlayActive ? 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)' : 'none',
@@ -535,15 +576,23 @@ export default function Home() {
           t={t}
         />
 
-        <main className="w-full min-h-full md:min-h-0 md:flex-1 pt-2 md:pt-5 pb-32 px-4 md:px-5 max-w-[480px] md:max-w-[860px] mx-auto flex flex-col gap-3.5 md:gap-4 box-border">
-          {(pullDistance > 0 || isManualRefreshing) && !isDesktop && (
-            <div
-              style={{ height: (isManualRefreshing ? 36 : Math.min(48, pullDistance * 0.65)) + 'px' }}
-              className="flex items-center justify-center gap-2 overflow-hidden transition-[height] duration-150 select-none md:hidden"
-            >
-              {isManualRefreshing ? (
-                <IosSpinner size="small" className="text-[var(--ios-blue)]" />
-              ) : (
+        <main className="w-full min-h-full md:min-h-0 md:flex-1 pt-2 md:pt-5 pb-32 px-4 md:px-5 max-w-[480px] md:max-w-[860px] mx-auto flex flex-col box-border">
+          <div
+            aria-hidden={!isPullSlotVisible}
+            style={{
+              height: pullSlotHeight + 'px',
+              marginBottom: isPullSlotVisible ? '10px' : '0px',
+              opacity: isPullSlotVisible ? 1 : 0,
+              transition: isPullDragging
+                ? 'none'
+                : 'height 320ms cubic-bezier(0.32, 0.72, 0, 1), margin-bottom 320ms cubic-bezier(0.32, 0.72, 0, 1), opacity 220ms cubic-bezier(0.32, 0.72, 0, 1)'
+            }}
+            className="flex items-center justify-center gap-2 overflow-hidden select-none md:hidden shrink-0"
+          >
+            {isPullRefreshing ? (
+              <IosSpinner size="small" className="text-[var(--ios-blue)]" />
+            ) : (
+              <>
                 <ArrowDown
                   className={
                     'w-4 h-4 text-[var(--ios-secondary)] transition-transform duration-150 ' +
@@ -551,56 +600,54 @@ export default function Home() {
                   }
                   strokeWidth={2.2}
                 />
-              )}
-              <span className="text-[12px] font-medium text-[var(--ios-secondary)]">
-                {isManualRefreshing
-                  ? t.updatingStatus
-                  : pullDistance >= 54
-                    ? t.releaseToRefreshHint
-                    : t.pullToRefreshHint}
-              </span>
-            </div>
-          )}
-
-          {showLuckyNumberBanner &&
-            account.profile?.luckyNumber !== null &&
-            account.profile?.luckyNumber !== undefined &&
-            account.profile?.classNumber !== null &&
-            account.profile?.classNumber !== undefined &&
-            account.profile.classNumber === account.profile.luckyNumber &&
-            luckyDismissedDate !== todayIsoStr && (
-              <div className="ios-card px-4 py-3 flex items-center justify-between gap-3 select-none">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center font-semibold text-[13px] shrink-0 tabular-nums">
-                    #{account.profile.luckyNumber}
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[14px] font-semibold text-[var(--ios-label)] tracking-[-0.15px] truncate leading-tight">
-                      {lang === 'en' ? 'Your lucky number today!' : 'Twój szczęśliwy numerek dzisiaj!'}
-                    </span>
-                    <span className="text-[12px] font-normal text-[var(--ios-secondary)] truncate leading-tight mt-0.5">
-                      {lang === 'en' ? 'You are exempt from unannounced quizzes' : 'Zwolnienie z niezapowiedzianych odpowiedzi'}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={settings.handleDismissLuckyBanner}
-                  className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer"
-                  aria-label={t.closeLabel}
-                >
-                  <X className="w-3.5 h-3.5" strokeWidth={2.4} />
-                </button>
-              </div>
+                <span className="text-[12px] font-medium text-[var(--ios-secondary)]">
+                  {pullDistance >= 54 ? t.releaseToRefreshHint : t.pullToRefreshHint}
+                </span>
+              </>
             )}
-
-          <div className="hidden md:grid md:grid-cols-2 gap-4 items-start w-full">
-            <div className="flex flex-col gap-4 w-full">{leftDesktopIds.map((id) => renderWidget(id, true))}</div>
-            <div className="flex flex-col gap-4 w-full">{rightDesktopIds.map((id) => renderWidget(id, true))}</div>
           </div>
 
-          <div className="flex md:hidden flex-col gap-3.5 w-full">
-            {visibleMobileIds.map((id) => renderWidget(id, false))}
+          <div className="flex flex-col gap-3.5 md:gap-4 w-full">
+            {showLuckyNumberBanner &&
+              account.profile?.luckyNumber !== null &&
+              account.profile?.luckyNumber !== undefined &&
+              account.profile?.classNumber !== null &&
+              account.profile?.classNumber !== undefined &&
+              account.profile.classNumber === account.profile.luckyNumber &&
+              luckyDismissedDate !== todayIsoStr && (
+                <div className="ios-card px-4 py-3 flex items-center justify-between gap-3 select-none">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-[var(--ios-green-subtle)] text-[var(--ios-green)] flex items-center justify-center font-semibold text-[13px] shrink-0 tabular-nums">
+                      #{account.profile.luckyNumber}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[14px] font-semibold text-[var(--ios-label)] tracking-[-0.15px] truncate leading-tight">
+                        {lang === 'en' ? 'Your lucky number today!' : 'Twój szczęśliwy numerek dzisiaj!'}
+                      </span>
+                      <span className="text-[12px] font-normal text-[var(--ios-secondary)] truncate leading-tight mt-0.5">
+                        {lang === 'en' ? 'You are exempt from unannounced quizzes' : 'Zwolnienie z niezapowiedzianych odpowiedzi'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={settings.handleDismissLuckyBanner}
+                    className="w-7 h-7 rounded-full bg-[var(--ios-element)] text-[var(--ios-secondary)] hover:text-[var(--ios-label)] flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer"
+                    aria-label={t.closeLabel}
+                  >
+                    <X className="w-3.5 h-3.5" strokeWidth={2.4} />
+                  </button>
+                </div>
+              )}
+
+            <div className="hidden md:grid md:grid-cols-2 gap-4 items-start w-full">
+              <div className="flex flex-col gap-4 w-full">{leftDesktopIds.map((id) => renderWidget(id, true))}</div>
+              <div className="flex flex-col gap-4 w-full">{rightDesktopIds.map((id) => renderWidget(id, true))}</div>
+            </div>
+
+            <div className="flex md:hidden flex-col gap-3.5 w-full">
+              {visibleMobileIds.map((id) => renderWidget(id, false))}
+            </div>
           </div>
         </main>
       </div>

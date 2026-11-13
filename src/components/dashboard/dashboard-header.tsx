@@ -9,6 +9,7 @@ import { IosIconButton } from '@/components/ios/ios-ui'
 import { IosSpinner } from '@/components/ios/ios-spinner'
 import { IOS_PANEL_TRANSITION, IOS_PARALLAX_PERCENT } from '@/components/ios/ios-screen'
 import { cn } from '@/utils/cn.util'
+import { sanitizeAccountLabel } from '@/utils/account.util'
 
 interface DashboardHeaderProps {
   profile: StudentProfile | null
@@ -144,9 +145,9 @@ export function DashboardHeader({
               <span className="text-[13px] font-medium text-[var(--ios-label)] truncate max-w-[180px]">
                 {accountDisplayName}
               </span>
-              {profile?.className && (
+              {sanitizeAccountLabel(profile?.className) && (
                 <span className="text-[12px] font-normal text-[var(--ios-secondary)]">
-                  {profile.className}
+                  {sanitizeAccountLabel(profile?.className)}
                 </span>
               )}
               {profile?.luckyNumber !== null && profile?.luckyNumber !== undefined && (

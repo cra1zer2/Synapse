@@ -4,11 +4,19 @@ import { useState, useEffect } from 'react'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
 import { AppLanguage, AppDictionary } from '@/config/dictionary.config'
 import { getStudentProfileAction } from '@/app/actions'
-import { isStudentUsername } from '@/utils/account.util'
+import { isStudentUsername, sanitizeAccountLabel } from '@/utils/account.util'
 
 interface UseAccountSessionOptions {
     lang: AppLanguage
     t: AppDictionary
+}
+
+function sanitizeSavedProfile(profile: StudentProfile): StudentProfile {
+    return {
+        ...profile,
+        className: sanitizeAccountLabel(profile.className),
+        schoolName: sanitizeAccountLabel(profile.schoolName)
+    }
 }
 
 function deduplicateSavedAccounts(accounts: SavedAccount[]): SavedAccount[] {
@@ -16,11 +24,12 @@ function deduplicateSavedAccounts(accounts: SavedAccount[]): SavedAccount[] {
     for (const acc of accounts) {
         if (!acc || !acc.username) continue
         const key = acc.username.trim().toLowerCase()
+        const normalizedProfile = sanitizeSavedProfile(acc.profile)
         const existing = map.get(key)
         if (!existing) {
-            map.set(key, { ...acc, id: key, username: acc.username.trim() })
+            map.set(key, { ...acc, id: key, username: acc.username.trim(), profile: normalizedProfile })
         } else if (acc.isActive) {
-            map.set(key, { ...acc, id: key, username: acc.username.trim(), isActive: true })
+            map.set(key, { ...acc, id: key, username: acc.username.trim(), profile: normalizedProfile, isActive: true })
         }
     }
     return Array.from(map.values())

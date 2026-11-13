@@ -104,7 +104,8 @@ export function LegacyAttendanceView({
     let minCol = 1
     let maxCol = 8
     for (const day of days) {
-      for (const k of Object.keys(day.lessons)) {
+      for (const [k, lesson] of Object.entries(day.lessons)) {
+        if (!lesson || lesson.type === 'ob') continue
         const n = Number(k)
         if (!isNaN(n)) {
           if (n < minCol) minCol = n
@@ -216,7 +217,7 @@ export function LegacyAttendanceView({
                     <div className="flex flex-wrap gap-1 flex-1 min-w-0 items-center">
                       {lessonCols.map((col) => {
                         const lesson = day.lessons[col]
-                        if (!lesson) {
+                        if (!lesson || lesson.type === 'ob') {
                           return (
                             <div
                               key={col}

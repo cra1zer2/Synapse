@@ -57,3 +57,29 @@ export function resolveAvatarLetter(name?: string | null, username?: string | nu
   }
   return source.slice(0, 2).toUpperCase()
 }
+
+const PLACEHOLDER_PROFILE_VALUES = new Set(['klasa', 'szkoła', 'szkola', 'class', 'school'])
+
+export function sanitizeAccountLabel(value?: string | null): string {
+  const trimmed = (value || '').trim()
+  if (!trimmed) return ''
+  if (PLACEHOLDER_PROFILE_VALUES.has(trimmed.toLowerCase())) return ''
+  return trimmed
+}
+
+export function formatClassLabel(cls: unknown): string {
+  if (!cls || typeof cls !== 'object') return ''
+  const record = cls as Record<string, unknown>
+  const name = sanitizeAccountLabel(typeof record.Name === 'string' ? record.Name : '')
+  if (name) return name
+  const symbol = sanitizeAccountLabel(typeof record.Symbol === 'string' ? record.Symbol : '')
+  const rawNum =
+    record.Number !== undefined && record.Number !== null ? String(record.Number).trim() : ''
+  if (rawNum && symbol) {
+    if (symbol.toLowerCase().startsWith(rawNum.toLowerCase())) {
+      return symbol
+    }
+    return `${rawNum}${symbol}`
+  }
+  return symbol || rawNum || ''
+}

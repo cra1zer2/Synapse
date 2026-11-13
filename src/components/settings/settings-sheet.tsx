@@ -10,7 +10,7 @@ import {
   DEFAULT_DASHBOARD_ORDER,
   DEFAULT_DASHBOARD_VISIBLE
 } from '@/hooks/settings.hook'
-import { isStudentUsername, resolveAvatarLetter } from '@/utils/account.util'
+import { isStudentUsername, resolveAvatarLetter, sanitizeAccountLabel } from '@/utils/account.util'
 import { IosScreen } from '@/components/ios/ios-screen'
 import { IosListSection, IosCell } from '@/components/ios/ios-list'
 import { IosAlert, IosCard } from '@/components/ios/ios-ui'
@@ -168,8 +168,8 @@ export function SettingsSheet({
   const heroAvatar = resolveAvatarLetter(activeRawName, activeUsername)
   const heroSubtitle =
     [
-      activeAccount?.profile?.className || profile?.className,
-      activeAccount?.profile?.schoolName || profile?.schoolName
+      sanitizeAccountLabel(activeAccount?.profile?.className || profile?.className),
+      sanitizeAccountLabel(activeAccount?.profile?.schoolName || profile?.schoolName)
     ]
       .filter(Boolean)
       .join(' • ') || 'Librus Synergia'

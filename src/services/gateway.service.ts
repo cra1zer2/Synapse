@@ -16,6 +16,7 @@ function isCacheableEndpoint(cleanPath: string): boolean {
         p.includes('gateway/api/2.0/auth/subjects') ||
         p.includes('gateway/api/2.0/lessons') ||
         p.includes('gateway/api/2.0/schools') ||
+        p.includes('gateway/api/2.0/classes') ||
         p.includes('gateway/api/2.0/attendances/types') ||
         p.includes('gateway/api/2.0/grades/categories') ||
         p.includes('gateway/api/2.0/grades/comments') ||

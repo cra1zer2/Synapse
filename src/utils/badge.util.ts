@@ -7,47 +7,11 @@ export function getGradeBadgeStyle(value: string): {
   variant: IosBadgeVariant
 } {
   const clean = (value || '').trim().toLowerCase()
-  const num = parseFloat(clean.replace('+', '.5').replace('-', '.25'))
-  if (!Number.isNaN(num)) {
-    if (num >= 5) {
-      return {
-        bg: 'bg-[var(--ios-green-subtle)]',
-        text: 'text-[var(--ios-green)]',
-        variant: 'green'
-      }
-    }
-    if (num >= 4) {
-      return {
-        bg: 'bg-[var(--ios-blue-subtle)]',
-        text: 'text-[var(--ios-blue)]',
-        variant: 'blue'
-      }
-    }
-    if (num >= 3) {
-      return {
-        bg: 'bg-[var(--ios-orange-subtle)]',
-        text: 'text-[var(--ios-orange)]',
-        variant: 'orange'
-      }
-    }
+  if (clean === 'nb' || /^[01]([+-])?$/.test(clean)) {
     return {
       bg: 'bg-[var(--ios-red-subtle)]',
       text: 'text-[var(--ios-red)]',
       variant: 'red'
-    }
-  }
-  if (clean === '+') {
-    return {
-      bg: 'bg-[var(--ios-green-subtle)]',
-      text: 'text-[var(--ios-green)]',
-      variant: 'green'
-    }
-  }
-  if (clean === '-' || clean === 'np' || clean === 'bz') {
-    return {
-      bg: 'bg-[var(--ios-orange-subtle)]',
-      text: 'text-[var(--ios-orange)]',
-      variant: 'orange'
     }
   }
   return {

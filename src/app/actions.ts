@@ -15,7 +15,7 @@ import {
 } from '@/services/message.service'
 import { JustificationPayload } from '@/models/justification.model'
 import { StudentProfile } from '@/models/account.model'
-import { isStudentUsername } from '@/utils/account.util'
+import { isStudentUsername, sanitizeAccountLabel, formatClassLabel } from '@/utils/account.util'
 import { MessagesActionResult } from '@/models/message.model'
 import { SmartTimetableResult } from '@/models/timetable.model'
 import { GradesResult } from '@/models/grade.model'
@@ -221,8 +221,12 @@ export async function getStudentProfileAction(username: string, pass: string): P
             }
         }
 
-        const meRes = await fetchGatewayEndpoint(cleanUser, cleanPass, 'gateway/api/2.0/Me')
-        const luckyRes = await fetchGatewayEndpoint(cleanUser, cleanPass, 'gateway/api/2.0/LuckyNumbers').catch(() => null)
+        const [meRes, luckyRes, schoolsRes, classesRes] = await Promise.all([
+            fetchGatewayEndpoint(cleanUser, cleanPass, 'gateway/api/2.0/Me'),
+            fetchGatewayEndpoint(cleanUser, cleanPass, 'gateway/api/2.0/LuckyNumbers').catch(() => null),
+            fetchGatewayEndpoint(cleanUser, cleanPass, 'gateway/api/2.0/Schools').catch(() => null),
+            fetchGatewayEndpoint(cleanUser, cleanPass, 'gateway/api/2.0/Classes').catch(() => null)
+        ])
 
         const me = meRes?.Me || meRes?.data?.Me
         if (!me || typeof me !== 'object') {
@@ -237,8 +241,33 @@ export async function getStudentProfileAction(username: string, pass: string): P
         const full = [firstName, lastName].filter(Boolean).join(' ')
         const fullName = full.length > 0 ? full : (accountInfo.Login || cleanUser)
 
-        const className = me.Class?.Symbol || me.Class?.Name || 'Klasa'
-        const schoolName = me.School?.Name || 'Szkoła'
+        const rawMeClassId = me.Class?.Id ?? userInfo.Class?.Id ?? null
+        const meClassId = rawMeClassId !== null && !isNaN(Number(rawMeClassId)) ? Number(rawMeClassId) : null
+
+        let resolvedClassName = formatClassLabel(me.Class)
+        if (!resolvedClassName) {
+            const classesList = Array.isArray(classesRes?.Classes) ? classesRes.Classes : []
+            const matchedClass =
+                (meClassId ? classesList.find((c: { Id?: unknown }) => Number(c?.Id) === meClassId) : null) ||
+                classesRes?.Class ||
+                classesList[0] ||
+                null
+            resolvedClassName = formatClassLabel(matchedClass)
+        }
+        if (!resolvedClassName && meClassId) {
+            const classByIdRes = await fetchGatewayEndpoint(cleanUser, cleanPass, `gateway/api/2.0/Classes/${meClassId}`).catch(() => null)
+            resolvedClassName = formatClassLabel(
+                classByIdRes?.Class || (Array.isArray(classByIdRes?.Classes) ? classByIdRes.Classes[0] : null)
+            )
+        }
+
+        const schoolCandidate =
+            schoolsRes?.School?.Name ||
+            (Array.isArray(schoolsRes?.Schools) ? schoolsRes.Schools[0]?.Name : '') ||
+            me.School?.Name ||
+            ''
+        const className = sanitizeAccountLabel(resolvedClassName)
+        const schoolName = sanitizeAccountLabel(typeof schoolCandidate === 'string' ? schoolCandidate : '')
 
         const rawLucky = luckyRes?.LuckyNumber?.LuckyNumber
         const lucky = typeof rawLucky === 'number' ? rawLucky : null
@@ -440,7 +469,7 @@ export async function runDisplayDiagnosticsAction(
         'Profil i autoryzacja (Gateway)',
         'profile',
         () => getStudentProfileAction(cleanUser, cleanPass),
-        (d) => d.data ? d.data.fullName + ' (' + d.data.className + ')' : 'OK'
+        (d) => d.data ? d.data.fullName + (d.data.className ? ' (' + d.data.className + ')' : '') : 'OK'
     )
 
     await testStep(

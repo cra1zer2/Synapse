@@ -15,26 +15,26 @@
 <table>
   <tr>
     <td align="center" width="25%">
-      <a href="docs/screenshots/dashboard-dark.png">
-        <img src="docs/screenshots/dashboard-dark.png" width="190" alt="Synapse Mobile Dashboard (Dark Mode)" />
+      <a href="docs/screenshots/en/dashboard-dark.png">
+        <img src="docs/screenshots/en/dashboard-dark.png" width="190" alt="Synapse Mobile Dashboard (Dark Mode)" />
       </a>
       <br /><sub><b>Daily Overview</b><br />Live classes, GPA, inbox &amp; presence</sub>
     </td>
     <td align="center" width="25%">
-      <a href="docs/screenshots/schedule-dark.png">
-        <img src="docs/screenshots/schedule-dark.png" width="190" alt="Synapse Schedule View" />
+      <a href="docs/screenshots/en/schedule-dark.png">
+        <img src="docs/screenshots/en/schedule-dark.png" width="190" alt="Synapse Schedule View" />
       </a>
       <br /><sub><b>Smart Timetable</b><br />Room changes, exams &amp; breaks</sub>
     </td>
     <td align="center" width="25%">
-      <a href="docs/screenshots/grades-dark.png">
-        <img src="docs/screenshots/grades-dark.png" width="190" alt="Synapse Grades and GPA Calculator" />
+      <a href="docs/screenshots/en/grades-dark.png">
+        <img src="docs/screenshots/en/grades-dark.png" width="190" alt="Synapse Grades and GPA Calculator" />
       </a>
       <br /><sub><b>Grades &amp; GPA</b><br />Weighted averages &amp; target simulator</sub>
     </td>
     <td align="center" width="25%">
-      <a href="docs/screenshots/attendance-dark.png">
-        <img src="docs/screenshots/attendance-dark.png" width="190" alt="Synapse Attendance Breakdown" />
+      <a href="docs/screenshots/en/attendance-dark.png">
+        <img src="docs/screenshots/en/attendance-dark.png" width="190" alt="Synapse Attendance Breakdown" />
       </a>
       <br /><sub><b>Attendance</b><br />Per-subject threshold &amp; absences</sub>
     </td>
@@ -42,8 +42,8 @@
 </table>
 
 <p align="center">
-  <a href="docs/screenshots/desktop-light.png">
-    <img src="docs/screenshots/desktop-light.png" width="760" alt="Synapse Adaptive Desktop Layout (Light Mode)" />
+  <a href="docs/screenshots/en/desktop-light.png">
+    <img src="docs/screenshots/en/desktop-light.png" width="760" alt="Synapse Adaptive Desktop Layout (Light Mode)" />
   </a>
   <br /><sub><b>Responsive Desktop Workspace (Light Mode)</b> — automatically adapts to wide screens with the full-day timetable side-by-side with metrics</sub>
 </p>
@@ -69,6 +69,14 @@ After the shutdown of popular open-source Android gradebook clients, thousands o
 - **Attendance & Parent e-Excuses**: Daily presence indicators separated from the deviation journal (`nb`, `usp`, `sp`, `sL`, `zw`), threshold alerts (`50%` / `75%`), and direct e-excuse submissions with live approval tracking.
 - **Messages & School Notices**: Distraction-free inbox, sent folder, staff directory lookup, attachment downloads, and announcements.
 - **Bilingual & Adaptive Themes**: Seamless **English / Polish** (`EN / PL`) switching plus Light, Dark, and System appearance modes.
+
+### Customization & Controls
+
+Tailor the interface and grading rules directly from **Settings**:
+- **Home Screen Layout**: Reorder widgets or toggle individual cards (**Grades**, **Lesson Plan**, **Tests & Deadlines**, **Messages**, **Attendance**) on or off.
+- **Display Preferences**: Switch between full and shortened subject names, show or hide today's lesson attendance strip on phones, toggle homework items, and enable the lucky number banner.
+- **Grade Calculation Rules**: Choose how `+` and `-` modifiers affect GPA (`+0.5/-0.25`, `+0.5/-0.5`, `+0.25/-0.25`, or ignore modifiers) and enable or disable the interactive what-if simulator.
+- **Accounts, Permissions & Diagnostics**: Add and switch between multiple Student and Parent accounts, optionally allow absence excuses from student profiles, and inspect per-endpoint **Request Timings**.
 
 ---
 

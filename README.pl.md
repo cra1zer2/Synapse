@@ -15,26 +15,26 @@
 <table>
   <tr>
     <td align="center" width="25%">
-      <a href="docs/screenshots/dashboard-dark.png">
-        <img src="docs/screenshots/dashboard-dark.png" width="190" alt="Pulpit Synapse w trybie mobilnym (Dark Mode)" />
+      <a href="docs/screenshots/pl/dashboard-dark.png">
+        <img src="docs/screenshots/pl/dashboard-dark.png" width="190" alt="Pulpit Synapse w trybie mobilnym (Dark Mode)" />
       </a>
       <br /><sub><b>Pulpit na co dzień</b><br />Lekcja na żywo, średnia, poczta i obecność</sub>
     </td>
     <td align="center" width="25%">
-      <a href="docs/screenshots/schedule-dark.png">
-        <img src="docs/screenshots/schedule-dark.png" width="190" alt="Plan lekcji Synapse" />
+      <a href="docs/screenshots/pl/schedule-dark.png">
+        <img src="docs/screenshots/pl/schedule-dark.png" width="190" alt="Plan lekcji Synapse" />
       </a>
       <br /><sub><b>Plan lekcji</b><br />Zmiany sal, sprawdziany i przerwy</sub>
     </td>
     <td align="center" width="25%">
-      <a href="docs/screenshots/grades-dark.png">
-        <img src="docs/screenshots/grades-dark.png" width="190" alt="Oceny i kalkulator GPA Synapse" />
+      <a href="docs/screenshots/pl/grades-dark.png">
+        <img src="docs/screenshots/pl/grades-dark.png" width="190" alt="Oceny i kalkulator GPA Synapse" />
       </a>
       <br /><sub><b>Oceny i średnia</b><br />Średnia ważona i symulator „co jeśli”</sub>
     </td>
     <td align="center" width="25%">
-      <a href="docs/screenshots/attendance-dark.png">
-        <img src="docs/screenshots/attendance-dark.png" width="190" alt="Frekwencja Synapse" />
+      <a href="docs/screenshots/pl/attendance-dark.png">
+        <img src="docs/screenshots/pl/attendance-dark.png" width="190" alt="Frekwencja Synapse" />
       </a>
       <br /><sub><b>Frekwencja</b><br />Progi przedmiotowe i nieobecności</sub>
     </td>
@@ -42,8 +42,8 @@
 </table>
 
 <p align="center">
-  <a href="docs/screenshots/desktop-light.png">
-    <img src="docs/screenshots/desktop-light.png" width="760" alt="Układ desktopowy Synapse (Tryb jasny)" />
+  <a href="docs/screenshots/pl/desktop-light.png">
+    <img src="docs/screenshots/pl/desktop-light.png" width="760" alt="Układ desktopowy Synapse (Tryb jasny)" />
   </a>
   <br /><sub><b>Responsywny widok desktopowy (Tryb jasny)</b> — pełny plan dnia obok podsumowania ocen, wiadomości i frekwencji</sub>
 </p>
@@ -69,6 +69,14 @@ Po zakończeniu wsparcia dla popularnych open-source’owych aplikacji mobilnych
 - **Frekwencja, dziennik odchyleń i e-Usprawiedliwienia**: Dzisiejsze obecności (`OB`) oddzielone od dziennika odchyleń (`nb`, `usp`, `sp`, `sL`, `zw`), progi ostrzegawcze (`50%` / `75%`) oraz wysyłanie i śledzenie e-usprawiedliwień z konta rodzica.
 - **Wiadomości i Ogłoszenia**: Czysta skrzynka odbiorcza i wysłane, wygodne wyszukiwanie nauczycieli, pobieranie załączników oraz ogłoszenia szkolne.
 - **Dwujęzyczność i motywy systemu**: Pełny interfejs **Polski / English (`PL / EN`)** oraz tryb jasny, ciemny i systemowy.
+
+### Personalizacja i ustawienia
+
+Dopasuj wygląd oraz sposób liczenia ocen bezpośrednio w **Ustawieniach**:
+- **Układ ekranu głównego**: Zmieniaj kolejność kart oraz ukrywaj lub włączaj wybrane sekcje (**Oceny**, **Plan lekcji**, **Sprawdziany i terminy**, **Wiadomości**, **Frekwencja**).
+- **Preferencje widoku**: Wybieraj między pełnymi a skróconymi nazwami przedmiotów, włączaj pasek dzisiejszej obecności na telefonie, widok zadań domowych oraz powiadomienie o szczęśliwym numerku.
+- **Zasady obliczania średniej**: Dopasuj wagi plusów i minusów (`+0.5/-0.25`, `+0.5/-0.5`, `+0.25/-0.25` lub ignorowanie znaków) oraz włączaj lub ukrywaj interaktywny symulator ocen.
+- **Wiele kont i diagnostyka**: Dodawaj i przełączaj konta Ucznia oraz Rodzica, opcjonalnie odblokuj e-usprawiedliwienia dla konta ucznia i sprawdzaj czasy odpowiedzi w podglądzie **Czas zapytań**.
 
 ---
 

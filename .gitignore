@@ -36,7 +36,8 @@ yarn-error.log*
 
 # Private Archive, Dumps, HAR Captures & Local Docs
 /archive/
-/docs/
+/docs/*
+!/docs/screenshots/
 Apple iOS 27 UI/
 *.har
 *.txt

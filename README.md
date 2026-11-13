@@ -1,72 +1,137 @@
-# Synapse `v1.0.0`
+# Synapse
 
-**🇬🇧 English** | **[🇵🇱 Polski](README.pl.md)**
+**[🇬🇧 English](README.md)** · **[🇵🇱 Polski](README.pl.md)**
 
-**Synapse** is a fast, clean, ad-free web & PWA client for the Polish **Librus Synergia** gradebook — designed with an **iOS-native feel** for **iPhone (iOS)**, **Android**, and desktop browsers.
+**A fast, private, ad-free client for Poland's Librus Synergia school portal** — built to replace cluttered web portals and paywalled mobile apps with a focused daily dashboard across phones and desktops.
 
-> **Disclaimer**: Synapse is an independent, unofficial open-source project and is **not** affiliated with or endorsed by Librus sp. z o.o. There are no central Synapse servers and no telemetry or data collection — your deployment and credentials remain 100% yours and are stored locally on your device. See the [Disclaimer & Privacy Notice](#disclaimer--privacy-notice) below.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcra1zer2%2FSynapse)
 
----
-
-### Why Synapse
-
-Following the shutdown of third-party mobile alternatives — which were already Android-only — students and parents on iOS and desktop were left with an official portal crowded with ads, microtransactions, and multi-step navigation.
-
-**Synapse** gives you a clean, distraction-free experience in a personal Next.js app that you can run locally or host privately for free on **Vercel**. When added to your **Home Screen on iOS or Android**, it runs as a full-screen standalone app with native-style spring transitions, pull-to-refresh, and automatic Light / Dark themes.
-
-It is also designed to keep server traffic minimal: Synapse batches requests and caches static gateway data (`Schools`, `Classes`, `Subjects`, `Teachers`, `Me`) locally instead of polling in the background — for instance, fetching a full week's lesson topics with **5x fewer requests** than the official web portal.
+> Subtly inspired by clean modern mobile design principles, Synapse works as an adaptive web and PWA hybrid: fluid touch cards on smartphones and an expanded multi-column workspace on desktop monitors — with zero ads, zero tracking, and no central servers.
 
 ---
 
-## Demo Mode (No Librus Account Required)
+## Visual Overview
 
-Explore the UI, animations, and all views immediately using built-in **Demo Mode** — populated with realistic student and parent sample data (smart timetable with substitutions, exams & deadlines, weighted GPA grades, attendance & deviations journal, e-excuses, and messages):
+<table>
+  <tr>
+    <td align="center" width="25%">
+      <a href="docs/screenshots/dashboard-dark.png">
+        <img src="docs/screenshots/dashboard-dark.png" width="190" alt="Synapse Mobile Dashboard (Dark Mode)" />
+      </a>
+      <br /><sub><b>Daily Overview</b><br />Live classes, GPA, inbox &amp; presence</sub>
+    </td>
+    <td align="center" width="25%">
+      <a href="docs/screenshots/schedule-dark.png">
+        <img src="docs/screenshots/schedule-dark.png" width="190" alt="Synapse Schedule View" />
+      </a>
+      <br /><sub><b>Smart Timetable</b><br />Room changes, exams &amp; breaks</sub>
+    </td>
+    <td align="center" width="25%">
+      <a href="docs/screenshots/grades-dark.png">
+        <img src="docs/screenshots/grades-dark.png" width="190" alt="Synapse Grades and GPA Calculator" />
+      </a>
+      <br /><sub><b>Grades &amp; GPA</b><br />Weighted averages &amp; target simulator</sub>
+    </td>
+    <td align="center" width="25%">
+      <a href="docs/screenshots/attendance-dark.png">
+        <img src="docs/screenshots/attendance-dark.png" width="190" alt="Synapse Attendance Breakdown" />
+      </a>
+      <br /><sub><b>Attendance</b><br />Per-subject threshold &amp; absences</sub>
+    </td>
+  </tr>
+</table>
 
-| Role | Username | Password | Scope |
+<p align="center">
+  <a href="docs/screenshots/desktop-light.png">
+    <img src="docs/screenshots/desktop-light.png" width="760" alt="Synapse Adaptive Desktop Layout (Light Mode)" />
+  </a>
+  <br /><sub><b>Responsive Desktop Workspace (Light Mode)</b> — automatically adapts to wide screens with the full-day timetable side-by-side with metrics</sub>
+</p>
+
+---
+
+## Why Synapse
+
+After the shutdown of popular open-source Android gradebook clients, thousands of Polish students and parents were forced back onto official portals packed with ads, slow multi-step navigation, and paywalls around core features like push views and convenient summaries.
+
+**Synapse** solves that everyday pain cleanly:
+- **Actually fast in daily use** — opens straight into cached local data and silently syncs updates in the background instead of reloading heavy multi-page web tables.
+- **Privately self-hosted for free** — no shared third-party backend ever holds your school credentials. You deploy your own private copy on Vercel in a minute (or run it locally) and add it straight to your phone's home screen.
+- **Built for both students and parents** — switch effortlessly between student and parent accounts, inspect subject deviations, or send e-excuses in seconds.
+
+---
+
+## Key Capabilities
+
+- **Today at a Glance**: Live lesson status, break timer, room changes, recent grades, and unread messages on one customizable home view.
+- **Timetable, Exams & Calendar Export**: Automatic merging of double periods, highlighted substitutions/cancellations, upcoming exams/homework timeline, and one-tap `.ics` export to external calendars.
+- **Calm Grades & GPA What-If Simulator**: Weighted semester and full-year GPA calculation, configurable `+`/`-` modifier rules, restrained typography that only flags alert marks (`nb`, `0`, `1`) in red, and an inline target-grade planner.
+- **Attendance & Parent e-Excuses**: Daily presence indicators separated from the deviation journal (`nb`, `usp`, `sp`, `sL`, `zw`), threshold alerts (`50%` / `75%`), and direct e-excuse submissions with live approval tracking.
+- **Messages & School Notices**: Distraction-free inbox, sent folder, staff directory lookup, attachment downloads, and announcements.
+- **Bilingual & Adaptive Themes**: Seamless **English / Polish** (`EN / PL`) switching plus Light, Dark, and System appearance modes.
+
+---
+
+## Try Demo Mode (No Account Needed)
+
+Test every screen, schedule view, grade simulator, and parent workflow right away using built-in demo accounts:
+
+| Role | Username | Password | What It Demonstrates |
 | :--- | :--- | :--- | :--- |
-| **Student** | `demo` *(or `demou`)* | `demo` | Class `4T`, lucky number `#14` |
-| **Parent** | `demor` *(or `demoparent`)* | `demo` | Parent view with one-tap e-excuses |
-
-Simply enter any demo username above and password `demo` on the sign-in screen to preview your account details before entering the dashboard.
+| **Student** | `demo` *(or `demou`)* | `demo` | Active timetable, weighted GPA, attendance tracking (`4T`, `#14`) |
+| **Parent** | `demor` *(or `demoparent`)* | `demo` | Parent workspace with e-excuse submission flows |
 
 ---
 
-## Install on Your Phone (No Coding Required)
+## Private Setup in 60 Seconds
 
-1. **Deploy your free private instance on Vercel**:
+1. **Deploy your personal instance on Vercel**:
 
    [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcra1zer2%2FSynapse)
 
-   Sign in with GitHub and click **Create / Deploy** (no environment variables required). Within a minute you will have your private URL (e.g., `https://my-synapse.vercel.app`).
-2. **Add to Home Screen** (standalone fullscreen mode):
-   - **iOS (Safari)**: Tap **Share** → **Add to Home Screen**.
-   - **Android (Chrome)**: Tap **⋮** → **Add to Home screen** / **Install app**.
-3. **Sign in** with your Librus Synergia (`Student` or `Parent`) credentials, or use `demo` / `demo`.
+   Sign in with GitHub and deploy with defaults (no environment variables required) to get your private URL.
+2. **Add to Home Screen** (optional full-screen mode):
+   - **Safari (iOS)**: **Share** → **Add to Home Screen**
+   - **Chrome (Android)**: **⋮** → **Add to Home screen** / **Install app**
+3. **Sign in** with your Librus Synergia credentials or explore with `demo` / `demo`.
 
 ---
 
-## Features (`v1.0.0` Stable)
+## Architecture & Engineering
 
-- **iCloud-Inspired Sign-In & Account Preview**: Fixed-height floating-label inputs, bilingual **PL / EN** cross-fade, verified class/school preview card before saving, and one-tap switching between multiple Student and Parent accounts.
-- **Customizable iOS Dashboard**: Reorder or toggle home widgets (**Schedule**, **Grades**, **Upcoming Events**, **Attendance**, **Messages**), live current/next lesson countdown, lucky number banner, and smooth pull-to-refresh.
-- **Smart Timetable & Calendar**: Automatically merges double lessons, highlights substitutions, cancellations, classrooms, and lesson topics, plus dedicated Exams, Homework, & Holidays views in list or calendar format with `.ics` export.
-- **Calm Grades & GPA Calculator**: Focused grade badges where only alert/failing marks (`nb`, `0`, `1`) are highlighted in red while other grades stay neutral grey; instant weighted semester/yearly GPA calculation, `+`/`-` modifier modes, and a target grade simulator.
-- **Attendance, Deviations Journal & e-Excuses**: Daily presence dots (`OB`) are kept cleanly on Today's Attendance, while the **Journal** (*Dziennik*) filters out `OB` clutter to spotlight deviations (`nb`, `usp`, `sp`, `sL`, `zw`). Parent accounts can submit one-tap e-Excuses for unexcused lessons or date ranges and track approval statuses live.
-- **Messages & Announcements**: Clean inbox/sent viewer, teacher recipient picker, file attachment support, and school announcements.
-- **Bilingual & Adaptive Themes**: Full **English / Polish** (`EN / PL`) interface with automatic Light & Dark mode support, plus built-in request timing diagnostics in Settings.
+Beneath the minimal interface, Synapse acts as a **stateless Backend-for-Frontend (BFF) and protocol adapter** over Librus Synergia's mixed JSON/HTML infrastructure — built specifically to deliver low-latency UX without storing user data on a central server.
 
----
+### Highlights Under the Hood
 
-## Running Locally (Development)
+- **Stateless Server Actions Proxy (`src/app/actions.ts`)**: All upstream authentication and fetching execute inside Next.js Server Actions on the user's own deployment. `syncAllUserDataAction` dispatches timetable, grade, and attendance pipelines concurrently via `Promise.all` and instruments per-endpoint latency (`serverTimings`) for built-in diagnostics.
+- **Custom Cookie-Jar & Auth Lifecycle (`src/services/session.service.ts`)**: Implements `NativeCookieJar` and `NativeLibrusSession` to manage Synergia's multi-hop redirects and session cookies deterministically without relying on headless browsers.
+- **Hybrid Gateway + HTML Scraper Aggregation (`src/services/`)**: Combines Synergia Gateway v2 JSON endpoints (`gateway.service.ts`, `justification.service.ts`) with targeted HTML parsing for endpoints without clean JSON APIs (e.g., rich message bodies via `message-parser.service.ts`, weekly timetable metadata, live justification statuses), with transparent `401` / expired-session recovery and retry.
+- **Request Coalescing & Scoped Catalog Cache (`src/services/gateway.service.ts`)**: Deduplicates concurrent identical calls via an `inFlightRequests` map and caches relatively static school catalogs (`Schools`, `Classes`, `Subjects`, `Lessons`, `Attendances/Types`, `Grades/Categories`, `Grades/Comments`, `Me`, `Realizations`) in memory with per-resource TTLs to cut redundant upstream load.
+- **Local-First Client Hydration (`src/hooks/`)**: Persists normalized user state and multi-account profiles strictly in browser `localStorage`, delivering instant perceived boot while background sync reconciles fresh upstream state.
 
-Requires **Node.js `>= 20.9.0`**. Built with **Next.js 15**, **React 19**, **TypeScript 5**, and **Tailwind CSS 4**.
+### Tech Stack & Layout
+
+Built with **Next.js 15** (App Router & Server Actions), **React 19**, **TypeScript 5**, **Tailwind CSS 4**, **Lucide Icons**, and **Node.js `>= 20.9.0`**.
+
+```text
+src/
+├── app/            # Next.js entrypoints & stateless Server Actions (actions.ts)
+├── components/     # Modular UI features (dashboard, schedule, grades, attendance, messages, settings)
+├── config/         # Bilingual dictionaries (PL / EN)
+├── hooks/          # Local-first sync, account management, settings & scroll physics
+├── models/         # Typed domain models for timetable, grades, attendance & messages
+├── services/       # Custom session/cookie jar, Gateway client, parsers, translation & demo generator
+└── utils/          # Weighted GPA math, time/break helpers, .ics calendar export & formatting
+```
+
+### Local Development
 
 ```bash
 npm install
-npm run dev     # http://localhost:3000
+npm run dev       # http://localhost:3000
 ```
 
-Production check:
+Production verification:
 
 ```bash
 npx tsc --noEmit
@@ -78,7 +143,6 @@ npm run start
 
 ## Disclaimer & Privacy Notice
 
-- **Unofficial & Independent**: **Synapse** is an independent open-source project intended strictly for personal and educational use. It is **not** affiliated with, authorized, or endorsed by **Librus sp. z o.o.** (*Librus* and *Librus Synergia* are trademarks of their respective owners).
-- **Zero Data Collection (100% Local)**: The author does **not** operate any central server and does **not** collect, store, or access your credentials, grades, attendance, or messages. Credentials stay locally in your browser (`localStorage`) and are sent only through your own local or Vercel instance when syncing with Librus.
-- **Open Source & Auditable**: No trackers or hidden analytics — the entire source code is public in this repository.
-- **As-Is Software**: Provided **"as is"** without warranties of any kind. The author assumes no liability for any issues arising from the use of this software.
+- **Independent Open-Source Project**: Synapse is not affiliated with, authorized, or endorsed by **Librus sp. z o.o.** (*Librus* and *Librus Synergia* are trademarks of their respective owners). Intended strictly for personal and educational use.
+- **Zero Telemetry, Zero Central Storage**: The repository author does **not** operate any central server or database and never sees your credentials, grades, attendance, or messages. Data resides solely on your device (`localStorage`) and transits directly through your personal Next.js instance.
+- **As-Is Software**: Provided without warranties of any kind; use at your own discretion.

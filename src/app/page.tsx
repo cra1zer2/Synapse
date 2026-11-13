@@ -93,6 +93,8 @@ export default function Home() {
 
   const rootScrollRef = useRef<HTMLDivElement>(null)
   const pullStartRef = useRef<{ x: number; y: number } | null>(null)
+  const pullDistanceRef = useRef(0)
+  const isPullDraggingRef = useRef(false)
   const [pullDistance, setPullDistance] = useState(0)
   const [isPullDragging, setIsPullDragging] = useState(false)
   const [isPullRefreshing, setIsPullRefreshing] = useState(false)
@@ -277,19 +279,28 @@ export default function Home() {
 
   const handleManualRefresh = () => runRefresh(false)
 
+  const resetPullState = () => {
+    pullStartRef.current = null
+    if (isPullDraggingRef.current) {
+      isPullDraggingRef.current = false
+      setIsPullDragging(false)
+    }
+    if (pullDistanceRef.current > 0) {
+      pullDistanceRef.current = 0
+      setPullDistance(0)
+    }
+  }
+
   const handleRootTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (isDesktop || isAnyOverlayActive || isAnySheetActive || isManualRefreshing || timetable.isUpdating) {
-      pullStartRef.current = null
-      setIsPullDragging(false)
+      resetPullState()
       return
     }
     const scrollTop = isDesktop ? (rootScrollRef.current?.scrollTop ?? 0) : Math.max(0, window.scrollY)
     if (scrollTop <= 0) {
       pullStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-      setIsPullDragging(true)
     } else {
-      pullStartRef.current = null
-      setIsPullDragging(false)
+      resetPullState()
     }
   }
 
@@ -297,29 +308,31 @@ export default function Home() {
     if (!pullStartRef.current) return
     const scrollTop = isDesktop ? (rootScrollRef.current?.scrollTop ?? 0) : Math.max(0, window.scrollY)
     if (scrollTop > 0) {
-      pullStartRef.current = null
-      setIsPullDragging(false)
-      if (pullDistance > 0) setPullDistance(0)
+      resetPullState()
       return
     }
     const dy = e.touches[0].clientY - pullStartRef.current.y
     const dx = Math.abs(e.touches[0].clientX - pullStartRef.current.x)
-    if (dx > dy) {
-      pullStartRef.current = null
-      setIsPullDragging(false)
-      if (pullDistance > 0) setPullDistance(0)
+    if (dy < 0 || dx > dy) {
+      resetPullState()
       return
     }
     if (dy > 8) {
-      setPullDistance(Math.min(78, Math.round((dy - 8) * 0.42)))
+      if (!isPullDraggingRef.current) {
+        isPullDraggingRef.current = true
+        setIsPullDragging(true)
+      }
+      const nextPull = Math.min(78, Math.round((dy - 8) * 0.42))
+      if (nextPull !== pullDistanceRef.current) {
+        pullDistanceRef.current = nextPull
+        setPullDistance(nextPull)
+      }
     }
   }
 
   const handleRootTouchEnd = () => {
-    const shouldRefresh = pullDistance >= 54
-    pullStartRef.current = null
-    setIsPullDragging(false)
-    setPullDistance(0)
+    const shouldRefresh = pullDistanceRef.current >= 54
+    resetPullState()
     if (shouldRefresh) {
       runRefresh(true)
     }
@@ -583,6 +596,7 @@ export default function Home() {
               height: pullSlotHeight + 'px',
               marginBottom: isPullSlotVisible ? '10px' : '0px',
               opacity: isPullSlotVisible ? 1 : 0,
+              pointerEvents: isPullSlotVisible ? 'auto' : 'none',
               transition: isPullDragging
                 ? 'none'
                 : 'height 320ms cubic-bezier(0.32, 0.72, 0, 1), margin-bottom 320ms cubic-bezier(0.32, 0.72, 0, 1), opacity 220ms cubic-bezier(0.32, 0.72, 0, 1)'
@@ -744,7 +758,7 @@ export default function Home() {
         isSubView={true}
         isReceded={Boolean(selectedSubjectDetail || showManualExcuse || showLiveJustifications || isLegacyDaySubViewOpen)}
       >
-        {timetable.attendanceData && (
+        {timetable.attendanceData ? (
           <div className="w-full flex flex-col gap-3.5">
             <IosSegmentedControl<'summary' | 'table'>
               value={attendanceViewTab}
@@ -785,6 +799,8 @@ export default function Home() {
               />
             )}
           </div>
+        ) : (
+          renderLoadingOrError(timetable.attendanceError)
         )}
       </IosScreen>
 

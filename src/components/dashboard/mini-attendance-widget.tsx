@@ -127,7 +127,7 @@ export function MiniAttendanceWidget({
       ? 'bg-[var(--ios-orange)]'
       : 'bg-[var(--ios-green)]'
 
-  const canOpenAttendance = Boolean(attendanceData && !isPending && !error)
+  const canOpenAttendance = Boolean(attendanceData && !isPending)
 
   return (
     <IosCard

@@ -11,11 +11,14 @@ interface UseAccountSessionOptions {
     t: AppDictionary
 }
 
-function sanitizeSavedProfile(profile: StudentProfile): StudentProfile {
+function sanitizeSavedProfile(profile?: StudentProfile | null, fallbackRole: 'student' | 'parent' = 'parent'): StudentProfile {
     return {
-        ...profile,
-        className: sanitizeAccountLabel(profile.className),
-        schoolName: sanitizeAccountLabel(profile.schoolName)
+        fullName: profile?.fullName || '',
+        className: sanitizeAccountLabel(profile?.className),
+        schoolName: sanitizeAccountLabel(profile?.schoolName),
+        luckyNumber: profile?.luckyNumber ?? null,
+        classNumber: profile?.classNumber ?? null,
+        role: profile?.role || fallbackRole
     }
 }
 
@@ -24,7 +27,7 @@ function deduplicateSavedAccounts(accounts: SavedAccount[]): SavedAccount[] {
     for (const acc of accounts) {
         if (!acc || !acc.username) continue
         const key = acc.username.trim().toLowerCase()
-        const normalizedProfile = sanitizeSavedProfile(acc.profile)
+        const normalizedProfile = sanitizeSavedProfile(acc.profile, acc.role || 'parent')
         const existing = map.get(key)
         if (!existing) {
             map.set(key, { ...acc, id: key, username: acc.username.trim(), profile: normalizedProfile })

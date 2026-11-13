@@ -67,7 +67,7 @@ export function MiniGradesWidget({
   const formattedAvg = avg !== null && avg !== undefined ? avg.toFixed(2) : '—'
   const isDanger = typeof avg === 'number' && avg < 2.0
   const recentGrades: GradeItem[] = gradesData?.recentGrades?.slice(0, 5) || []
-  const canOpenGrades = Boolean(gradesData && !isPending && !error)
+  const canOpenGrades = Boolean(gradesData && !isPending)
 
   return (
     <IosCard

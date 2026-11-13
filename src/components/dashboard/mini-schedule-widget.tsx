@@ -343,10 +343,23 @@ export function MiniScheduleWidget({
       targetDayLessons[targetDayLessons.length - 1]?.isCancelled
   )
 
+  const isCardEmptyOrEnded =
+    !isLoading &&
+    Boolean(timetableData) &&
+    !error &&
+    (displayLessons.length === 0 || (!showAllLessons && scheduleState.mode === 'all_ended_today' && !shouldShowNextDay))
+  const isCardBodyClickable = !showAllLessons || isCardEmptyOrEnded
+
   return (
-    <IosCard className="overflow-hidden flex flex-col select-none">
+    <IosCard
+      onClick={isCardBodyClickable ? handleCardClick : undefined}
+      className={cn(
+        'overflow-hidden flex flex-col select-none',
+        isCardBodyClickable && 'active:bg-[var(--ios-row-active)] transition-colors duration-150'
+      )}
+    >
       <div
-        onClick={handleCardClick}
+        onClick={!isCardBodyClickable ? handleCardClick : undefined}
         className="px-4 h-[46px] flex items-center justify-between gap-2 border-b border-[var(--ios-separator)] cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)] transition-colors duration-150"
       >
         <div className="flex items-center gap-1.5 min-w-0">

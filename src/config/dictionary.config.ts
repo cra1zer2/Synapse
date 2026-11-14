@@ -1,0 +1,565 @@
+export type AppLanguage = 'pl' | 'en'
+export type AppTheme = 'system' | 'light' | 'dark'
+
+export interface AppDictionary {
+    dashboard: string
+    schedule: string
+    grades: string
+    attendance: string
+    messages: string
+    teachers: string
+    attendanceRate: string
+    dangerBadge: string
+    warningBadge: string
+    safeBadge: string
+    missedOf: (m: number, tot: number) => string
+    safeToMiss: string
+    neededToRecover: string
+    lessons: string
+    excuseAction: string
+    searchTeacher: string
+    allDates: string
+    today: string
+    myTeacher: string
+    saveCreds: string
+    updateNow: string
+    newChanges: string
+    noAbsencesToday: string
+    noLessonsDay: string
+    vacationDay: string
+    subjectDetails: string
+    justificationSent: string
+    pendingJustification: string
+    onlyParentCanExcuse: string
+    allPendingNotice: string
+    cancel: string
+    send: string
+    sending: string
+    commentPlaceholder: string
+    close: string
+    gotIt: string
+    minimalEffortToFix: string
+    currentAverage: (avg: number | null) => string
+    recommendedTargets: string
+    youAreDone: string
+    scoreTooDeep: string
+    noGradesRecorded: string
+    noAbsencesRecorded: string
+    weight: string
+    teacherLabel: string
+    dateLabel: string
+    notSpecified: string
+    settingsTitle: string
+    refresh: string
+    loadingTimetable: string
+    syncedStatus: string
+    updatingStatus: string
+    profileTitle: string
+    luckyNumber: string
+    appLanguage: string
+    appTheme: string
+    themeSystem: string
+    themeLight: string
+    themeDark: string
+    teacherAbsencesTool: string
+    accountSwitcher: string
+    studentRole: string
+    parentRole: string
+    studentRoleTitle: string
+    parentRoleTitle: string
+    switchAccount: string
+    addAccount: string
+    saveAccount: string
+    preferences: string
+    accessibilityTitle: string
+    advancedTitle: string
+    systemSection: string
+    studentJustificationsSection: string
+    studentJustificationsTitle: string
+    studentJustificationsDescription: string
+    displaySectionTitle: string
+    gradesCalcSectionTitle: string
+    ignoreModifiersLabel: string
+    ignoreModifiersDescription: string
+    benchmarkSectionTitle: string
+    benchmarkButtonLabel: string
+    benchmarkDescription: string
+    benchmarkTotalDuration: string
+    benchmarkAuthDuration: string
+    benchmarkFastestEndpoint: string
+    benchmarkSlowestEndpoint: string
+    benchmarkCopyReportAction: string
+    benchmarkReportCopied: string
+    benchmarkEndpointsDetails: string
+    runBenchmarkAction: string
+    benchmarkingStatus: string
+    onLabel: string
+    offLabel: string
+    textClampLabel: string
+    textClampSingleLineDescription: string
+    appVersionFooter: string
+    cancelledLabel: string
+    substitutionLabel: string
+    logout: string
+    done: string
+    backAction: string
+    whatsNewTitle: string
+    whatsNewSubtitle: string
+    whatsNewAction: string
+    messagesInbox: string
+    messagesAnnouncements: string
+    noMessages: string
+    composeMessage: string
+    recipientPlaceholder: string
+    subjectPlaceholder: string
+    messagePlaceholder: string
+    searchRecipient: string
+    welcomeTitle: string
+    loginSubtitle: string
+    loginPlaceholder: string
+    passwordPlaceholder: string
+    verifyButton: string
+    verifyingAccount: string
+    accountVerified: string
+    confirmAndEnter: string
+    loginError: string
+    changeData: string
+    breakLabel: string
+    breakCountdownLabel: (m: number) => string
+    breakUpcomingLabel: (m: number) => string
+    replyAction: string
+    searchMessagesPlaceholder: string
+    writeNewMessage: string
+    newMessageTitle: string
+    backToMessages: string
+    loadingMessages: string
+    messageSent: string
+    emptyMessageContent: string
+    subjectsSection: string
+    subjectAttendance: string
+    missedLessonsCount: (count: number) => string
+    ofScheduled: (total: number) => string
+    recordedAbsencesTitle: string
+    lessonNumberLabel: (num: number) => string
+    unexcusedShortBadge: (count: number) => string
+    gpaTitle: string
+    partialGradesTitle: string
+    terminarzButton: string
+    lessonDetails: string
+    lessonTopic: string
+    noTopicRecorded: string
+    roomLabel: string
+    durationLabel: string
+    statusLabel: string
+    normalLesson: string
+    breakWord: string
+    justStatusPending: string
+    justStatusAccepted: string
+    justStatusRejected: string
+    justStatusPartial: string
+    liveJustificationsTitle: string
+    liveJustificationsEmpty: string
+    mobileTodayAttendanceTitle: string
+    mobileTodayAttendanceDesc: string
+    gradeModifierPresetTitle: string
+    gradeModifierPresetDesc: string
+    gradeModStandard: string
+    gradeModSymmetric: string
+    gradeModQuarter: string
+    gradeModNone: string
+    targetAverageLabel: string
+    targetSolverResult: (count: number, grade: number, weight: number, projected: number) => string
+    targetSolverAlreadyMet: string
+    targetSolverImpossible: string
+    laterStartLabel: string
+    earlierFinishLabel: string
+    exportCalendarIcs: string
+    pullToRefreshHint: string
+    releaseToRefreshHint: string
+    lastSyncedAtLabel: (timeStr: string) => string
+    offlineCachedLabel: string
+    demoStudentLabel: string
+    demoParentLabel: string
+    closeLabel: string
+    backLabel: string
+}
+
+export function getDictionary(lang: AppLanguage): AppDictionary {
+    if (lang === 'en') {
+        return {
+            dashboard: 'Home',
+            schedule: 'Schedule',
+            grades: 'Grades',
+            attendance: 'Attendance',
+            messages: 'Messages',
+            teachers: 'Teachers',
+            attendanceRate: 'Attendance Rate',
+            dangerBadge: 'Critical Risk < 50%',
+            warningBadge: 'Sub-optimal < 75%',
+            safeBadge: 'Safe',
+            missedOf: (m, tot) => `${m} missed of ${tot}`,
+            safeToMiss: 'Safe to miss',
+            neededToRecover: 'Needed to recover',
+            lessons: 'lessons',
+            excuseAction: 'Excuse',
+            searchTeacher: 'Search teacher...',
+            allDates: 'All dates',
+            today: 'Today',
+            myTeacher: 'My Teacher',
+            saveCreds: 'Save Credentials',
+            updateNow: 'Update Now',
+            newChanges: 'New changes detected on Librus',
+            noAbsencesToday: 'No teacher absences recorded for this date',
+            noLessonsDay: 'No scheduled lessons for this day',
+            vacationDay: 'School holiday or break',
+            subjectDetails: 'Attendance Details',
+            justificationSent: 'Justification submitted successfully',
+            pendingJustification: 'Pending',
+            onlyParentCanExcuse: 'Only parent accounts can submit absence justifications.',
+            allPendingNotice: 'All recorded absences are currently pending teacher review.',
+            cancel: 'Cancel',
+            send: 'Submit',
+            sending: 'Submitting...',
+            commentPlaceholder: 'Optional message to teacher...',
+            close: 'Close',
+            gotIt: 'Got it',
+            minimalEffortToFix: 'Minimal Effort To Fix',
+            currentAverage: (avg) => `Current: ${avg ?? 'N/A'}`,
+            recommendedTargets: 'Recommended targets to reach 2.0:',
+            youAreDone: 'You are done',
+            scoreTooDeep: 'Weighted score too deep to reach 2.0',
+            noGradesRecorded: 'No grades recorded',
+            noAbsencesRecorded: 'No absences recorded',
+            weight: 'Weight',
+            teacherLabel: 'Teacher',
+            dateLabel: 'Date',
+            notSpecified: 'Not specified',
+            settingsTitle: 'Settings',
+            refresh: 'Refresh',
+            loadingTimetable: 'Loading timetable...',
+            syncedStatus: 'Synced',
+            updatingStatus: 'Updating...',
+            profileTitle: 'Student Profile',
+            luckyNumber: 'Lucky number',
+            appLanguage: 'Language',
+            appTheme: 'Theme',
+            themeSystem: 'Auto',
+            themeLight: 'Light',
+            themeDark: 'Dark',
+            teacherAbsencesTool: 'Teacher Absences Finder',
+            accountSwitcher: 'Account Switcher',
+            studentRole: 'Student',
+            parentRole: 'Parent',
+            studentRoleTitle: 'Student Account',
+            parentRoleTitle: 'Parent Account',
+            switchAccount: 'Switch',
+            addAccount: 'Add another account',
+            saveAccount: 'Save account',
+            preferences: 'Preferences',
+            accessibilityTitle: 'Accessibility',
+            advancedTitle: 'Advanced',
+            systemSection: 'System',
+            studentJustificationsSection: 'Excuses & Justifications',
+            studentJustificationsTitle: 'Allow student justifications',
+            studentJustificationsDescription: 'Enable submitting absence excuses from student accounts',
+            displaySectionTitle: 'Display & Layout',
+            gradesCalcSectionTitle: 'Grade Calculations',
+            ignoreModifiersLabel: 'Ignore pluses and minuses',
+            ignoreModifiersDescription: 'Calculate GPA from base grades (e.g. 4+ and 4- as 4)',
+            benchmarkSectionTitle: 'Diagnostics & Latency',
+            benchmarkButtonLabel: 'Librus Benchmark',
+            benchmarkDescription: 'Measure latency across all Synergia endpoints without entering credentials',
+            benchmarkTotalDuration: 'Total request time',
+            benchmarkAuthDuration: 'Authorization time',
+            benchmarkFastestEndpoint: 'Fastest endpoint',
+            benchmarkSlowestEndpoint: 'Slowest endpoint',
+            benchmarkCopyReportAction: 'Copy JSON Report',
+            benchmarkReportCopied: 'Copied to clipboard!',
+            benchmarkEndpointsDetails: 'Endpoints Breakdown',
+            runBenchmarkAction: 'Run Test',
+            benchmarkingStatus: 'Testing...',
+            onLabel: 'On',
+            offLabel: 'Off',
+            textClampLabel: 'Single-line subject names',
+            textClampSingleLineDescription: 'Truncate long lesson titles to a single line',
+            appVersionFooter: 'Synapse • Smart Librus Client',
+            cancelledLabel: 'Cancelled',
+            substitutionLabel: 'Substitution',
+            logout: 'Sign Out',
+            done: 'Done',
+            backAction: 'Back',
+            whatsNewTitle: "What's New in Synapse",
+            whatsNewSubtitle: 'Version 3.0.3',
+            whatsNewAction: 'Continue',
+            messagesInbox: 'Inbox',
+            messagesAnnouncements: 'Announcements',
+            noMessages: 'No messages yet',
+            composeMessage: 'New Message',
+            recipientPlaceholder: 'Select recipient',
+            subjectPlaceholder: 'Subject',
+            messagePlaceholder: 'Write your message...',
+            searchRecipient: 'Search staff...',
+            welcomeTitle: 'Welcome to Synapse',
+            loginSubtitle: 'Sign in with your Librus Synergia account',
+            loginPlaceholder: 'Login / ID',
+            passwordPlaceholder: 'Password',
+            verifyButton: 'Verify & Connect',
+            verifyingAccount: 'Verifying account with Librus...',
+            accountVerified: 'Identity Verified',
+            confirmAndEnter: 'Confirm & Enter',
+            loginError: 'Invalid login or password. Please try again.',
+            changeData: 'Change credentials',
+            breakLabel: 'Break',
+            breakCountdownLabel: (m: number) => `Break • ${m} min left`,
+            breakUpcomingLabel: (m: number) => `Next break • ${m} min`,
+            replyAction: 'Reply',
+            searchMessagesPlaceholder: 'Search messages...',
+            writeNewMessage: 'Compose',
+            newMessageTitle: 'New Message',
+            backToMessages: 'Messages',
+            loadingMessages: 'Loading messages...',
+            messageSent: 'Message sent successfully',
+            emptyMessageContent: 'No message content available',
+            subjectsSection: 'Subjects',
+            subjectAttendance: 'Subject Attendance',
+            missedLessonsCount: (count: number) => `${count} missed`,
+            ofScheduled: (total: number) => `of ${total} scheduled`,
+            recordedAbsencesTitle: 'Recorded Absences',
+            lessonNumberLabel: (num: number) => `Lesson ${num}`,
+            unexcusedShortBadge: (count: number) => `${count} nb`,
+            gpaTitle: 'Grade Point Average (GPA)',
+            partialGradesTitle: 'Individual Grades',
+            terminarzButton: 'Calendar',
+            lessonDetails: 'Lesson Details',
+            lessonTopic: 'Lesson Topic',
+            noTopicRecorded: 'No topic recorded',
+            roomLabel: 'Classroom',
+            durationLabel: 'Duration',
+            statusLabel: 'Status',
+            normalLesson: 'Regular period',
+            breakWord: 'Break',
+            justStatusPending: 'Pending',
+            justStatusAccepted: 'Accepted',
+            justStatusRejected: 'Rejected',
+            justStatusPartial: 'Partial',
+            liveJustificationsTitle: 'Librus Justifications',
+            liveJustificationsEmpty: 'No requests found in this status',
+            mobileTodayAttendanceTitle: "Show today's attendance on phone",
+            mobileTodayAttendanceDesc: "Adds today's lesson dots row to the compact dashboard widget",
+            gradeModifierPresetTitle: '+ / - modifier values',
+            gradeModifierPresetDesc: 'Adjust how plus and minus affect calculated averages',
+            gradeModStandard: 'Standard (+0.5 / -0.25)',
+            gradeModSymmetric: 'Symmetric (+0.5 / -0.5)',
+            gradeModQuarter: 'Quarter (+0.25 / -0.25)',
+            gradeModNone: 'Ignore (+0 / -0)',
+            targetAverageLabel: 'Target average',
+            targetSolverResult: (count, grade, weight, projected) =>
+                `Need ${count}x ${grade} (w.${weight}) -> ${projected.toFixed(2)}`,
+            targetSolverAlreadyMet: 'Target already reached',
+            targetSolverImpossible: 'Not reachable within 30 grades',
+            laterStartLabel: 'Later start',
+            earlierFinishLabel: 'Earlier finish',
+            exportCalendarIcs: 'Add to Calendar (.ics)',
+            pullToRefreshHint: 'Pull to refresh',
+            releaseToRefreshHint: 'Release to sync',
+            lastSyncedAtLabel: (timeStr) => `Synced at ${timeStr}`,
+            offlineCachedLabel: 'Cached offline view',
+            demoStudentLabel: 'Demo Student',
+            demoParentLabel: 'Demo Parent',
+            closeLabel: 'Close',
+            backLabel: 'Back'
+        }
+    }
+
+    return {
+        dashboard: 'Pulpit',
+        schedule: 'Plan',
+        grades: 'Oceny',
+        attendance: 'Frekwencja',
+        messages: 'Wiadomości',
+        teachers: 'Nauczyciele',
+        attendanceRate: 'Wskaźnik frekwencji',
+        dangerBadge: 'Zagrożenie < 50%',
+        warningBadge: 'Nierekomendowana < 75%',
+        safeBadge: 'Bezpiecznie',
+        missedOf: (m, tot) => `${m} opuszczonych z ${tot}`,
+        safeToMiss: 'Bezpieczny zapas',
+        neededToRecover: 'Wymagane do 50%',
+        lessons: 'lekcji',
+        excuseAction: 'Usprawiedliw',
+        searchTeacher: 'Szukaj nauczyciela...',
+        allDates: 'Wszystkie daty',
+        today: 'Dzisiaj',
+        myTeacher: 'Mój nauczyciel',
+        saveCreds: 'Zapisz dane',
+        updateNow: 'Zaktualizuj',
+        newChanges: 'Wykryto zmiany w Librusie',
+        noAbsencesToday: 'Brak nieobecności nauczycieli w tym dniu',
+        noLessonsDay: 'Brak zaplanowanych lekcji w tym dniu',
+        vacationDay: 'Dzień wolny od zajęć dydaktycznych',
+        subjectDetails: 'Szczegóły frekwencji',
+        justificationSent: 'Usprawiedliwienie wysłane pomyślnie',
+        pendingJustification: 'Oczekuje',
+        onlyParentCanExcuse: 'Tylko z konta rodzica można przesyłać usprawiedliwienia nieobecności.',
+        allPendingNotice: 'Wszystkie nieobecności oczekują na decyzję wychowawcy.',
+        cancel: 'Anuluj',
+        send: 'Wyślij',
+        sending: 'Wysyłanie...',
+        commentPlaceholder: 'Komentarz do wychowawcy (opcjonalnie)...',
+        close: 'Zamknij',
+        gotIt: 'Rozumiem',
+        minimalEffortToFix: 'Minimal Effort To Fix',
+        currentAverage: (avg) => `Aktualna: ${avg ?? 'Brak'}`,
+        recommendedTargets: 'Rekomendowane cele aby osiągnąć 2.0:',
+        youAreDone: 'You are done',
+        scoreTooDeep: 'Średnia ważona zbyt niska aby osiągnąć 2.0',
+        noGradesRecorded: 'Brak wpisanych ocen',
+        noAbsencesRecorded: 'Brak zarejestrowanych nieobecności',
+        weight: 'Waga',
+        teacherLabel: 'Nauczyciel',
+        dateLabel: 'Data',
+        notSpecified: 'Nie podano',
+        settingsTitle: 'Ustawienia',
+        refresh: 'Odśwież',
+        loadingTimetable: 'Ładowanie planu lekcji...',
+        syncedStatus: 'Zsynchronizowano',
+        updatingStatus: 'Aktualizowanie...',
+        profileTitle: 'Profil ucznia',
+        luckyNumber: 'Szczęśliwy numerek',
+        appLanguage: 'Język',
+        appTheme: 'Motyw',
+        themeSystem: 'Auto',
+        themeLight: 'Jasny',
+        themeDark: 'Ciemny',
+        teacherAbsencesTool: 'Nieobecności nauczycieli',
+        accountSwitcher: 'Przełącznik kont',
+        studentRole: 'Uczeń',
+        parentRole: 'Rodzic',
+        studentRoleTitle: 'Konto ucznia',
+        parentRoleTitle: 'Konto rodzica',
+        switchAccount: 'Przełącz',
+        addAccount: 'Dodaj kolejne konto',
+        saveAccount: 'Zapisz konto',
+        preferences: 'Preferencje',
+        accessibilityTitle: 'Dostępność',
+        advancedTitle: 'Zaawansowane',
+        systemSection: 'System',
+        studentJustificationsSection: 'e-Usprawiedliwienia',
+        studentJustificationsTitle: 'Usprawiedliwienia dla uczniów',
+        studentJustificationsDescription: 'Pozwól na przesyłanie usprawiedliwień z konta ucznia',
+        displaySectionTitle: 'Ekran i układ',
+        gradesCalcSectionTitle: 'Kalkulator ocen',
+        ignoreModifiersLabel: 'Ignoruj plusy i minusy',
+        ignoreModifiersDescription: 'Obliczaj średnią z bazowych ocen (np. 4+ i 4- jako 4)',
+        benchmarkSectionTitle: 'Diagnostyka i opóźnienia',
+        benchmarkButtonLabel: 'Test opóźnień Librus',
+        benchmarkDescription: 'Zmierz czas odpowiedzi Synergii bez ponownego wpisywania hasła',
+        benchmarkTotalDuration: 'Łączny czas zapytań',
+        benchmarkAuthDuration: 'Czas autoryzacji',
+        benchmarkFastestEndpoint: 'Najszybszy punkt',
+        benchmarkSlowestEndpoint: 'Najwolniejszy punkt',
+        benchmarkCopyReportAction: 'Kopiuj raport JSON',
+        benchmarkReportCopied: 'Skopiowano do schowka!',
+        benchmarkEndpointsDetails: 'Szczegóły punktów końcowych',
+        runBenchmarkAction: 'Uruchom test',
+        benchmarkingStatus: 'Testowanie...',
+        onLabel: 'Wł.',
+        offLabel: 'Wył.',
+        textClampLabel: 'Skracanie nazw przedmiotów',
+        textClampSingleLineDescription: 'Ogranicza długie nazwy lekcji do jednej linii',
+        appVersionFooter: 'Synapse • Klient Librus Synergia',
+        cancelledLabel: 'Odwołane',
+        substitutionLabel: 'Zastępstwo',
+        logout: 'Wyloguj się',
+        done: 'Gotowe',
+        backAction: 'Wróć',
+        whatsNewTitle: 'Co nowego w Synapse',
+        whatsNewSubtitle: 'Wersja 3.0.3',
+        whatsNewAction: 'Kontynuuj',
+        messagesInbox: 'Odebrane',
+        messagesAnnouncements: 'Ogłoszenia',
+        noMessages: 'Brak wiadomości',
+        composeMessage: 'Nowa wiadomość',
+        recipientPlaceholder: 'Wybierz odbiorcę',
+        subjectPlaceholder: 'Temat',
+        messagePlaceholder: 'Treść wiadomości...',
+        searchRecipient: 'Szukaj pracownika...',
+        welcomeTitle: 'Witaj w Synapse',
+        loginSubtitle: 'Zaloguj się kontem Librus Synergia',
+        loginPlaceholder: 'Login / ID',
+        passwordPlaceholder: 'Hasło',
+        verifyButton: 'Weryfikuj i połącz',
+        verifyingAccount: 'Weryfikacja konta w Librus...',
+        accountVerified: 'Tożsamość potwierdzona',
+        confirmAndEnter: 'Potwierdź i wejdź',
+        loginError: 'Nieprawidłowy login lub hasło. Spróbuj ponownie.',
+        changeData: 'Zmień dane',
+        breakLabel: 'Przerwa',
+        breakCountdownLabel: (m: number) => `Przerwa • pozostało ${m} min`,
+        breakUpcomingLabel: (m: number) => `Kolejna przerwa • ${m} min`,
+        replyAction: 'Odpowiedz',
+        searchMessagesPlaceholder: 'Szukaj w wiadomościach...',
+        writeNewMessage: 'Napisz',
+        newMessageTitle: 'Nowa wiadomość',
+        backToMessages: 'Wiadomości',
+        loadingMessages: 'Wczytywanie wiadomości...',
+        messageSent: 'Wysłano wiadomość',
+        emptyMessageContent: 'Brak treści wiadomości',
+        subjectsSection: 'Przedmioty',
+        subjectAttendance: 'Frekwencja z przedmiotu',
+        missedLessonsCount: (count: number) => {
+            if (count === 0) return '0 opuszczonych'
+            if (count === 1) return '1 opuszczona'
+            const lastTwo = count % 100
+            const last = count % 10
+            if (lastTwo >= 12 && lastTwo <= 14) return `${count} opuszczonych`
+            if (last >= 2 && last <= 4) return `${count} opuszczone`
+            return `${count} opuszczonych`
+        },
+        ofScheduled: (total: number) => `z ${total} zaplanowanych`,
+        recordedAbsencesTitle: 'Zarejestrowane nieobecności',
+        lessonNumberLabel: (num: number) => `Lekcja ${num}`,
+        unexcusedShortBadge: (count: number) => `${count} nb`,
+        gpaTitle: 'Średnia ocen (GPA)',
+        partialGradesTitle: 'Oceny cząstkowe',
+        terminarzButton: 'Terminarz',
+        lessonDetails: 'Szczegóły lekcji',
+        lessonTopic: 'Temat lekcji',
+        noTopicRecorded: 'Brak wpisanego tematu',
+        roomLabel: 'Sala / Gabinet',
+        durationLabel: 'Czas trwania',
+        statusLabel: 'Status',
+        normalLesson: 'Lekcja planowa',
+        breakWord: 'Przerwa',
+        justStatusPending: 'Oczekujące',
+        justStatusAccepted: 'Zaakceptowane',
+        justStatusRejected: 'Odrzucone',
+        justStatusPartial: 'Częściowe',
+        liveJustificationsTitle: 'Wnioski w Librusie',
+        liveJustificationsEmpty: 'Brak wniosków w tym statusie',
+        mobileTodayAttendanceTitle: 'Dzisiejsza obecność na telefonie',
+        mobileTodayAttendanceDesc: 'Pokazuje pasek lekcji z dzisiaj na karcie frekwencji',
+        gradeModifierPresetTitle: 'Wartości znaków + / -',
+        gradeModifierPresetDesc: 'Wybierz wpływ plusów i minusów na średnią ocen',
+        gradeModStandard: 'Standard (+0.5 / -0.25)',
+        gradeModSymmetric: 'Symetryczne (+0.5 / -0.5)',
+        gradeModQuarter: 'Ćwiartki (+0.25 / -0.25)',
+        gradeModNone: 'Ignoruj (+0 / -0)',
+        targetAverageLabel: 'Cel średniej',
+        targetSolverResult: (count, grade, weight, projected) =>
+            `Potrzeba ${count}× ${grade} (w.${weight}) -> ${projected.toFixed(2)}`,
+        targetSolverAlreadyMet: 'Cel już osiągnięty',
+        targetSolverImpossible: 'Nieosiągalne w 30 ocenach',
+        laterStartLabel: 'Późniejszy początek',
+        earlierFinishLabel: 'Wcześniejszy koniec',
+        exportCalendarIcs: 'Dodaj do Kalendarza (.ics)',
+        pullToRefreshHint: 'Pociągnij, aby odświeżyć',
+        releaseToRefreshHint: 'Puść, aby zsynchronizować',
+        lastSyncedAtLabel: (timeStr) => `Zsynchronizowano ${timeStr}`,
+        offlineCachedLabel: 'Tryb offline (pamięć)',
+        demoStudentLabel: 'Demo Uczeń',
+        demoParentLabel: 'Demo Rodzic',
+        closeLabel: 'Zamknij',
+        backLabel: 'Wróć'
+    }
+}

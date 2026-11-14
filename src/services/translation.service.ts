@@ -1,194 +1,256 @@
+const MAX_CACHE_ENTRIES = 4000
+const MAX_CHUNK_CHARS = 1200
+const ENGINE_TIMEOUT_MS = 4500
+const DEFAULT_BATCH_CONCURRENCY = 6
+
 const translationCache = new Map<string, string>()
+const inFlightTranslations = new Map<string, Promise<string>>()
 
-const SCHOOL_DICTIONARY: Record<string, string> = {
-    'matematyka': 'Mathematics',
-    'język polski': 'Polish',
-    'jezyk polski': 'Polish',
-    'język angielski': 'English',
-    'jezyk angielski': 'English',
-    'język niemiecki': 'German',
-    'jezyk niemiecki': 'German',
-    'język hiszpański': 'Spanish',
-    'jezyk hiszpanski': 'Spanish',
-    'historia': 'History',
-    'historia i teraźniejszość': 'History and Current Affairs',
-    'historia i terazniejszosc': 'History and Current Affairs',
-    'hit': 'History and Current Affairs',
-    'biologia': 'Biology',
-    'chemia': 'Chemistry',
-    'fizyka': 'Physics',
-    'geografia': 'Geography',
-    'informatyka': 'Computer Science',
-    'wychowanie fizyczne': 'Physical Education (PE)',
-    'wf': 'Physical Education (PE)',
-    'edukacja dla bezpieczeństwa': 'Safety Education',
-    'edukacja dla bezpieczenstwa': 'Safety Education',
-    'edb': 'Safety Education',
-    'wiedza o społeczeństwie': 'Social Studies',
-    'wiedza o spoleczenstwie': 'Social Studies',
-    'wos': 'Social Studies',
-    'religia': 'Religion',
-    'etyka': 'Ethics',
-    'godzina z wychowawcą': 'Homeroom',
-    'godzina z wychowawca': 'Homeroom',
-    'zajęcia z wychowawcą': 'Homeroom',
-    'zajecia z wychowawca': 'Homeroom',
-    'gzw': 'Homeroom',
-    'zajęcia szkolne': 'School Classes',
-    'zajecia szkolne': 'School Classes',
-    'programowanie aplikacji internetowych': 'Web App Programming',
-    'programowanie aplikacji desktopowych i mobilnych': 'Desktop & Mobile Programming',
-    'programowanie i testowanie aplikacji mobilnych oraz zaawansowanych webowych': 'Mobile & Advanced Web App Development & Testing',
-    'programowanie i testowanie aplikacji': 'App Programming & Testing',
-    'tworzenie stron i aplikacji internetowych': 'Web Development',
-    'projektowanie stron internetowych': 'Web Design',
-    'bazy danych': 'Databases',
-    'systemy baz danych': 'Database Systems',
-    'administracja bazami danych': 'Database Administration',
-    'działalność gospodarcza w branży informatycznej': 'IT Business Economics',
-    'dzialalnosc gospodarcza w branzy informatycznej': 'IT Business Economics',
-    'język angielski zawodowy': 'Vocational English',
-    'jezyk angielski zawodowy': 'Vocational English',
-    'pracownia programowania': 'Programming Lab',
-    'pracownia aplikacji internetowych': 'Web App Lab',
-    'bezpieczeństwo i higiena pracy': 'Occupational Health & Safety',
-    'bezpieczenstwo i higiena pracy': 'Occupational Health & Safety',
-    'bhp': 'Occupational Health & Safety',
-    'nieobecność nieusprawiedliwiona': 'Unexcused absence',
-    'nieobecnosc nieusprawiedliwiona': 'Unexcused absence',
-    'nieobecność usprawiedliwiona': 'Excused absence',
-    'nieobecnosc usprawiedliwiona': 'Excused absence',
-    'spóźnienie': 'Tardy / Late',
-    'spoznienie': 'Tardy / Late',
-    'zwolnienie': 'Excused early leave',
-    'zastępstwo': 'Substitution',
-    'zastepstwo': 'Substitution',
-    'odwołane': 'Cancelled',
-    'odwolane': 'Cancelled',
-    'odwołane zajęcia': 'Cancelled class',
-    'odwolane zajecia': 'Cancelled class',
-    'skrócona lekcja': 'Shortened period',
-    'skrocona lekcja': 'Shortened period',
-    'skrócone': 'Shortened',
-    'skrocone': 'Shortened',
-    'nauczyciel nieobecny': 'Teacher absent',
-    'sprawdzian': 'Exam',
-    'kartkówka': 'Quiz',
-    'kartkowka': 'Quiz',
-    'praca klasowa': 'Class Test',
-    'odpowiedź ustna': 'Oral Exam',
-    'odpowiedz ustna': 'Oral Exam',
-    'zadanie domowe': 'Homework',
-    'aktywność': 'Participation',
-    'aktywnosc': 'Participation',
-    'nieprzygotowanie': 'Unprepared',
-    'brak zadania': 'Missing Homework'
+function setCacheEntry(key: string, value: string): void {
+    if (translationCache.size >= MAX_CACHE_ENTRIES) {
+        const oldestKey = translationCache.keys().next().value
+        if (oldestKey !== undefined) {
+            translationCache.delete(oldestKey)
+        }
+    }
+    translationCache.set(key, value)
 }
 
-function normalizeKey(str: string): string {
-    return str
-        .toLowerCase()
-        .replace(/\s*\(\s*gr\.?\s*[\w\d]+.*?\)/gi, '')
-        .replace(/\s*\(\s*\d+\s*\/\s*\d+\s*\)/g, '')
-        .replace(/\s*\[.*?\]/g, '')
-        .trim()
+function isNonTranslatable(trimmed: string): boolean {
+    if (!trimmed || trimmed === '-' || trimmed === '—') return true
+    if (/^(https?:\/\/|www\.)\S+$/i.test(trimmed)) return true
+    // Skip pure numbers, dates, grade tokens (e.g. "5+"), and room codes ("104a", "2B").
+    if (!/[\p{L}]{2,}/u.test(trimmed)) return true
+    return false
 }
 
-async function fetchFromDynamicTranslationEngines(text: string): Promise<string | null> {
+function extractChromeTranslation(json: unknown): string | null {
+    if (!Array.isArray(json)) return null
+    const parts: string[] = []
+
+    for (const item of json) {
+        if (typeof item === 'string') {
+            parts.push(item)
+        } else if (Array.isArray(item) && typeof item[0] === 'string') {
+            parts.push(item[0])
+        }
+    }
+
+    const joined = parts.join('').trim()
+    return joined.length > 0 ? joined : null
+}
+
+async function fetchSingleChunkFromEngines(text: string): Promise<string | null> {
     const encoded = encodeURIComponent(text)
 
     try {
         const urlChrome = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=pl&tl=en&q=${encoded}`
         const resChrome = await fetch(urlChrome, {
+            signal: AbortSignal.timeout(ENGINE_TIMEOUT_MS),
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
         })
         if (resChrome.ok) {
-            const json = await resChrome.json()
-            if (Array.isArray(json) && typeof json[0] === 'string' && json[0].trim().length > 0) {
-                return json[0].trim()
-            }
+            const json: unknown = await resChrome.json()
+            const extracted = extractChromeTranslation(json)
+            if (extracted) return extracted
         }
     } catch { }
 
     try {
         const urlGtx = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=pl&tl=en&dt=t&q=${encoded}`
         const resGtx = await fetch(urlGtx, {
+            signal: AbortSignal.timeout(ENGINE_TIMEOUT_MS),
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
             }
         })
         if (resGtx.ok) {
-            const json = await resGtx.json()
+            const json: unknown = await resGtx.json()
             if (Array.isArray(json) && Array.isArray(json[0])) {
-                const combined = json[0].map((item: any) => item[0]).join('').trim()
-                if (combined.length > 0) {
-                    return combined
-                }
+                const combined = json[0]
+                    .map((item: unknown) => (Array.isArray(item) && typeof item[0] === 'string' ? item[0] : ''))
+                    .join('')
+                    .trim()
+                if (combined.length > 0) return combined
             }
         }
     } catch { }
 
-    try {
-        const urlMemory = `https://api.mymemory.translated.net/get?q=${encoded}&langpair=pl|en`
-        const resMemory = await fetch(urlMemory)
-        if (resMemory.ok) {
-            const json = await resMemory.json()
-            if (json && json.responseData && typeof json.responseData.translatedText === 'string') {
-                const clean = json.responseData.translatedText.trim()
-                if (clean.length > 0 && !clean.toUpperCase().includes('MYMEMORY WARNING')) {
-                    return clean
+    // MyMemory struggles with very long segments; use it only for concise strings.
+    if (text.length <= 480) {
+        try {
+            const urlMemory = `https://api.mymemory.translated.net/get?q=${encoded}&langpair=pl|en`
+            const resMemory = await fetch(urlMemory, {
+                signal: AbortSignal.timeout(ENGINE_TIMEOUT_MS)
+            })
+            if (resMemory.ok) {
+                const json: any = await resMemory.json()
+                const translatedText = json?.responseData?.translatedText
+                if (typeof translatedText === 'string') {
+                    const clean = translatedText.trim()
+                    if (clean.length > 0 && !clean.toUpperCase().includes('MYMEMORY WARNING')) {
+                        return clean
+                    }
                 }
             }
-        }
-    } catch { }
+        } catch { }
+    }
 
     return null
 }
 
-export async function translateTextToEnglish(text: string): Promise<string> {
-    const trimmed = text.trim()
-    if (!trimmed || trimmed === '-') {
-        return text
+function splitOversizedSegment(segment: string, maxChars: number): string[] {
+    if (segment.length <= maxChars) return [segment]
+
+    const pieces: string[] = []
+    const sentences = segment.split(/(?<=[.!?])\s+/)
+    let current = ''
+
+    const flushWordChunks = (longSentence: string) => {
+        const words = longSentence.split(/\s+/)
+        let line = ''
+        for (const word of words) {
+            if (!line) {
+                line = word
+            } else if (line.length + 1 + word.length <= maxChars) {
+                line += ' ' + word
+            } else {
+                pieces.push(line)
+                line = word
+            }
+        }
+        if (line) pieces.push(line)
     }
 
-    if (translationCache.has(trimmed)) {
-        return translationCache.get(trimmed)!
-    }
+    for (const sentence of sentences) {
+        if (!sentence) continue
+        if (sentence.length > maxChars) {
+            if (current) {
+                pieces.push(current)
+                current = ''
+            }
+            flushWordChunks(sentence)
+            continue
+        }
 
-    const normKey = normalizeKey(trimmed)
-    if (SCHOOL_DICTIONARY[normKey]) {
-        const translated = SCHOOL_DICTIONARY[normKey]
-        translationCache.set(trimmed, translated)
-        return translated
-    }
-
-    for (const [key, val] of Object.entries(SCHOOL_DICTIONARY)) {
-        if (normKey === key || normKey.startsWith(key) || key.startsWith(normKey)) {
-            translationCache.set(trimmed, val)
-            return val
+        if (!current) {
+            current = sentence
+        } else if (current.length + 1 + sentence.length <= maxChars) {
+            current += ' ' + sentence
+        } else {
+            pieces.push(current)
+            current = sentence
         }
     }
 
-    const dynamicTranslation = await fetchFromDynamicTranslationEngines(trimmed)
-    if (dynamicTranslation) {
-        translationCache.set(trimmed, dynamicTranslation)
-        return dynamicTranslation
-    }
-
-    return trimmed
+    if (current) pieces.push(current)
+    return pieces
 }
 
-export async function translateBatch(texts: string[]): Promise<Record<string, string>> {
+async function translateSegment(segment: string): Promise<string> {
+    const trimmed = segment.trim()
+    if (isNonTranslatable(trimmed)) return segment
+
+    const cached = translationCache.get(trimmed)
+    if (cached !== undefined) return cached
+
+    const inFlight = inFlightTranslations.get(trimmed)
+    if (inFlight) return inFlight
+
+    const promise = (async () => {
+        try {
+            if (trimmed.length <= MAX_CHUNK_CHARS) {
+                const dynamic = await fetchSingleChunkFromEngines(trimmed)
+                if (dynamic) {
+                    setCacheEntry(trimmed, dynamic)
+                    return dynamic
+                }
+                return trimmed
+            }
+
+            const chunks = splitOversizedSegment(trimmed, MAX_CHUNK_CHARS)
+            const translatedChunks: string[] = []
+            for (const chunk of chunks) {
+                const translated = await translateSegment(chunk)
+                translatedChunks.push(translated)
+            }
+            const joined = translatedChunks.join(' ').trim() || trimmed
+            setCacheEntry(trimmed, joined)
+            return joined
+        } finally {
+            inFlightTranslations.delete(trimmed)
+        }
+    })()
+
+    inFlightTranslations.set(trimmed, promise)
+    return promise
+}
+
+/**
+ * Dynamically translates Polish dynamic Librus text (subjects, topics, events, messages)
+ * into English via free translation APIs, preserving paragraph breaks.
+ * Never uses a static school dictionary so arbitrary school/message text translates natively.
+ */
+export async function translateTextToEnglish(text: string): Promise<string> {
+    const trimmed = text.trim()
+    if (isNonTranslatable(trimmed)) {
+        return text
+    }
+
+    const cached = translationCache.get(trimmed)
+    if (cached !== undefined) {
+        return cached
+    }
+
+    // Preserve multi-paragraph formatting (e.g. messages and announcements) across engine calls.
+    if (trimmed.includes('\n')) {
+        const paragraphs = trimmed.split(/\r?\n\r?\n/)
+        const translatedParagraphs = await Promise.all(
+            paragraphs.map(async (paragraph) => {
+                const pTrimmed = paragraph.trim()
+                if (!pTrimmed) return ''
+                if (!pTrimmed.includes('\n')) {
+                    return translateSegment(pTrimmed)
+                }
+                const lines = pTrimmed.split(/\r?\n/)
+                const translatedLines = await Promise.all(
+                    lines.map((line) => (line.trim() ? translateSegment(line.trim()) : Promise.resolve('')))
+                )
+                return translatedLines.join('\n')
+            })
+        )
+        const combined = translatedParagraphs.join('\n\n')
+        setCacheEntry(trimmed, combined)
+        return combined
+    }
+
+    return translateSegment(trimmed)
+}
+
+/**
+ * Translates unique non-empty strings with bounded concurrency to avoid throttling.
+ */
+export async function translateBatch(
+    texts: string[],
+    concurrency: number = DEFAULT_BATCH_CONCURRENCY
+): Promise<Record<string, string>> {
     const result: Record<string, string> = {}
+    const uniqueTexts = Array.from(new Set(texts)).filter((t) => Boolean(t && t.trim()))
+    if (uniqueTexts.length === 0) return result
 
-    await Promise.all(
-        texts.map(async (str) => {
-            const translated = await translateTextToEnglish(str)
-            result[str] = translated
-        })
-    )
+    const workerCount = Math.min(Math.max(1, concurrency), uniqueTexts.length)
+    let cursor = 0
 
+    const worker = async () => {
+        while (cursor < uniqueTexts.length) {
+            const index = cursor++
+            const original = uniqueTexts[index]
+            result[original] = await translateTextToEnglish(original)
+        }
+    }
+
+    await Promise.all(Array.from({ length: workerCount }, () => worker()))
     return result
 }

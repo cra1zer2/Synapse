@@ -2,6 +2,7 @@ import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem, Message
 import { getNativeLibrusSession, invalidateNativeSession, NativeLibrusSession } from '@/services/session.service'
 import { getAuthenticatedClient, invalidateClientSession } from '@/services/librus.service'
 import { isStudentUsername } from '@/utils/account.util'
+import { translateBatch, translateTextToEnglish } from '@/services/translation.service'
 import {
     isLoggedOutHtml,
     tryDecodeBase64Content,
@@ -156,7 +157,57 @@ export async function fetchReceiversOnly(username: string, pass: string): Promis
     }
 }
 
-export async function fetchMessagesBundle(username: string, pass: string): Promise<MessagesActionResult> {
+export async function applyTranslatedMessagesBundle(bundle: MessagesActionResult): Promise<MessagesActionResult> {
+    if (!bundle.success) return bundle
+
+    const textsToTranslate = new Set<string>()
+    const collectMessage = (msg: MessageItem) => {
+        if (msg.subject) textsToTranslate.add(msg.subject)
+        if (msg.content) textsToTranslate.add(msg.content)
+    }
+
+    bundle.messages.forEach(collectMessage)
+    ;(bundle.sentMessages || []).forEach(collectMessage)
+    bundle.announcements.forEach((ann) => {
+        if (ann.title) textsToTranslate.add(ann.title)
+        if (ann.content) textsToTranslate.add(ann.content)
+    })
+
+    if (textsToTranslate.size === 0) return bundle
+    const translatedMap = await translateBatch(Array.from(textsToTranslate))
+
+    const applyMessage = (msg: MessageItem): MessageItem => ({
+        ...msg,
+        subject: (msg.subject && translatedMap[msg.subject]) || msg.subject,
+        content: msg.content && translatedMap[msg.content] ? translatedMap[msg.content] : msg.content
+    })
+
+    return {
+        ...bundle,
+        messages: bundle.messages.map(applyMessage),
+        sentMessages: bundle.sentMessages?.map(applyMessage),
+        announcements: bundle.announcements.map((ann) => ({
+            ...ann,
+            title: (ann.title && translatedMap[ann.title]) || ann.title,
+            content: (ann.content && translatedMap[ann.content]) || ann.content
+        }))
+    }
+}
+
+async function finalizeMessageContent(
+    content: string,
+    attachments: MessageAttachment[],
+    translate: boolean
+): Promise<{ success: boolean; content?: string; attachments?: MessageAttachment[]; error?: string }> {
+    const finalContent = translate && content ? await translateTextToEnglish(content) : content
+    return { success: true, content: finalContent, attachments }
+}
+
+export async function fetchMessagesBundle(
+    username: string,
+    pass: string,
+    translate: boolean = false
+): Promise<MessagesActionResult> {
     const bundleStart = performance.now()
     try {
         const cleanUser = String(username || '').trim()
@@ -229,7 +280,7 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
             const cachedRec = receiversCache.get(cleanUser.toLowerCase())
             const receiversList = cachedRec && cachedRec.expiresAt > Date.now() ? cachedRec.data : []
 
-            return {
+            const bundleResult: MessagesActionResult = {
                 success: true,
                 messages: inboxMessages,
                 sentMessages,
@@ -241,6 +292,7 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
                     previewsMs
                 }
             }
+            return translate ? await applyTranslatedMessagesBundle(bundleResult) : bundleResult
         }
 
         try {
@@ -284,13 +336,14 @@ export async function fetchMessagesBundle(username: string, pass: string): Promi
                 content: tryDecodeBase64Content(String(item.content || ''))
             }))
 
-            return {
+            const fallbackResult: MessagesActionResult = {
                 success: true,
                 messages,
                 sentMessages,
                 announcements,
                 receivers: []
             }
+            return translate ? await applyTranslatedMessagesBundle(fallbackResult) : fallbackResult
         } catch (fallbackErr: any) {
             return {
                 success: false,
@@ -315,15 +368,16 @@ export async function fetchMessageContent(
     username: string,
     pass: string,
     messageId: number,
-    folderId: number = 5
+    folderId: number = 5,
+    translate: boolean = false
 ): Promise<{ success: boolean; content?: string; attachments?: MessageAttachment[]; error?: string }> {
     try {
         const cleanUser = String(username || '').trim()
         const cleanPass = String(pass || '').trim()
         const cacheKey = cleanUser + ':' + folderId + ':' + messageId
         const cached = messageBodyCacheV2.get(cacheKey)
-        if (cached && cached.content && cached.attachments.length > 0) {
-            return { success: true, content: cached.content, attachments: cached.attachments }
+        if (cached && (cached.content || cached.attachments.length > 0)) {
+            return await finalizeMessageContent(cached.content, cached.attachments, translate)
         }
 
         const primary = await fetchHtmlWithRetry(
@@ -337,7 +391,7 @@ export async function fetchMessageContent(
         let attachments = extractMessageAttachmentsFromHtml(primary.html)
         if (body || attachments.length > 0) {
             if (body) messageBodyCacheV2.set(cacheKey, { content: body, attachments })
-            return { success: true, content: body, attachments }
+            return await finalizeMessageContent(body, attachments, translate)
         }
 
         const secondary = await fetchHtmlWithRetry(
@@ -351,7 +405,7 @@ export async function fetchMessageContent(
         attachments = extractMessageAttachmentsFromHtml(secondary.html)
         if (body || attachments.length > 0) {
             if (body) messageBodyCacheV2.set(cacheKey, { content: body, attachments })
-            return { success: true, content: body, attachments }
+            return await finalizeMessageContent(body, attachments, translate)
         }
 
         const altFolder = folderId === 5 ? 6 : 5
@@ -364,7 +418,7 @@ export async function fetchMessageContent(
         body = extractMessageBodyFromHtml(alt.html)
         attachments = extractMessageAttachmentsFromHtml(alt.html)
         if (body || attachments.length > 0) {
-            return { success: true, content: body, attachments }
+            return await finalizeMessageContent(body, attachments, translate)
         }
 
         try {
@@ -378,11 +432,7 @@ export async function fetchMessageContent(
                 })).filter((f: MessageAttachment) => Boolean(f.path))
                 : []
             if (rawContent || rawFiles.length > 0) {
-                return {
-                    success: true,
-                    content: tryDecodeBase64Content(rawContent),
-                    attachments: rawFiles
-                }
+                return await finalizeMessageContent(tryDecodeBase64Content(rawContent), rawFiles, translate)
             }
         } catch {}
 

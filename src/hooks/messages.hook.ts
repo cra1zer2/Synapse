@@ -4,8 +4,17 @@ import { useState, useEffect, useCallback } from 'react'
 import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { getMessagesAndAnnouncementsAction, getReceiversAction, readMessageAction, sendMessageAction, downloadAttachmentAction } from '@/app/actions'
 import { addRequestLog } from '@/utils/request-logger.util'
+import { AppLanguage } from '@/config/dictionary.config'
 
-export function useMessagesInbox({ username, password }: { username: string; password: string }) {
+export function useMessagesInbox({
+    username,
+    password,
+    lang
+}: {
+    username: string
+    password: string
+    lang: AppLanguage
+}) {
     const [messages, setMessages] = useState<MessageItem[]>([])
     const [sentMessages, setSentMessages] = useState<MessageItem[]>([])
     const [currentFolder, setCurrentFolder] = useState<'inbox' | 'sent'>('inbox')
@@ -28,15 +37,23 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         const cacheKey = `synapse_msg_${username}`
         const cached = localStorage.getItem(cacheKey)
         let cachedReceiversSnapshot: ReceiverItem[] = []
+        let hasMatchingLangCache = false
         if (cached) {
             try {
                 const parsed = JSON.parse(cached)
-                if (Array.isArray(parsed.messages)) setMessages(parsed.messages)
-                if (Array.isArray(parsed.sentMessages)) setSentMessages(parsed.sentMessages)
-                if (Array.isArray(parsed.announcements)) setAnnouncements(parsed.announcements)
                 if (Array.isArray(parsed.receivers)) {
                     setReceivers(parsed.receivers)
                     cachedReceiversSnapshot = parsed.receivers
+                }
+                if (parsed.lang === lang) {
+                    if (Array.isArray(parsed.messages)) setMessages(parsed.messages)
+                    if (Array.isArray(parsed.sentMessages)) setSentMessages(parsed.sentMessages)
+                    if (Array.isArray(parsed.announcements)) setAnnouncements(parsed.announcements)
+                    hasMatchingLangCache = true
+                } else {
+                    setMessages([])
+                    setSentMessages([])
+                    setAnnouncements([])
                 }
             } catch {}
         } else {
@@ -53,7 +70,7 @@ export function useMessagesInbox({ username, password }: { username: string; pas
             setMessagesError(null)
             const clientStart = performance.now()
             try {
-                const mRes = await getMessagesAndAnnouncementsAction(username, password)
+                const mRes = await getMessagesAndAnnouncementsAction(username, password, lang === 'en')
                 const clientDurationMs = Math.round(performance.now() - clientStart)
                 addRequestLog({
                     name: 'Wiadomości i ogłoszenia (Start)',
@@ -78,6 +95,7 @@ export function useMessagesInbox({ username, password }: { username: string; pas
                         }
                         setMessagesError(null)
                         localStorage.setItem(cacheKey, JSON.stringify({
+                            lang,
                             messages: mRes.messages || [],
                             sentMessages: mRes.sentMessages || [],
                             announcements: mRes.announcements || [],
@@ -105,7 +123,7 @@ export function useMessagesInbox({ username, password }: { username: string; pas
             }
         }
 
-        const delayMs = cached ? 350 : 0
+        const delayMs = hasMatchingLangCache ? 350 : 0
         const timer = setTimeout(() => {
             fetchBundle()
         }, delayMs)
@@ -114,7 +132,7 @@ export function useMessagesInbox({ username, password }: { username: string; pas
             isCancelled = true
             clearTimeout(timer)
         }
-    }, [username, password])
+    }, [username, password, lang])
 
     const ensureReceivers = useCallback(async (): Promise<ReceiverItem[]> => {
         if (receivers.length > 0) return receivers
@@ -182,7 +200,7 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         }
 
         const clientStart = performance.now()
-        const res = await readMessageAction(username, password, idNum, folder === 'sent' ? 6 : 5)
+        const res = await readMessageAction(username, password, idNum, folder === 'sent' ? 6 : 5, lang === 'en')
         const clientDurationMs = Math.round(performance.now() - clientStart)
         addRequestLog({
             name: `Odczyt wiadomości #${idNum}`,
@@ -248,7 +266,7 @@ export function useMessagesInbox({ username, password }: { username: string; pas
         setMessagesError(null)
         const clientStart = performance.now()
         try {
-            const mRes = await getMessagesAndAnnouncementsAction(username, password)
+            const mRes = await getMessagesAndAnnouncementsAction(username, password, lang === 'en')
             const clientDurationMs = Math.round(performance.now() - clientStart)
             addRequestLog({
                 name: 'Wiadomości i ogłoszenia (Odświeżenie)',
@@ -273,6 +291,7 @@ export function useMessagesInbox({ username, password }: { username: string; pas
                 setMessagesError(null)
                 const cacheKey = `synapse_msg_${username}`
                 localStorage.setItem(cacheKey, JSON.stringify({
+                    lang,
                     messages: mRes.messages || [],
                     sentMessages: mRes.sentMessages || [],
                     announcements: mRes.announcements || [],

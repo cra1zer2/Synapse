@@ -55,7 +55,7 @@ Po zakończeniu wsparcia dla popularnych open-source’owych aplikacji mobilnych
 - **Spokojny widok ocen i symulator średniej**: Natychmiastowa średnia ważona za okres i cały rok, konfiguracja wag `+`/`-`, stonowana kolorystyka wyróżniająca na czerwono wyłącznie oceny alarmowe (`nb`, `0`, `1`) oraz planowanie oceny docelowej.
 - **Frekwencja, dziennik odchyleń i e-Usprawiedliwienia**: Dzisiejsze obecności (`OB`) oddzielone od dziennika odchyleń (`nb`, `usp`, `sp`, `sL`, `zw`), progi ostrzegawcze (`50%` / `75%`) oraz wysyłanie i śledzenie e-usprawiedliwień z konta rodzica.
 - **Wiadomości i Ogłoszenia**: Czysta skrzynka odbiorcza i wysłane, wygodne wyszukiwanie nauczycieli, pobieranie załączników oraz ogłoszenia szkolne.
-- **Dwujęzyczność i motywy systemu**: Pełny interfejs **Polski / English (`PL / EN`)** oraz tryb jasny, ciemny i systemowy.
+- **Automatyczne tłumaczenie na angielski i motywy**: Błyskawiczne przełączanie interfejsu **Polski / English (`PL / EN`)** połączone z automatycznym tłumaczeniem dynamicznych treści z Librusa (przedmioty, tematy lekcji, opisy sprawdzianów i zadań, komentarze ocen, typy nieobecności, wiadomości oraz ogłoszenia) bez modyfikowania nazwisk, sal lekcyjnych, dat i załączników — oraz tryb jasny, ciemny i systemowy.
 
 ### Personalizacja i ustawienia
 
@@ -102,6 +102,7 @@ Od strony inżynierskiej Synapse pełni rolę **bezstanowego proxy BFF (Backend-
 - **Własny silnik sesji i ciasteczek (`src/services/session.service.ts`)**: Klasy `NativeCookieJar` i `NativeLibrusSession` deterministycznie obsługują wieloetapowe przekierowania logowania oraz cykl życia ciasteczek bez narzutu przeglądarek headless.
 - **Hybrydowa agregacja API Gateway + HTML (`src/services/`)**: Warstwa serwisów łączy zasoby Gateway API v2 (`gateway.service.ts`, `justification.service.ts`) z precyzyjnym parsowaniem HTML tam, gdzie brakuje kompletnego JSON API (m.in. treści wiadomości w `message-parser.service.ts`, metadane planu lekcji, statusy wniosków e-usprawiedliwień), wraz z automatycznym odzyskiwaniem sesji po wygaśnięciu (`401` / przekierowanie logowania).
 - **Grupowanie zapytań i bufor słowników z TTL (`src/services/gateway.service.ts`)**: Mapa `inFlightRequests` deduplikuje równoległe zapytania o ten sam zasób, a `catalogCache` buforuje w pamięci rzadko zmieniające się słowniki (`Schools`, `Classes`, `Subjects`, `Lessons`, `Attendances/Types`, `Grades/Categories`, `Grades/Comments`, `Me`, `Realizations`).
+- **Dynamiczny silnik tłumaczeń na angielski (`src/services/translation.service.ts`)**: W trybie angielskim szkolne treści i wieloakapitowe wiadomości są tłumaczone w locie (z ograniczeniem współbieżności, dzieleniem długich treści i buforem w pamięci zamiast statycznego słownika przedmiotów), z pominięciem imion i nazwisk, numerów sal, dat oraz nazw plików.
 - **Hydracja Local-First (`src/hooks/`)**: Znormalizowane dane kont i ustawienia interfejsu są utrwalane wyłącznie w `localStorage` przeglądarki, gwarantując natychmiastowy start widoku oraz ciche dociąganie aktualizacji w tle.
 
 ### Stos technologiczny i struktura projektu

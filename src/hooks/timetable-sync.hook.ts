@@ -122,7 +122,7 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
             ...tRes.data,
             schedule: recalibratedSchedule
           }
-          weekCacheRef.current[`${u}_${weekPivot}`] = fetchedData
+          weekCacheRef.current[`${u}_${currentAppLang}_${weekPivot}`] = fetchedData
           if (isTargetTodayWeek) {
             setTodayTimetableData(fetchedData)
           }
@@ -191,11 +191,12 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
         try {
           const parsed = JSON.parse(cachedSnapshot)
           const cachedWeekMonday = parsed.t?.weekStart ? normalizeToMondayIso(parsed.t.weekStart) : null
+          const cachedLang = (parsed.lang as AppLanguage | undefined) || 'pl'
           if (parsed.t && Array.isArray(parsed.t.schedule) && (!cachedWeekMonday || cachedWeekMonday === targetMonday)) {
             const cal = { ...parsed.t, schedule: recalibrateScheduleToday(parsed.t.schedule) }
             setTimetableData(cal)
             setTodayTimetableData(cal)
-            weekCacheRef.current[`${username}_${targetMonday}`] = cal
+            weekCacheRef.current[`${username}_${cachedLang}_${targetMonday}`] = cal
             hasWarmCache = true
           } else if (isAccountSwitch) {
             setTimetableData(null)
@@ -238,7 +239,7 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
     setCurrentWeekPivot(mondayPivot)
     pivotRef.current = mondayPivot
 
-    const cachedWeek = weekCacheRef.current[`${username}_${mondayPivot}`]
+    const cachedWeek = weekCacheRef.current[`${username}_${lang}_${mondayPivot}`]
     if (cachedWeek) {
       setTimetableData(cachedWeek)
       setIsLoadingWeek(false)

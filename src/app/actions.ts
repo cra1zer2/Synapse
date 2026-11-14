@@ -1,12 +1,14 @@
 'use server'
 
 import { fetchGatewayEndpoint } from '@/services/gateway.service'
-import { fetchJustificationsHistory, submitJustification, fetchLiveJustificationsHistory } from '@/services/justification.service'
+import { fetchJustificationsHistory, submitJustification, fetchLiveJustificationsHistory, translateLiveJustifications } from '@/services/justification.service'
 import { fetchSmartTimetable } from '@/services/timetable.service'
 import { fetchStudentGrades } from '@/services/grade.service'
 import { fetchAttendanceMetrics } from '@/services/attendance.service'
+import { translateTextToEnglish } from '@/services/translation.service'
 import {
     fetchMessagesBundle,
+    applyTranslatedMessagesBundle,
     fetchReceiversOnly,
     fetchUnreadCounters,
     fetchMessageContent,
@@ -297,12 +299,14 @@ export async function getStudentProfileAction(username: string, pass: string): P
 
 export async function getMessagesAndAnnouncementsAction(
     username: string,
-    pass: string
+    pass: string,
+    translate: boolean = false
 ): Promise<MessagesActionResult> {
     if (isDemoAccount(username)) {
-        return getDemoMessagesBundle()
+        const bundle = getDemoMessagesBundle()
+        return translate ? await applyTranslatedMessagesBundle(bundle) : bundle
     }
-    return fetchMessagesBundle(username, pass)
+    return fetchMessagesBundle(username, pass, translate)
 }
 
 export async function getReceiversAction(username: string, pass: string) {
@@ -317,12 +321,22 @@ export async function getReceiversAction(username: string, pass: string) {
     }
 }
 
-export async function readMessageAction(username: string, pass: string, messageId: number, folderId: number = 5) {
+export async function readMessageAction(
+    username: string,
+    pass: string,
+    messageId: number,
+    folderId: number = 5,
+    translate: boolean = false
+) {
     if (isDemoAccount(username)) {
-        return getDemoMessageContent(messageId)
+        const res = getDemoMessageContent(messageId)
+        if (translate && res.content) {
+            return { ...res, content: await translateTextToEnglish(res.content) }
+        }
+        return res
     }
     try {
-        return await fetchMessageContent(username, pass, messageId, folderId)
+        return await fetchMessageContent(username, pass, messageId, folderId, translate)
     } catch (error) {
         return { success: false, error: String(error) }
     }
@@ -368,13 +382,15 @@ export async function getUnreadCountsAction(username: string, pass: string) {
 export async function getLiveJustificationsAction(
     username: string,
     pass: string,
-    statusFilter: '0' | '1' | '2' | '3' = '0'
+    statusFilter: '0' | '1' | '2' | '3' = '0',
+    translate: boolean = false
 ) {
     if (isDemoAccount(username)) {
-        return { success: true, data: getDemoLiveJustifications(statusFilter) }
+        const items = getDemoLiveJustifications(statusFilter)
+        return { success: true, data: translate ? await translateLiveJustifications(items, true) : items }
     }
     try {
-        return await fetchLiveJustificationsHistory(username, pass, statusFilter)
+        return await fetchLiveJustificationsHistory(username, pass, statusFilter, '', '', translate)
     } catch (error: any) {
         return { success: false, data: [], error: String(error?.message || error) }
     }

@@ -331,19 +331,33 @@ export async function fetchAttendanceMetrics(
 
         if (translate) {
             const textsToTranslate = new Set<string>()
-            subjects.forEach((s) => textsToTranslate.add(s.subject))
-            parsedAbsences.forEach((a) => textsToTranslate.add(a.subject))
+            const collectAbsence = (a: (typeof parsedAbsences)[number]) => {
+                if (a.subject) textsToTranslate.add(a.subject)
+                if (a.typeName) textsToTranslate.add(a.typeName)
+            }
+
+            subjects.forEach((s) => {
+                if (s.subject) textsToTranslate.add(s.subject)
+                s.absences.forEach(collectAbsence)
+            })
+            parsedAbsences.forEach(collectAbsence)
+            unexcusedAbsences.forEach(collectAbsence)
+
             const map = await translateBatch(Array.from(textsToTranslate))
+            const visitedAbsences = new Set<(typeof parsedAbsences)[number]>()
+
+            const applyAbsence = (a: (typeof parsedAbsences)[number]) => {
+                if (visitedAbsences.has(a)) return
+                visitedAbsences.add(a)
+                if (a.subject && map[a.subject]) a.subject = map[a.subject]
+                if (a.typeName && map[a.typeName]) a.typeName = map[a.typeName]
+            }
 
             subjects.forEach((s) => {
                 if (map[s.subject]) s.subject = map[s.subject]
-                s.absences.forEach((a) => {
-                    if (map[a.subject]) a.subject = map[a.subject]
-                })
+                s.absences.forEach(applyAbsence)
             })
-            unexcusedAbsences.forEach((a) => {
-                if (map[a.subject]) a.subject = map[a.subject]
-            })
+            unexcusedAbsences.forEach(applyAbsence)
         }
 
         const result: AttendanceResult = {

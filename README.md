@@ -55,7 +55,7 @@ After the shutdown of popular open-source Android gradebook clients, thousands o
 - **Calm Grades & GPA What-If Simulator**: Weighted semester and full-year GPA calculation, configurable `+`/`-` modifier rules, restrained typography that only flags alert marks (`nb`, `0`, `1`) in red, and an inline target-grade planner.
 - **Attendance & Parent e-Excuses**: Daily presence indicators separated from the deviation journal (`nb`, `usp`, `sp`, `sL`, `zw`), threshold alerts (`50%` / `75%`), and direct e-excuse submissions with live approval tracking.
 - **Messages & School Notices**: Distraction-free inbox, sent folder, staff directory lookup, attachment downloads, and announcements.
-- **Bilingual & Adaptive Themes**: Seamless **English / Polish** (`EN / PL`) switching plus Light, Dark, and System appearance modes.
+- **Full English Auto-Translation & Adaptive Themes**: Seamless **English / Polish** (`EN / PL`) interface switching paired with automatic real-time English translation of dynamic Librus content (subjects, lesson topics, exam & homework details, grade categories/comments, absence types, messages, and announcements) while keeping names, classrooms, dates, and attachments untouched — plus Light, Dark, and System appearance modes.
 
 ### Customization & Controls
 
@@ -102,6 +102,7 @@ Beneath the minimal interface, Synapse acts as a **stateless Backend-for-Fronten
 - **Custom Cookie-Jar & Auth Lifecycle (`src/services/session.service.ts`)**: Implements `NativeCookieJar` and `NativeLibrusSession` to manage Synergia's multi-hop redirects and session cookies deterministically without relying on headless browsers.
 - **Hybrid Gateway + HTML Scraper Aggregation (`src/services/`)**: Combines Synergia Gateway v2 JSON endpoints (`gateway.service.ts`, `justification.service.ts`) with targeted HTML parsing for endpoints without clean JSON APIs (e.g., rich message bodies via `message-parser.service.ts`, weekly timetable metadata, live justification statuses), with transparent `401` / expired-session recovery and retry.
 - **Request Coalescing & Scoped Catalog Cache (`src/services/gateway.service.ts`)**: Deduplicates concurrent identical calls via an `inFlightRequests` map and caches relatively static school catalogs (`Schools`, `Classes`, `Subjects`, `Lessons`, `Attendances/Types`, `Grades/Categories`, `Grades/Comments`, `Me`, `Realizations`) in memory with per-resource TTLs to cut redundant upstream load.
+- **Dynamic English Translation Pipeline (`src/services/translation.service.ts`)**: In English mode, dynamic school strings and multi-paragraph messages are translated on the fly with bounded-concurrency batching and in-memory caching instead of a static school dictionary, explicitly skipping teacher/sender names, classroom numbers, dates, and attachment filenames.
 - **Local-First Client Hydration (`src/hooks/`)**: Persists normalized user state and multi-account profiles strictly in browser `localStorage`, delivering instant perceived boot while background sync reconciles fresh upstream state.
 
 ### Tech Stack & Layout

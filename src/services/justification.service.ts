@@ -2,6 +2,29 @@
 
 import { JustificationPayload, GatewayResponse, LiveJustificationItem } from '@/models/justification.model'
 import { getNativeLibrusSession, invalidateNativeSession } from '@/services/session.service'
+import { translateBatch } from '@/services/translation.service'
+
+export async function translateLiveJustifications(
+    items: LiveJustificationItem[],
+    translatePeriod: boolean = true
+): Promise<LiveJustificationItem[]> {
+    if (items.length === 0) return items
+
+    const textsToTranslate = new Set<string>()
+    for (const item of items) {
+        if (translatePeriod && item.periodStr) textsToTranslate.add(item.periodStr)
+        if (item.comment) textsToTranslate.add(item.comment)
+    }
+
+    if (textsToTranslate.size === 0) return items
+    const map = await translateBatch(Array.from(textsToTranslate))
+
+    return items.map((item) => ({
+        ...item,
+        periodStr: translatePeriod && item.periodStr && map[item.periodStr] ? map[item.periodStr] : item.periodStr,
+        comment: item.comment && map[item.comment] ? map[item.comment] : item.comment
+    }))
+}
 
 function parsePeriodLessons(str: string): { dates: string[]; lessons: number[] } {
     const dates: string[] = []
@@ -28,7 +51,8 @@ export async function fetchLiveJustificationsHistory(
     pass: string,
     statusFilter: '0' | '1' | '2' | '3' = '0',
     dateFrom: string = '',
-    dateTo: string = ''
+    dateTo: string = '',
+    translate: boolean = false
 ): Promise<{ success: boolean; data: LiveJustificationItem[]; error?: string }> {
     try {
         const cleanUser = String(username || '').trim()
@@ -82,8 +106,11 @@ export async function fetchLiveJustificationsHistory(
                     const dates = lessonDates.length > 0 ? lessonDates : [fromStr, toStr].filter(Boolean)
 
                     const dateLabel = fromStr && toStr && fromStr !== toStr ? `${fromStr} - ${toStr}` : fromStr
+                    const lessonUnit = translate
+                        ? (lessonNums.length === 1 ? 'lesson' : 'lessons')
+                        : (lessonNums.length === 1 ? 'lekcja' : 'lekcje')
                     const periodStr = lessonNums.length > 0
-                        ? `${dateLabel}, ${lessonNums.length === 1 ? 'lekcja' : 'lekcje'}: ${lessonNums.join(', ')}`
+                        ? `${dateLabel}, ${lessonUnit}: ${lessonNums.join(', ')}`
                         : dateLabel
 
                     const rawSt = String(entry.justificationStatus || '').toLowerCase()
@@ -118,7 +145,10 @@ export async function fetchLiveJustificationsHistory(
                     }
                 })
 
-                return { success: true, data: items }
+                return {
+                    success: true,
+                    data: translate ? await translateLiveJustifications(items, false) : items
+                }
             }
         }
 
@@ -236,7 +266,10 @@ export async function fetchLiveJustificationsHistory(
             }
         }
 
-        return { success: true, data: items }
+        return {
+            success: true,
+            data: translate ? await translateLiveJustifications(items, true) : items
+        }
     } catch (error: any) {
         return { success: false, data: [], error: String(error?.message || error) }
     }

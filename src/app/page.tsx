@@ -147,7 +147,8 @@ export default function Home() {
 
   const messagesInbox = useMessagesInbox({
     username: account.username,
-    password: account.password
+    password: account.password,
+    lang
   })
 
   const timetable = useTimetableSync({
@@ -169,7 +170,7 @@ export default function Home() {
       )
       const targetUser = parentAcc ? parentAcc.username : account.username
       const targetPass = parentAcc ? parentAcc.password : account.password
-      const res = await getLiveJustificationsAction(targetUser, targetPass, status)
+      const res = await getLiveJustificationsAction(targetUser, targetPass, status, lang === 'en')
       const clientDurationMs = Math.round(performance.now() - t0)
       if (res.success) {
         setLiveJustifications(res.data)
@@ -255,11 +256,7 @@ export default function Home() {
   }, [])
 
   const onLanguageChange = (newLang: AppLanguage) => {
-    settings.handleSelectLanguage(newLang, (l) => {
-      if (account.isConfigured && account.username && account.password) {
-        timetable.executeSync(account.username, account.password, l, timetable.currentWeekPivot, true)
-      }
-    })
+    settings.handleSelectLanguage(newLang)
   }
 
   const runRefresh = async (fromPull: boolean) => {

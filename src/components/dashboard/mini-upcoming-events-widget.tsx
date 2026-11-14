@@ -157,7 +157,7 @@ export function MiniUpcomingEventsWidget({
                     className={cn(
                       'text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 max-w-[42%] truncate',
                       (() => {
-                        const s = getEventCategoryStyle(ev.eventType || ev.category)
+                        const s = getEventCategoryStyle(ev.category)
                         return `${s.bgClass} ${s.textClass}`
                       })()
                     )}

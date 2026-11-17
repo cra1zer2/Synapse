@@ -78,11 +78,24 @@ export function BottomNavBar({
       }
 
   return createPortal(
-    <nav
-      aria-label="Primary navigation"
-      style={mobileRecedeStyle}
-      className="fixed bottom-[max(calc(env(safe-area-inset-bottom,0px)+10px),14px)] left-3 right-3 max-w-[460px] mx-auto z-30 bg-[var(--ios-glass-surface-strong)] backdrop-blur-xl backdrop-saturate-150 border border-[var(--ios-glass-border)] rounded-full p-1.5 shadow-[var(--ios-modal-shadow)] select-none"
-    >
+    <>
+      <div
+        aria-hidden="true"
+        style={{
+          ...mobileRecedeStyle,
+          pointerEvents: 'none',
+          background:
+            'linear-gradient(to top, var(--ios-bg) 0%, color-mix(in srgb, var(--ios-bg) 78%, transparent) 54%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to top, black 0%, black 46%, transparent 100%)',
+          maskImage: 'linear-gradient(to top, black 0%, black 46%, transparent 100%)'
+        }}
+        className="fixed inset-x-0 bottom-0 h-[calc(env(safe-area-inset-bottom,0px)+116px)] z-20 backdrop-blur-md select-none"
+      />
+      <nav
+        aria-label="Primary navigation"
+        style={mobileRecedeStyle}
+        className="fixed bottom-[max(calc(env(safe-area-inset-bottom,0px)+10px),14px)] left-3 right-3 max-w-[460px] mx-auto z-30 bg-[var(--ios-glass-surface-strong)] backdrop-blur-xl backdrop-saturate-150 border border-[var(--ios-glass-border)] rounded-full p-1.5 shadow-[var(--ios-modal-shadow)] select-none"
+      >
       <div className="relative grid grid-cols-4">
         <div
           aria-hidden="true"
@@ -123,7 +136,8 @@ export function BottomNavBar({
           )
         })}
       </div>
-    </nav>,
+      </nav>
+    </>,
     document.body
   )
 }

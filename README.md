@@ -17,26 +17,26 @@
 ## Visual Overview
 
 <p align="center">
-  <a href="docs/screenshots/en/iphone-light-tabs.png" title="iPhone Pro · iOS Light + Bottom Bar">
-    <img src="docs/screenshots/en/iphone-light-tabs.png" width="168" alt="Synapse iPhone Pro Light Bottom Bar" />
+  <a href="docs/screenshots/en/iphone-light-widgets.png" title="iPhone Pro · iOS Light + Widgets">
+    <img src="docs/screenshots/en/iphone-light-widgets.png" width="168" alt="Synapse iPhone Pro Light Widgets" />
   </a>
   <a href="docs/screenshots/en/iphone-dark-widgets.png" title="iPhone Pro · iOS Dark + Widgets">
     <img src="docs/screenshots/en/iphone-dark-widgets.png" width="168" alt="Synapse iPhone Pro Dark Widgets" />
   </a>
-  <a href="docs/screenshots/en/pixel-light-tabs.png" title="Pixel XL · Material 3 Expressive Light + Bottom Bar">
-    <img src="docs/screenshots/en/pixel-light-tabs.png" width="168" alt="Synapse Pixel XL Material 3 Light Bottom Bar" />
+  <a href="docs/screenshots/en/iphone-light-tabs.png" title="iPhone Pro · iOS Light + Bottom Bar">
+    <img src="docs/screenshots/en/iphone-light-tabs.png" width="168" alt="Synapse iPhone Pro Light Bottom Bar" />
   </a>
-  <a href="docs/screenshots/en/pixel-dark-widgets.png" title="Pixel XL · Material 3 Expressive Dark + Widgets">
-    <img src="docs/screenshots/en/pixel-dark-widgets.png" width="168" alt="Synapse Pixel XL Material 3 Dark Widgets" />
+  <a href="docs/screenshots/en/iphone-dark-tabs.png" title="iPhone Pro · iOS Dark + Bottom Bar">
+    <img src="docs/screenshots/en/iphone-dark-tabs.png" width="168" alt="Synapse iPhone Pro Dark Bottom Bar" />
   </a>
-  <br /><sub><b>Mobile Variations:</b> iPhone Pro (iOS Light · Tab Bar) · iPhone Pro (iOS Dark · Widgets) · Pixel XL (M3 Light · Tab Bar) · Pixel XL (M3 Dark · Widgets)</sub>
+  <br /><sub><b>Mobile Variations:</b> Light · Widgets &nbsp;|&nbsp; Dark · Widgets &nbsp;|&nbsp; Light · Bottom Bar &nbsp;|&nbsp; Dark · Bottom Bar</sub>
 </p>
 
 <p align="center">
-  <a href="docs/screenshots/en/desktop-workspace.png" title="Adaptive Desktop Workspace (Light Mode)">
-    <img src="docs/screenshots/en/desktop-workspace.png" width="684" alt="Synapse Adaptive Desktop Workspace" />
+  <a href="docs/screenshots/en/desktop-workspace.png" title="Desktop Workspace (Deprecated · WIP)">
+    <img src="docs/screenshots/en/desktop-workspace.png" width="684" alt="Synapse Desktop Workspace (Deprecated / WIP)" />
   </a>
-  <br /><sub><b>Responsive Desktop Workspace</b> — expands automatically to a two-column layout showing the full daily timetable beside grades, tests, messages, and attendance</sub>
+  <br /><sub>⚠️ <b>Desktop Workspace [Deprecated · WIP]:</b> The desktop screenshot above is <b>outdated/deprecated</b> and currently removed from the live build — a completely redesigned PC layout is planned and in active development (<code>WIP</code>).</sub>
 </p>
 
 ---

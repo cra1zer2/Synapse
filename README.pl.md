@@ -17,26 +17,26 @@
 ## Podgląd interfejsu
 
 <p align="center">
-  <a href="docs/screenshots/pl/iphone-light-tabs.png" title="iPhone Pro · iOS Jasny + Pasek dolny">
-    <img src="docs/screenshots/pl/iphone-light-tabs.png" width="168" alt="Synapse iPhone Pro Jasny Pasek dolny" />
+  <a href="docs/screenshots/pl/iphone-light-widgets.png" title="iPhone Pro · Jasny + Widżety">
+    <img src="docs/screenshots/pl/iphone-light-widgets.png" width="168" alt="Synapse iPhone Pro Jasny Widżety" />
   </a>
-  <a href="docs/screenshots/pl/iphone-dark-widgets.png" title="iPhone Pro · iOS Ciemny + Widżety">
+  <a href="docs/screenshots/pl/iphone-dark-widgets.png" title="iPhone Pro · Ciemny + Widżety">
     <img src="docs/screenshots/pl/iphone-dark-widgets.png" width="168" alt="Synapse iPhone Pro Ciemny Widżety" />
   </a>
-  <a href="docs/screenshots/pl/pixel-light-tabs.png" title="Pixel XL · Material 3 Expressive Jasny + Pasek dolny">
-    <img src="docs/screenshots/pl/pixel-light-tabs.png" width="168" alt="Synapse Pixel XL Material 3 Jasny Pasek dolny" />
+  <a href="docs/screenshots/pl/iphone-light-tabs.png" title="iPhone Pro · Jasny + Pasek dolny">
+    <img src="docs/screenshots/pl/iphone-light-tabs.png" width="168" alt="Synapse iPhone Pro Jasny Pasek dolny" />
   </a>
-  <a href="docs/screenshots/pl/pixel-dark-widgets.png" title="Pixel XL · Material 3 Expressive Ciemny + Widżety">
-    <img src="docs/screenshots/pl/pixel-dark-widgets.png" width="168" alt="Synapse Pixel XL Material 3 Ciemny Widżety" />
+  <a href="docs/screenshots/pl/iphone-dark-tabs.png" title="iPhone Pro · Ciemny + Pasek dolny">
+    <img src="docs/screenshots/pl/iphone-dark-tabs.png" width="168" alt="Synapse iPhone Pro Ciemny Pasek dolny" />
   </a>
-  <br /><sub><b>Warianty mobilne:</b> iPhone Pro (iOS Jasny · Pasek) · iPhone Pro (iOS Ciemny · Widżety) · Pixel XL (M3 Jasny · Pasek) · Pixel XL (M3 Ciemny · Widżety)</sub>
+  <br /><sub><b>Warianty mobilne:</b> Jasny · Widżety &nbsp;|&nbsp; Ciemny · Widżety &nbsp;|&nbsp; Jasny · Pasek dolny &nbsp;|&nbsp; Ciemny · Pasek dolny</sub>
 </p>
 
 <p align="center">
-  <a href="docs/screenshots/pl/desktop-workspace.png" title="Responsywny widok desktopowy">
-    <img src="docs/screenshots/pl/desktop-workspace.png" width="684" alt="Układ desktopowy Synapse" />
+  <a href="docs/screenshots/pl/desktop-workspace.png" title="Widok desktopowy (Przestarzały · WIP)">
+    <img src="docs/screenshots/pl/desktop-workspace.png" width="684" alt="Układ desktopowy Synapse (Deprecated / WIP)" />
   </a>
-  <br /><sub><b>Responsywny widok desktopowy</b> — pełny plan dnia obok podsumowania ocen, terminarza, wiadomości i frekwencji</sub>
+  <br /><sub>⚠️ <b>Widok desktopowy [Deprecated · WIP]:</b> Powyższy zrzut ekranu z wersji PC jest <b>nieaktualny (deprecated)</b> i został tymczasowo wyłączony — układ komputerowy zostanie zaprojektowany od nowa i jest obecnie w trakcie prac (<code>WIP</code>).</sub>
 </p>
 
 ---

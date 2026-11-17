@@ -1,10 +1,16 @@
-export type ClassValue =
+/**
+ * Utils: Class Name Combinator
+ * Lightweight conditional CSS class builder without external dependencies.
+ * Used across UI primitives and feature components.
+ */
+
+type ClassValue =
   | string
   | number
   | boolean
   | undefined
   | null
-  | { [key: string]: any }
+  | { [key: string]: unknown }
   | ClassValue[]
 
 export function cn(...inputs: ClassValue[]): string {

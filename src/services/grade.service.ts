@@ -1,8 +1,14 @@
+/**
+ * Service: Student Grades
+ * Fetches partial grades, categories, subjects, comments, and computes semester/overall weighted GPAs and recovery suggestions.
+ * Used by dashboard sync and diagnostics Server Actions.
+ */
+
 'use server'
 
 import { GradeItem, SubjectGrades, GradesResult, FixOption, SubjectWarning } from '@/models/grade.model'
 import { fetchGatewayEndpoint } from '@/services/gateway.service'
-import { translateBatch } from '@/services/translation.service'
+import { translateBatch, resolveTranslateTarget } from '@/services/translation.service'
 
 function parseGradeValue(gradeStr: string): number | null {
     const clean = gradeStr.trim().toLowerCase()
@@ -143,8 +149,9 @@ function generateFixOptions(grades: GradeItem[], translate: boolean = false): Su
 export async function fetchStudentGrades(
     username: string,
     pass: string,
-    translate: boolean = false
+    translate: boolean | string = false
 ): Promise<{ success: boolean; data?: GradesResult; error?: string }> {
+    const targetCode = resolveTranslateTarget(translate)
     try {
         const [gradesRes, categoriesRes, subjectsRes, usersRes, lessonsRes, commentsRes] = await Promise.all([
             fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Grades').catch((err) => {
@@ -299,7 +306,7 @@ export async function fetchStudentGrades(
                 if (sub.finalAverage < 2.0) {
                     failingSubjectsCount++
                     const relevantGrades = [...sub.semester1, ...sub.semester2]
-                    sub.warning = generateFixOptions(relevantGrades, translate)
+                    sub.warning = generateFixOptions(relevantGrades, Boolean(targetCode))
                 }
             }
         }
@@ -310,12 +317,12 @@ export async function fetchStudentGrades(
 
         let globalWarning: string | undefined = undefined
         if (evaluatedSubjectsCount > 0 && failingSubjectsCount === evaluatedSubjectsCount) {
-            globalWarning = translate
+            globalWarning = targetCode
                 ? 'All averages need attention'
                 : 'Wszystkie średnie wymagają uwagi'
         }
 
-        if (translate) {
+        if (targetCode) {
             const textsToTranslate = new Set<string>()
             const collectGrade = (g: GradeItem) => {
                 if (g.subject) textsToTranslate.add(g.subject)
@@ -325,12 +332,17 @@ export async function fetchStudentGrades(
 
             subjectsList.forEach((s) => {
                 if (s.subject) textsToTranslate.add(s.subject)
+                if (targetCode !== 'en' && s.warning) {
+                    textsToTranslate.add(s.warning.message)
+                    s.warning.fixOptions.forEach((opt) => textsToTranslate.add(opt.description))
+                }
                 s.semester1.forEach(collectGrade)
                 s.semester2.forEach(collectGrade)
             })
             recentGrades.forEach(collectGrade)
+            if (targetCode !== 'en' && globalWarning) textsToTranslate.add(globalWarning)
 
-            const translationMap = await translateBatch(Array.from(textsToTranslate))
+            const translationMap = await translateBatch(Array.from(textsToTranslate), targetCode)
             const visitedGrades = new Set<GradeItem>()
 
             const applyGrade = (g: GradeItem) => {
@@ -351,9 +363,19 @@ export async function fetchStudentGrades(
                 if (translationMap[s.subject]) {
                     s.subject = translationMap[s.subject]
                 }
+                if (targetCode !== 'en' && s.warning) {
+                    if (translationMap[s.warning.message]) s.warning.message = translationMap[s.warning.message]
+                    s.warning.fixOptions.forEach((opt) => {
+                        if (translationMap[opt.description]) opt.description = translationMap[opt.description]
+                    })
+                }
                 s.semester1.forEach(applyGrade)
                 s.semester2.forEach(applyGrade)
             })
+
+            if (targetCode !== 'en' && globalWarning && translationMap[globalWarning]) {
+                globalWarning = translationMap[globalWarning]
+            }
 
             recentGrades.forEach(applyGrade)
         }

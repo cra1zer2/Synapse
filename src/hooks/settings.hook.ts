@@ -1,12 +1,9 @@
 'use client'
-
 import { useState, useEffect, useCallback } from 'react'
-import { AppLanguage, AppTheme } from '@/config/dictionary.config'
+import { AppLanguage, AppTheme, NavMode, normalizeLanguage } from '@/config/dictionary.config'
 import { getTodayIsoString } from '@/utils/date.util'
-import { GradeModifierMode } from '@/utils/grade.util'
 
-export type { GradeModifierMode }
-export type TextClampOption = 'full' | '1' | '2'
+export type { NavMode }
 export type DashboardWidgetId = 'grades' | 'schedule' | 'upcoming' | 'messages' | 'attendance'
 
 export const DEFAULT_DASHBOARD_ORDER: DashboardWidgetId[] = [
@@ -14,21 +11,24 @@ export const DEFAULT_DASHBOARD_ORDER: DashboardWidgetId[] = [
   'schedule',
   'upcoming',
   'messages',
-  'attendance'
+  'attendance',
 ]
-
 export const DEFAULT_DASHBOARD_VISIBLE: Record<DashboardWidgetId, boolean> = {
   grades: true,
   schedule: true,
   upcoming: false,
   messages: true,
-  attendance: true
+  attendance: true,
 }
 
-export function syncMetaThemeColor(isDark: boolean) {
+function resolveCanvasBgHex(isDark: boolean): string {
+  return isDark ? '#000000' : '#f2f2f7'
+}
+
+function syncMetaThemeColor(isDark: boolean) {
   if (typeof document === 'undefined') return
   let meta = document.querySelector('meta[name="theme-color"]')
-  const targetColor = isDark ? '#000000' : '#f2f2f7'
+  const targetColor = resolveCanvasBgHex(isDark)
   if (!meta) {
     meta = document.createElement('meta')
     meta.setAttribute('name', 'theme-color')
@@ -39,35 +39,32 @@ export function syncMetaThemeColor(isDark: boolean) {
 
 export function useAppSettings() {
   const [mounted, setMounted] = useState(false)
-  const [isDesktop, setIsDesktop] = useState(false)
   const [lang, setLang] = useState<AppLanguage>('pl')
   const [theme, setTheme] = useState<AppTheme>('system')
-  const [textClamp, setTextClamp] = useState<TextClampOption>('full')
+  const [navMode, setNavMode] = useState<NavMode>('widgets')
   const [showFullSubjectNames, setShowFullSubjectNames] = useState(false)
-  const [ignoreGradeModifiers, setIgnoreGradeModifiers] = useState(false)
-  const [gradeModifierMode, setGradeModifierMode] = useState<GradeModifierMode>('standard')
   const [allowStudentJustifications, setAllowStudentJustifications] = useState(false)
-  const [enableGradeSimulator, setEnableGradeSimulator] = useState(false)
+  const [enableGradeSimulator, setEnableGradeSimulator] = useState(true)
   const [showHomeworks, setShowHomeworks] = useState(false)
   const [showMobileTodayAttendance, setShowMobileTodayAttendance] = useState(false)
   const [dashboardOrder, setDashboardOrder] = useState<DashboardWidgetId[]>(DEFAULT_DASHBOARD_ORDER)
-  const [dashboardVisible, setDashboardVisible] = useState<Record<DashboardWidgetId, boolean>>(DEFAULT_DASHBOARD_VISIBLE)
+  const [dashboardVisible, setDashboardVisible] =
+    useState<Record<DashboardWidgetId, boolean>>(DEFAULT_DASHBOARD_VISIBLE)
   const [showLuckyNumberBanner, setShowLuckyNumberBanner] = useState(false)
   const [luckyDismissedDate, setLuckyDismissedDate] = useState('')
 
-  const applyTheme = useCallback((targetTheme: AppTheme) => {
+  const applyAppearance = useCallback((targetTheme: AppTheme) => {
     const root = document.documentElement
-    root.classList.remove('dark', 'light')
+    root.classList.remove('dark', 'light', 'ui-m3')
     const isDark =
       targetTheme === 'dark' ||
       (targetTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-
     if (isDark) {
       root.classList.add('dark')
     } else {
       root.classList.add('light')
     }
-    const bgHex = isDark ? '#000000' : '#f2f2f7'
+    const bgHex = resolveCanvasBgHex(isDark)
     root.style.backgroundColor = bgHex
     if (document.body) {
       document.body.style.backgroundColor = bgHex
@@ -76,41 +73,26 @@ export function useAppSettings() {
   }, [])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const mq = window.matchMedia('(min-width: 768px)')
-    const updateDesktop = () => setIsDesktop(mq.matches)
-    updateDesktop()
-    mq.addEventListener('change', updateDesktop)
-    return () => mq.removeEventListener('change', updateDesktop)
-  }, [])
-
-  useEffect(() => {
     setMounted(true)
-    const savedLang = (localStorage.getItem('synapse_lang') as AppLanguage) || 'pl'
-    const savedTheme = (localStorage.getItem('synapse_theme') as AppTheme) || 'system'
-    const savedClamp = (localStorage.getItem('synapse_text_clamp') as TextClampOption) || 'full'
+    const savedLang = normalizeLanguage(localStorage.getItem('synapse_lang'))
+    const rawTheme = localStorage.getItem('synapse_theme')
+    const savedTheme: AppTheme =
+      rawTheme === 'dark' || rawTheme === 'light' || rawTheme === 'system' ? rawTheme : 'system'
+    const savedNavMode: NavMode = localStorage.getItem('synapse_nav_mode') === 'tabs' ? 'tabs' : 'widgets'
     const savedFull = localStorage.getItem('synapse_full_names') === 'true'
-    const savedIgnore = localStorage.getItem('synapse_ignore_modifiers') === 'true'
-    const savedModMode = localStorage.getItem('synapse_grade_modifier_mode') as GradeModifierMode | null
-    const resolvedModMode: GradeModifierMode =
-      savedModMode && ['standard', 'symmetric', 'quarter', 'none'].includes(savedModMode)
-        ? savedModMode
-        : savedIgnore
-          ? 'none'
-          : 'standard'
     const savedStudentJust = localStorage.getItem('synapse_allow_student_justifications') === 'true'
-    const savedSim = localStorage.getItem('synapse_grade_simulator') === 'true'
+    const rawSim = localStorage.getItem('synapse_grade_simulator')
+    const savedSim = rawSim === null ? true : rawSim === 'true'
     const savedHw = localStorage.getItem('synapse_show_homeworks') === 'true'
     const savedMobileTodayAtt = localStorage.getItem('synapse_mobile_today_attendance') === 'true'
     const savedLuckyBanner = localStorage.getItem('synapse_show_lucky_banner') === 'true'
     const savedLuckyDismissed = localStorage.getItem('synapse_lucky_dismissed_date') || ''
 
     setLang(savedLang)
+    document.documentElement.lang = savedLang
     setTheme(savedTheme)
-    setTextClamp(savedClamp)
+    setNavMode(savedNavMode)
     setShowFullSubjectNames(savedFull)
-    setGradeModifierMode(resolvedModMode)
-    setIgnoreGradeModifiers(resolvedModMode === 'none')
     setAllowStudentJustifications(savedStudentJust)
     setEnableGradeSimulator(savedSim)
     setShowHomeworks(savedHw)
@@ -122,12 +104,13 @@ export function useAppSettings() {
       const rawOrder = localStorage.getItem('synapse_dashboard_order_v1')
       if (rawOrder) {
         const parsed = JSON.parse(rawOrder) as DashboardWidgetId[]
-        if (Array.isArray(parsed) && DEFAULT_DASHBOARD_ORDER.every((k) => parsed.includes(k))) {
-          setDashboardOrder(parsed)
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter((k) => DEFAULT_DASHBOARD_ORDER.includes(k))
+          const missing = DEFAULT_DASHBOARD_ORDER.filter((k) => !valid.includes(k))
+          setDashboardOrder([...valid, ...missing])
         }
       }
     } catch {}
-
     try {
       const rawVis = localStorage.getItem('synapse_dashboard_visible_v1')
       if (rawVis) {
@@ -136,59 +119,41 @@ export function useAppSettings() {
       }
     } catch {}
 
-    applyTheme(savedTheme)
-  }, [applyTheme])
+    applyAppearance(savedTheme)
+  }, [applyAppearance])
 
   useEffect(() => {
     if (theme !== 'system') return
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = (e: MediaQueryListEvent) => {
-      const root = document.documentElement
-      root.classList.remove('dark', 'light')
-      if (e.matches) root.classList.add('dark')
-      else root.classList.add('light')
-      syncMetaThemeColor(e.matches)
-    }
+    const handler = () => applyAppearance('system')
     mediaQuery.addEventListener('change', handler)
     return () => mediaQuery.removeEventListener('change', handler)
-  }, [theme])
+  }, [theme, applyAppearance])
 
   const handleSelectLanguage = (newLang: AppLanguage, onAfterChange?: (l: AppLanguage) => void) => {
-    setLang(newLang)
-    localStorage.setItem('synapse_lang', newLang)
-    if (onAfterChange) onAfterChange(newLang)
+    const normalized = normalizeLanguage(newLang)
+    setLang(normalized)
+    localStorage.setItem('synapse_lang', normalized)
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = normalized
+    }
+    if (onAfterChange) onAfterChange(normalized)
   }
 
   const handleSelectTheme = (newTheme: AppTheme) => {
     setTheme(newTheme)
     localStorage.setItem('synapse_theme', newTheme)
-    applyTheme(newTheme)
+    applyAppearance(newTheme)
   }
 
-  const handleSelectTextClamp = (clamp: TextClampOption) => {
-    setTextClamp(clamp)
-    localStorage.setItem('synapse_text_clamp', clamp)
+  const handleSelectNavMode = (nextMode: NavMode) => {
+    setNavMode(nextMode)
+    localStorage.setItem('synapse_nav_mode', nextMode)
   }
 
   const handleToggleShowFullSubjectNames = (val: boolean) => {
     setShowFullSubjectNames(val)
     localStorage.setItem('synapse_full_names', String(val))
-  }
-
-  const handleToggleIgnoreGradeModifiers = (val: boolean) => {
-    const nextMode: GradeModifierMode = val ? 'none' : 'standard'
-    setIgnoreGradeModifiers(val)
-    setGradeModifierMode(nextMode)
-    localStorage.setItem('synapse_ignore_modifiers', String(val))
-    localStorage.setItem('synapse_grade_modifier_mode', nextMode)
-  }
-
-  const handleSelectGradeModifierMode = (mode: GradeModifierMode) => {
-    setGradeModifierMode(mode)
-    const ignore = mode === 'none'
-    setIgnoreGradeModifiers(ignore)
-    localStorage.setItem('synapse_grade_modifier_mode', mode)
-    localStorage.setItem('synapse_ignore_modifiers', String(ignore))
   }
 
   const handleToggleAllowStudentJustifications = (val: boolean) => {
@@ -237,13 +202,10 @@ export function useAppSettings() {
 
   return {
     mounted,
-    isDesktop,
     lang,
     theme,
-    textClamp,
+    navMode,
     showFullSubjectNames,
-    ignoreGradeModifiers,
-    gradeModifierMode,
     allowStudentJustifications,
     enableGradeSimulator,
     showHomeworks,
@@ -255,10 +217,8 @@ export function useAppSettings() {
     todayIsoStr,
     handleSelectLanguage,
     handleSelectTheme,
-    handleSelectTextClamp,
+    handleSelectNavMode,
     handleToggleShowFullSubjectNames,
-    handleToggleIgnoreGradeModifiers,
-    handleSelectGradeModifierMode,
     handleToggleAllowStudentJustifications,
     handleToggleEnableGradeSimulator,
     handleToggleShowHomeworks,
@@ -266,6 +226,6 @@ export function useAppSettings() {
     handleChangeDashboardOrder,
     handleToggleDashboardWidget,
     handleToggleShowLuckyNumberBanner,
-    handleDismissLuckyBanner
+    handleDismissLuckyBanner,
   }
 }

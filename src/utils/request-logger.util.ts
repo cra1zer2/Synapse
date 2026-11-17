@@ -1,3 +1,9 @@
+/**
+ * Utils: Request Timing Logger
+ * Records client/server sync timings in localStorage and formats diagnostic reports for clipboard export.
+ * Used by sync hooks, attendance justification actions, and the RequestTimingsModal screen.
+ */
+
 'use client'
 
 export interface RequestLogItem {
@@ -83,19 +89,18 @@ export function addRequestLog(
   return newItem
 }
 
-export function getDeviceInfoSummary(): string {
+function getDeviceInfoSummary(): string {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return 'SSR / Unknown'
   const ua = navigator.userAgent || ''
   const isIos = /iPhone|iPad|iPod/i.test(ua)
   const isAndroid = /Android/i.test(ua)
   const isMobile = isIos || isAndroid || /Mobile/i.test(ua)
-
-  const screenInfo = typeof window !== 'undefined'
-    ? `${window.innerWidth}x${window.innerHeight} (DPR: ${window.devicePixelRatio || 1})`
-    : 'Unknown screen'
+  const screenInfo = `${window.innerWidth}x${window.innerHeight} (DPR: ${window.devicePixelRatio || 1})`
 
   let networkInfo = 'unknown'
-  const navAny = navigator as any
+  const navAny = navigator as Navigator & {
+    connection?: { effectiveType?: string; type?: string; rtt?: number; downlink?: number }
+  }
   if (navAny.connection) {
     const conn = navAny.connection
     networkInfo = [
@@ -106,9 +111,9 @@ export function getDeviceInfoSummary(): string {
   }
 
   return [
-    `Platforma: ${isIos ? 'iOS' : isAndroid ? 'Android' : 'Desktop'} (${isMobile ? 'Mobile' : 'Desktop'})`,
-    `Ekran: ${screenInfo}`,
-    `Sieć: ${networkInfo}`,
+    `Platform: ${isIos ? 'iOS' : isAndroid ? 'Android' : 'Desktop'} (${isMobile ? 'Mobile' : 'Desktop'})`,
+    `Screen: ${screenInfo}`,
+    `Network: ${networkInfo}`,
     `UA: ${ua}`
   ].join('\n')
 }
@@ -119,32 +124,32 @@ export function formatLogsForExport(logs: RequestLogItem[]): string {
 
   const lines: string[] = [
     '==================================================',
-    '       SYNAPSE - DIAGNOSTYKA CZASU ZAPYTAŃ        ',
+    '        SYNAPSE - REQUEST TIMINGS DIAGNOSTICS     ',
     '==================================================',
-    `Data raportu: ${nowStr}`,
+    `Generated: ${nowStr}`,
     deviceInfo,
-    `Liczba zarejestrowanych zapytań: ${logs.length}`,
+    `Total entries: ${logs.length}`,
     '--------------------------------------------------'
   ]
 
   if (logs.length === 0) {
-    lines.push('Brak zarejestrowanych zapytań w pamięci podręcznej.')
+    lines.push('No recorded requests in local cache.')
   } else {
     logs.forEach((log, idx) => {
       lines.push(`\n[${idx + 1}] [${log.timestamp}] ${log.name}`)
-      lines.push(`    Status: ${log.status.toUpperCase()}${log.error ? ` (Błąd: ${log.error})` : ''}`)
-      lines.push(`    Czas klienta (Roundtrip): ${log.clientDurationMs} ms`)
+      lines.push(`    Status: ${log.status.toUpperCase()}${log.error ? ` (Error: ${log.error})` : ''}`)
+      lines.push(`    Client roundtrip: ${log.clientDurationMs} ms`)
       if (log.serverDurationMs !== undefined) {
-        lines.push(`    Czas serwera: ${log.serverDurationMs} ms`)
+        lines.push(`    Server time: ${log.serverDurationMs} ms`)
       }
       if (log.breakdown && Object.keys(log.breakdown).length > 0) {
         const bdParts = Object.entries(log.breakdown)
           .map(([k, v]) => `${k}: ${v}ms`)
           .join(' | ')
-        lines.push(`    Rozbicie serwera: ${bdParts}`)
+        lines.push(`    Server breakdown: ${bdParts}`)
       }
       if (log.details) {
-        lines.push(`    Szczegóły: ${log.details}`)
+        lines.push(`    Details: ${log.details}`)
       }
     })
   }

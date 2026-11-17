@@ -1,8 +1,14 @@
+/**
+ * Service: Librus Messages & Announcements Client
+ * Fetches, parses, sends, translates, and downloads attachments for Librus Synergia messages and school announcements.
+ * Reuses pooled native sessions with HTML parsing and clean retries on session expiry.
+ */
+
 import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem, MessagesActionResult } from '@/models/message.model'
 import { getNativeLibrusSession, invalidateNativeSession, NativeLibrusSession } from '@/services/session.service'
 import { getAuthenticatedClient, invalidateClientSession } from '@/services/librus.service'
 import { isStudentUsername } from '@/utils/account.util'
-import { translateBatch, translateTextToEnglish } from '@/services/translation.service'
+import { translateBatch, translateText, resolveTranslateTarget } from '@/services/translation.service'
 import {
     isLoggedOutHtml,
     tryDecodeBase64Content,
@@ -157,8 +163,12 @@ export async function fetchReceiversOnly(username: string, pass: string): Promis
     }
 }
 
-export async function applyTranslatedMessagesBundle(bundle: MessagesActionResult): Promise<MessagesActionResult> {
-    if (!bundle.success) return bundle
+export async function applyTranslatedMessagesBundle(
+    bundle: MessagesActionResult,
+    translate: boolean | string = 'en'
+): Promise<MessagesActionResult> {
+    const targetCode = resolveTranslateTarget(translate)
+    if (!bundle.success || !targetCode) return bundle
 
     const textsToTranslate = new Set<string>()
     const collectMessage = (msg: MessageItem) => {
@@ -174,7 +184,7 @@ export async function applyTranslatedMessagesBundle(bundle: MessagesActionResult
     })
 
     if (textsToTranslate.size === 0) return bundle
-    const translatedMap = await translateBatch(Array.from(textsToTranslate))
+    const translatedMap = await translateBatch(Array.from(textsToTranslate), targetCode)
 
     const applyMessage = (msg: MessageItem): MessageItem => ({
         ...msg,
@@ -197,16 +207,17 @@ export async function applyTranslatedMessagesBundle(bundle: MessagesActionResult
 async function finalizeMessageContent(
     content: string,
     attachments: MessageAttachment[],
-    translate: boolean
+    translate: boolean | string
 ): Promise<{ success: boolean; content?: string; attachments?: MessageAttachment[]; error?: string }> {
-    const finalContent = translate && content ? await translateTextToEnglish(content) : content
+    const targetCode = resolveTranslateTarget(translate)
+    const finalContent = targetCode && content ? await translateText(content, targetCode) : content
     return { success: true, content: finalContent, attachments }
 }
 
 export async function fetchMessagesBundle(
     username: string,
     pass: string,
-    translate: boolean = false
+    translate: boolean | string = false
 ): Promise<MessagesActionResult> {
     const bundleStart = performance.now()
     try {
@@ -292,7 +303,7 @@ export async function fetchMessagesBundle(
                     previewsMs
                 }
             }
-            return translate ? await applyTranslatedMessagesBundle(bundleResult) : bundleResult
+            return resolveTranslateTarget(translate) ? await applyTranslatedMessagesBundle(bundleResult, translate) : bundleResult
         }
 
         try {
@@ -343,7 +354,7 @@ export async function fetchMessagesBundle(
                 announcements,
                 receivers: []
             }
-            return translate ? await applyTranslatedMessagesBundle(fallbackResult) : fallbackResult
+            return resolveTranslateTarget(translate) ? await applyTranslatedMessagesBundle(fallbackResult, translate) : fallbackResult
         } catch (fallbackErr: any) {
             return {
                 success: false,
@@ -369,7 +380,7 @@ export async function fetchMessageContent(
     pass: string,
     messageId: number,
     folderId: number = 5,
-    translate: boolean = false
+    translate: boolean | string = false
 ): Promise<{ success: boolean; content?: string; attachments?: MessageAttachment[]; error?: string }> {
     try {
         const cleanUser = String(username || '').trim()
@@ -555,32 +566,5 @@ export async function sendMessageToUser(
         return { success: true }
     } catch (error: any) {
         return { success: false, error: String(error?.message || error) }
-    }
-}
-
-export async function fetchUnreadCounters(
-    username: string,
-    pass: string
-): Promise<{ success: boolean; unreadMessages: number; announcementsCount: number }> {
-    try {
-        const bundle = await fetchMessagesBundle(username, pass)
-        if (!bundle.success) {
-            return { success: false, unreadMessages: 0, announcementsCount: 0 }
-        }
-
-        const unreadMessages = bundle.messages.filter((m) => !m.isRead).length
-        const announcementsCount = bundle.announcements.length
-
-        return {
-            success: true,
-            unreadMessages,
-            announcementsCount
-        }
-    } catch {
-        return {
-            success: false,
-            unreadMessages: 0,
-            announcementsCount: 0
-        }
     }
 }

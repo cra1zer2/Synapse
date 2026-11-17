@@ -1,3 +1,9 @@
+/**
+ * Service: Smart Timetable & Calendar
+ * Fetches weekly schedules, lesson realizations, substitutions, and calendar exams/homework from Gateway v2.
+ * Translates dynamic school text into the active target language via translation.service.ts.
+ */
+
 'use server'
 
 import {
@@ -6,7 +12,7 @@ import {
     SmartTimetableResult,
     TimetableEvent
 } from '@/models/timetable.model'
-import { translateBatch } from '@/services/translation.service'
+import { translateBatch, resolveTranslateTarget } from '@/services/translation.service'
 import { fetchGatewayEndpoint } from '@/services/gateway.service'
 import { parseLessonTimeRange } from '@/utils/time.util'
 import { getTodayIsoString } from '@/utils/date.util'
@@ -126,9 +132,10 @@ function parseRawDayLessons(
 export async function fetchSmartTimetable(
     username: string,
     pass: string,
-    translate: boolean = false,
+    translate: boolean | string = false,
     targetDateIso?: string
 ): Promise<{ success: boolean; data?: SmartTimetableResult; error?: string }> {
+    const targetCode = resolveTranslateTarget(translate)
     try {
         let pivotDate: Date
         if (targetDateIso) {
@@ -554,7 +561,7 @@ export async function fetchSmartTimetable(
             .flat()
             .sort((a, b) => a.isoDate.localeCompare(b.isoDate))
 
-        if (translate) {
+        if (targetCode) {
             const textsToTranslate = new Set<string>()
             const collectEvents = (events: typeof allCalendarEvents) => {
                 events.forEach((e) => {
@@ -576,7 +583,13 @@ export async function fetchSmartTimetable(
             if (nextUpcomingDay) collectDay(nextUpcomingDay)
             collectEvents(allCalendarEvents)
 
-            const translatedMap = await translateBatch(Array.from(textsToTranslate))
+            if (targetCode !== 'en') {
+                textsToTranslate.add('Odwołane')
+                textsToTranslate.add('Zastępstwo')
+                textsToTranslate.add('Zastępstwo za:')
+            }
+
+            const translatedMap = await translateBatch(Array.from(textsToTranslate), targetCode)
             const visitedEvents = new Set<typeof allCalendarEvents[number]>()
 
             const applyEvents = (events: typeof allCalendarEvents) => {
@@ -590,18 +603,21 @@ export async function fetchSmartTimetable(
                 })
             }
 
+            const cancelledWord = targetCode === 'en' ? 'Cancelled' : (translatedMap['Odwołane'] || 'Cancelled')
+            const substitutionWord = targetCode === 'en' ? 'Substitution' : (translatedMap['Zastępstwo'] || 'Substitution')
+            const subForPrefix = targetCode === 'en' ? 'Substitution for:' : (translatedMap['Zastępstwo za:'] || 'Substitution for:')
+
             const applyDay = (day: typeof schedule[number]) => {
                 day.lessons.forEach((l) => {
                     if (translatedMap[l.subject]) l.subject = translatedMap[l.subject]
                     if (l.topic && translatedMap[l.topic]) l.topic = translatedMap[l.topic]
-                    if (l.flag === 'Odwołane') l.flag = 'Cancelled'
-                    else if (l.flag === 'Zastępstwo') l.flag = 'Substitution'
+                    if (l.flag === 'Odwołane') l.flag = cancelledWord
+                    else if (l.flag === 'Zastępstwo') l.flag = substitutionWord
                     if (l.teacherAbsenceReason) {
                         if (l.teacherAbsenceReason.startsWith('Zastępstwo za: ')) {
-                            // Keep the original teacher name untranslated after the prefix.
-                            l.teacherAbsenceReason = 'Substitution for: ' + l.teacherAbsenceReason.slice('Zastępstwo za: '.length)
+                            l.teacherAbsenceReason = `${subForPrefix} ` + l.teacherAbsenceReason.slice('Zastępstwo za: '.length)
                         } else if (l.teacherAbsenceReason === 'Zastępstwo') {
-                            l.teacherAbsenceReason = 'Substitution'
+                            l.teacherAbsenceReason = substitutionWord
                         }
                     }
                 })
@@ -620,7 +636,6 @@ export async function fetchSmartTimetable(
                 weekEnd: fridayIso,
                 schedule,
                 nextUpcomingDay,
-                allAbsentTeachers: [],
                 calendarEvents: allCalendarEvents.length > 0 ? allCalendarEvents : schedule.flatMap((d) => d.events)
             }
         }

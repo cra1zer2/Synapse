@@ -1,4 +1,12 @@
-export function normalizeUsername(username?: string | null): string {
+/**
+ * Utils: Account Helpers
+ * Normalizes Synergia usernames, classifies student/parent/demo accounts, and formats profile labels.
+ * Used across auth, account session hooks, server profile actions, and demo data providers.
+ */
+
+const PLACEHOLDER_PROFILE_VALUES = new Set(['klasa', 'szkoła', 'szkola', 'class', 'school'])
+
+function normalizeUsername(username?: string | null): string {
   return String(username || '').trim().toLowerCase()
 }
 
@@ -17,35 +25,16 @@ export function isDemoAccount(username?: string | null): boolean {
     clean === 'test' ||
     clean === 'testu' ||
     clean.startsWith('demo_') ||
-    clean.startsWith('demo-')
+    clean.startsWith('demo-') ||
+    clean.startsWith('test_')
   )
 }
 
 export function isStudentUsername(username?: string | null): boolean {
   const clean = normalizeUsername(username)
-  if (!clean) return false
-  if (isDemoParentAccount(clean)) return false
-  if (
-    clean === 'demo' ||
-    clean === 'demou' ||
-    clean === 'test' ||
-    clean === 'testu' ||
-    clean.startsWith('demo_') ||
-    clean.startsWith('demo-')
-  ) {
-    return true
-  }
+  if (!clean || isDemoParentAccount(clean)) return false
+  if (isDemoAccount(clean)) return true
   return /^\d+u$/.test(clean) || clean.endsWith('u')
-}
-
-export function resolveAccountRole(
-  username?: string | null,
-  explicitRole?: 'student' | 'parent'
-): 'student' | 'parent' {
-  if (explicitRole === 'student' || explicitRole === 'parent') {
-    return explicitRole
-  }
-  return isStudentUsername(username) ? 'student' : 'parent'
 }
 
 export function resolveAvatarLetter(name?: string | null, username?: string | null): string {
@@ -57,8 +46,6 @@ export function resolveAvatarLetter(name?: string | null, username?: string | nu
   }
   return source.slice(0, 2).toUpperCase()
 }
-
-const PLACEHOLDER_PROFILE_VALUES = new Set(['klasa', 'szkoła', 'szkola', 'class', 'school'])
 
 export function sanitizeAccountLabel(value?: string | null): string {
   const trimmed = (value || '').trim()

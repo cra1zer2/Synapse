@@ -1,10 +1,22 @@
+/**
+ * Hook: Messages & Announcements Inbox Manager
+ * Fetches, caches, reads, sends, and downloads attachments for Librus messages and announcements.
+ * Uses `AppLanguage` directly so all dynamic content respects the extensible language registry.
+ */
+
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem } from '@/models/message.model'
-import { getMessagesAndAnnouncementsAction, getReceiversAction, readMessageAction, sendMessageAction, downloadAttachmentAction } from '@/app/actions'
+import {
+    getMessagesAndAnnouncementsAction,
+    getReceiversAction,
+    readMessageAction,
+    sendMessageAction,
+    downloadAttachmentAction
+} from '@/app/actions'
 import { addRequestLog } from '@/utils/request-logger.util'
-import { AppLanguage } from '@/config/dictionary.config'
+import { AppLanguage, pickText } from '@/config/dictionary.config'
 
 export function useMessagesInbox({
     username,
@@ -23,6 +35,97 @@ export function useMessagesInbox({
     const [isLoadingMessages, setIsLoadingMessages] = useState(false)
     const [messagesError, setMessagesError] = useState<string | null>(null)
 
+    const receiversRef = useRef<ReceiverItem[]>([])
+    receiversRef.current = receivers
+
+    const syncBundle = useCallback(
+        async (
+            trigger: 'Start' | 'Refresh',
+            isCancelledCheck?: () => boolean
+        ) => {
+            if (!username || !password) return
+
+            setIsLoadingMessages(true)
+            setMessagesError(null)
+            const clientStart = performance.now()
+            const logLabel = pickText(lang, {
+                pl: trigger === 'Start' ? 'Wiadomości i ogłoszenia (Start)' : 'Wiadomości i ogłoszenia (Odświeżenie)',
+                en: trigger === 'Start' ? 'Messages & Announcements (Init)' : 'Messages & Announcements (Refresh)'
+            })
+            const loadErrorFallback = pickText(lang, {
+                pl: 'Błąd ładowania wiadomości',
+                en: 'Failed to load messages'
+            })
+            const connectionErrorFallback = pickText(lang, {
+                pl: 'Błąd połączenia',
+                en: 'Connection error'
+            })
+
+            try {
+                const mRes = await getMessagesAndAnnouncementsAction(username, password, lang)
+                const clientDurationMs = Math.round(performance.now() - clientStart)
+
+                addRequestLog({
+                    name: logLabel,
+                    clientDurationMs,
+                    serverDurationMs: mRes.serverTimings?.totalMs,
+                    breakdown: mRes.serverTimings
+                        ? {
+                              [pickText(lang, { pl: 'Pobranie list', en: 'Lists' })]: mRes.serverTimings.inboxMs || 0,
+                              [pickText(lang, { pl: 'Podglądy', en: 'Previews' })]: mRes.serverTimings.previewsMs || 0
+                          }
+                        : undefined,
+                    status: mRes.success ? 'ok' : 'error',
+                    error: mRes.error,
+                    details: `${pickText(lang, { pl: 'Wiadomości', en: 'Messages' })}: ${mRes.messages?.length || 0}, ${pickText(lang, { pl: 'Ogłoszenia', en: 'Announcements' })}: ${mRes.announcements?.length || 0}`
+                })
+
+                if (isCancelledCheck?.()) return
+
+                if (mRes.success) {
+                    const nextReceivers =
+                        mRes.receivers && mRes.receivers.length > 0 ? mRes.receivers : receiversRef.current
+                    setMessages(mRes.messages || [])
+                    setSentMessages(mRes.sentMessages || [])
+                    setAnnouncements(mRes.announcements || [])
+                    if (mRes.receivers && mRes.receivers.length > 0) {
+                        setReceivers(mRes.receivers)
+                    }
+                    setMessagesError(null)
+                    localStorage.setItem(
+                        `synapse_msg_${username}`,
+                        JSON.stringify({
+                            lang,
+                            messages: mRes.messages || [],
+                            sentMessages: mRes.sentMessages || [],
+                            announcements: mRes.announcements || [],
+                            receivers: nextReceivers
+                        })
+                    )
+                } else {
+                    setMessagesError(mRes.error || loadErrorFallback)
+                }
+            } catch (err: unknown) {
+                const errMsg = err instanceof Error ? err.message : connectionErrorFallback
+                const clientDurationMs = Math.round(performance.now() - clientStart)
+                addRequestLog({
+                    name: logLabel,
+                    clientDurationMs,
+                    status: 'error',
+                    error: errMsg
+                })
+                if (!isCancelledCheck?.()) {
+                    setMessagesError(errMsg)
+                }
+            } finally {
+                if (!isCancelledCheck?.()) {
+                    setIsLoadingMessages(false)
+                }
+            }
+        },
+        [username, password, lang]
+    )
+
     useEffect(() => {
         if (!username || !password) {
             setMessages([])
@@ -36,14 +139,13 @@ export function useMessagesInbox({
 
         const cacheKey = `synapse_msg_${username}`
         const cached = localStorage.getItem(cacheKey)
-        let cachedReceiversSnapshot: ReceiverItem[] = []
         let hasMatchingLangCache = false
         if (cached) {
             try {
                 const parsed = JSON.parse(cached)
                 if (Array.isArray(parsed.receivers)) {
                     setReceivers(parsed.receivers)
-                    cachedReceiversSnapshot = parsed.receivers
+                    receiversRef.current = parsed.receivers
                 }
                 if (parsed.lang === lang) {
                     if (Array.isArray(parsed.messages)) setMessages(parsed.messages)
@@ -64,78 +166,19 @@ export function useMessagesInbox({
         }
 
         let isCancelled = false
-
-        const fetchBundle = async () => {
-            setIsLoadingMessages(true)
-            setMessagesError(null)
-            const clientStart = performance.now()
-            try {
-                const mRes = await getMessagesAndAnnouncementsAction(username, password, lang === 'en')
-                const clientDurationMs = Math.round(performance.now() - clientStart)
-                addRequestLog({
-                    name: 'Wiadomości i ogłoszenia (Start)',
-                    clientDurationMs,
-                    serverDurationMs: mRes.serverTimings?.totalMs,
-                    breakdown: mRes.serverTimings ? {
-                        'Pobranie list': mRes.serverTimings.inboxMs || 0,
-                        'Podglądy': mRes.serverTimings.previewsMs || 0
-                    } : undefined,
-                    status: mRes.success ? 'ok' : 'error',
-                    error: mRes.error,
-                    details: `Wiadomości: ${mRes.messages?.length || 0}, Ogłoszenia: ${mRes.announcements?.length || 0}`
-                })
-
-                if (!isCancelled) {
-                    if (mRes.success) {
-                        setMessages(mRes.messages || [])
-                        setSentMessages(mRes.sentMessages || [])
-                        setAnnouncements(mRes.announcements || [])
-                        if (mRes.receivers && mRes.receivers.length > 0) {
-                            setReceivers(mRes.receivers)
-                        }
-                        setMessagesError(null)
-                        localStorage.setItem(cacheKey, JSON.stringify({
-                            lang,
-                            messages: mRes.messages || [],
-                            sentMessages: mRes.sentMessages || [],
-                            announcements: mRes.announcements || [],
-                            receivers: mRes.receivers && mRes.receivers.length > 0 ? mRes.receivers : cachedReceiversSnapshot
-                        }))
-                    } else {
-                        setMessagesError(mRes.error || 'Błąd ładowania wiadomości')
-                    }
-                }
-            } catch (err: any) {
-                const clientDurationMs = Math.round(performance.now() - clientStart)
-                addRequestLog({
-                    name: 'Wiadomości i ogłoszenia (Start)',
-                    clientDurationMs,
-                    status: 'error',
-                    error: err?.message || 'Błąd połączenia'
-                })
-                if (!isCancelled) {
-                    setMessagesError(err?.message || 'Błąd połączenia')
-                }
-            } finally {
-                if (!isCancelled) {
-                    setIsLoadingMessages(false)
-                }
-            }
-        }
-
         const delayMs = hasMatchingLangCache ? 350 : 0
         const timer = setTimeout(() => {
-            fetchBundle()
+            syncBundle('Start', () => isCancelled)
         }, delayMs)
 
         return () => {
             isCancelled = true
             clearTimeout(timer)
         }
-    }, [username, password, lang])
+    }, [username, password, lang, syncBundle])
 
     const ensureReceivers = useCallback(async (): Promise<ReceiverItem[]> => {
-        if (receivers.length > 0) return receivers
+        if (receiversRef.current.length > 0) return receiversRef.current
         try {
             const res = await getReceiversAction(username, password)
             if (res.success && res.receivers && res.receivers.length > 0) {
@@ -143,8 +186,8 @@ export function useMessagesInbox({
                 return res.receivers
             }
         } catch {}
-        return receivers
-    }, [username, password, receivers])
+        return receiversRef.current
+    }, [username, password])
 
     const markMessageLocal = useCallback(
         (
@@ -200,14 +243,14 @@ export function useMessagesInbox({
         }
 
         const clientStart = performance.now()
-        const res = await readMessageAction(username, password, idNum, folder === 'sent' ? 6 : 5, lang === 'en')
+        const res = await readMessageAction(username, password, idNum, folder === 'sent' ? 6 : 5, lang)
         const clientDurationMs = Math.round(performance.now() - clientStart)
         addRequestLog({
-            name: `Odczyt wiadomości #${idNum}`,
+            name: `${pickText(lang, { pl: 'Odczyt wiadomości', en: 'Read message' })} #${idNum}`,
             clientDurationMs,
             status: res.success ? 'ok' : 'error',
             error: res.error,
-            details: `Folder: ${folder}, Załączników: ${res.attachments?.length || 0}`
+            details: `Folder: ${folder}, ${pickText(lang, { pl: 'Załączników', en: 'Attachments' })}: ${res.attachments?.length || 0}`
         })
         const content = res.content || ''
         const attachments = res.attachments || []
@@ -223,7 +266,7 @@ export function useMessagesInbox({
         const res = await downloadAttachmentAction(username, password, att.path, att.name)
         const clientDurationMs = Math.round(performance.now() - clientStart)
         addRequestLog({
-            name: `Pobieranie załącznika: ${att.name}`,
+            name: `${pickText(lang, { pl: 'Pobieranie załącznika', en: 'Download attachment' })}: ${att.name}`,
             clientDurationMs,
             status: res.success ? 'ok' : 'error',
             error: res.error
@@ -260,59 +303,7 @@ export function useMessagesInbox({
         return Boolean(res.success)
     }
 
-    const reloadMessages = async () => {
-        if (!username || !password) return
-        setIsLoadingMessages(true)
-        setMessagesError(null)
-        const clientStart = performance.now()
-        try {
-            const mRes = await getMessagesAndAnnouncementsAction(username, password, lang === 'en')
-            const clientDurationMs = Math.round(performance.now() - clientStart)
-            addRequestLog({
-                name: 'Wiadomości i ogłoszenia (Odświeżenie)',
-                clientDurationMs,
-                serverDurationMs: mRes.serverTimings?.totalMs,
-                breakdown: mRes.serverTimings ? {
-                    'Pobranie list': mRes.serverTimings.inboxMs || 0,
-                    'Podglądy': mRes.serverTimings.previewsMs || 0
-                } : undefined,
-                status: mRes.success ? 'ok' : 'error',
-                error: mRes.error,
-                details: `Wiadomości: ${mRes.messages?.length || 0}, Ogłoszenia: ${mRes.announcements?.length || 0}`
-            })
-
-            if (mRes.success) {
-                setMessages(mRes.messages || [])
-                setSentMessages(mRes.sentMessages || [])
-                setAnnouncements(mRes.announcements || [])
-                if (mRes.receivers && mRes.receivers.length > 0) {
-                    setReceivers(mRes.receivers)
-                }
-                setMessagesError(null)
-                const cacheKey = `synapse_msg_${username}`
-                localStorage.setItem(cacheKey, JSON.stringify({
-                    lang,
-                    messages: mRes.messages || [],
-                    sentMessages: mRes.sentMessages || [],
-                    announcements: mRes.announcements || [],
-                    receivers: mRes.receivers && mRes.receivers.length > 0 ? mRes.receivers : receivers
-                }))
-            } else {
-                setMessagesError(mRes.error || 'Błąd ładowania wiadomości')
-            }
-        } catch (err: any) {
-            const clientDurationMs = Math.round(performance.now() - clientStart)
-            addRequestLog({
-                name: 'Wiadomości i ogłoszenia (Odświeżenie)',
-                clientDurationMs,
-                status: 'error',
-                error: err?.message || 'Błąd połączenia'
-            })
-            setMessagesError(err?.message || 'Błąd połączenia')
-        } finally {
-            setIsLoadingMessages(false)
-        }
-    }
+    const reloadMessages = useCallback(() => syncBundle('Refresh'), [syncBundle])
 
     return {
         messages,

@@ -1,11 +1,18 @@
-import type { IosBadgeVariant } from '@/components/ios/ios-badge'
+/**
+ * Utils: Badge & Event Styling
+ * Maps grades, timetable event categories, attendance symbols, and justification statuses to UI badge styles and labels.
+ * Used by grades, schedule, events, and attendance components.
+ */
+
+import type { UiBadgeVariant } from '@/components/ui/ui-badge'
 import type { AppDictionary } from '@/config/dictionary.config'
 import type { TimetableEvent } from '@/models/timetable.model'
+import { formatSubjectName } from '@/utils/text.util'
 
 export function getGradeBadgeStyle(value: string): {
   bg: string
   text: string
-  variant: IosBadgeVariant
+  variant: UiBadgeVariant
 } {
   const clean = (value || '').trim().toLowerCase()
   if (clean === 'nb' || /^[01]([+-])?$/.test(clean)) {
@@ -22,18 +29,19 @@ export function getGradeBadgeStyle(value: string): {
   }
 }
 
-export function getEventCategoryStyle(category: string): {
-  variant: IosBadgeVariant
+export function getEventCategoryStyle(category: string, eventType?: string): {
+  variant: UiBadgeVariant
   bgClass: string
   textClass: string
   dotClass: string
 } {
-  const lower = (category || '').toLowerCase()
+  const effective = category && category !== 'info' ? category : eventType || category
+  const lower = (effective || '').toLowerCase()
   if (
     lower.includes('sprawdzian') ||
     lower.includes('praca klasowa') ||
     lower.includes('exam') ||
-    lower.includes('test')
+    /\btest/i.test(lower)
   ) {
     return {
       variant: 'red',
@@ -70,10 +78,7 @@ export function getEventCategoryStyle(category: string): {
   }
 }
 
-export function getEventCategoryShortLabel(
-  category: TimetableEvent['category'],
-  isEn: boolean
-): string {
+function getEventCategoryFallbackLabel(category: string, isEn: boolean): string {
   switch (category) {
     case 'exam':
       return isEn ? 'Exam' : 'Sprawdzian'
@@ -88,15 +93,11 @@ export function getEventCategoryShortLabel(
   }
 }
 
-/**
- * Resolves a concise badge label for an event row.
- * Falls back to the short category label when a long `eventType` already serves as the row heading.
- */
 export function resolveEventBadgeLabel(
   event: Pick<TimetableEvent, 'category' | 'eventType' | 'subjectName'>,
   isEn: boolean
 ): string {
-  const shortLabel = getEventCategoryShortLabel(event.category, isEn)
+  const shortLabel = getEventCategoryFallbackLabel(event.category, isEn)
   const rawType = (event.eventType || '').trim()
   if (!rawType) return shortLabel
 
@@ -109,8 +110,24 @@ export function resolveEventBadgeLabel(
   return rawType
 }
 
+export function getEventPrimaryTitle(
+  event: {
+    subjectName?: string
+    eventType?: string
+    title?: string
+    category: string
+  },
+  showFullSubjectNames: boolean,
+  isEn: boolean
+): string {
+  if (event.subjectName && event.subjectName !== event.eventType) {
+    return formatSubjectName(event.subjectName, showFullSubjectNames)
+  }
+  return event.title || event.eventType || getEventCategoryFallbackLabel(event.category, isEn)
+}
+
 export function getAttendanceTypeStyle(shortType: string): {
-  variant: IosBadgeVariant
+  variant: UiBadgeVariant
   bgClass: string
   textClass: string
   dotClass: string
@@ -124,7 +141,7 @@ export function getAttendanceTypeStyle(shortType: string): {
       dotClass: 'bg-[var(--ios-red)]'
     }
   }
-  if (short === 'u') {
+  if (short === 'u' || short === 'ob') {
     return {
       variant: 'green',
       bgClass: 'bg-[var(--ios-green-subtle)]',
@@ -148,14 +165,6 @@ export function getAttendanceTypeStyle(shortType: string): {
       dotClass: 'bg-[var(--ios-purple)]'
     }
   }
-  if (short === 'ob') {
-    return {
-      variant: 'green',
-      bgClass: 'bg-[var(--ios-green-subtle)]',
-      textClass: 'text-[var(--ios-green)]',
-      dotClass: 'bg-[var(--ios-green)]'
-    }
-  }
   return {
     variant: 'neutral',
     bgClass: 'bg-[var(--ios-element)]',
@@ -167,7 +176,7 @@ export function getAttendanceTypeStyle(shortType: string): {
 export function getJustificationStatusMeta(
   status: number | string,
   t?: AppDictionary
-): { label: string; variant: IosBadgeVariant } {
+): { label: string; variant: UiBadgeVariant } {
   const num = Number(status)
   if (num === 0) {
     return {

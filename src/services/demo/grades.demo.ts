@@ -1,3 +1,9 @@
+/**
+ * Service: Demo Grades Provider
+ * Supplies bilingual sample grades and GPA summaries for built-in demo student and parent sessions.
+ * Re-exported by demo-data.service.ts.
+ */
+
 import { GradesResult, GradeItem, SubjectGrades } from '@/models/grade.model'
 
 export function getDemoGrades(translate: boolean = false): GradesResult {

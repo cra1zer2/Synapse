@@ -1,62 +1,104 @@
+/**
+ * Stylesheet: Synapse Global Design System
+ * Defines dual iOS / Material 3 CSS variables, surface elevations, animations, and responsive mobile behaviors.
+ * Tailwind v4 dark mode follows explicit `.dark` class toggling managed by layout bootstrap and settings hooks.
+ */
+
 @import "tailwindcss";
-@config "../../tailwind.config.ts";
+@custom-variant dark (&:where(.dark, .dark *));
+
+
+/* === Native Apple SF Pro Typography (Local on macOS/iOS, Instant Subset on Windows/Linux) === */
+
+@font-face {
+  font-family: 'SF Pro Web';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro Text'), local('SF Pro Display'),
+       url('/fonts/SF-Pro-Regular.woff2') format('woff2');
+  unicode-range: U+0020-007F, U+00A0-00FF, U+0100-017F, U+0180-024F, U+0400-045F, U+0490-0491, U+2010-2027, U+20AC, U+20BD, U+00A3, U+0024;
+}
+
+@font-face {
+  font-family: 'SF Pro Web';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro Text Medium'), local('SF Pro Display Medium'),
+       url('/fonts/SF-Pro-Medium.woff2') format('woff2');
+  unicode-range: U+0020-007F, U+00A0-00FF, U+0100-017F, U+0180-024F, U+0400-045F, U+0490-0491, U+2010-2027, U+20AC, U+20BD, U+00A3, U+0024;
+}
+
+@font-face {
+  font-family: 'SF Pro Web';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro Text Semibold'), local('SF Pro Display Semibold'),
+       url('/fonts/SF-Pro-Semibold.woff2') format('woff2');
+  unicode-range: U+0020-007F, U+00A0-00FF, U+0100-017F, U+0180-024F, U+0400-045F, U+0490-0491, U+2010-2027, U+20AC, U+20BD, U+00A3, U+0024;
+}
+
+@font-face {
+  font-family: 'SF Pro Web';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro Text Bold'), local('SF Pro Display Bold'),
+       url('/fonts/SF-Pro-Bold.woff2') format('woff2');
+  unicode-range: U+0020-007F, U+00A0-00FF, U+0100-017F, U+0180-024F, U+0400-045F, U+0490-0491, U+2010-2027, U+20AC, U+20BD, U+00A3, U+0024;
+}
+
+/* === Light Palette (iOS Default) === */
 
 :root,
 :root.light,
 .light {
-  --ios-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --ios-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro Web", "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, sans-serif;
 
-  --bg-canvas: #f2f2f7;
-  --bg-card-primary: #ffffff;
   --bg-card-secondary: #f2f2f7;
-  --bg-card-tertiary: #e5e5ea;
 
   --ios-bg: #f2f2f7;
   --ios-bg-primary: #f2f2f7;
-  --ios-bg-secondary: #ffffff;
-  --ios-bg-tertiary: #e5e5ea;
 
   --ios-card: #ffffff;
   --ios-card-solid: #ffffff;
-  --ios-card-secondary: #f2f2f7;
-  --ios-card-border: transparent;
+  --ios-card-border: rgba(60, 60, 67, 0.075);
   --ios-modal-bg: #f2f2f7;
-  --ios-modal-card: #ffffff;
-  --ios-modal-shadow: 0 24px 64px rgba(0, 0, 0, 0.16);
+  --ios-modal-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.18), 0 4px 16px -2px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95);
   --ios-element: rgba(118, 118, 128, 0.12);
   --ios-row-hover: rgba(118, 118, 128, 0.06);
   --ios-row-active: rgba(118, 118, 128, 0.12);
-  --ios-block-bg: rgba(118, 118, 128, 0.08);
-  --ios-block-bg-hover: rgba(118, 118, 128, 0.12);
-  --ios-block-bg-active: rgba(118, 118, 128, 0.16);
   --ios-input: rgba(118, 118, 128, 0.12);
   --ios-switch-off: #e5e5ea;
 
   --ios-segmented-track: rgba(118, 118, 128, 0.12);
   --ios-segmented-thumb: #ffffff;
   --ios-segmented-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --ios-segmented-track-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  --ios-element-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.72), inset 0 0 0 0.5px rgba(60, 60, 67, 0.06);
+  --ios-well-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03), inset 0 0 0 0.5px rgba(60, 60, 67, 0.06), 0 1px 0 rgba(255, 255, 255, 0.7);
+  --ios-tile-shadow: 0 1px 2px rgba(0, 0, 0, 0.025), inset 0 1px 0 rgba(255, 255, 255, 0.65), inset 0 0 0 0.5px rgba(0, 0, 0, 0.045);
+  --ios-primary-pill-shadow: 0 2px 10px rgba(0, 136, 255, 0.24), 0 1px 2px rgba(0, 0, 0, 0.06), inset 0 1px 0.5px rgba(255, 255, 255, 0.45);
+  --ios-destructive-pill-shadow: 0 2px 10px rgba(255, 56, 60, 0.24), 0 1px 2px rgba(0, 0, 0, 0.06), inset 0 1px 0.5px rgba(255, 255, 255, 0.42);
+  --ios-switch-track-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.09), inset 0 0 0 0.5px rgba(0, 0, 0, 0.05);
+  --ios-switch-thumb-shadow: 0 2px 6px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95);
 
   --ios-glass-surface: rgba(255, 255, 255, 0.72);
   --ios-glass-surface-strong: rgba(255, 255, 255, 0.96);
   --ios-glass-border: rgba(60, 60, 67, 0.12);
   --ios-glass-shadow: 0 4px 16px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  --ios-card-shadow: none;
-  --ios-subview-shadow: none;
+  --ios-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 6px 16px rgba(0, 0, 0, 0.025), inset 0 1px 0 rgba(255, 255, 255, 0.95);
   --ios-subview-backdrop: rgba(0, 0, 0, 0.42);
 
   --ios-label: #000000;
-  --ios-label-secondary: rgba(60, 60, 67, 0.60);
-  --ios-label-tertiary: rgba(60, 60, 67, 0.30);
-  --ios-label-quaternary: rgba(60, 60, 67, 0.18);
-
   --ios-secondary: rgba(60, 60, 67, 0.60);
   --ios-tertiary: rgba(60, 60, 67, 0.30);
   --ios-quaternary: rgba(60, 60, 67, 0.18);
 
   --ios-separator: rgba(60, 60, 67, 0.12);
-  --border-hairline: rgba(60, 60, 67, 0.12);
   --ios-border: rgba(60, 60, 67, 0.12);
-  --ios-hairline: 0.5px;
 
   --ios-blue: #0088ff;
   --ios-blue-subtle: rgba(0, 136, 255, 0.12);
@@ -69,74 +111,62 @@
   --ios-purple: #cb30e0;
   --ios-purple-subtle: rgba(203, 48, 224, 0.12);
   --ios-teal: #00c8b3;
-  --ios-yellow: #ffcc00;
 
   --ios-room-bg: rgba(0, 136, 255, 0.10);
   --ios-room-text: #0088ff;
 
   --ios-radius-card: 26px;
-  --ios-radius-sheet: 34px;
-  --ios-radius-alert: 34px;
-  --ios-radius-inner: 18px;
-  --ios-radius-full: 9999px;
   --ios-spring: cubic-bezier(0.32, 0.72, 0, 1);
 
-  --ios-nav-bg: #f2f2f7;
   --ios-header-bg: rgba(242, 242, 247, 0.76);
-  --ios-ambient-bg: #f2f2f7;
+  --ios-on-accent: #ffffff;
 }
+
+/* === Dark Palette (iOS Default) === */
 
 :root.dark,
 .dark {
-  --bg-canvas: #000000;
-  --bg-card-primary: #1c1c1e;
   --bg-card-secondary: #2c2c2e;
-  --bg-card-tertiary: #3a3a3c;
 
   --ios-bg: #000000;
   --ios-bg-primary: #000000;
-  --ios-bg-secondary: #1c1c1e;
-  --ios-bg-tertiary: #2c2c2e;
 
   --ios-card: #1c1c1e;
   --ios-card-solid: #1c1c1e;
-  --ios-card-secondary: #2c2c2e;
-  --ios-card-border: transparent;
+  --ios-card-border: rgba(255, 255, 255, 0.075);
   --ios-modal-bg: #000000;
-  --ios-modal-card: #1c1c1e;
-  --ios-modal-shadow: 0 28px 80px rgba(0, 0, 0, 0.75);
+  --ios-modal-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.75), 0 0 0 0.5px rgba(255, 255, 255, 0.14), inset 0 0.5px 0 rgba(255, 255, 255, 0.22);
   --ios-element: #2c2c2e;
   --ios-row-hover: rgba(255, 255, 255, 0.05);
   --ios-row-active: rgba(255, 255, 255, 0.10);
-  --ios-block-bg: #2c2c2e;
-  --ios-block-bg-hover: #343438;
-  --ios-block-bg-active: #3a3a3e;
   --ios-input: #2c2c2e;
   --ios-switch-off: #39393d;
 
   --ios-segmented-track: #1c1c1e;
   --ios-segmented-thumb: #3a3a3c;
   --ios-segmented-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), inset 0 0.5px 0 rgba(255, 255, 255, 0.16);
+  --ios-segmented-track-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45), inset 0 0.5px 0 rgba(255, 255, 255, 0.06);
+  --ios-element-shadow: 0 1px 3px rgba(0, 0, 0, 0.28), inset 0 0.5px 0 rgba(255, 255, 255, 0.13), inset 0 0 0 0.5px rgba(255, 255, 255, 0.05);
+  --ios-well-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28), inset 0 0.5px 0 rgba(255, 255, 255, 0.06), inset 0 0 0 0.5px rgba(255, 255, 255, 0.05);
+  --ios-tile-shadow: 0 1px 2px rgba(0, 0, 0, 0.22), inset 0 0.5px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 0.5px rgba(255, 255, 255, 0.05);
+  --ios-primary-pill-shadow: 0 2px 12px rgba(0, 145, 255, 0.32), 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 0.5px rgba(255, 255, 255, 0.38);
+  --ios-destructive-pill-shadow: 0 2px 12px rgba(255, 66, 69, 0.30), 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 0.5px rgba(255, 255, 255, 0.36);
+  --ios-switch-track-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45), inset 0 0.5px 0 rgba(255, 255, 255, 0.08);
+  --ios-switch-thumb-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), 0 0 1px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.92);
 
   --ios-glass-surface: rgba(34, 34, 36, 0.68);
   --ios-glass-surface-strong: rgba(28, 28, 30, 0.96);
   --ios-glass-border: rgba(255, 255, 255, 0.12);
   --ios-glass-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), inset 0 0.5px 0 rgba(255, 255, 255, 0.18);
-  --ios-card-shadow: none;
-  --ios-subview-shadow: none;
+  --ios-card-shadow: 0 2px 12px rgba(0, 0, 0, 0.35), inset 0 0.5px 0 rgba(255, 255, 255, 0.11);
   --ios-subview-backdrop: rgba(0, 0, 0, 0.65);
 
   --ios-label: #ffffff;
-  --ios-label-secondary: rgba(235, 235, 245, 0.60);
-  --ios-label-tertiary: rgba(235, 235, 245, 0.32);
-  --ios-label-quaternary: rgba(235, 235, 245, 0.18);
-
   --ios-secondary: rgba(235, 235, 245, 0.60);
   --ios-tertiary: rgba(235, 235, 245, 0.32);
   --ios-quaternary: rgba(235, 235, 245, 0.18);
 
   --ios-separator: rgba(255, 255, 255, 0.13);
-  --border-hairline: rgba(255, 255, 255, 0.13);
   --ios-border: rgba(255, 255, 255, 0.12);
 
   --ios-blue: #0091ff;
@@ -150,14 +180,13 @@
   --ios-purple: #db34f2;
   --ios-purple-subtle: rgba(219, 52, 242, 0.16);
   --ios-teal: #00d2e0;
-  --ios-yellow: #ffd600;
 
   --ios-room-bg: rgba(0, 145, 255, 0.16);
   --ios-room-text: #40aeff;
-  --ios-nav-bg: #000000;
   --ios-header-bg: rgba(0, 0, 0, 0.72);
-  --ios-ambient-bg: #000000;
 }
+
+/* === Base & Utilities === */
 
 * {
   scrollbar-width: none;
@@ -169,6 +198,32 @@
   display: none;
 }
 
+@media (min-width: 1024px) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ios-separator) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--ios-quaternary);
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ios-tertiary);
+  }
+}
+
 html {
   background-color: var(--ios-bg);
   color-scheme: light;
@@ -176,12 +231,12 @@ html {
 }
 
 html.dark {
-  background-color: #000000;
+  background-color: var(--ios-bg);
   color-scheme: dark;
 }
 
 html.light {
-  background-color: #f2f2f7;
+  background-color: var(--ios-bg);
   color-scheme: light;
 }
 
@@ -199,6 +254,7 @@ body {
   font-family: var(--ios-font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   margin: 0;
   padding: 0;
   min-height: 100%;
@@ -214,12 +270,11 @@ body {
 }
 
 .ios-header {
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-  z-index: 40;
+  z-index: 20;
   width: 100%;
+  flex-shrink: 0;
   padding-top: var(--ios-header-pad-top);
   padding-bottom: var(--ios-header-pad-bottom);
   padding-left: 0.75rem;
@@ -257,23 +312,15 @@ body {
     backdrop-filter: none;
   }
 
-  [data-ios-root-panel="true"] {
-    padding-top: calc(var(--ios-header-pad-top) + 44px + var(--ios-header-pad-bottom));
-  }
-
   [data-ios-subview-panel="true"] {
     height: 100lvh !important;
     min-height: calc(100dvh + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  [data-ios-subview-panel="true"][data-ios-has-header="true"] {
-    padding-top: calc(var(--ios-header-pad-top) + 42px + var(--ios-header-pad-bottom));
   }
 }
 
 .ios-glass-control {
   background-color: var(--ios-glass-surface);
-  border: 0.5px solid var(--ios-glass-border);
+  border: 1px solid var(--ios-glass-border);
   box-shadow: var(--ios-glass-shadow);
   backdrop-filter: saturate(185%) blur(20px);
   -webkit-backdrop-filter: saturate(185%) blur(20px);
@@ -281,7 +328,7 @@ body {
 
 .ios-glass-modal {
   background-color: var(--ios-glass-surface-strong);
-  border: 0.5px solid var(--ios-glass-border);
+  border: 1px solid var(--ios-glass-border);
   box-shadow: var(--ios-modal-shadow);
   backdrop-filter: saturate(190%) blur(34px);
   -webkit-backdrop-filter: saturate(190%) blur(34px);
@@ -290,13 +337,32 @@ body {
 .ios-card {
   background-color: var(--ios-card-solid);
   border-radius: var(--ios-radius-card);
-  border: 0.5px solid var(--ios-card-border);
+  border: 1px solid var(--ios-card-border);
   box-shadow: var(--ios-card-shadow);
   overflow: hidden;
+  background-clip: padding-box;
 }
 
-.ios-safe-bottom-pad {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+.ios-well {
+  background-color: var(--bg-card-secondary);
+  box-shadow: var(--ios-well-shadow);
+}
+
+.ios-element-pill {
+  background-color: var(--ios-element);
+  box-shadow: var(--ios-element-shadow);
+}
+
+.ios-tile {
+  box-shadow: var(--ios-tile-shadow);
+}
+
+.ios-pill-raised {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.ios-progress-fill {
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.45);
 }
 
 .divide-y > * {
@@ -315,7 +381,9 @@ body {
   top: 0;
   left: 16px;
   right: 16px;
-  height: 0.5px;
+  height: 1px;
+  transform: scaleY(0.5);
+  transform-origin: top;
   background-color: var(--ios-separator);
   pointer-events: none;
 }
@@ -366,6 +434,22 @@ body {
   animation: ios-reveal 0.18s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 
+@keyframes desktop-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.996);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.desktop-reveal {
+  animation: desktop-reveal 0.14s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
 @keyframes ios-content-swap {
   0% {
     opacity: 0;
@@ -412,22 +496,6 @@ body {
   will-change: opacity;
 }
 
-@keyframes ios-app-entrance {
-  0% {
-    opacity: 0;
-    transform: scale3d(0.985, 0.985, 1);
-  }
-  100% {
-    opacity: 1;
-    transform: scale3d(1, 1, 1);
-  }
-}
-
-.ios-app-entrance {
-  animation: ios-app-entrance 0.32s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-  will-change: opacity, transform;
-}
-
 @keyframes ios-spinner-spin {
   from {
     transform: rotate(0deg);
@@ -451,4 +519,113 @@ body {
     background-color: var(--ios-bg);
     touch-action: manipulation !important;
   }
+}
+
+/* === Material 3 Design System === */
+
+@keyframes tab-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translate3d(28px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes tab-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translate3d(-28px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes tab-slide-out-left {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(-20px, 0, 0);
+  }
+}
+
+@keyframes tab-slide-out-right {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(20px, 0, 0);
+  }
+}
+
+.tab-enter-right {
+  animation: tab-slide-in-right 280ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+  will-change: transform, opacity;
+}
+
+.tab-enter-left {
+  animation: tab-slide-in-left 280ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+  will-change: transform, opacity;
+}
+
+.tab-exit-left {
+  animation: tab-slide-out-left 180ms cubic-bezier(0.2, 0, 0, 1) both;
+  will-change: transform, opacity;
+}
+
+.tab-exit-right {
+  animation: tab-slide-out-right 180ms cubic-bezier(0.2, 0, 0, 1) both;
+  will-change: transform, opacity;
+}
+
+@keyframes sim-block-shimmer {
+  0% {
+    transform: translate3d(-115%, 0, 0);
+  }
+  100% {
+    transform: translate3d(115%, 0, 0);
+  }
+}
+
+.sim-block-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.sim-block-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(
+    112deg,
+    transparent 24%,
+    rgba(142, 142, 147, 0.08) 42%,
+    rgba(142, 142, 147, 0.16) 50%,
+    rgba(142, 142, 147, 0.08) 58%,
+    transparent 76%
+  );
+  animation: sim-block-shimmer 2.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform;
+}
+
+html.dark .sim-block-shimmer::after {
+  background: linear-gradient(
+    112deg,
+    transparent 24%,
+    rgba(255, 255, 255, 0.035) 42%,
+    rgba(255, 255, 255, 0.085) 50%,
+    rgba(255, 255, 255, 0.035) 58%,
+    transparent 76%
+  );
 }

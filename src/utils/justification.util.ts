@@ -1,11 +1,18 @@
+/**
+ * Utils: Pending Justifications Storage
+ * Manages optimistic localStorage state for newly submitted absence justifications and reconciles them against synced records.
+ * Used by attendance views, detail modals, manual excuse screens, and account logout cleanup.
+ */
+
 import { SubjectAttendance } from '@/models/attendance.model'
 import { PendingJustificationRecord } from '@/models/justification.model'
 
 export type { PendingJustificationRecord }
 
-const STORAGE_KEY = 'synapse_pending_justifications'
+export const PENDING_JUSTIFICATIONS_STORAGE_KEY = 'synapse_pending_justifications'
+const OPTIMISTIC_PENDING_TTL_MS = 2 * 60 * 1000
 
-export function normalizeDate(str: string): { iso: string; display: string } {
+function normalizeDate(str: string): { iso: string; display: string } {
   if (!str) return { iso: '', display: '' }
   const clean = str.trim()
   if (clean.includes('.')) {
@@ -29,11 +36,9 @@ export function normalizeDate(str: string): { iso: string; display: string } {
   return { iso: clean, display: clean }
 }
 
-const OPTIMISTIC_PENDING_TTL_MS = 2 * 60 * 1000
-
 export function getPendingJustifications(): PendingJustificationRecord[] {
   if (typeof window === 'undefined') return []
-  const raw = localStorage.getItem(STORAGE_KEY)
+  const raw = localStorage.getItem(PENDING_JUSTIFICATIONS_STORAGE_KEY)
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw)
@@ -44,7 +49,7 @@ export function getPendingJustifications(): PendingJustificationRecord[] {
       return ts > 0 && now - ts < OPTIMISTIC_PENDING_TTL_MS
     })
     if (fresh.length !== parsed.length) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh))
+      localStorage.setItem(PENDING_JUSTIFICATIONS_STORAGE_KEY, JSON.stringify(fresh))
     }
     return fresh
   } catch {
@@ -94,7 +99,7 @@ export function savePendingJustification(
   }
 
   if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    localStorage.setItem(PENDING_JUSTIFICATIONS_STORAGE_KEY, JSON.stringify(updated))
   }
   return savedRecord
 }
@@ -141,7 +146,7 @@ export function reconcilePendingJustifications(
     }
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reconciled))
+  localStorage.setItem(PENDING_JUSTIFICATIONS_STORAGE_KEY, JSON.stringify(reconciled))
   return reconciled
 }
 

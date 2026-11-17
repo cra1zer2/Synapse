@@ -1,10 +1,16 @@
+/**
+ * Hook: Dashboard Sync & Week Navigation
+ * Coordinates concurrent loading, caching, and week-pivoted synchronization of timetable, grades, and attendance.
+ * Uses race-condition request guards and Warsaw-timezone date normalization.
+ */
+
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { SmartTimetableResult, DaySchedule } from '@/models/timetable.model'
 import { GradesResult } from '@/models/grade.model'
 import { AttendanceResult } from '@/models/attendance.model'
-import { AppLanguage } from '@/config/dictionary.config'
+import { AppLanguage, pickText, normalizeLanguage } from '@/config/dictionary.config'
 import { syncAllUserDataAction } from '@/app/actions'
 import { getTodayIsoString, getTodayDayName, normalizeToMondayIso, getSchoolWeekMondayIso } from '@/utils/date.util'
 import { addRequestLog } from '@/utils/request-logger.util'
@@ -71,30 +77,39 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
 
       const clientStart = performance.now()
       try {
-        const shouldTranslate = currentAppLang === 'en'
-        const res = await syncAllUserDataAction(u, p, shouldTranslate, weekPivot)
+        const res = await syncAllUserDataAction(u, p, currentAppLang, weekPivot)
         const clientDurationMs = Math.round(performance.now() - clientStart)
 
         addRequestLog({
-          name: 'Główna synchronizacja (Plan, Oceny, Frekwencja)',
+          name: pickText(currentAppLang, {
+            pl: 'Główna synchronizacja (Plan, Oceny, Frekwencja)',
+            en: 'Main Sync (Schedule, Grades, Attendance)'
+          }),
           clientDurationMs,
           serverDurationMs: res.serverTimings?.totalMs,
-          breakdown: res.serverTimings ? {
-            'Plan lekcji': res.serverTimings.timetableMs,
-            'Oceny': res.serverTimings.gradesMs,
-            'Frekwencja': res.serverTimings.attendanceMs
-          } : undefined,
+          breakdown: res.serverTimings
+            ? {
+                [pickText(currentAppLang, { pl: 'Plan lekcji', en: 'Timetable' })]: res.serverTimings.timetableMs,
+                [pickText(currentAppLang, { pl: 'Oceny', en: 'Grades' })]: res.serverTimings.gradesMs,
+                [pickText(currentAppLang, { pl: 'Frekwencja', en: 'Attendance' })]: res.serverTimings.attendanceMs
+              }
+            : undefined,
           status: res.success ? 'ok' : 'error',
           error: res.error,
-          details: `Tydzień: ${weekPivot}`
+          details: `${pickText(currentAppLang, { pl: 'Tydzień', en: 'Week' })}: ${weekPivot}`
         })
 
         if (requestId !== activeRequestCounter.current) return
 
+        const fallbackConnectionError = pickText(currentAppLang, {
+          pl: 'Błąd połączenia',
+          en: 'Connection error'
+        })
+
         if (!res.success) {
-          setTimetableError(res.error || 'Błąd połączenia')
-          setGradesError(res.error || 'Błąd połączenia')
-          setAttendanceError(res.error || 'Błąd połączenia')
+          setTimetableError(res.error || fallbackConnectionError)
+          setGradesError(res.error || fallbackConnectionError)
+          setAttendanceError(res.error || fallbackConnectionError)
           return
         }
 
@@ -106,14 +121,18 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
           setAttendanceData(aRes.data)
           setAttendanceError(null)
         } else if (aRes && !aRes.success) {
-          setAttendanceError(aRes.error || 'Błąd ładowania frekwencji')
+          setAttendanceError(
+            aRes.error || pickText(currentAppLang, { pl: 'Błąd ładowania frekwencji', en: 'Failed to load attendance' })
+          )
         }
 
         if (gRes?.success && 'data' in gRes && gRes.data) {
           setGradesData(gRes.data)
           setGradesError(null)
         } else if (gRes && !gRes.success) {
-          setGradesError(gRes.error || 'Błąd ładowania ocen')
+          setGradesError(
+            gRes.error || pickText(currentAppLang, { pl: 'Błąd ładowania ocen', en: 'Failed to load grades' })
+          )
         }
 
         if (tRes?.success && 'data' in tRes && tRes.data) {
@@ -129,7 +148,9 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
           setTimetableData(fetchedData)
           setTimetableError(null)
         } else if (tRes && !tRes.success) {
-          setTimetableError(tRes.error || 'Błąd ładowania planu lekcji')
+          setTimetableError(
+            tRes.error || pickText(currentAppLang, { pl: 'Błąd ładowania planu lekcji', en: 'Failed to load schedule' })
+          )
         }
 
         if (typeof window !== 'undefined' && isTargetTodayWeek && (tRes?.data || gRes?.data || aRes?.data)) {
@@ -191,7 +212,7 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
         try {
           const parsed = JSON.parse(cachedSnapshot)
           const cachedWeekMonday = parsed.t?.weekStart ? normalizeToMondayIso(parsed.t.weekStart) : null
-          const cachedLang = (parsed.lang as AppLanguage | undefined) || 'pl'
+          const cachedLang = normalizeLanguage(parsed.lang)
           if (parsed.t && Array.isArray(parsed.t.schedule) && (!cachedWeekMonday || cachedWeekMonday === targetMonday)) {
             const cal = { ...parsed.t, schedule: recalibrateScheduleToday(parsed.t.schedule) }
             setTimetableData(cal)
@@ -256,13 +277,9 @@ export function useTimetableSync({ username, password, lang, isConfigured }: Use
   }
 
   const shiftWeek = (deltaDays: number) => {
-    const parts = currentWeekPivot.split('-').map(Number)
-    const current = new Date(parts[0], parts[1] - 1, parts[2])
-    current.setDate(current.getDate() + deltaDays)
-    const y = current.getFullYear()
-    const m = String(current.getMonth() + 1).padStart(2, '0')
-    const d = String(current.getDate()).padStart(2, '0')
-    queueWeekChange(`${y}-${m}-${d}`)
+    const [y, m, d] = currentWeekPivot.split('-').map(Number)
+    const next = new Date(Date.UTC(y, (m || 1) - 1, (d || 1) + deltaDays))
+    queueWeekChange(next.toISOString().split('T')[0])
   }
 
   return {

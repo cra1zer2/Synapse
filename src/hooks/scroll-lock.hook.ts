@@ -1,3 +1,9 @@
+/**
+ * Hook: Document Body Scroll Lock
+ * Freezes viewport scrolling on mobile (preserving scroll offset) and desktop while modals or sheets are open.
+ * Automatically restores the original scroll position when unlocked.
+ */
+
 'use client'
 
 import { useEffect } from 'react'
@@ -49,5 +55,3 @@ export function useBodyScrollLock(isLocked: boolean): void {
     }
   }, [isLocked])
 }
-
-export default useBodyScrollLock

@@ -1,3 +1,9 @@
+/**
+ * Utils: Text & Localization Formatting
+ * Cleans Librus sender names, abbreviates verbose Polish subject names, and computes Polish plural forms.
+ * Used across message views, schedule/grade/attendance cards, and bilingual dictionary rules.
+ */
+
 export function cleanSenderName(raw: string): string {
   if (!raw) return ''
 
@@ -11,12 +17,9 @@ export function cleanSenderName(raw: string): string {
     }
   }
 
-  const parts = text.split(' ')
-  return parts
-    .map((p) => {
-      if (p.length === 0) return ''
-      return p[0].toUpperCase() + p.slice(1).toLowerCase()
-    })
+  return text
+    .split(' ')
+    .map((p) => (p.length === 0 ? '' : p[0].toUpperCase() + p.slice(1).toLowerCase()))
     .join(' ')
 }
 

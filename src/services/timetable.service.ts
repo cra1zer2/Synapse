@@ -1,3 +1,9 @@
+/**
+ * Service: Smart Timetable & Calendar
+ * Fetches weekly schedules, lesson realizations, substitutions, and calendar exams/homework from Gateway v2.
+ * Translates dynamic school text into the active target language via translation.service.ts.
+ */
+
 'use server'
 
 import {
@@ -6,7 +12,7 @@ import {
     SmartTimetableResult,
     TimetableEvent
 } from '@/models/timetable.model'
-import { translateBatch } from '@/services/translation.service'
+import { translateBatch, resolveTranslateTarget } from '@/services/translation.service'
 import { fetchGatewayEndpoint } from '@/services/gateway.service'
 import { parseLessonTimeRange } from '@/utils/time.util'
 import { getTodayIsoString } from '@/utils/date.util'
@@ -126,9 +132,10 @@ function parseRawDayLessons(
 export async function fetchSmartTimetable(
     username: string,
     pass: string,
-    translate: boolean = false,
+    translate: boolean | string = false,
     targetDateIso?: string
 ): Promise<{ success: boolean; data?: SmartTimetableResult; error?: string }> {
+    const targetCode = resolveTranslateTarget(translate)
     try {
         let pivotDate: Date
         if (targetDateIso) {
@@ -554,57 +561,72 @@ export async function fetchSmartTimetable(
             .flat()
             .sort((a, b) => a.isoDate.localeCompare(b.isoDate))
 
-        if (translate) {
+        if (targetCode) {
             const textsToTranslate = new Set<string>()
-            schedule.forEach((day) => {
+            const collectEvents = (events: typeof allCalendarEvents) => {
+                events.forEach((e) => {
+                    if (e.title) textsToTranslate.add(e.title)
+                    if (e.subjectName) textsToTranslate.add(e.subjectName)
+                    if (e.description) textsToTranslate.add(e.description)
+                    if (e.eventType) textsToTranslate.add(e.eventType)
+                })
+            }
+            const collectDay = (day: typeof schedule[number]) => {
                 day.lessons.forEach((l) => {
                     if (l.subject) textsToTranslate.add(l.subject)
                     if (l.topic) textsToTranslate.add(l.topic)
                 })
-                day.events.forEach((e) => {
-                    if (e.title) textsToTranslate.add(e.title)
-                    if (e.subjectName) textsToTranslate.add(e.subjectName)
-                })
-            })
-            if (nextUpcomingDay) {
-                nextUpcomingDay.lessons.forEach((l) => {
-                    if (l.subject) textsToTranslate.add(l.subject)
-                    if (l.topic) textsToTranslate.add(l.topic)
-                })
-                nextUpcomingDay.events.forEach((e) => {
-                    if (e.title) textsToTranslate.add(e.title)
-                    if (e.subjectName) textsToTranslate.add(e.subjectName)
+                collectEvents(day.events)
+            }
+
+            schedule.forEach(collectDay)
+            if (nextUpcomingDay) collectDay(nextUpcomingDay)
+            collectEvents(allCalendarEvents)
+
+            if (targetCode !== 'en') {
+                textsToTranslate.add('Odwołane')
+                textsToTranslate.add('Zastępstwo')
+                textsToTranslate.add('Zastępstwo za:')
+            }
+
+            const translatedMap = await translateBatch(Array.from(textsToTranslate), targetCode)
+            const visitedEvents = new Set<typeof allCalendarEvents[number]>()
+
+            const applyEvents = (events: typeof allCalendarEvents) => {
+                events.forEach((e) => {
+                    if (visitedEvents.has(e)) return
+                    visitedEvents.add(e)
+                    if (translatedMap[e.title]) e.title = translatedMap[e.title]
+                    if (e.subjectName && translatedMap[e.subjectName]) e.subjectName = translatedMap[e.subjectName]
+                    if (e.description && translatedMap[e.description]) e.description = translatedMap[e.description]
+                    if (e.eventType && translatedMap[e.eventType]) e.eventType = translatedMap[e.eventType]
                 })
             }
-            allCalendarEvents.forEach((e) => {
-                if (e.title) textsToTranslate.add(e.title)
-                if (e.subjectName) textsToTranslate.add(e.subjectName)
-            })
-            const translatedMap = await translateBatch(Array.from(textsToTranslate))
-            schedule.forEach((day) => {
+
+            const cancelledWord = targetCode === 'en' ? 'Cancelled' : (translatedMap['Odwołane'] || 'Cancelled')
+            const substitutionWord = targetCode === 'en' ? 'Substitution' : (translatedMap['Zastępstwo'] || 'Substitution')
+            const subForPrefix = targetCode === 'en' ? 'Substitution for:' : (translatedMap['Zastępstwo za:'] || 'Substitution for:')
+
+            const applyDay = (day: typeof schedule[number]) => {
                 day.lessons.forEach((l) => {
                     if (translatedMap[l.subject]) l.subject = translatedMap[l.subject]
                     if (l.topic && translatedMap[l.topic]) l.topic = translatedMap[l.topic]
+                    if (l.flag === 'Odwołane') l.flag = cancelledWord
+                    else if (l.flag === 'Zastępstwo') l.flag = substitutionWord
+                    if (l.teacherAbsenceReason) {
+                        if (l.teacherAbsenceReason.startsWith('Zastępstwo za: ')) {
+                            l.teacherAbsenceReason = `${subForPrefix} ` + l.teacherAbsenceReason.slice('Zastępstwo za: '.length)
+                        } else if (l.teacherAbsenceReason === 'Zastępstwo') {
+                            l.teacherAbsenceReason = substitutionWord
+                        }
+                    }
                 })
-                day.events.forEach((e) => {
-                    if (translatedMap[e.title]) e.title = translatedMap[e.title]
-                    if (e.subjectName && translatedMap[e.subjectName]) e.subjectName = translatedMap[e.subjectName]
-                })
-            })
-            if (nextUpcomingDay) {
-                nextUpcomingDay.lessons.forEach((l) => {
-                    if (translatedMap[l.subject]) l.subject = translatedMap[l.subject]
-                    if (l.topic && translatedMap[l.topic]) l.topic = translatedMap[l.topic]
-                })
-                nextUpcomingDay.events.forEach((e) => {
-                    if (translatedMap[e.title]) e.title = translatedMap[e.title]
-                    if (e.subjectName && translatedMap[e.subjectName]) e.subjectName = translatedMap[e.subjectName]
-                })
+                applyEvents(day.events)
             }
-            allCalendarEvents.forEach((e) => {
-                if (translatedMap[e.title]) e.title = translatedMap[e.title]
-                if (e.subjectName && translatedMap[e.subjectName]) e.subjectName = translatedMap[e.subjectName]
-            })
+
+            schedule.forEach(applyDay)
+            if (nextUpcomingDay) applyDay(nextUpcomingDay)
+            applyEvents(allCalendarEvents)
         }
 
         return {
@@ -614,7 +636,6 @@ export async function fetchSmartTimetable(
                 weekEnd: fridayIso,
                 schedule,
                 nextUpcomingDay,
-                allAbsentTeachers: [],
                 calendarEvents: allCalendarEvents.length > 0 ? allCalendarEvents : schedule.flatMap((d) => d.events)
             }
         }

@@ -1,3 +1,9 @@
+/**
+ * Service: Synergia HTML Message Parser
+ * Extracts inbox/sent message lists, announcements, recipient trees, message bodies, and attachment links from Synergia HTML.
+ * Used by message.service.ts for scraping message endpoints lacking JSON APIs.
+ */
+
 import * as cheerio from 'cheerio'
 import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 

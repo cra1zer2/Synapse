@@ -1,6 +1,6 @@
 {
   "name": "synapse",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "\"E-Dziennik\" — Fast, private client for Librus Synergia",
   "private": true,
   "type": "module",
@@ -14,6 +14,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
+    "@fontsource-variable/roboto-flex": "^5.3.0",
+    "@material/material-color-utilities": "^0.3.0",
     "librus-api": "github:Mati365/librus-api",
     "lucide-react": "^1.72.0",
     "next": "^15.0.0",

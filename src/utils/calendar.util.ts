@@ -1,3 +1,9 @@
+/**
+ * Utils: Calendar (.ics) Export
+ * Builds RFC 5545 calendar payloads and triggers browser downloads for scheduled events.
+ * Used by EventDetailModal in the schedule feature module.
+ */
+
 import { TimetableEvent } from '@/models/timetable.model'
 
 function escapeIcsText(val: string): string {
@@ -18,7 +24,7 @@ function addOneDayIso(isoDate: string): string {
   return `${y}-${m}-${d}`
 }
 
-export function buildEventIcsContent(ev: TimetableEvent): string {
+function buildEventIcsContent(ev: TimetableEvent): string {
   const iso = ev.isoDate || ''
   const compactDate = iso.replace(/-/g, '')
   const nextDate = addOneDayIso(iso).replace(/-/g, '')

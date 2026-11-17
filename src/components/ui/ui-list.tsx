@@ -1,0 +1,144 @@
+'use client'
+import React, { ReactNode, ReactElement, isValidElement } from 'react'
+import { cn } from '@/utils/cn.util'
+
+interface UiListSectionProps {
+  children: ReactNode
+  header?: ReactNode
+  footer?: ReactNode
+  className?: string
+  cardClassName?: string
+}
+
+interface UiCellProps {
+  title: ReactNode
+  subtitle?: ReactNode
+  leading?: ReactNode
+  trailing?: ReactNode
+  detail?: ReactNode
+  onClick?: () => void
+  chevron?: boolean
+  size?: 'compact' | 'standard' | 'tall'
+  tall?: boolean
+  compact?: boolean
+  isLast?: boolean
+  hideSeparator?: boolean
+  disabled?: boolean
+  className?: string
+}
+
+export function UiCell({
+  title,
+  subtitle,
+  leading,
+  trailing,
+  detail,
+  onClick,
+  chevron = false,
+  size = 'standard',
+  tall = false,
+  compact = false,
+  isLast = false,
+  hideSeparator = false,
+  disabled = false,
+  className = '',
+}: UiCellProps) {
+  const isInteractive = Boolean(onClick) && !disabled
+  const resolvedSize = tall ? 'tall' : compact ? 'compact' : size
+  const heightClasses = {
+    compact: 'min-h-[44px] py-1.5',
+    standard: 'min-h-[52px] py-2.5',
+    tall: 'min-h-[66px] py-3',
+  }[resolvedSize]
+  const separatorLeft = leading ? 'left-[56px]' : 'left-4'
+
+  return (
+    <div
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      aria-disabled={disabled || undefined}
+      onClick={isInteractive ? onClick : undefined}
+      onKeyDown={
+        isInteractive
+          ? (e) => {
+              if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
+                e.preventDefault()
+                onClick?.()
+              }
+            }
+          : undefined
+      }
+      className={cn(
+        'relative px-4 flex items-center justify-between gap-3 select-none transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[var(--ios-blue)]/40',
+        heightClasses,
+        isInteractive && 'cursor-pointer hover:bg-[var(--ios-row-hover)] active:bg-[var(--ios-row-active)]',
+        disabled && 'opacity-40 pointer-events-none',
+        className
+      )}
+    >
+      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+        {leading && <div className="w-[28px] h-[28px] shrink-0 flex items-center justify-center">{leading}</div>}
+        <div className="flex flex-col justify-center min-w-0 flex-1">
+          <div className="text-[15px] font-medium text-[var(--ios-label)] leading-snug truncate tracking-[-0.2px]">
+            {title}
+          </div>
+          {subtitle && (
+            <div className="text-[12px] font-normal text-[var(--ios-secondary)] leading-[17px] truncate mt-0.5 tracking-[-0.1px]">
+              {subtitle}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {detail && (
+          <span className="text-[var(--ios-secondary)] text-[15px] font-normal tracking-[-0.2px]">{detail}</span>
+        )}
+        {trailing}
+        {chevron && (
+          <svg
+            className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        )}
+      </div>
+      {!isLast && !hideSeparator && (
+        <div className={cn('absolute bottom-0 right-4 h-[0.5px] bg-[var(--ios-separator)] pointer-events-none', separatorLeft)} />
+      )}
+    </div>
+  )
+}
+
+export function UiListSection({ children, header, footer, className = '', cardClassName = '' }: UiListSectionProps) {
+  const childArray = React.Children.toArray(children).filter(isValidElement)
+  const totalChildren = childArray.length
+  return (
+    <section className={cn('flex flex-col w-full', className)}>
+      {header && (
+        <div className="select-none text-[12px] font-medium uppercase text-[var(--ios-secondary)] tracking-[0.02em] px-4 pt-2 pb-1.5">
+          {header}
+        </div>
+      )}
+      <div className={cn('ios-card rounded-[26px] overflow-hidden', cardClassName)}>
+        {childArray.map((child, index) => {
+          const isLastItem = index === totalChildren - 1
+          if (typeof child.type === 'function') {
+            return React.cloneElement(child as ReactElement<UiCellProps>, { isLast: isLastItem })
+          }
+          return child
+        })}
+      </div>
+      {footer && (
+        <div className="text-[12px] font-normal text-[var(--ios-secondary)] leading-[17px] select-none px-4 pt-1.5 pb-1">
+          {footer}
+        </div>
+      )}
+    </section>
+  )
+}

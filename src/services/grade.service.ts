@@ -1,8 +1,14 @@
+/**
+ * Service: Student Grades
+ * Fetches partial grades, categories, subjects, comments, and computes semester/overall weighted GPAs and recovery suggestions.
+ * Used by dashboard sync and diagnostics Server Actions.
+ */
+
 'use server'
 
 import { GradeItem, SubjectGrades, GradesResult, FixOption, SubjectWarning } from '@/models/grade.model'
 import { fetchGatewayEndpoint } from '@/services/gateway.service'
-import { translateBatch } from '@/services/translation.service'
+import { translateBatch, resolveTranslateTarget } from '@/services/translation.service'
 
 function parseGradeValue(gradeStr: string): number | null {
     const clean = gradeStr.trim().toLowerCase()
@@ -64,7 +70,7 @@ function isDateRecent(dateStr: string, daysThreshold: number = 14): boolean {
     return diffDays <= daysThreshold
 }
 
-function generateFixOptions(grades: GradeItem[]): SubjectWarning {
+function generateFixOptions(grades: GradeItem[], translate: boolean = false): SubjectWarning {
     let totalScore = 0
     let totalWeight = 0
 
@@ -81,50 +87,61 @@ function generateFixOptions(grades: GradeItem[]): SubjectWarning {
         return Math.ceil(needed * 2) / 2
     }
 
-    const gradeWeight2 = solveForGrade(2)
-    const gradeWeight3 = solveForGrade(3)
+    const gradeWeight2 = Math.max(2, solveForGrade(2))
+    const gradeWeight3 = Math.max(2, solveForGrade(3))
 
     const fixOptions: FixOption[] = []
 
     if (gradeWeight2 <= 6) {
         fixOptions.push({
-            gradeNeeded: Math.max(2, gradeWeight2),
+            gradeNeeded: gradeWeight2,
             weight: 2,
             count: 1,
-            description: 'Otrzymaj ocenę co najmniej ' + Math.max(2, gradeWeight2) + ' z kartkówki (waga 2)'
+            description: translate
+                ? `Get at least ${gradeWeight2} on a quiz (weight 2)`
+                : `Otrzymaj ocenę co najmniej ${gradeWeight2} z kartkówki (waga 2)`
         })
     }
 
     if (gradeWeight3 <= 6) {
         fixOptions.push({
-            gradeNeeded: Math.max(2, gradeWeight3),
+            gradeNeeded: gradeWeight3,
             weight: 3,
             count: 1,
-            description: 'Otrzymaj ocenę co najmniej ' + Math.max(2, gradeWeight3) + ' ze sprawdzianu (waga 3)'
+            description: translate
+                ? `Get at least ${gradeWeight3} on an exam (weight 3)`
+                : `Otrzymaj ocenę co najmniej ${gradeWeight3} ze sprawdzianu (waga 3)`
         })
     }
 
-    const doubleGradeNeeded = Math.ceil(((targetAverage * (totalWeight + 4) - totalScore) / 4) * 2) / 2
+    const doubleGradeNeeded = Math.max(
+        2,
+        Math.ceil(((targetAverage * (totalWeight + 4) - totalScore) / 4) * 2) / 2
+    )
     if (doubleGradeNeeded <= 6) {
         fixOptions.push({
-            gradeNeeded: Math.max(2, doubleGradeNeeded),
+            gradeNeeded: doubleGradeNeeded,
             weight: 2,
             count: 2,
-            description: 'Otrzymaj dwie oceny ' + Math.max(2, doubleGradeNeeded) + ' (waga 2)'
+            description: translate
+                ? `Get two grades of ${doubleGradeNeeded} (weight 2)`
+                : `Otrzymaj dwie oceny ${doubleGradeNeeded} (waga 2)`
         })
     }
 
     if (fixOptions.length === 0) {
         return {
             status: 'done',
-            message: 'Oceny poprawione',
+            message: translate ? 'Grades improved' : 'Oceny poprawione',
             fixOptions: []
         }
     }
 
     return {
         status: 'critical',
-        message: 'Średnia poniżej 2.0 — wymagana poprawa',
+        message: translate
+            ? 'Average below 2.0 — improvement needed'
+            : 'Średnia poniżej 2.0 — wymagana poprawa',
         fixOptions
     }
 }
@@ -132,8 +149,9 @@ function generateFixOptions(grades: GradeItem[]): SubjectWarning {
 export async function fetchStudentGrades(
     username: string,
     pass: string,
-    translate: boolean = false
+    translate: boolean | string = false
 ): Promise<{ success: boolean; data?: GradesResult; error?: string }> {
+    const targetCode = resolveTranslateTarget(translate)
     try {
         const [gradesRes, categoriesRes, subjectsRes, usersRes, lessonsRes, commentsRes] = await Promise.all([
             fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Grades').catch((err) => {
@@ -288,7 +306,7 @@ export async function fetchStudentGrades(
                 if (sub.finalAverage < 2.0) {
                     failingSubjectsCount++
                     const relevantGrades = [...sub.semester1, ...sub.semester2]
-                    sub.warning = generateFixOptions(relevantGrades)
+                    sub.warning = generateFixOptions(relevantGrades, Boolean(targetCode))
                 }
             }
         }
@@ -299,37 +317,67 @@ export async function fetchStudentGrades(
 
         let globalWarning: string | undefined = undefined
         if (evaluatedSubjectsCount > 0 && failingSubjectsCount === evaluatedSubjectsCount) {
-            globalWarning = 'Wszystkie średnie wymagają uwagi'
+            globalWarning = targetCode
+                ? 'All averages need attention'
+                : 'Wszystkie średnie wymagają uwagi'
         }
 
-        if (translate) {
+        if (targetCode) {
             const textsToTranslate = new Set<string>()
-            subjectsList.forEach((s) => textsToTranslate.add(s.subject))
-            recentGrades.forEach((g) => textsToTranslate.add(g.category))
+            const collectGrade = (g: GradeItem) => {
+                if (g.subject) textsToTranslate.add(g.subject)
+                if (g.category) textsToTranslate.add(g.category)
+                if (g.description) textsToTranslate.add(g.description)
+            }
 
-            const translationMap = await translateBatch(Array.from(textsToTranslate))
+            subjectsList.forEach((s) => {
+                if (s.subject) textsToTranslate.add(s.subject)
+                if (targetCode !== 'en' && s.warning) {
+                    textsToTranslate.add(s.warning.message)
+                    s.warning.fixOptions.forEach((opt) => textsToTranslate.add(opt.description))
+                }
+                s.semester1.forEach(collectGrade)
+                s.semester2.forEach(collectGrade)
+            })
+            recentGrades.forEach(collectGrade)
+            if (targetCode !== 'en' && globalWarning) textsToTranslate.add(globalWarning)
+
+            const translationMap = await translateBatch(Array.from(textsToTranslate), targetCode)
+            const visitedGrades = new Set<GradeItem>()
+
+            const applyGrade = (g: GradeItem) => {
+                if (visitedGrades.has(g)) return
+                visitedGrades.add(g)
+                if (g.subject && translationMap[g.subject]) {
+                    g.subject = translationMap[g.subject]
+                }
+                if (g.category && translationMap[g.category]) {
+                    g.category = translationMap[g.category]
+                }
+                if (g.description && translationMap[g.description]) {
+                    g.description = translationMap[g.description]
+                }
+            }
 
             subjectsList.forEach((s) => {
                 if (translationMap[s.subject]) {
                     s.subject = translationMap[s.subject]
                 }
-                s.semester1.forEach((g) => {
-                    if (translationMap[g.category]) {
-                        g.category = translationMap[g.category]
-                    }
-                })
-                s.semester2.forEach((g) => {
-                    if (translationMap[g.category]) {
-                        g.category = translationMap[g.category]
-                    }
-                })
+                if (targetCode !== 'en' && s.warning) {
+                    if (translationMap[s.warning.message]) s.warning.message = translationMap[s.warning.message]
+                    s.warning.fixOptions.forEach((opt) => {
+                        if (translationMap[opt.description]) opt.description = translationMap[opt.description]
+                    })
+                }
+                s.semester1.forEach(applyGrade)
+                s.semester2.forEach(applyGrade)
             })
 
-            recentGrades.forEach((g) => {
-                if (translationMap[g.category]) {
-                    g.category = translationMap[g.category]
-                }
-            })
+            if (targetCode !== 'en' && globalWarning && translationMap[globalWarning]) {
+                globalWarning = translationMap[globalWarning]
+            }
+
+            recentGrades.forEach(applyGrade)
         }
 
         const toDateSortKey = (d: string) => {

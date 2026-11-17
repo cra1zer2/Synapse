@@ -1,35 +1,21 @@
+/**
+ * Service: Offline & Demo Data Generator
+ * Generates realistic Librus timetables, grades, attendance, messages, announcements, and justifications for demo accounts.
+ * Mirrors live service schemas across both Polish and non-Polish language modes.
+ */
+
 import { StudentProfile } from '@/models/account.model'
 import { SmartTimetableResult, DaySchedule, LessonItem, TimetableEvent } from '@/models/timetable.model'
 import { GradesResult } from '@/models/grade.model'
 import { AttendanceResult, SubjectAttendance, AbsenceDetail, LegacyAttendanceTable } from '@/models/attendance.model'
-import { MessagesActionResult, MessageItem, AnnouncementItem, ReceiverItem, UnreadCounters, MessageAttachment } from '@/models/message.model'
+import { MessagesActionResult, MessageItem, AnnouncementItem, ReceiverItem, MessageAttachment } from '@/models/message.model'
 import { LiveJustificationItem } from '@/models/justification.model'
+import { isDemoParentAccount } from '@/utils/account.util'
 import { getSchoolWeekMondayIso, getTodayIsoString } from '@/utils/date.util'
 export { getDemoGrades } from '@/services/demo/grades.demo'
 
-export function isDemoAccount(username?: string): boolean {
-    if (!username) return false
-    const u = username.trim().toLowerCase()
-    return (
-        u === 'demo' ||
-        u === 'demou' ||
-        u === 'demor' ||
-        u === 'demoparent' ||
-        u === 'test' ||
-        u === 'testu' ||
-        u.startsWith('demo_') ||
-        u.startsWith('test_')
-    )
-}
-
-export function isDemoParent(username?: string): boolean {
-    if (!username) return false
-    const u = username.trim().toLowerCase()
-    return u === 'demor' || u === 'demoparent'
-}
-
 export function getDemoStudentProfile(username: string): StudentProfile {
-    const isParent = isDemoParent(username)
+    const isParent = isDemoParentAccount(username)
     return {
         fullName: isParent ? 'Marek Kowalski (Rodzic)' : 'Aleksander Kowalski',
         className: '4T',
@@ -660,15 +646,6 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
         weekStart: mondayIso,
         weekEnd: fridayIso,
         schedule,
-        allAbsentTeachers: [
-            {
-                teacher: 'dr Jan Nowak',
-                date: dayDates[4].displayDate,
-                isoDate: dayDates[4].isoDate,
-                reason: s('Udział w konferencji naukowej', 'Attending academic conference'),
-                isRelevantToStudent: true
-            }
-        ],
         calendarEvents
     }
 }
@@ -991,13 +968,6 @@ Uczniowie klas IV proszeni są o dopełnienie formalności do 20 listopada.`
             inboxMs: 6,
             previewsMs: 6
         }
-    }
-}
-
-export function getDemoUnreadCounters(): UnreadCounters {
-    return {
-        unreadMessages: 2,
-        announcementsCount: 1
     }
 }
 

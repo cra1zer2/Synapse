@@ -1,10 +1,17 @@
+/**
+ * Hook: Account & Multi-Profile Session Manager
+ * Manages Librus credential verification, local multi-account persistence, active account switching, and logout cleanup.
+ * Syncs with browser `localStorage` and invokes `getStudentProfileAction`.
+ */
+
 'use client'
 
 import { useState, useEffect } from 'react'
 import { StudentProfile, SavedAccount } from '@/models/account.model'
-import { AppLanguage, AppDictionary } from '@/config/dictionary.config'
+import { AppLanguage, AppDictionary, pickText } from '@/config/dictionary.config'
 import { getStudentProfileAction } from '@/app/actions'
 import { isStudentUsername, sanitizeAccountLabel } from '@/utils/account.util'
+import { PENDING_JUSTIFICATIONS_STORAGE_KEY } from '@/utils/justification.util'
 
 interface UseAccountSessionOptions {
     lang: AppLanguage
@@ -47,7 +54,6 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
 
     const [newAccUser, setNewAccUser] = useState('')
     const [newAccPass, setNewAccPass] = useState('')
-    const [isAddingAcc, setIsAddingAcc] = useState(false)
     const [addAccountStep, setAddAccountStep] = useState<'input' | 'verifying' | 'preview'>('input')
     const [addAccountCandidate, setAddAccountCandidate] = useState<StudentProfile | null>(null)
     const [addAccountError, setAddAccountError] = useState<string | null>(null)
@@ -55,6 +61,11 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
     const [authStep, setAuthStep] = useState<'input' | 'verifying' | 'preview'>('input')
     const [verifiedCandidate, setVerifiedCandidate] = useState<StudentProfile | null>(null)
     const [authError, setAuthError] = useState<string | null>(null)
+
+    const duplicateAccountError = pickText(lang, {
+        pl: 'To konto jest już dodane na tym urządzeniu.',
+        en: 'This account is already added.'
+    })
 
     useEffect(() => {
         const savedAccountsJson = localStorage.getItem('synapse_accounts')
@@ -65,7 +76,7 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
                 if (Array.isArray(parsed)) {
                     loadedAccounts = deduplicateSavedAccounts(parsed)
                 }
-            } catch { }
+            } catch {}
         }
 
         const savedUser = (localStorage.getItem('synapse_user') || '').trim()
@@ -178,20 +189,14 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
             (a) => a.username.trim().toLowerCase() === candidateKey
         )
         if (alreadyExists) {
-            setAddAccountError(
-                lang === 'en'
-                    ? 'This account is already added.'
-                    : 'To konto jest już dodane na tym urządzeniu.'
-            )
+            setAddAccountError(duplicateAccountError)
             setAddAccountStep('input')
             return
         }
 
         setAddAccountStep('verifying')
-        setIsAddingAcc(true)
 
         const res = await getStudentProfileAction(cleanCandidateUser, newAccPass)
-        setIsAddingAcc(false)
 
         if (res.success && res.data) {
             const sameRoleAndPerson = savedAccounts.some(
@@ -203,11 +208,7 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
                     a.username.trim().toLowerCase() === candidateKey
             )
             if (sameRoleAndPerson) {
-                setAddAccountError(
-                    lang === 'en'
-                        ? 'This account is already added.'
-                        : 'To konto jest już dodane na tym urządzeniu.'
-                )
+                setAddAccountError(duplicateAccountError)
                 setAddAccountStep('input')
                 return
             }
@@ -228,11 +229,7 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         const key = cleanUser.toLowerCase()
 
         if (savedAccounts.some((a) => a.username.trim().toLowerCase() === key)) {
-            setAddAccountError(
-                lang === 'en'
-                    ? 'This account is already added.'
-                    : 'To konto jest już dodane na tym urządzeniu.'
-            )
+            setAddAccountError(duplicateAccountError)
             setAddAccountStep('input')
             return false
         }
@@ -280,6 +277,7 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         localStorage.removeItem('synapse_cache')
         localStorage.removeItem('synapse_week_cache')
         localStorage.removeItem('synapse_allow_student_justifications')
+        localStorage.removeItem(PENDING_JUSTIFICATIONS_STORAGE_KEY)
         setUsername('')
         setPassword('')
         setProfile(null)
@@ -304,7 +302,6 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         setNewAccUser,
         newAccPass,
         setNewAccPass,
-        isAddingAcc,
         authStep,
         setAuthStep,
         verifiedCandidate,
@@ -313,7 +310,6 @@ export function useAccountSession({ lang, t }: UseAccountSessionOptions) {
         handleStartVerification,
         handleConfirmLogin,
         handleSwitchAccount,
-        handleAddSecondaryAccount: handleStartAddAccountVerification,
         addAccountStep,
         setAddAccountStep,
         addAccountCandidate,

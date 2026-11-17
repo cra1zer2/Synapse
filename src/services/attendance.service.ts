@@ -1,3 +1,9 @@
+/**
+ * Service: Attendance Metrics
+ * Aggregates attendance records, lesson catalogs, types, and live justifications from Gateway v2 into subject and journal views.
+ * Used by dashboard sync and diagnostics Server Actions.
+ */
+
 'use server'
 
 import { 
@@ -9,14 +15,15 @@ import {
 } from '@/models/attendance.model'
 import { fetchGatewayEndpoint } from '@/services/gateway.service'
 import { fetchLiveJustificationsHistory } from '@/services/justification.service'
-import { translateBatch } from '@/services/translation.service'
+import { translateBatch, resolveTranslateTarget } from '@/services/translation.service'
 import { isStudentUsername } from '@/utils/account.util'
 
 export async function fetchAttendanceMetrics(
     username: string,
     pass: string,
-    translate: boolean = false
+    translate: boolean | string = false
 ): Promise<{ success: boolean; data?: AttendanceResult; error?: string }> {
+    const targetCode = resolveTranslateTarget(translate)
     try {
         const [
             allAttendancesRes,
@@ -329,21 +336,50 @@ export async function fetchAttendanceMetrics(
             )
         })
 
-        if (translate) {
-            const textsToTranslate = new Set<string>()
-            subjects.forEach((s) => textsToTranslate.add(s.subject))
-            parsedAbsences.forEach((a) => textsToTranslate.add(a.subject))
-            const map = await translateBatch(Array.from(textsToTranslate))
+        if (targetCode === 'en') {
+const enTypeNames: Record<string, string> = {
+  nb: 'Unexcused absence',
+  u: 'Excused absence',
+  sp: 'Late',
+  zw: 'Released',
+  sl: 'Exempt / Limit',
+}
+const normalizeEnType = (a: (typeof parsedAbsences)[number]) => {
+  if (enTypeNames[a.type]) a.typeName = enTypeNames[a.type]
+}
+subjects.forEach((s) => s.absences.forEach(normalizeEnType))
+parsedAbsences.forEach(normalizeEnType)
+unexcusedAbsences.forEach(normalizeEnType)
+}
+if (targetCode) {
+const textsToTranslate = new Set<string>()
+            const collectAbsence = (a: (typeof parsedAbsences)[number]) => {
+                if (a.subject) textsToTranslate.add(a.subject)
+                if (a.typeName && targetCode !== 'en') textsToTranslate.add(a.typeName)
+            }
+
+            subjects.forEach((s) => {
+                if (s.subject) textsToTranslate.add(s.subject)
+                s.absences.forEach(collectAbsence)
+            })
+            parsedAbsences.forEach(collectAbsence)
+            unexcusedAbsences.forEach(collectAbsence)
+
+            const map = await translateBatch(Array.from(textsToTranslate), targetCode)
+            const visitedAbsences = new Set<(typeof parsedAbsences)[number]>()
+
+            const applyAbsence = (a: (typeof parsedAbsences)[number]) => {
+                if (visitedAbsences.has(a)) return
+                visitedAbsences.add(a)
+                if (a.subject && map[a.subject]) a.subject = map[a.subject]
+                if (a.typeName && map[a.typeName]) a.typeName = map[a.typeName]
+            }
 
             subjects.forEach((s) => {
                 if (map[s.subject]) s.subject = map[s.subject]
-                s.absences.forEach((a) => {
-                    if (map[a.subject]) a.subject = map[a.subject]
-                })
+                s.absences.forEach(applyAbsence)
             })
-            unexcusedAbsences.forEach((a) => {
-                if (map[a.subject]) a.subject = map[a.subject]
-            })
+            unexcusedAbsences.forEach(applyAbsence)
         }
 
         const result: AttendanceResult = {

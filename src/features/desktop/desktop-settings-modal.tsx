@@ -362,7 +362,7 @@ export function DesktopSettingsModal({
                         subtitle={`${acc.role === 'student' ? t.studentRole : t.parentRole} · ${acc.username}`}
                         trailing={
                           isCurrent ? (
-                            <span className="text-[11.5px] font-semibold text-[var(--mac-blue)] flex items-center gap-1">
+                            <span className="text-[12px] font-semibold text-[var(--mac-blue)] flex items-center gap-1">
                               <Check className="w-3.5 h-3.5" />
                               {pickText(currentLang, { pl: 'Aktywne', en: 'Active' })}
                             </span>
@@ -540,12 +540,12 @@ export function DesktopSettingsModal({
 
               <MacGroupBox noPadding>
                 {logs.length > 0 ? (
-                  <div className="divide-y divide-[var(--mac-row-divider)]">
+                  <div className="mac-divide-y">
                     {logs.map((item) => (
                       <div key={item.id} className="px-3.5 py-2.5 flex items-center justify-between gap-3 text-[12px]">
                         <div className="min-w-0">
                           <div className="font-semibold text-[var(--mac-label-1)] truncate">{item.name}</div>
-                          <div className="text-[10.5px] text-[var(--mac-label-2)] font-mono">
+                          <div className="text-[11px] text-[var(--mac-label-2)] font-mono">
                             {item.timestamp} {item.details ? `· ${item.details}` : ''}
                           </div>
                           {item.error && (

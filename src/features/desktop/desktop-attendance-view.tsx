@@ -31,6 +31,8 @@ import { UiSpinner } from '@/components/ui/ui-spinner'
 import { cn } from '@/utils/cn.util'
 import { MacGroupBox, MacPushButton, MacSegmentedControl } from './mac-primitives'
 
+export type DesktopAttendanceSubTab = 'summary' | 'journal' | 'justifications'
+
 interface DesktopAttendanceViewProps {
   attendanceData: AttendanceResult | null
   attendanceError: string | null
@@ -50,11 +52,11 @@ interface DesktopAttendanceViewProps {
     lessons: number[]
     message: string
   }) => Promise<{ ok: boolean; error?: string }>
+  subTab: DesktopAttendanceSubTab
   lang: AppLanguage
   t: AppDictionary
 }
 
-type AttTab = 'summary' | 'journal' | 'justifications'
 type ExcuseModeTab = 'nb' | 'range' | 'hours'
 
 export function DesktopAttendanceView({
@@ -71,10 +73,10 @@ export function DesktopAttendanceView({
   onChangeLiveFilter,
   onLoadLiveJustifications,
   onSubmitJustification,
+  subTab: requestedSubTab,
   lang,
   t
 }: DesktopAttendanceViewProps) {
-  const [subTab, setSubTab] = useState<AttTab>('summary')
   const [selectedSubject, setSelectedSubject] = useState<SubjectAttendance | null>(null)
   const [selectedJournalDay, setSelectedJournalDay] = useState<LegacyAttendanceDay | null>(null)
   const [pendingList, setPendingList] = useState<PendingJustificationRecord[]>([])
@@ -92,6 +94,8 @@ export function DesktopAttendanceView({
   const [submitFailures, setSubmitFailures] = useState<Array<{ date: string; error: string }>>([])
 
   const allowExcuse = canSubmitExcuse !== undefined ? canSubmitExcuse : !isStudent
+  const subTab: DesktopAttendanceSubTab =
+    !allowExcuse && requestedSubTab === 'justifications' ? 'summary' : requestedSubTab
 
   useEffect(() => {
     if (attendanceData?.subjects) {
@@ -378,36 +382,7 @@ export function DesktopAttendanceView({
 
   return (
     <div className="h-full flex flex-col min-h-0 select-none">
-      {/* Sub-navigation bar */}
-      <div className="px-6 py-3 border-b border-[var(--mac-row-divider)] flex items-center justify-between gap-4 shrink-0">
-        <MacSegmentedControl<AttTab>
-          value={subTab}
-          onChange={setSubTab}
-          options={[
-            { id: 'summary', label: pickText(lang, { pl: 'Podsumowanie', en: 'Summary' }) },
-            { id: 'journal', label: pickText(lang, { pl: 'Dziennik obecności', en: 'Journal' }) },
-            ...(allowExcuse
-              ? [{ id: 'justifications' as const, label: pickText(lang, { pl: 'Usprawiedliwienia', en: 'Justifications' }) }]
-              : [])
-          ]}
-          className="w-[420px]"
-        />
-
-        <div className="flex items-center gap-4 text-[12px] tabular-nums">
-          <span className="text-[var(--mac-label-2)]">
-            {t.attendanceRate}:{' '}
-            <strong className="text-[var(--mac-label-1)]">{attendanceData.overallPercentage}%</strong>
-          </span>
-          <span className="text-[var(--mac-label-2)]">
-            {pickText(lang, { pl: 'Nieusprawiedliwione:', en: 'Unexcused:' })}{' '}
-            <strong className={attendanceData.unexcusedAbsences.length > 0 ? 'text-[var(--mac-red)]' : 'text-[var(--mac-label-1)]'}>
-              {attendanceData.unexcusedAbsences.length} nb
-            </strong>
-          </span>
-        </div>
-      </div>
-
-      {/* TAB 1: SUMMARY SPLIT VIEW */}
+      {/* TAB 1: SUMMARY SPLIT VIEW (mode switched in macOS 27 Unified Toolbar) */}
       {subTab === 'summary' && (
         <div className="flex-1 min-h-0 flex">
           <div className="flex-1 min-w-0 overflow-y-auto p-5 flex flex-col gap-4">
@@ -453,7 +428,7 @@ export function DesktopAttendanceView({
             </div>
 
             <MacGroupBox title={t.subjectsSection} noPadding>
-              <div className="divide-y divide-[var(--mac-row-divider)]">
+              <div className="mac-divide-y">
                 {sortedSubjects.map((sub) => {
                   const isSel = selectedSubject?.subject === sub.subject
                   const activeNb = sub.absences.filter((a) => {
@@ -473,7 +448,7 @@ export function DesktopAttendanceView({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-[13.5px] font-semibold text-[var(--mac-label-1)] truncate">
+                          <span className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
                             {formatSubjectName(sub.subject, showFullSubjectNames)}
                           </span>
                           {activeNb > 0 && (
@@ -528,7 +503,7 @@ export function DesktopAttendanceView({
 
                 <MacGroupBox title={t.recordedAbsencesTitle} noPadding>
                   {selectedSubject.absences.length > 0 ? (
-                    <div className="divide-y divide-[var(--mac-row-divider)]">
+                    <div className="mac-divide-y">
                       {selectedSubject.absences.map((item, idx) => {
                         const iso = item.date.includes('.') ? item.date.split('.').reverse().join('-') : item.date
                         const isPend = isLessonJustificationPending(pendingList, iso, item.date, item.lessonNumber)
@@ -536,7 +511,7 @@ export function DesktopAttendanceView({
                         return (
                           <div key={`${item.date}-${item.lessonNumber}-${idx}`} className="px-3.5 py-2.5 flex flex-col gap-1">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-[12.5px] font-semibold text-[var(--mac-label-1)] tabular-nums">
+                              <span className="text-[12px] font-semibold text-[var(--mac-label-1)] tabular-nums">
                                 {item.date} · {t.lessonNumberLabel(item.lessonNumber)}
                               </span>
                               {isPend ? (
@@ -582,7 +557,7 @@ export function DesktopAttendanceView({
                 { label: pickText(lang, { pl: 'Razem nieob.', en: 'Total missed' }), val: journalSummary.total, tone: 'text-[var(--mac-label-1)]' }
               ].map((stat) => (
                 <MacGroupBox key={stat.label}>
-                  <div className="text-[10.5px] font-semibold uppercase text-[var(--mac-label-2)] truncate">{stat.label}</div>
+                  <div className="text-[11px] font-semibold uppercase text-[var(--mac-label-2)] truncate">{stat.label}</div>
                   <div className={cn('text-[20px] font-bold tabular-nums mt-0.5', stat.tone)}>{stat.val}</div>
                 </MacGroupBox>
               ))}
@@ -602,7 +577,7 @@ export function DesktopAttendanceView({
                       <th className="py-2.5 px-3 text-right">nb / u</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--mac-row-divider)]">
+                  <tbody className="mac-divide-y">
                     {journalDays.map((day) => {
                       const isSel = selectedJournalDay?.date === day.date
                       const meta = formatDayDate(day.isoDate, lang)
@@ -615,7 +590,7 @@ export function DesktopAttendanceView({
                             isSel ? 'bg-[var(--ios-blue-subtle)]/40' : 'hover:bg-[var(--mac-fill-4)]'
                           )}
                         >
-                          <td className="py-2.5 px-4 text-[12.5px] font-medium text-[var(--mac-label-1)] tabular-nums">
+                          <td className="py-2.5 px-4 text-[12px] font-medium text-[var(--mac-label-1)] tabular-nums">
                             {day.date}{' '}
                             <span className="text-[11px] text-[var(--mac-label-2)] ml-1">{meta.weekday}</span>
                           </td>
@@ -669,14 +644,14 @@ export function DesktopAttendanceView({
                   </h3>
                 </div>
                 <MacGroupBox noPadding>
-                  <div className="divide-y divide-[var(--mac-row-divider)]">
+                  <div className="mac-divide-y">
                     {Object.entries(selectedJournalDay.lessons)
                       .filter(([, l]) => l && l.type !== 'ob')
                       .sort(([a], [b]) => Number(a) - Number(b))
                       .map(([num, l]) => {
                         const st = getAttendanceTypeStyle(l.type)
                         return (
-                          <div key={num} className="px-3.5 py-2.5 flex items-center justify-between gap-2 text-[12.5px]">
+                          <div key={num} className="px-3.5 py-2.5 flex items-center justify-between gap-2 text-[12px]">
                             <span className="font-medium text-[var(--mac-label-1)]">
                               {t.lessonNumberLabel(Number(num))}
                             </span>
@@ -705,7 +680,7 @@ export function DesktopAttendanceView({
               <h3 className="text-[15px] font-bold text-[var(--mac-label-1)]">
                 {pickText(lang, { pl: 'Wyślij usprawiedliwienie', en: 'Submit Justification' })}
               </h3>
-              <p className="text-[11.5px] text-[var(--mac-label-2)] mt-0.5">
+              <p className="text-[12px] text-[var(--mac-label-2)] mt-0.5">
                 {pickText(lang, {
                   pl: 'Wybierz nieobecności, zakres dni lub pojedyncze godziny lekcyjne.',
                   en: 'Select unexcused absences, a date range, or specific periods.'
@@ -730,7 +705,7 @@ export function DesktopAttendanceView({
               {excuseTab === 'nb' && (
                 <MacGroupBox title={`${pickText(lang, { pl: 'Wybrane', en: 'Selected' })}: ${selectedNbCount}`} noPadding>
                   {groupedNbDays.length > 0 ? (
-                    <div className="divide-y divide-[var(--mac-row-divider)] max-h-[260px] overflow-y-auto">
+                    <div className="mac-divide-y max-h-[260px] overflow-y-auto">
                       {groupedNbDays.map((g) => (
                         <div key={g.date} className="p-3 flex flex-col gap-1.5">
                           <div className="text-[12px] font-semibold text-[var(--mac-label-1)] tabular-nums">{g.date}</div>
@@ -746,7 +721,7 @@ export function DesktopAttendanceView({
                                   disabled={isPend}
                                   onClick={() => setSelectedNbMap((prev) => ({ ...prev, [key]: !prev[key] }))}
                                   className={cn(
-                                    'px-2.5 py-1 rounded-[7px] text-[11px] font-medium cursor-pointer transition-colors border',
+                                    'px-3 py-1 rounded-full text-[11px] font-medium cursor-pointer transition-colors border',
                                     isPend
                                       ? 'bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] border-transparent opacity-70 cursor-default'
                                       : checked
@@ -796,7 +771,7 @@ export function DesktopAttendanceView({
                       />
                     </div>
                   </div>
-                  <div className="text-[11.5px] text-[var(--mac-label-2)] mt-2.5">
+                  <div className="text-[12px] text-[var(--mac-label-2)] mt-2.5">
                     {pickText(lang, { pl: 'Lekcji do wysłania:', en: 'Periods queued:' })}{' '}
                     <strong className="text-[var(--mac-label-1)]">{rangePlan.totalLessons}</strong>
                   </div>
@@ -825,7 +800,7 @@ export function DesktopAttendanceView({
                           type="button"
                           onClick={() => setSelectedHoursMap((p) => ({ ...p, [l.number]: !p[l.number] }))}
                           className={cn(
-                            'px-2.5 py-1 rounded-[7px] text-[11px] font-medium cursor-pointer border',
+                            'px-3 py-1 rounded-full text-[11px] font-medium cursor-pointer border',
                             active
                               ? 'bg-[var(--mac-blue)] text-white border-transparent'
                               : 'bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] border-[var(--mac-group-border)]'
@@ -848,7 +823,7 @@ export function DesktopAttendanceView({
                   value={parentMessage}
                   onChange={(e) => setParentMessage(e.target.value)}
                   placeholder={t.commentPlaceholder}
-                  className="w-full p-2.5 rounded-[10px] bg-[var(--mac-group-bg)] border border-[var(--mac-group-border)] text-[12.5px] text-[var(--mac-label-1)] placeholder-[var(--mac-label-2)] outline-none mac-input-focus resize-none"
+                  className="w-full p-2.5 rounded-[10px] bg-[var(--mac-group-bg)] border border-[var(--mac-group-border)] text-[13px] text-[var(--mac-label-1)] placeholder-[var(--mac-label-2)] outline-none mac-input-focus resize-none"
                 />
               </div>
 
@@ -927,7 +902,7 @@ export function DesktopAttendanceView({
               </div>
             ) : liveJustifications.length > 0 ? (
               <MacGroupBox noPadding>
-                <div className="divide-y divide-[var(--mac-row-divider)]">
+                <div className="mac-divide-y">
                   {liveJustifications.map((item) => {
                     const code =
                       item.statusCode === 'accepted' ? 1 : item.statusCode === 'rejected' ? 2 : item.statusCode === 'pending' ? 0 : item.statusRaw || 0

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { PanelLeft, RefreshCw, Settings, SquarePen } from 'lucide-react'
+import { Archive, Calendar, ChevronLeft, ChevronRight, PanelLeft, RefreshCw, Settings, SquarePen } from 'lucide-react'
 import { SavedAccount, StudentProfile } from '@/models/account.model'
 import { SmartTimetableResult, LessonItem, TimetableEvent } from '@/models/timetable.model'
 import { GradesResult, GradeItem } from '@/models/grade.model'
@@ -17,14 +17,20 @@ import { ScheduleFeatureController } from '@/features/schedule/schedule-feature'
 import { GradesFeatureController } from '@/features/grades/grades-feature'
 import { AttendanceFeatureController } from '@/features/attendance/attendance-feature'
 import { MessagesFeatureController } from '@/features/messages/messages-feature'
+import { computeLiveWeekDays, getTodayIsoString } from '@/utils/date.util'
 import { cn } from '@/utils/cn.util'
-import { MacToolbarButton } from './mac-primitives'
+import {
+  MacSearchField,
+  MacSegmentedControl,
+  MacToolbarButton,
+  MacToolbarCapsuleGroup
+} from './mac-primitives'
 import { DesktopNavSection, DesktopSidebar } from './desktop-sidebar'
 import { DesktopOverview } from './desktop-overview'
 import { DesktopTimetableView } from './desktop-timetable-view'
 import { DesktopDeadlinesView } from './desktop-deadlines-view'
 import { DesktopGradesView } from './desktop-grades-view'
-import { DesktopAttendanceView } from './desktop-attendance-view'
+import { DesktopAttendanceSubTab, DesktopAttendanceView } from './desktop-attendance-view'
 import { DesktopMessagesView } from './desktop-messages-view'
 import { DesktopSettingsModal, DesktopSettingsPane } from './desktop-settings-modal'
 
@@ -184,6 +190,16 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
   const [settingsPane, setSettingsPane] = useState<DesktopSettingsPane>('account')
   const [settingsAddAccount, setSettingsAddAccount] = useState(false)
 
+  // View controls lifted into macOS 27 52px Unified Toolbar
+  const [timetableViewMode, setTimetableViewMode] = useState<'week' | 'day'>('week')
+  const [deadlinesViewMode, setDeadlinesViewMode] = useState<'list' | 'calendar'>('list')
+  const [deadlinesSearchQuery, setDeadlinesSearchQuery] = useState('')
+  const [deadlinesShowArchived, setDeadlinesShowArchived] = useState(false)
+  const [attendanceSubTab, setAttendanceSubTab] = useState<DesktopAttendanceSubTab>('summary')
+
+  const liveWeekMeta = useMemo(() => computeLiveWeekDays(currentWeekPivot), [currentWeekPivot])
+  const allowExcuse = canSubmitExcuse !== undefined ? canSubmitExcuse : !isStudent
+
   // Deep-jump handoffs from Overview
   const [timetableSelection, setTimetableSelection] = useState<{
     lesson?: LessonItem
@@ -229,7 +245,7 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
   }, [activeSection, lang, t])
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex bg-[var(--mac-window-bg)] text-[var(--mac-label-1)]">
+    <div className="h-dvh w-full overflow-hidden flex bg-[var(--mac-window-bg)] text-[var(--mac-label-1)] mac-desktop-root">
       <DesktopSidebar
         activeSection={activeSection}
         onSelectSection={onSelectSection}
@@ -274,11 +290,11 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
                 aria-label={pickText(lang, { pl: 'Pokaż pasek boczny', en: 'Show Sidebar' })}
               />
             )}
-            <div className="min-w-0 flex items-baseline gap-2.5">
-              <h1 className="text-[15px] font-semibold text-[var(--mac-label-1)] leading-[20px] truncate">
+            <div className="min-w-0 flex flex-col justify-center">
+              <h1 className="text-[15px] font-semibold text-[var(--mac-label-1)] leading-[18px] truncate">
                 {windowTitle}
               </h1>
-              <span className="text-[11px] text-[var(--mac-label-2)] tabular-nums truncate">
+              <span className="text-[11px] text-[var(--mac-label-2)] leading-[14px] tabular-nums truncate">
                 {isUpdating
                   ? t.updatingStatus
                   : formattedSyncTime
@@ -289,6 +305,106 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {activeSection === 'timetable' && (
+              <>
+                <MacToolbarCapsuleGroup>
+                  <button
+                    type="button"
+                    onClick={() => onShiftWeek(-7)}
+                    aria-label={pickText(lang, { pl: 'Poprzedni tydzień', en: 'Previous week' })}
+                    className="h-[28px] w-[28px] rounded-full inline-flex items-center justify-center hover:bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] cursor-pointer transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectDate(getTodayIsoString())}
+                    className="h-[28px] px-2.5 rounded-full text-[12px] font-medium hover:bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] cursor-pointer transition-colors"
+                  >
+                    {pickText(lang, { pl: 'Dzisiaj', en: 'Today' })}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onShiftWeek(7)}
+                    aria-label={pickText(lang, { pl: 'Następny tydzień', en: 'Next week' })}
+                    className="h-[28px] w-[28px] rounded-full inline-flex items-center justify-center hover:bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] cursor-pointer transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </MacToolbarCapsuleGroup>
+
+                <div className="relative h-[36px] rounded-full mac-glass-pill px-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--mac-label-1)] tabular-nums shrink-0 hover:brightness-[0.98] dark:hover:brightness-110 transition-all">
+                  <Calendar className="w-3.5 h-3.5 text-[var(--mac-label-2)] shrink-0" />
+                  <span>{liveWeekMeta.rangeLabel}</span>
+                  {isLoadingWeek && <span className="w-1.5 h-1.5 rounded-full bg-[var(--mac-blue)] animate-pulse" />}
+                  <input
+                    type="date"
+                    value={currentWeekPivot}
+                    onChange={(e) => {
+                      if (e.target.value) onSelectDate(e.target.value)
+                    }}
+                    aria-label={t.dateLabel}
+                    className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                  />
+                </div>
+
+                <MacSegmentedControl<'week' | 'day'>
+                  surface="toolbar"
+                  value={timetableViewMode}
+                  onChange={setTimetableViewMode}
+                  options={[
+                    { id: 'week', label: pickText(lang, { pl: 'Tydzień', en: 'Week' }) },
+                    { id: 'day', label: pickText(lang, { pl: 'Dzień', en: 'Day' }) }
+                  ]}
+                  className="shrink-0"
+                />
+              </>
+            )}
+
+            {activeSection === 'deadlines' && (
+              <>
+                <MacSearchField
+                  surface="toolbar"
+                  value={deadlinesSearchQuery}
+                  onChange={setDeadlinesSearchQuery}
+                  placeholder={pickText(lang, { pl: 'Szukaj terminu...', en: 'Search deadlines...' })}
+                  className="w-[190px]"
+                />
+                <MacToolbarButton
+                  active={deadlinesShowArchived}
+                  icon={<Archive className="w-3.5 h-3.5" />}
+                  label={pickText(lang, { pl: 'Archiwum', en: 'Past' })}
+                  onClick={() => setDeadlinesShowArchived((p) => !p)}
+                />
+                <MacSegmentedControl<'list' | 'calendar'>
+                  surface="toolbar"
+                  value={deadlinesViewMode}
+                  onChange={setDeadlinesViewMode}
+                  options={[
+                    { id: 'list', label: pickText(lang, { pl: 'Lista', en: 'List' }) },
+                    { id: 'calendar', label: pickText(lang, { pl: 'Kalendarz', en: 'Calendar' }) }
+                  ]}
+                  className="shrink-0"
+                />
+              </>
+            )}
+
+            {activeSection === 'attendance' && (
+              <MacSegmentedControl<DesktopAttendanceSubTab>
+                surface="toolbar"
+                value={!allowExcuse && attendanceSubTab === 'justifications' ? 'summary' : attendanceSubTab}
+                onChange={setAttendanceSubTab}
+                options={[
+                  { id: 'summary', label: pickText(lang, { pl: 'Podsumowanie', en: 'Summary' }) },
+                  { id: 'journal', label: pickText(lang, { pl: 'Dziennik', en: 'Journal' }) },
+                  ...(allowExcuse
+                    ? [{ id: 'justifications' as const, label: pickText(lang, { pl: 'Usprawiedliwienia', en: 'Justifications' }) }]
+                    : [])
+                ]}
+                className="shrink-0"
+              />
+            )}
+
             {(activeSection === 'inbox' || activeSection === 'sent') && (
               <MacToolbarButton
                 icon={<SquarePen className="w-4 h-4 text-[var(--mac-blue)]" strokeWidth={2} />}
@@ -328,15 +444,12 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
           {activeSection === 'overview' && (
             <div className="h-full overflow-y-auto">
               <DesktopOverview
-                profile={profile}
                 timetableData={timetableData}
                 todayTimetableData={todayTimetableData}
                 gradesData={gradesData}
                 attendanceData={attendanceData}
                 messages={messages}
-                announcements={announcements}
                 isUpdating={isUpdating}
-                isLoadingMessages={isLoadingMessages}
                 showFullSubjectNames={showFullSubjectNames}
                 showHomeworks={showHomeworks}
                 lang={lang}
@@ -355,14 +468,6 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
                   setGradeSelection({ grade, subject })
                   onSelectSection('grades')
                 }}
-                onOpenMessageInMail={(msg) => {
-                  setMailSelection(msg)
-                  onSelectSection('inbox')
-                }}
-                onOpenAnnouncementInNotices={(ann) => {
-                  setNoticeSelection(ann)
-                  onSelectSection('notices')
-                }}
               />
             </div>
           )}
@@ -375,9 +480,7 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
               selectedDay={selectedDay}
               onSelectDay={onSelectDay}
               currentWeekPivot={currentWeekPivot}
-              onShiftWeek={onShiftWeek}
-              onSelectDate={onSelectDate}
-              isLoadingWeek={isLoadingWeek}
+              viewMode={timetableViewMode}
               showFullSubjectNames={showFullSubjectNames}
               showHomeworks={showHomeworks}
               lang={lang}
@@ -393,6 +496,9 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
               showFullSubjectNames={showFullSubjectNames}
               lang={lang}
               t={t}
+              viewMode={deadlinesViewMode}
+              searchQuery={deadlinesSearchQuery}
+              showArchived={deadlinesShowArchived}
               initialSelectedEvent={deadlineSelection}
             />
           )}
@@ -425,6 +531,7 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
               onChangeLiveFilter={attendanceCtrl.setLiveJustificationsFilter}
               onLoadLiveJustifications={attendanceCtrl.handleOpenLiveJustifications}
               onSubmitJustification={attendanceCtrl.handleSubmitJustifications}
+              subTab={attendanceSubTab}
               lang={lang}
               t={t}
             />

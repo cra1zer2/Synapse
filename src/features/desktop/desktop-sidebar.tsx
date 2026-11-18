@@ -99,6 +99,8 @@ export function DesktopSidebar({
   const schoolLabel = sanitizeAccountLabel(profile?.schoolName || activeAccount?.profile?.schoolName)
   const subtitle = [classLabel, schoolLabel].filter(Boolean).join(' · ') || 'Librus Synergia'
   const luckyNum = profile?.luckyNumber ?? activeAccount?.profile?.luckyNumber ?? null
+  const classNum = profile?.classNumber ?? activeAccount?.profile?.classNumber ?? null
+  const isLuckyMatch = luckyNum !== null && classNum !== null && luckyNum === classNum
 
   const groups: Array<{ title: string; items: SidebarNavItem[] }> = [
     {
@@ -188,8 +190,17 @@ export function DesktopSidebar({
             </span>
             {luckyNum !== null && luckyNum !== undefined && (
               <span
-                title={t.luckyNumber}
-                className="inline-flex items-center gap-1 h-[20px] px-2 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[11px] font-semibold tabular-nums shrink-0"
+                title={
+                  isLuckyMatch
+                    ? pickText(lang, { pl: 'Twój szczęśliwy numerek dzisiaj!', en: 'Your lucky number today!' })
+                    : t.luckyNumber
+                }
+                className={cn(
+                  'inline-flex items-center gap-1 h-[20px] px-2 rounded-full text-[11px] font-semibold tabular-nums shrink-0',
+                  isLuckyMatch
+                    ? 'bg-[#ffcc00]/20 text-[#b28900] dark:bg-[#ffd600]/20 dark:text-[#ffd600] ring-1 ring-[#ffcc00]/40'
+                    : 'bg-[var(--mac-fill-3)] text-[var(--mac-label-2)]'
+                )}
               >
                 <Sparkles className="w-3 h-3" strokeWidth={2.2} />
                 {luckyNum}

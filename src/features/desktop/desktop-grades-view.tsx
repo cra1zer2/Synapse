@@ -31,6 +31,7 @@ import { UiSpinner } from '@/components/ui/ui-spinner'
 import { cn } from '@/utils/cn.util'
 import {
   MacGroupBox,
+  MacPopupSelect,
   MacPushButton,
   MacSegmentedControl
 } from './mac-primitives'
@@ -473,7 +474,7 @@ export function DesktopGradesView({
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--mac-row-divider)]">
+                <tbody className="mac-divide-y">
                   {subjects.map((sub) => {
                     const m = metrics.bySubject.get(sub.subject)
                     const simList = enableGradeSimulator ? simulatedBySubject[sub.subject] || [] : []
@@ -629,14 +630,14 @@ export function DesktopGradesView({
 
               {selectedDetail.grade.description && (
                 <MacGroupBox title={pickText(lang, { pl: 'Komentarz', en: 'Comment' })}>
-                  <p className="text-[12.5px] text-[var(--mac-label-1)] leading-relaxed whitespace-pre-wrap select-text">
+                  <p className="text-[12px] text-[var(--mac-label-1)] leading-relaxed whitespace-pre-wrap select-text">
                     {selectedDetail.grade.description}
                   </p>
                 </MacGroupBox>
               )}
 
               <MacGroupBox noPadding>
-                <div className="divide-y divide-[var(--mac-row-divider)] text-[12px]">
+                <div className="mac-divide-y text-[12px]">
                   <div className="px-3.5 py-2.5 flex items-center justify-between">
                     <span className="text-[var(--mac-label-2)]">{t.weight}</span>
                     <span className="font-semibold text-[var(--mac-label-1)] tabular-nums">
@@ -699,20 +700,21 @@ export function DesktopGradesView({
               <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)] block mb-1">
                 {pickText(lang, { pl: 'Przedmiot', en: 'Subject' })}
               </label>
-              <select
+              <MacPopupSelect
+                wrapperClassName="w-full"
+                className="w-full"
                 value={simSubject || ''}
                 onChange={(e) => {
                   setSimSubject(e.target.value)
                   setEditTarget(null)
                 }}
-                className="w-full h-[32px] px-2.5 rounded-[8px] bg-[var(--mac-fill-3)] border border-[var(--mac-group-border)] text-[12.5px] font-medium text-[var(--mac-label-1)] outline-none"
               >
                 {subjects.map((s) => (
                   <option key={s.subject} value={s.subject}>
                     {formatSubjectName(s.subject, showFullSubjectNames)}
                   </option>
                 ))}
-              </select>
+              </MacPopupSelect>
             </div>
 
             {activeSimMetrics && (
@@ -768,31 +770,33 @@ export function DesktopGradesView({
                     <span className="text-[11px] text-[var(--mac-label-2)] block mb-1">
                       {pickText(lang, { pl: 'Ocena', en: 'Grade' })}
                     </span>
-                    <select
+                    <MacPopupSelect
+                      wrapperClassName="w-full"
+                      className="w-full font-semibold"
                       value={simGradeVal}
                       onChange={(e) => setSimGradeVal(e.target.value)}
-                      className="w-full h-[30px] px-2 rounded-[7px] bg-[var(--mac-window-bg)] border border-[var(--mac-group-border)] text-[13px] font-semibold text-[var(--mac-label-1)] outline-none"
                     >
                       {GRADE_SIM_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>
                           {opt}
                         </option>
                       ))}
-                    </select>
+                    </MacPopupSelect>
                   </div>
                   <div>
                     <span className="text-[11px] text-[var(--mac-label-2)] block mb-1">{t.weight}</span>
-                    <select
+                    <MacPopupSelect
+                      wrapperClassName="w-full"
+                      className="w-full font-semibold"
                       value={simWeightVal}
                       onChange={(e) => setSimWeightVal(Number(e.target.value))}
-                      className="w-full h-[30px] px-2 rounded-[7px] bg-[var(--mac-window-bg)] border border-[var(--mac-group-border)] text-[13px] font-semibold text-[var(--mac-label-1)] outline-none"
                     >
                       {WEIGHT_SIM_OPTIONS.map((w) => (
                         <option key={w} value={w}>
                           {w}
                         </option>
                       ))}
-                    </select>
+                    </MacPopupSelect>
                   </div>
                 </div>
 
@@ -843,7 +847,7 @@ export function DesktopGradesView({
                 title={pickText(lang, { pl: 'Aktywne zmiany What-If', en: 'Active What-If changes' })}
                 noPadding
               >
-                <div className="divide-y divide-[var(--mac-row-divider)] text-[12px]">
+                <div className="mac-divide-y text-[12px]">
                   {activeSimList.map((sg) => (
                     <div key={sg.id} className="px-3 py-2 flex items-center justify-between gap-2">
                       <button

@@ -2,7 +2,7 @@
 
 import React, { ReactNode, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Search, X } from 'lucide-react'
+import { ChevronsUpDown, Search, X } from 'lucide-react'
 import { cn } from '@/utils/cn.util'
 import { UiSpinner } from '@/components/ui/ui-spinner'
 
@@ -265,7 +265,7 @@ export function MacSegmentedControl<T extends string | number>({
     return (
       <div
         className={cn(
-          'h-[36px] rounded-full mac-glass-pill p-1 inline-flex items-center gap-0.5 select-none',
+          'h-[36px] rounded-full mac-glass-pill p-[4px] inline-flex items-center gap-0.5 select-none',
           className
         )}
       >
@@ -279,13 +279,20 @@ export function MacSegmentedControl<T extends string | number>({
               className={cn(
                 'h-[28px] px-3 rounded-full text-[12px] leading-[15px] inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-150 select-none outline-none',
                 isActive
-                  ? 'bg-[var(--mac-window-bg)] text-[var(--mac-label-1)] font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.12)]'
-                  : 'text-[var(--mac-label-2)] font-medium hover:text-[var(--mac-label-1)] hover:bg-[var(--mac-fill-4)]'
+                  ? 'bg-[var(--mac-blue-overglass)] text-white font-semibold shadow-[0_1px_4px_rgba(0,120,240,0.32)]'
+                  : 'text-[var(--mac-label-1)]/80 font-medium hover:text-[var(--mac-label-1)] hover:bg-[var(--mac-fill-3)]'
               )}
             >
               <span className="truncate">{opt.label}</span>
               {typeof opt.badge === 'number' && opt.badge > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] tabular-nums leading-none">
+                <span
+                  className={cn(
+                    'px-1.5 py-0.5 rounded-full text-[10px] font-semibold tabular-nums leading-none',
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)]'
+                  )}
+                >
                   {opt.badge}
                 </span>
               )}
@@ -299,7 +306,7 @@ export function MacSegmentedControl<T extends string | number>({
   return (
     <div
       className={cn(
-        'h-[28px] rounded-[8px] bg-[var(--mac-fill-2)] p-[2px] inline-flex items-center gap-0.5 select-none',
+        'h-[28px] rounded-full bg-[var(--mac-fill-2)] p-[2px] inline-flex items-center gap-0.5 select-none',
         className
       )}
     >
@@ -311,21 +318,59 @@ export function MacSegmentedControl<T extends string | number>({
             type="button"
             onClick={() => onChange(opt.id)}
             className={cn(
-              'h-[24px] px-2.5 rounded-[6px] text-[12px] leading-[15px] inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-150 select-none outline-none flex-1',
+              'h-[24px] px-3 rounded-full text-[12px] leading-[15px] inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-150 select-none outline-none flex-1',
               isActive
-                ? 'bg-[var(--mac-window-bg)] text-[var(--mac-label-1)] font-semibold shadow-[0_1px_3px_rgba(0,0,0,0.10)]'
+                ? 'bg-[var(--mac-blue)] text-white font-semibold shadow-[0_1px_3px_rgba(0,136,255,0.3)]'
                 : 'text-[var(--mac-label-2)] font-medium hover:text-[var(--mac-label-1)]'
             )}
           >
             <span className="truncate">{opt.label}</span>
             {typeof opt.badge === 'number' && opt.badge > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] tabular-nums leading-none">
+              <span
+                className={cn(
+                  'px-1.5 py-0.5 rounded-full text-[10px] font-semibold tabular-nums leading-none',
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : 'bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)]'
+                )}
+              >
                 {opt.badge}
               </span>
             )}
           </button>
         )
       })}
+    </div>
+  )
+}
+
+/* === macOS 27 Pop-up Button (28px capsule select) === */
+
+interface MacPopupSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  wrapperClassName?: string
+}
+
+export function MacPopupSelect({
+  wrapperClassName = '',
+  className = '',
+  children,
+  ...rest
+}: MacPopupSelectProps) {
+  return (
+    <div className={cn('relative inline-flex items-center w-full', wrapperClassName)}>
+      <select
+        className={cn(
+          'w-full h-[28px] rounded-full bg-[var(--mac-fill-2)] hover:bg-[var(--mac-fill-1)] px-3 pr-7 text-[12px] font-medium text-[var(--mac-label-1)] appearance-none outline-none mac-focus-ring cursor-pointer transition-colors',
+          className
+        )}
+        {...rest}
+      >
+        {children}
+      </select>
+      <ChevronsUpDown
+        className="w-3.5 h-3.5 text-[var(--mac-label-2)] pointer-events-none absolute right-2.5 shrink-0"
+        strokeWidth={2}
+      />
     </div>
   )
 }
@@ -378,7 +423,7 @@ export function MacSearchField({
   )
 }
 
-/* === macOS 27 Switch === */
+/* === macOS 27 Switch (44x20 track, 26x16 oblong capsule knob) === */
 
 export function MacSwitch({
   checked,
@@ -400,14 +445,14 @@ export function MacSwitch({
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
       className={cn(
-        'relative inline-flex items-center w-[34px] h-[20px] rounded-full p-[2px] transition-colors duration-150 shrink-0 outline-none mac-focus-ring',
+        'relative inline-flex items-center w-[44px] h-[20px] rounded-full p-[2px] transition-colors duration-150 shrink-0 outline-none mac-focus-ring',
         disabled ? 'opacity-45 cursor-default' : 'cursor-pointer',
         checked ? 'bg-[var(--mac-blue)]' : 'bg-[var(--mac-fill-1)]'
       )}
     >
       <span
         className={cn(
-          'w-[16px] h-[16px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.22)] transition-transform duration-150',
+          'w-[26px] h-[16px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.20),inset_0_0.5px_0_rgba(255,255,255,0.9)] transition-transform duration-150',
           checked ? 'translate-x-[14px]' : 'translate-x-0'
         )}
       />
@@ -454,7 +499,7 @@ export function MacDialogWindow({
   return createPortal(
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-[4px]"
+      className="mac-desktop-root fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-[4px]"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -468,25 +513,15 @@ export function MacDialogWindow({
       >
         {(title || headerActions) && (
           <div className="h-[52px] px-5 shrink-0 flex items-center justify-between gap-3 border-b border-[var(--mac-row-divider)] select-none">
-            <div className="flex items-center gap-3 min-w-0">
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close"
-                className="w-[14px] h-[14px] rounded-full bg-[#ff5f57] border border-black/10 hover:brightness-95 flex items-center justify-center group cursor-pointer shrink-0"
-              >
-                <X className="w-2.5 h-2.5 text-black/60 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2.6} />
-              </button>
-              <div className="min-w-0">
-                {title && (
-                  <h2 className="text-[15px] font-semibold text-[var(--mac-label-1)] leading-[20px] truncate">
-                    {title}
-                  </h2>
-                )}
-                {subtitle && (
-                  <p className="text-[11px] text-[var(--mac-label-2)] leading-[14px] truncate">{subtitle}</p>
-                )}
-              </div>
+            <div className="min-w-0">
+              {title && (
+                <h2 className="text-[15px] font-semibold text-[var(--mac-label-1)] leading-[20px] truncate">
+                  {title}
+                </h2>
+              )}
+              {subtitle && (
+                <p className="text-[11px] text-[var(--mac-label-2)] leading-[14px] truncate">{subtitle}</p>
+              )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {headerActions}

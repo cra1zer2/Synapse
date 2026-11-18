@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo, useState, useEffect } from 'react'
-import { Calendar, CalendarClock, CalendarPlus, ChevronLeft, ChevronRight, Archive } from 'lucide-react'
+import { Calendar, CalendarClock, CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { SmartTimetableResult, TimetableEvent } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
 import {
@@ -20,9 +20,7 @@ import { downloadEventIcs } from '@/utils/calendar.util'
 import { cn } from '@/utils/cn.util'
 import {
   MacGroupBox,
-  MacPushButton,
-  MacSearchField,
-  MacSegmentedControl
+  MacPushButton
 } from './mac-primitives'
 
 interface DesktopDeadlinesViewProps {
@@ -31,6 +29,9 @@ interface DesktopDeadlinesViewProps {
   showFullSubjectNames: boolean
   lang: AppLanguage
   t: AppDictionary
+  viewMode: 'list' | 'calendar'
+  searchQuery: string
+  showArchived: boolean
   initialSelectedEvent?: TimetableEvent | null
 }
 
@@ -42,6 +43,9 @@ export function DesktopDeadlinesView({
   showFullSubjectNames,
   lang,
   t,
+  viewMode,
+  searchQuery,
+  showArchived,
   initialSelectedEvent
 }: DesktopDeadlinesViewProps) {
   const todayIso = useMemo(() => getTodayIsoString(), [])
@@ -54,10 +58,7 @@ export function DesktopDeadlinesView({
     return [parts[0], (parts[1] || 1) - 1]
   }, [todayIso])
 
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
-  const [showArchived, setShowArchived] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const [selectedEvent, setSelectedEvent] = useState<TimetableEvent | null>(initialSelectedEvent || null)
   const [calYear, setCalYear] = useState(todayYear)
   const [calMonth, setCalMonth] = useState(todayMonth)
@@ -226,14 +227,14 @@ export function DesktopDeadlinesView({
 
         {desc && (
           <MacGroupBox title={pickText(lang, { pl: 'Zakres materiału / Opis', en: 'Scope / Description' })}>
-            <p className="text-[12.5px] text-[var(--mac-label-1)] leading-relaxed whitespace-pre-wrap select-text">
+            <p className="text-[12px] text-[var(--mac-label-1)] leading-relaxed whitespace-pre-wrap select-text">
               {desc}
             </p>
           </MacGroupBox>
         )}
 
         <MacGroupBox noPadding>
-          <div className="divide-y divide-[var(--mac-row-divider)] text-[12px]">
+          <div className="mac-divide-y text-[12px]">
             {selectedEvent.lessonNumber !== undefined && (
               <div className="px-3 py-2 flex items-center justify-between">
                 <span className="text-[var(--mac-label-2)]">{pickText(lang, { pl: 'Lekcja', en: 'Period' })}</span>
@@ -274,62 +275,34 @@ export function DesktopDeadlinesView({
     <div className="h-full flex min-h-0 select-none">
       {/* Main Pane */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
-        {/* Filter & Controls Toolbar */}
-        <div className="px-6 py-3 border-b border-[var(--mac-row-divider)] flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {filterChips.map((chip) => {
-              const active = categoryFilter === chip.id
-              return (
-                <button
-                  key={chip.id}
-                  type="button"
-                  onClick={() => setCategoryFilter(chip.id)}
+        {/* Category Filter Chips Bar (search, past & view switcher live in macOS 27 Unified Toolbar) */}
+        <div className="px-5 py-2.5 border-b border-[var(--mac-row-divider)] flex items-center gap-1.5 flex-wrap shrink-0">
+          {filterChips.map((chip) => {
+            const active = categoryFilter === chip.id
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => setCategoryFilter(chip.id)}
+                className={cn(
+                  'h-[28px] px-3 rounded-full text-[12px] font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors',
+                  active
+                    ? 'bg-[var(--mac-blue)] text-white font-semibold'
+                    : 'bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] hover:bg-[var(--mac-fill-2)]'
+                )}
+              >
+                <span>{chip.label}</span>
+                <span
                   className={cn(
-                    'h-[28px] px-3 rounded-full text-[12px] font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors',
-                    active
-                      ? 'bg-[var(--mac-blue)] text-white font-semibold'
-                      : 'bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] hover:bg-[var(--mac-fill-2)]'
+                    'text-[10px] px-1.5 py-0.5 rounded-full tabular-nums',
+                    active ? 'bg-white/20 text-white' : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]'
                   )}
                 >
-                  <span>{chip.label}</span>
-                  <span
-                    className={cn(
-                      'text-[10px] px-1.5 py-0.2 rounded-full tabular-nums',
-                      active ? 'bg-white/20 text-white' : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]'
-                    )}
-                  >
-                    {chip.count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <MacSearchField
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder={pickText(lang, { pl: 'Szukaj terminu...', en: 'Search deadlines...' })}
-              className="w-[210px]"
-            />
-            <MacPushButton
-              variant={showArchived ? 'tinted' : 'bordered'}
-              size="lg"
-              onClick={() => setShowArchived((p) => !p)}
-              icon={<Archive className="w-3.5 h-3.5" />}
-            >
-              {pickText(lang, { pl: 'Archiwum', en: 'Past' })}
-            </MacPushButton>
-            <MacSegmentedControl<'list' | 'calendar'>
-              value={viewMode}
-              onChange={setViewMode}
-              options={[
-                { id: 'list', label: pickText(lang, { pl: 'Lista', en: 'List' }) },
-                { id: 'calendar', label: pickText(lang, { pl: 'Kalendarz', en: 'Calendar' }) }
-              ]}
-              className="w-[170px]"
-            />
-          </div>
+                  {chip.count}
+                </span>
+              </button>
+            )
+          })}
         </div>
 
         {/* Content Body */}
@@ -337,7 +310,7 @@ export function DesktopDeadlinesView({
           {viewMode === 'list' ? (
             filteredEvents.length > 0 ? (
               <MacGroupBox noPadding>
-                <div className="divide-y divide-[var(--mac-row-divider)]">
+                <div className="mac-divide-y">
                   {filteredEvents.map((ev, idx) => {
                     const st = getEventCategoryStyle(ev.category, ev.eventType)
                     const dayMeta = formatDayDate(ev.isoDate, lang)
@@ -376,7 +349,7 @@ export function DesktopDeadlinesView({
                               >
                                 {badgeLabel}
                               </span>
-                              <span className="text-[13.5px] font-semibold text-[var(--mac-label-1)] truncate">
+                              <span className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
                                 {primaryTitle}
                               </span>
                             </div>
@@ -454,7 +427,7 @@ export function DesktopDeadlinesView({
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 divide-x divide-y divide-[var(--mac-row-divider)]">
+              <div className="grid grid-cols-7 [&>*:not(:nth-child(7n))]:border-r [&>*]:border-b [&>*]:border-[var(--mac-row-divider)]">
                 {calendarGrid.map((cell, idx) => {
                   if (!cell.dayNum || !cell.iso) {
                     return <div key={`empty-${idx}`} className="min-h-[104px] bg-[var(--mac-fill-5)]/50" />

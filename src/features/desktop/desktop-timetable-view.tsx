@@ -2,10 +2,7 @@
 
 import React, { useMemo, useState, useEffect, Fragment } from 'react'
 import {
-  Calendar,
   CalendarPlus,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   MapPin,
   User,
@@ -37,8 +34,7 @@ import { UiSpinner } from '@/components/ui/ui-spinner'
 import { cn } from '@/utils/cn.util'
 import {
   MacGroupBox,
-  MacPushButton,
-  MacSegmentedControl
+  MacPushButton
 } from './mac-primitives'
 
 interface DesktopTimetableViewProps {
@@ -48,9 +44,7 @@ interface DesktopTimetableViewProps {
   selectedDay: string
   onSelectDay: (day: string) => void
   currentWeekPivot: string
-  onShiftWeek: (deltaDays: number) => void
-  onSelectDate: (dateIso: string) => void
-  isLoadingWeek: boolean
+  viewMode: 'week' | 'day'
   showFullSubjectNames: boolean
   showHomeworks: boolean
   lang: AppLanguage
@@ -70,16 +64,13 @@ export function DesktopTimetableView({
   selectedDay,
   onSelectDay,
   currentWeekPivot,
-  onShiftWeek,
-  onSelectDate,
-  isLoadingWeek,
+  viewMode,
   showFullSubjectNames,
   showHomeworks,
   lang,
   t,
   initialInspectorSelection
 }: DesktopTimetableViewProps) {
-  const [viewMode, setViewMode] = useState<'week' | 'day'>('week')
   const [inspector, setInspector] = useState<TimetableInspectorItem>(null)
   const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
   const todayIso = useMemo(() => getTodayIsoString(), [])
@@ -201,7 +192,7 @@ export function DesktopTimetableView({
           </MacGroupBox>
 
           <MacGroupBox noPadding>
-            <div className="divide-y divide-[var(--mac-row-divider)] text-[12px]">
+            <div className="mac-divide-y text-[12px]">
               <div className="px-3.5 py-2.5 flex items-center justify-between gap-2">
                 <span className="text-[var(--mac-label-2)] flex items-center gap-1.5 shrink-0">
                   <User className="w-3.5 h-3.5" />
@@ -281,7 +272,7 @@ export function DesktopTimetableView({
         )}
 
         <MacGroupBox noPadding>
-          <div className="divide-y divide-[var(--mac-row-divider)] text-[12px]">
+          <div className="mac-divide-y text-[12px]">
             {ev.lessonNumber !== undefined && (
               <div className="px-3.5 py-2.5 flex items-center justify-between">
                 <span className="text-[var(--mac-label-2)]">{pickText(lang, { pl: 'Lekcja', en: 'Period' })}</span>
@@ -322,69 +313,12 @@ export function DesktopTimetableView({
     <div className="h-full flex min-h-0 select-none">
       {/* Main Schedule Area */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
-        {/* Sub-Toolbar Controls */}
-        <div className="px-6 py-3 border-b border-[var(--mac-row-divider)] flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <MacPushButton
-              variant="bordered"
-              size="lg"
-              onClick={() => onShiftWeek(-7)}
-              icon={<ChevronLeft className="w-4 h-4" />}
-              aria-label={pickText(lang, { pl: 'Poprzedni tydzień', en: 'Previous week' })}
-            />
-            <MacPushButton
-              variant="bordered"
-              size="lg"
-              onClick={() => onSelectDate(todayIso)}
-            >
-              {pickText(lang, { pl: 'Dzisiaj', en: 'Today' })}
-            </MacPushButton>
-            <MacPushButton
-              variant="bordered"
-              size="lg"
-              onClick={() => onShiftWeek(7)}
-              icon={<ChevronRight className="w-4 h-4" />}
-              aria-label={pickText(lang, { pl: 'Następny tydzień', en: 'Next week' })}
-            />
-
-            <div className="ml-2 flex items-center gap-2">
-              <span className="text-[14px] font-semibold text-[var(--mac-label-1)] tabular-nums">
-                {liveWeek.rangeLabel}
-              </span>
-              {isLoadingWeek ? (
-                <UiSpinner size="small" className="text-[var(--mac-blue)]" />
-              ) : (
-                <label className="relative w-7 h-7 rounded-full hover:bg-[var(--mac-fill-3)] flex items-center justify-center cursor-pointer text-[var(--mac-label-2)] hover:text-[var(--mac-blue)] transition-colors">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <input
-                    type="date"
-                    value={currentWeekPivot}
-                    onChange={(e) => e.target.value && onSelectDate(e.target.value)}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    aria-label={pickText(lang, { pl: 'Wybierz datę', en: 'Pick date' })}
-                  />
-                </label>
-              )}
-            </div>
-          </div>
-
-          <MacSegmentedControl<'week' | 'day'>
-            value={viewMode}
-            onChange={setViewMode}
-            options={[
-              { id: 'week', label: pickText(lang, { pl: 'Tydzień (5 dni)', en: 'Week (5 days)' }) },
-              { id: 'day', label: pickText(lang, { pl: 'Dzień', en: 'Day' }) }
-            ]}
-            className="w-[220px]"
-          />
-        </div>
-
         {/* Main Content Grid */}
         <div className="flex-1 min-h-0 overflow-y-auto p-5">
           {timetableError && !timetableData ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3 text-center">
               <AlertCircle className="w-8 h-8 text-[var(--mac-red)]" />
-              <p className="text-[14px] font-medium text-[var(--mac-label-1)]">{timetableError}</p>
+              <p className="text-[13px] font-medium text-[var(--mac-label-1)]">{timetableError}</p>
               <MacPushButton variant="prominent" size="lg" onClick={onRetry}>
                 {t.refresh}
               </MacPushButton>
@@ -595,7 +529,7 @@ export function DesktopTimetableView({
 
               <MacGroupBox noPadding>
                 {activeDayData && activeDayData.lessons.length > 0 ? (
-                  <div className="divide-y divide-[var(--mac-row-divider)]">
+                  <div className="mac-divide-y">
                     {activeDayData.lessons.map((lesson, idx) => {
                       const nextLesson = activeDayData.lessons[idx + 1]
                       const breakMins = nextLesson ? calculateBreakDuration(lesson.time, nextLesson.time) : 0
@@ -637,7 +571,7 @@ export function DesktopTimetableView({
                                 {lesson.time}
                               </span>
                               <div className="min-w-0 flex-1">
-                                <div className={cn('text-[14px] font-semibold text-[var(--mac-label-1)] truncate', lesson.isCancelled && 'line-through')}>
+                                <div className={cn('text-[13px] font-semibold text-[var(--mac-label-1)] truncate', lesson.isCancelled && 'line-through')}>
                                   {formatSubjectName(lesson.subject, showFullSubjectNames)}
                                 </div>
                                 <div className="text-[12px] text-[var(--mac-label-2)] truncate">
@@ -646,7 +580,7 @@ export function DesktopTimetableView({
                               </div>
                             </div>
                             {lesson.room && (
-                              <span className="px-2.5 py-1 rounded-[7px] bg-[var(--mac-fill-2)] text-[var(--mac-label-1)] text-[12px] font-medium shrink-0">
+                              <span className="px-2.5 py-0.5 rounded-full bg-[var(--mac-fill-2)] text-[var(--mac-label-1)] text-[12px] font-medium shrink-0">
                                 {lesson.room}
                               </span>
                             )}

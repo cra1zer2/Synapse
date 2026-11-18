@@ -227,6 +227,9 @@ export function DesktopMessagesView({
     if (isComposeOpen && receivers.length === 0) {
       ensureReceivers()
     }
+    if (!isComposeOpen) {
+      setShowRecipientList(false)
+    }
   }, [isComposeOpen, receivers.length, ensureReceivers])
 
   const uniqueReceivers = useMemo(() => {
@@ -316,7 +319,7 @@ export function DesktopMessagesView({
               type="button"
               onClick={() => setOnlyUnread((p) => !p)}
               className={cn(
-                'h-[30px] px-2.5 rounded-full text-[11.5px] font-medium shrink-0 cursor-pointer transition-colors',
+                'h-[30px] px-3 rounded-full text-[12px] font-medium shrink-0 cursor-pointer transition-colors',
                 onlyUnread
                   ? 'bg-[var(--mac-blue)] text-white font-semibold'
                   : 'bg-[var(--mac-fill-3)] text-[var(--mac-label-2)] hover:text-[var(--mac-label-1)]'
@@ -327,7 +330,7 @@ export function DesktopMessagesView({
           )}
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-[var(--mac-row-divider)]">
+        <div className="flex-1 min-h-0 overflow-y-auto mac-divide-y">
           {mode === 'notices' ? (
             isLoadingMessages && announcements.length === 0 ? (
               <div className="py-16 flex justify-center">
@@ -395,7 +398,7 @@ export function DesktopMessagesView({
                       {folder === 'sent' && isRead && (
                         <Eye className="w-3 h-3 text-[var(--mac-blue)] shrink-0" />
                       )}
-                      <span className="text-[11.5px] font-semibold text-[var(--mac-blue)] truncate">
+                      <span className="text-[12px] font-semibold text-[var(--mac-blue)] truncate">
                         {cleanSenderName(msg.sender)}
                       </span>
                     </div>
@@ -480,10 +483,10 @@ export function DesktopMessagesView({
                     {resolveAvatarLetter(cleanSenderName(selectedMsg.sender), selectedMsg.sender)}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[13.5px] font-semibold text-[var(--mac-label-1)] truncate">
+                    <div className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
                       {cleanSenderName(selectedMsg.sender)}
                     </div>
-                    <div className="text-[11.5px] text-[var(--mac-label-2)] tabular-nums">
+                    <div className="text-[12px] text-[var(--mac-label-2)] tabular-nums">
                       {formatHumanDate(selectedMsg.date, true, lang)}
                     </div>
                   </div>
@@ -520,7 +523,7 @@ export function DesktopMessagesView({
                     })}
                     noPadding
                   >
-                    <div className="divide-y divide-[var(--mac-row-divider)] bg-[var(--mac-window-bg)]">
+                    <div className="mac-divide-y bg-[var(--mac-window-bg)]">
                       {readerAttachments.map((att, idx) => (
                         <button
                           key={`${att.path}-${idx}`}
@@ -603,10 +606,10 @@ export function DesktopMessagesView({
         ) : (
           <form onSubmit={handleSend} className="flex flex-col gap-3.5">
             <MacGroupBox noPadding>
-              <div className="divide-y divide-[var(--mac-row-divider)]">
+              <div className="mac-divide-y">
                 {/* To field */}
                 <div className="px-3.5 py-2.5 flex items-start gap-2.5">
-                  <span className="text-[12.5px] text-[var(--mac-label-2)] w-14 pt-1 shrink-0">
+                  <span className="text-[13px] text-[var(--mac-label-2)] w-14 pt-1 shrink-0">
                     {pickText(lang, { pl: 'Do:', en: 'To:' })}
                   </span>
                   <div className="flex-1 flex flex-wrap items-center gap-1.5">
@@ -644,7 +647,7 @@ export function DesktopMessagesView({
                       onChange={setRecipientQuery}
                       placeholder={pickText(lang, { pl: 'Szukaj nauczyciela lub grupy...', en: 'Search teacher or group...' })}
                     />
-                    <div className="max-h-[160px] overflow-y-auto divide-y divide-[var(--mac-row-divider)] rounded-[8px] border border-[var(--mac-group-border)] bg-[var(--mac-window-bg)]">
+                    <div className="max-h-[160px] overflow-y-auto mac-divide-y rounded-[8px] border border-[var(--mac-group-border)] bg-[var(--mac-window-bg)]">
                       {filteredReceivers.length > 0 ? (
                         filteredReceivers.map((r) => {
                           const selected = composeRecipients.some((x) => x.id === r.id)
@@ -662,7 +665,7 @@ export function DesktopMessagesView({
                               <div className="min-w-0">
                                 <div className="font-medium text-[var(--mac-label-1)] truncate">{r.name}</div>
                                 {r.group && (
-                                  <div className="text-[10.5px] text-[var(--mac-label-2)] truncate">{r.group}</div>
+                                  <div className="text-[11px] text-[var(--mac-label-2)] truncate">{r.group}</div>
                                 )}
                               </div>
                               {selected && <Check className="w-3.5 h-3.5 text-[var(--mac-blue)] shrink-0" />}
@@ -670,7 +673,7 @@ export function DesktopMessagesView({
                           )
                         })
                       ) : (
-                        <div className="p-4 text-center text-[11.5px] text-[var(--mac-label-2)]">
+                        <div className="p-4 text-center text-[12px] text-[var(--mac-label-2)]">
                           {receivers.length === 0 ? t.updatingStatus : t.notSpecified}
                         </div>
                       )}
@@ -680,12 +683,14 @@ export function DesktopMessagesView({
 
                 {/* Subject */}
                 <div className="px-3.5 py-2.5 flex items-center gap-2.5">
-                  <span className="text-[12.5px] text-[var(--mac-label-2)] w-14 shrink-0">
+                  <span className="text-[13px] text-[var(--mac-label-2)] w-14 shrink-0">
                     {pickText(lang, { pl: 'Temat:', en: 'Subject:' })}
                   </span>
                   <input
                     type="text"
                     value={composeTitle}
+                    onFocus={() => setShowRecipientList(false)}
+                    onClick={() => setShowRecipientList(false)}
                     onChange={(e) => setComposeTitle(e.target.value)}
                     placeholder={t.subjectPlaceholder}
                     className="w-full bg-transparent text-[13px] text-[var(--mac-label-1)] placeholder-[var(--mac-label-2)] outline-none"
@@ -697,6 +702,8 @@ export function DesktopMessagesView({
 
             <textarea
               value={composeBody}
+              onFocus={() => setShowRecipientList(false)}
+              onClick={() => setShowRecipientList(false)}
               onChange={(e) => setComposeBody(e.target.value)}
               placeholder={t.messagePlaceholder}
               rows={10}

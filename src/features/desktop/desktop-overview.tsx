@@ -8,17 +8,14 @@ import {
   CheckCircle2,
   GraduationCap,
   Inbox,
-  Megaphone,
-  Sparkles,
   Clock
 } from 'lucide-react'
 import { SmartTimetableResult, LessonItem, TimetableEvent, DaySchedule } from '@/models/timetable.model'
 import { GradesResult, GradeItem } from '@/models/grade.model'
 import { AttendanceResult } from '@/models/attendance.model'
-import { MessageItem, AnnouncementItem } from '@/models/message.model'
-import { StudentProfile } from '@/models/account.model'
+import { MessageItem } from '@/models/message.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
-import { formatSubjectName, cleanSenderName } from '@/utils/text.util'
+import { formatSubjectName } from '@/utils/text.util'
 import {
   formatDayDate,
   formatHumanDate,
@@ -41,15 +38,12 @@ import { MacGroupBox, MacPushButton } from './mac-primitives'
 import { DesktopNavSection } from './desktop-sidebar'
 
 interface DesktopOverviewProps {
-  profile: StudentProfile | null
   timetableData: SmartTimetableResult | null
   todayTimetableData: SmartTimetableResult | null
   gradesData: GradesResult | null
   attendanceData: AttendanceResult | null
   messages: MessageItem[]
-  announcements: AnnouncementItem[]
   isUpdating: boolean
-  isLoadingMessages: boolean
   showFullSubjectNames: boolean
   showHomeworks: boolean
   lang: AppLanguage
@@ -58,8 +52,6 @@ interface DesktopOverviewProps {
   onOpenLessonInTimetable: (dayName: string, lesson: LessonItem) => void
   onOpenEventInDeadlines: (ev: TimetableEvent) => void
   onOpenGradeInGrades: (grade: GradeItem, subject: string) => void
-  onOpenMessageInMail: (msg: MessageItem) => void
-  onOpenAnnouncementInNotices: (ann: AnnouncementItem) => void
 }
 
 function resolveDisplayDay(source: SmartTimetableResult | null, todayIso: string): DaySchedule | null {
@@ -72,15 +64,12 @@ function resolveDisplayDay(source: SmartTimetableResult | null, todayIso: string
 }
 
 export function DesktopOverview({
-  profile,
   timetableData,
   todayTimetableData,
   gradesData,
   attendanceData,
   messages,
-  announcements,
   isUpdating,
-  isLoadingMessages,
   showFullSubjectNames,
   showHomeworks,
   lang,
@@ -88,9 +77,7 @@ export function DesktopOverview({
   onNavigate,
   onOpenLessonInTimetable,
   onOpenEventInDeadlines,
-  onOpenGradeInGrades,
-  onOpenMessageInMail,
-  onOpenAnnouncementInNotices
+  onOpenGradeInGrades
 }: DesktopOverviewProps) {
   const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
   const todayIso = useMemo(() => getTodayIsoString(), [])
@@ -164,7 +151,7 @@ export function DesktopOverview({
     }
     return list
       .sort((a, b) => a.isoDate.localeCompare(b.isoDate) || (a.lessonNumber || 99) - (b.lessonNumber || 99))
-      .slice(0, 6)
+      .slice(0, 5)
   }, [scheduleSource, todayIso, showHomeworks])
 
   const recentGrades = useMemo(() => {
@@ -182,10 +169,6 @@ export function DesktopOverview({
   }, [gradesData])
 
   const unreadCount = useMemo(() => messages.filter((m) => !m.isRead).length, [messages])
-  const previewMessages = useMemo(() => {
-    const unread = messages.filter((m) => !m.isRead)
-    return (unread.length > 0 ? unread : messages).slice(0, 4)
-  }, [messages])
 
   const attPercentage = attendanceData?.overallPercentage ?? null
   const attBarColor =
@@ -220,13 +203,13 @@ export function DesktopOverview({
             </div>
             {lessonFocus ? (
               <div className="min-w-0">
-                <div className="text-[16px] font-bold text-[var(--mac-label-1)] truncate leading-tight">
+                <div className="text-[15px] font-bold text-[var(--mac-label-1)] truncate leading-tight">
                   {formatSubjectName(lessonFocus.lesson.subject, showFullSubjectNames)}
                 </div>
-                <div className="text-[12px] text-[var(--mac-label-2)] mt-1 flex items-center gap-2 tabular-nums">
+                <div className="text-[12px] text-[var(--mac-label-2)] mt-1.5 flex items-center gap-2 tabular-nums">
                   <span>{lessonFocus.lesson.time}</span>
                   {lessonFocus.lesson.room && (
-                    <span className="px-1.5 py-0.5 rounded-[5px] bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] text-[11px] font-semibold">
+                    <span className="px-2 py-0.5 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] text-[11px] font-semibold">
                       {lessonFocus.lesson.room}
                     </span>
                   )}
@@ -238,7 +221,7 @@ export function DesktopOverview({
                 </div>
               </div>
             ) : (
-              <div className="text-[14px] font-medium text-[var(--mac-label-2)]">
+              <div className="text-[13px] font-medium text-[var(--mac-label-2)]">
                 {isUpdating ? t.updatingStatus : t.noLessonsDay}
               </div>
             )}
@@ -257,7 +240,7 @@ export function DesktopOverview({
               <GraduationCap className="w-4 h-4 text-[var(--mac-blue)]" strokeWidth={1.9} />
             </div>
             <div className="flex items-end justify-between gap-2">
-              <div className="text-[28px] font-bold tracking-[-0.03em] text-[var(--mac-label-1)] leading-none tabular-nums">
+              <div className="text-[26px] font-bold text-[var(--mac-label-1)] leading-none tabular-nums">
                 {overallGpa}
               </div>
               <div className="flex items-center gap-1">
@@ -267,7 +250,7 @@ export function DesktopOverview({
                     <span
                       key={i}
                       className={cn(
-                        'min-w-[24px] h-[24px] px-1 rounded-[6px] text-[12px] font-semibold flex items-center justify-center tabular-nums',
+                        'min-w-[24px] h-[24px] px-1 rounded-[7px] text-[12px] font-semibold flex items-center justify-center tabular-nums',
                         st.bg,
                         st.text
                       )}
@@ -294,7 +277,7 @@ export function DesktopOverview({
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[28px] font-bold tracking-[-0.03em] text-[var(--mac-label-1)] leading-none tabular-nums">
+                <span className="text-[26px] font-bold text-[var(--mac-label-1)] leading-none tabular-nums">
                   {attPercentage !== null ? `${attPercentage}%` : '—'}
                 </span>
                 {attendanceData && (
@@ -330,28 +313,21 @@ export function DesktopOverview({
               </span>
               <Inbox className="w-4 h-4 text-[var(--mac-blue)]" strokeWidth={1.9} />
             </div>
-            <div className="flex items-end justify-between gap-2">
-              <div className="flex items-baseline gap-2">
-                <span className="text-[28px] font-bold tracking-[-0.03em] text-[var(--mac-label-1)] leading-none tabular-nums">
-                  {unreadCount}
-                </span>
-                <span className="text-[12px] text-[var(--mac-label-2)]">
-                  {pickText(lang, { pl: 'nieprzeczytanych', en: 'unread' })}
-                </span>
-              </div>
-              {profile?.luckyNumber !== null && profile?.luckyNumber !== undefined && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[11px] font-semibold tabular-nums">
-                  <Sparkles className="w-3 h-3" />#{profile.luckyNumber}
-                </span>
-              )}
+            <div className="flex items-baseline gap-2">
+              <span className="text-[26px] font-bold text-[var(--mac-label-1)] leading-none tabular-nums">
+                {unreadCount}
+              </span>
+              <span className="text-[12px] text-[var(--mac-label-2)]">
+                {pickText(lang, { pl: 'nieprzeczytanych', en: 'unread' })}
+              </span>
             </div>
           </div>
         </MacGroupBox>
       </div>
 
-      {/* Main 12-Column Bento Workspace */}
+      {/* Main 12-Column Overview Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Left 7 Columns: Day Schedule Table & Upcoming Tests */}
+        {/* Left 7 Columns: Today's / Next Day's Schedule */}
         <div className="lg:col-span-7 flex flex-col gap-5">
           <MacGroupBox
             title={dayTitle}
@@ -368,7 +344,7 @@ export function DesktopOverview({
             noPadding
           >
             {displayDay && displayDay.lessons.length > 0 ? (
-              <div className="divide-y divide-[var(--mac-row-divider)]">
+              <div className="mac-divide-y">
                 {displayDay.lessons.map((lesson, idx) => {
                   const r = parseLessonTimeRange(lesson.time)
                   const isActive =
@@ -393,7 +369,7 @@ export function DesktopOverview({
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <span
                           className={cn(
-                            'w-6 h-6 rounded-[6px] text-[11px] font-semibold flex items-center justify-center shrink-0 tabular-nums',
+                            'w-6 h-6 rounded-full text-[11px] font-semibold flex items-center justify-center shrink-0 tabular-nums',
                             isActive
                               ? 'bg-[var(--mac-blue)] text-white'
                               : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]'
@@ -430,7 +406,7 @@ export function DesktopOverview({
                           </span>
                         )}
                         {lesson.room && (
-                          <span className="px-2 py-0.5 rounded-[6px] bg-[var(--mac-fill-2)] text-[var(--mac-label-1)] text-[11px] font-medium tabular-nums">
+                          <span className="px-2 py-0.5 rounded-full bg-[var(--mac-fill-2)] text-[var(--mac-label-1)] text-[11px] font-medium tabular-nums">
                             {lesson.room}
                           </span>
                         )}
@@ -446,7 +422,10 @@ export function DesktopOverview({
               </div>
             )}
           </MacGroupBox>
+        </div>
 
+        {/* Right 5 Columns: Upcoming Deadlines & Recent Grades */}
+        <div className="lg:col-span-5 flex flex-col gap-5">
           <MacGroupBox
             title={pickText(lang, { pl: 'Nadchodzące sprawdziany i terminy', en: 'Upcoming Tests & Deadlines' })}
             trailing={
@@ -462,7 +441,7 @@ export function DesktopOverview({
             noPadding
           >
             {upcomingEvents.length > 0 ? (
-              <div className="divide-y divide-[var(--mac-row-divider)]">
+              <div className="mac-divide-y">
                 {upcomingEvents.map((ev, idx) => {
                   const st = getEventCategoryStyle(ev.category, ev.eventType)
                   const dayMeta = formatDayDate(ev.isoDate, lang)
@@ -480,7 +459,7 @@ export function DesktopOverview({
                           <span className="text-[13px] font-bold text-[var(--mac-label-1)] tabular-nums">
                             {dayMeta.dayNum}
                           </span>
-                          <span className="text-[9px] uppercase font-semibold text-[var(--mac-label-2)] mt-0.5">
+                          <span className="text-[10px] uppercase font-semibold text-[var(--mac-label-2)] mt-0.5">
                             {dayMeta.monthName}
                           </span>
                         </div>
@@ -488,7 +467,7 @@ export function DesktopOverview({
                           <div className="flex items-center gap-1.5">
                             <span
                               className={cn(
-                                'px-1.5 py-0.5 rounded-[5px] text-[10px] font-semibold uppercase tracking-wide shrink-0',
+                                'px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide shrink-0',
                                 st.bgClass,
                                 st.textClass
                               )}
@@ -522,10 +501,7 @@ export function DesktopOverview({
               </div>
             )}
           </MacGroupBox>
-        </div>
 
-        {/* Right 5 Columns: Recent Grades & Messages/Notices */}
-        <div className="lg:col-span-5 flex flex-col gap-5">
           <MacGroupBox
             title={pickText(lang, { pl: 'Ostatnie oceny', en: 'Recent Grades' })}
             trailing={
@@ -541,7 +517,7 @@ export function DesktopOverview({
             noPadding
           >
             {recentGrades.length > 0 ? (
-              <div className="divide-y divide-[var(--mac-row-divider)]">
+              <div className="mac-divide-y">
                 {recentGrades.map((g, idx) => {
                   const st = getGradeBadgeStyle(g.grade)
                   const subjectName = g.subject || ''
@@ -588,83 +564,6 @@ export function DesktopOverview({
             ) : (
               <div className="p-8 text-center text-[13px] text-[var(--mac-label-2)]">
                 {t.noGradesRecorded}
-              </div>
-            )}
-          </MacGroupBox>
-
-          <MacGroupBox
-            title={pickText(lang, { pl: 'Wiadomości i ogłoszenia', en: 'Messages & Notices' })}
-            trailing={
-              <MacPushButton
-                size="sm"
-                variant="ghost"
-                onClick={() => onNavigate('inbox')}
-                icon={<ArrowRight className="w-3 h-3" />}
-              >
-                {t.messagesInbox}
-              </MacPushButton>
-            }
-            noPadding
-          >
-            {isLoadingMessages && messages.length === 0 ? (
-              <div className="p-6 text-center text-[12px] text-[var(--mac-label-2)]">
-                {t.updatingStatus}
-              </div>
-            ) : (
-              <div className="divide-y divide-[var(--mac-row-divider)]">
-                {previewMessages.map((msg) => (
-                  <button
-                    key={msg.id}
-                    type="button"
-                    onClick={() => onOpenMessageInMail(msg)}
-                    className="w-full px-4 py-2.5 flex flex-col gap-0.5 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {!msg.isRead && (
-                          <span className="w-2 h-2 rounded-full bg-[var(--mac-blue)] shrink-0" />
-                        )}
-                        <span className="text-[11px] font-semibold text-[var(--mac-blue)] truncate">
-                          {cleanSenderName(msg.sender)}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-[var(--mac-label-2)] tabular-nums shrink-0">
-                        {formatHumanDate(msg.date, false, lang)}
-                      </span>
-                    </div>
-                    <div className="text-[13px] font-medium text-[var(--mac-label-1)] truncate">
-                      {msg.subject}
-                    </div>
-                  </button>
-                ))}
-                {announcements.slice(0, 2).map((ann) => (
-                  <button
-                    key={`ann-${ann.id}`}
-                    type="button"
-                    onClick={() => onOpenAnnouncementInNotices(ann)}
-                    className="w-full px-4 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer bg-[var(--mac-fill-5)]"
-                  >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Megaphone className="w-3.5 h-3.5 text-[var(--mac-purple)] shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[12px] font-semibold text-[var(--mac-label-1)] truncate">
-                          {ann.title}
-                        </div>
-                        <div className="text-[10px] text-[var(--mac-label-2)] truncate">
-                          {cleanSenderName(ann.author)}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] text-[var(--mac-label-2)] tabular-nums shrink-0">
-                      {formatHumanDate(ann.date, false, lang)}
-                    </span>
-                  </button>
-                ))}
-                {previewMessages.length === 0 && announcements.length === 0 && (
-                  <div className="p-8 text-center text-[13px] text-[var(--mac-label-2)]">
-                    {t.noMessages}
-                  </div>
-                )}
               </div>
             )}
           </MacGroupBox>

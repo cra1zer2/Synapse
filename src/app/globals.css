@@ -120,6 +120,51 @@
 
   --ios-header-bg: rgba(242, 242, 247, 0.76);
   --ios-on-accent: #ffffff;
+
+  /* === Apple macOS 27 UI Kit Tokens (Light) === */
+  --mac-window-bg: #ffffff;
+  --mac-canvas-bg: #f5f5f7;
+  --mac-sidebar-bg: rgba(250, 250, 250, 0.80);
+  --mac-sidebar-inactive-bg: #f4f4f4;
+  --mac-sidebar-selected: rgba(0, 0, 0, 0.11);
+  --mac-sidebar-hover: rgba(0, 0, 0, 0.05);
+  --mac-group-bg: rgba(0, 0, 0, 0.03);
+  --mac-group-border: rgba(0, 0, 0, 0.055);
+  --mac-row-divider: rgba(0, 0, 0, 0.05);
+  --mac-separator: rgba(60, 60, 67, 0.29);
+
+  --mac-fill-1: rgba(0, 0, 0, 0.10);
+  --mac-fill-2: rgba(0, 0, 0, 0.08);
+  --mac-fill-3: rgba(0, 0, 0, 0.05);
+  --mac-fill-4: rgba(0, 0, 0, 0.03);
+  --mac-fill-5: rgba(0, 0, 0, 0.02);
+
+  --mac-label-1: rgba(0, 0, 0, 0.85);
+  --mac-label-2: rgba(0, 0, 0, 0.50);
+  --mac-label-3: rgba(0, 0, 0, 0.25);
+  --mac-label-4: rgba(0, 0, 0, 0.10);
+
+  --mac-blue: #0088ff;
+  --mac-blue-overglass: #0078f0;
+  --mac-green: #34c759;
+  --mac-orange: #ff8d28;
+  --mac-red: #ff383c;
+  --mac-purple: #cb30e0;
+  --mac-teal: #00c3d0;
+  --mac-mint: #00c8b3;
+  --mac-indigo: #6155f5;
+
+  --mac-glass-pill-bg: rgba(255, 255, 255, 0.72);
+  --mac-glass-pill-border: rgba(0, 0, 0, 0.08);
+  --mac-glass-pill-shadow: 0 2px 10px rgba(0, 0, 0, 0.06), 0 0 0 0.5px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  --mac-toolbar-bg: rgba(255, 255, 255, 0.80);
+  --mac-popover-bg: rgba(255, 255, 255, 0.88);
+  --mac-popover-shadow: 0 12px 36px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --mac-dialog-shadow: 0 36px 100px rgba(0, 0, 0, 0.35), 0 0 1px rgba(0, 0, 0, 0.45);
+  --mac-window-border: rgba(0, 0, 0, 0.08);
+  --mac-input-bg: #ffffff;
+  --mac-input-border: rgba(0, 0, 0, 0.08);
+  --mac-focus-ring: 0 0 0 3.5px rgba(0, 136, 255, 0.25), 0 0 0 1px rgba(0, 136, 255, 0.55);
 }
 
 /* === Dark Palette (iOS Default) === */
@@ -184,6 +229,51 @@
   --ios-room-bg: rgba(0, 145, 255, 0.16);
   --ios-room-text: #40aeff;
   --ios-header-bg: rgba(0, 0, 0, 0.72);
+
+  /* === Apple macOS 27 UI Kit Tokens (Dark) === */
+  --mac-window-bg: #1e1e1e;
+  --mac-canvas-bg: #161617;
+  --mac-sidebar-bg: rgba(18, 18, 19, 0.85);
+  --mac-sidebar-inactive-bg: rgba(46, 46, 46, 0.85);
+  --mac-sidebar-selected: rgba(255, 255, 255, 0.11);
+  --mac-sidebar-hover: rgba(255, 255, 255, 0.055);
+  --mac-group-bg: rgba(255, 255, 255, 0.03);
+  --mac-group-border: rgba(255, 255, 255, 0.075);
+  --mac-row-divider: rgba(255, 255, 255, 0.05);
+  --mac-separator: rgba(255, 255, 255, 0.12);
+
+  --mac-fill-1: rgba(255, 255, 255, 0.10);
+  --mac-fill-2: rgba(255, 255, 255, 0.08);
+  --mac-fill-3: rgba(255, 255, 255, 0.05);
+  --mac-fill-4: rgba(255, 255, 255, 0.03);
+  --mac-fill-5: rgba(255, 255, 255, 0.02);
+
+  --mac-label-1: rgba(255, 255, 255, 0.96);
+  --mac-label-2: rgba(255, 255, 255, 0.55);
+  --mac-label-3: rgba(255, 255, 255, 0.25);
+  --mac-label-4: rgba(255, 255, 255, 0.10);
+
+  --mac-blue: #0091ff;
+  --mac-blue-overglass: #0a99ff;
+  --mac-green: #30d158;
+  --mac-orange: #ff9230;
+  --mac-red: #ff4245;
+  --mac-purple: #db34f2;
+  --mac-teal: #00d2e0;
+  --mac-mint: #00dac3;
+  --mac-indigo: #6d7cff;
+
+  --mac-glass-pill-bg: rgba(44, 44, 46, 0.72);
+  --mac-glass-pill-border: rgba(255, 255, 255, 0.14);
+  --mac-glass-pill-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(255, 255, 255, 0.14), inset 0 0.5px 0 rgba(255, 255, 255, 0.22);
+  --mac-toolbar-bg: rgba(30, 30, 30, 0.78);
+  --mac-popover-bg: rgba(38, 38, 40, 0.88);
+  --mac-popover-shadow: 0 18px 48px rgba(0, 0, 0, 0.55), 0 0 0 0.5px rgba(255, 255, 255, 0.18), inset 0 0.5px 0 rgba(255, 255, 255, 0.20);
+  --mac-dialog-shadow: 0 36px 100px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.20);
+  --mac-window-border: rgba(255, 255, 255, 0.16);
+  --mac-input-bg: #1e1e1e;
+  --mac-input-border: rgba(255, 255, 255, 0.08);
+  --mac-focus-ring: 0 0 0 3.5px rgba(0, 145, 255, 0.32), 0 0 0 1px rgba(0, 145, 255, 0.75);
 }
 
 /* === Base & Utilities === */
@@ -363,6 +453,68 @@ body {
 
 .ios-progress-fill {
   box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.45);
+}
+
+/* === Apple macOS 27 UI Kit Surface Utilities === */
+
+.mac-sidebar-surface {
+  background-color: var(--mac-sidebar-bg);
+  backdrop-filter: saturate(180%) blur(32px);
+  -webkit-backdrop-filter: saturate(180%) blur(32px);
+}
+
+.mac-toolbar-surface {
+  background-color: var(--mac-toolbar-bg);
+  backdrop-filter: saturate(185%) blur(26px);
+  -webkit-backdrop-filter: saturate(185%) blur(26px);
+}
+
+.mac-glass-pill {
+  background-color: var(--mac-glass-pill-bg);
+  border: 1px solid var(--mac-glass-pill-border);
+  box-shadow: var(--mac-glass-pill-shadow);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+.mac-group-box {
+  background-color: var(--mac-group-bg);
+  border: 1px solid var(--mac-group-border);
+  border-radius: 12px;
+}
+
+.mac-dialog-window {
+  background-color: var(--mac-window-bg);
+  border-radius: 26px;
+  box-shadow: var(--mac-dialog-shadow);
+}
+
+.mac-popover-surface {
+  background-color: var(--mac-popover-bg);
+  border-radius: 20px;
+  box-shadow: var(--mac-popover-shadow);
+  backdrop-filter: saturate(190%) blur(32px);
+  -webkit-backdrop-filter: saturate(190%) blur(32px);
+}
+
+.mac-focus-ring:focus-visible,
+.mac-input-focus:focus-within {
+  box-shadow: var(--mac-focus-ring);
+}
+
+@keyframes mac-dialog-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.mac-dialog-animate-in {
+  animation: mac-dialog-in 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
 }
 
 .divide-y > * {

@@ -273,8 +273,8 @@ export function AuthView({
   )
 
   const containerClass = isSubView
-    ? 'w-full bg-[var(--ios-bg)] text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 pt-3 pb-8 select-none'
-    : 'w-full min-h-[100lvh] min-h-[100dvh] md:fixed md:inset-0 bg-[var(--ios-bg)] text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 pt-[calc(var(--ios-header-pad-top)+38px+var(--ios-header-pad-bottom))] sm:p-5 md:pt-5 md:overflow-y-auto select-none'
+    ? 'w-full bg-[var(--ios-bg)] lg:bg-transparent text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 lg:p-0 pt-3 pb-8 lg:pb-2 select-none'
+    : 'w-full min-h-[100lvh] min-h-[100dvh] md:fixed md:inset-0 bg-[var(--ios-bg)] lg:bg-[var(--mac-canvas-bg)] text-[var(--ios-label)] font-sans flex flex-col justify-between p-4 pt-[calc(var(--ios-header-pad-top)+38px+var(--ios-header-pad-bottom))] sm:p-5 md:pt-5 md:overflow-y-auto select-none'
 
   const languageToggle = onSelectLanguage ? (
     SUPPORTED_LANGUAGES.length <= 3 ? (
@@ -327,13 +327,18 @@ export function AuthView({
     >
       {mobileAuthTopbar}
       {!isSubView && (
-        <div className="hidden md:flex w-full max-w-[380px] mx-auto justify-end shrink-0 ios-auth-topbar">
+        <div className="hidden md:flex w-full max-w-[380px] lg:max-w-[440px] mx-auto justify-end shrink-0 ios-auth-topbar">
           {languageToggle}
         </div>
       )}
 
       <div className={langContentClass}>
-        <div className="w-full max-w-[380px] mx-auto flex flex-col items-center my-auto py-4">
+        <div
+          className={cn(
+            'w-full max-w-[380px] mx-auto flex flex-col items-center my-auto py-4',
+            !isSubView && 'lg:max-w-[440px] lg:mac-dialog-window lg:rounded-[26px] lg:p-8 lg:border lg:border-[var(--mac-window-border)]'
+          )}
+        >
           {(authStep === 'input' || authStep === 'verifying') && (
             <div className="flex flex-col items-center text-center mb-6 ios-reveal">
               <div
@@ -497,10 +502,13 @@ export function AuthView({
                     >
                       demo / demo
                     </button>
-                    {pickText(displayLang, {
-                      pl: ' (najlepiej otwierać z telefonu · PC i dolny pasek w WIP).',
-                      en: ' (best viewed on a phone · PC & bottom bar are WIP).'
-                    })}
+                    <span className="lg:hidden">
+                      {pickText(displayLang, {
+                        pl: ' (najlepiej otwierać z telefonu · PC i dolny pasek w WIP).',
+                        en: ' (best viewed on a phone · PC & bottom bar are WIP).'
+                      })}
+                    </span>
+                    <span className="hidden lg:inline">.</span>
                   </p>
                 )}
 

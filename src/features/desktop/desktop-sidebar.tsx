@@ -1,0 +1,349 @@
+'use client'
+
+import React, { useState, useRef, useEffect } from 'react'
+import {
+  LayoutGrid,
+  Calendar,
+  CalendarClock,
+  GraduationCap,
+  CheckCircle2,
+  Inbox,
+  Send,
+  Megaphone,
+  Settings,
+  PanelLeft,
+  Sparkles,
+  Check,
+  ChevronsUpDown,
+  Plus
+} from 'lucide-react'
+import { SavedAccount, StudentProfile } from '@/models/account.model'
+import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
+import { resolveAvatarLetter, sanitizeAccountLabel } from '@/utils/account.util'
+import { cn } from '@/utils/cn.util'
+import { MacToolbarButton } from './mac-primitives'
+
+export type DesktopNavSection =
+  | 'overview'
+  | 'timetable'
+  | 'deadlines'
+  | 'grades'
+  | 'attendance'
+  | 'inbox'
+  | 'sent'
+  | 'notices'
+
+interface DesktopSidebarProps {
+  activeSection: DesktopNavSection
+  onSelectSection: (section: DesktopNavSection) => void
+  collapsed: boolean
+  onToggleCollapse: () => void
+  profile: StudentProfile | null
+  username: string
+  savedAccounts: SavedAccount[]
+  onSwitchAccount: (account: SavedAccount) => void
+  onOpenSettings: () => void
+  onOpenAddAccount: () => void
+  badges: {
+    schedule: number
+    grades: number
+    attendance: number
+    inbox: number
+    notices: number
+  }
+  lang: AppLanguage
+  t: AppDictionary
+}
+
+interface SidebarNavItem {
+  id: DesktopNavSection
+  label: string
+  icon: React.ReactNode
+  badge?: number
+  badgeTone?: 'blue' | 'red' | 'neutral'
+}
+
+export function DesktopSidebar({
+  activeSection,
+  onSelectSection,
+  collapsed,
+  onToggleCollapse,
+  profile,
+  username,
+  savedAccounts,
+  onSwitchAccount,
+  onOpenSettings,
+  onOpenAddAccount,
+  badges,
+  lang,
+  t
+}: DesktopSidebarProps) {
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const popoverRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!accountMenuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setAccountMenuOpen(false)
+      }
+    }
+    window.addEventListener('mousedown', handleClickOutside)
+    return () => window.removeEventListener('mousedown', handleClickOutside)
+  }, [accountMenuOpen])
+
+  const activeAccount = savedAccounts.find((a) => a.isActive) || savedAccounts[0]
+  const rawName = profile?.fullName || activeAccount?.profile?.fullName || username || 'Synapse'
+  const avatarText = resolveAvatarLetter(rawName, username)
+  const classLabel = sanitizeAccountLabel(profile?.className || activeAccount?.profile?.className)
+  const schoolLabel = sanitizeAccountLabel(profile?.schoolName || activeAccount?.profile?.schoolName)
+  const subtitle = [classLabel, schoolLabel].filter(Boolean).join(' · ') || 'Librus Synergia'
+  const luckyNum = profile?.luckyNumber ?? activeAccount?.profile?.luckyNumber ?? null
+
+  const groups: Array<{ title: string; items: SidebarNavItem[] }> = [
+    {
+      title: pickText(lang, { pl: 'Przegląd', en: 'Workspace' }),
+      items: [
+        {
+          id: 'overview',
+          label: pickText(lang, { pl: 'Pulpit', en: 'Overview' }),
+          icon: <LayoutGrid className="w-[16px] h-[16px]" strokeWidth={1.9} />
+        }
+      ]
+    },
+    {
+      title: pickText(lang, { pl: 'Dziennik', en: 'Academic' }),
+      items: [
+        {
+          id: 'timetable',
+          label: t.schedule,
+          icon: <Calendar className="w-[16px] h-[16px]" strokeWidth={1.9} />,
+          badge: badges.schedule,
+          badgeTone: 'blue'
+        },
+        {
+          id: 'deadlines',
+          label: pickText(lang, { pl: 'Sprawdziany i terminy', en: 'Tests & Deadlines' }),
+          icon: <CalendarClock className="w-[16px] h-[16px]" strokeWidth={1.9} />
+        },
+        {
+          id: 'grades',
+          label: t.grades,
+          icon: <GraduationCap className="w-[16px] h-[16px]" strokeWidth={1.9} />,
+          badge: badges.grades,
+          badgeTone: 'blue'
+        },
+        {
+          id: 'attendance',
+          label: t.attendance,
+          icon: <CheckCircle2 className="w-[16px] h-[16px]" strokeWidth={1.9} />,
+          badge: badges.attendance,
+          badgeTone: 'red'
+        }
+      ]
+    },
+    {
+      title: pickText(lang, { pl: 'Komunikacja', en: 'Mail' }),
+      items: [
+        {
+          id: 'inbox',
+          label: t.messagesInbox,
+          icon: <Inbox className="w-[16px] h-[16px]" strokeWidth={1.9} />,
+          badge: badges.inbox,
+          badgeTone: 'blue'
+        },
+        {
+          id: 'sent',
+          label: pickText(lang, { pl: 'Wysłane', en: 'Sent' }),
+          icon: <Send className="w-[16px] h-[16px]" strokeWidth={1.9} />
+        },
+        {
+          id: 'notices',
+          label: t.messagesAnnouncements,
+          icon: <Megaphone className="w-[16px] h-[16px]" strokeWidth={1.9} />,
+          badge: badges.notices,
+          badgeTone: 'neutral'
+        }
+      ]
+    }
+  ]
+
+  return (
+    <aside
+      aria-label="Sidebar"
+      className={cn(
+        'mac-sidebar-surface h-full shrink-0 border-r border-[var(--mac-row-divider)] flex flex-col select-none transition-[width,opacity] duration-200 ease-[cubic-bezier(0.2,0.9,0.3,1)] overflow-hidden relative z-20',
+        collapsed ? 'w-0 border-r-0 opacity-0 pointer-events-none' : 'w-[256px] opacity-100'
+      )}
+    >
+      <div className="w-[256px] h-full flex flex-col">
+        {/* Top 52px Sidebar Titlebar matching Apple macOS 27 Left Pane */}
+        <div className="h-[52px] px-[14px] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-[8px] bg-[var(--mac-blue)] text-white flex items-center justify-center shadow-[0_2px_8px_rgba(0,136,255,0.28)] shrink-0">
+              <GraduationCap className="w-4 h-4" strokeWidth={2.2} />
+            </div>
+            <span className="text-[14px] font-bold tracking-[-0.02em] text-[var(--mac-label-1)] truncate">
+              Synapse
+            </span>
+            {luckyNum !== null && luckyNum !== undefined && (
+              <span
+                title={t.luckyNumber}
+                className="inline-flex items-center gap-1 h-[20px] px-2 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[11px] font-semibold tabular-nums shrink-0"
+              >
+                <Sparkles className="w-3 h-3" strokeWidth={2.2} />
+                {luckyNum}
+              </span>
+            )}
+          </div>
+
+          <MacToolbarButton
+            icon={<PanelLeft className="w-4 h-4" strokeWidth={1.9} />}
+            onClick={onToggleCollapse}
+            title={pickText(lang, { pl: 'Ukryj pasek boczny', en: 'Hide Sidebar' })}
+            aria-label={pickText(lang, { pl: 'Ukryj pasek boczny', en: 'Hide Sidebar' })}
+          />
+        </div>
+
+        {/* Navigation Groups (14px inset, 18px section headers, 32px items w/ 8px radius) */}
+        <nav className="flex-1 overflow-y-auto px-[14px] py-2 flex flex-col gap-4">
+          {groups.map((group) => (
+            <div key={group.title} className="flex flex-col gap-0.5">
+              <div className="h-[18px] px-2 flex items-center">
+                <span className="text-[11px] font-semibold text-[var(--mac-label-2)] leading-[14px]">
+                  {group.title}
+                </span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {group.items.map((item) => {
+                  const isActive = activeSection === item.id
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => onSelectSection(item.id)}
+                      className={cn(
+                        'w-full h-[32px] px-2.5 rounded-[8px] flex items-center justify-between gap-2 text-left transition-colors duration-100 cursor-pointer outline-none mac-focus-ring',
+                        isActive
+                          ? 'bg-[var(--mac-sidebar-selected)] text-[var(--mac-label-1)] font-semibold'
+                          : 'text-[var(--mac-label-1)] hover:bg-[var(--mac-sidebar-hover)] font-normal'
+                      )}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span
+                          className={cn(
+                            'w-[20px] h-[20px] flex items-center justify-center shrink-0 transition-colors',
+                            isActive ? 'text-[var(--mac-blue)]' : 'text-[var(--mac-label-2)]'
+                          )}
+                        >
+                          {item.icon}
+                        </span>
+                        <span className="text-[13px] leading-[16px] truncate">{item.label}</span>
+                      </div>
+
+                      {typeof item.badge === 'number' && item.badge > 0 && (
+                        <span
+                          className={cn(
+                            'min-w-[18px] h-[18px] px-1.5 rounded-full text-[11px] font-semibold flex items-center justify-center tabular-nums leading-none shrink-0',
+                            item.badgeTone === 'red'
+                              ? 'bg-[var(--ios-red-subtle)] text-[var(--mac-red)]'
+                              : item.badgeTone === 'blue'
+                                ? 'bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)]'
+                                : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]'
+                          )}
+                        >
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* Bottom Account & Settings Footer */}
+        <div className="p-[14px] pt-2 border-t border-[var(--mac-row-divider)] shrink-0 relative" ref={popoverRef}>
+          {accountMenuOpen && (
+            <div className="mac-popover-surface absolute left-[14px] right-[14px] bottom-[62px] p-1.5 flex flex-col gap-0.5 z-50">
+              <div className="px-2.5 py-1.5 text-[11px] font-semibold text-[var(--mac-label-2)]">
+                {pickText(lang, { pl: 'Zapisane konta', en: 'Saved accounts' })}
+              </div>
+              {savedAccounts.map((acc) => {
+                const isCurrent = acc.id === activeAccount?.id
+                return (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    onClick={() => {
+                      if (!isCurrent) onSwitchAccount(acc)
+                      setAccountMenuOpen(false)
+                    }}
+                    className={cn(
+                      'w-full px-2.5 py-1.5 rounded-[10px] flex items-center justify-between gap-2 text-left cursor-pointer transition-colors',
+                      isCurrent ? 'bg-[var(--mac-fill-3)]' : 'hover:bg-[var(--mac-fill-3)]'
+                    )}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[12px] font-medium text-[var(--mac-label-1)] truncate">
+                        {acc.profile?.fullName || acc.username}
+                      </div>
+                      <div className="text-[10px] text-[var(--mac-label-2)] truncate">
+                        {acc.role === 'student' ? t.studentRole : t.parentRole} · {acc.username}
+                      </div>
+                    </div>
+                    {isCurrent && <Check className="w-3.5 h-3.5 text-[var(--mac-blue)] shrink-0" strokeWidth={2.5} />}
+                  </button>
+                )
+              })}
+              <div className="h-[1px] bg-[var(--mac-row-divider)] my-1" />
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountMenuOpen(false)
+                  onOpenAddAccount()
+                }}
+                className="w-full px-2.5 py-1.5 rounded-[10px] flex items-center gap-2 text-[12px] font-medium text-[var(--mac-blue)] hover:bg-[var(--mac-fill-3)] cursor-pointer transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" strokeWidth={2.3} />
+                <span>{t.addAccount}</span>
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setAccountMenuOpen((prev) => !prev)}
+              className="flex-1 min-w-0 p-1.5 rounded-[10px] flex items-center gap-2.5 hover:bg-[var(--mac-sidebar-hover)] transition-colors cursor-pointer text-left outline-none mac-focus-ring"
+            >
+              <div className="w-8 h-8 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] flex items-center justify-center text-[12px] font-bold shrink-0">
+                {avatarText}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] font-semibold text-[var(--mac-label-1)] truncate leading-[15px]">
+                  {rawName}
+                </div>
+                <div className="text-[10px] text-[var(--mac-label-2)] truncate leading-[13px] mt-0.5">
+                  {subtitle}
+                </div>
+              </div>
+              <ChevronsUpDown className="w-3.5 h-3.5 text-[var(--mac-label-3)] shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              title={t.settingsTitle}
+              aria-label={t.settingsTitle}
+              className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[var(--mac-label-2)] hover:text-[var(--mac-label-1)] hover:bg-[var(--mac-sidebar-hover)] transition-colors cursor-pointer shrink-0 outline-none mac-focus-ring"
+            >
+              <Settings className="w-4 h-4" strokeWidth={1.9} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  )
+}

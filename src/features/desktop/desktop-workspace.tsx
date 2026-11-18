@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { Archive, Calendar, ChevronLeft, ChevronRight, PanelLeft, RefreshCw, Settings, SquarePen } from 'lucide-react'
 import { SavedAccount, StudentProfile } from '@/models/account.model'
 import { SmartTimetableResult, LessonItem, TimetableEvent } from '@/models/timetable.model'
@@ -17,7 +17,15 @@ import { ScheduleFeatureController } from '@/features/schedule/schedule-feature'
 import { GradesFeatureController } from '@/features/grades/grades-feature'
 import { AttendanceFeatureController } from '@/features/attendance/attendance-feature'
 import { MessagesFeatureController } from '@/features/messages/messages-feature'
-import { computeLiveWeekDays, getTodayIsoString } from '@/utils/date.util'
+import {
+  computeLiveWeekDays,
+  getDayAbbr,
+  getMonthNames,
+  getSchoolWeekMondayIso,
+  getTodayDayName,
+  getTodayIsoString,
+  getWeekdayHeaders
+} from '@/utils/date.util'
 import { cn } from '@/utils/cn.util'
 import {
   MacSearchField,
@@ -200,12 +208,146 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
   const liveWeekMeta = useMemo(() => computeLiveWeekDays(currentWeekPivot), [currentWeekPivot])
   const allowExcuse = canSubmitExcuse !== undefined ? canSubmitExcuse : !isStudent
 
+  // Interactive macOS 27 Timetable Calendar Popover state
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const calendarRef = useRef<HTMLDivElement | null>(null)
+  const todayIso = useMemo(() => getTodayIsoString(), [])
+  const monthNames = useMemo(() => getMonthNames(lang), [lang])
+  const weekdayHeaders = useMemo(() => getWeekdayHeaders(lang), [lang])
+
+  const activeDaySlot = useMemo(
+    () => liveWeekMeta.days.find((d) => d.dayName === selectedDay) || liveWeekMeta.days[0],
+    [liveWeekMeta, selectedDay]
+  )
+
+  const [calYear, setCalYear] = useState(() => {
+    const parts = (currentWeekPivot || getTodayIsoString()).split('-').map(Number)
+    return parts[0] || new Date().getFullYear()
+  })
+  const [calMonth, setCalMonth] = useState(() => {
+    const parts = (currentWeekPivot || getTodayIsoString()).split('-').map(Number)
+    return (parts[1] || 1) - 1
+  })
+
+  useEffect(() => {
+    if (!calendarOpen) return
+    const targetIso =
+      timetableViewMode === 'day' && activeDaySlot?.isoDate
+        ? activeDaySlot.isoDate
+        : currentWeekPivot
+    const parts = (targetIso || todayIso).split('-').map(Number)
+    if (parts[0] && parts[1]) {
+      setCalYear(parts[0])
+      setCalMonth(parts[1] - 1)
+    }
+  }, [calendarOpen, timetableViewMode, activeDaySlot?.isoDate, currentWeekPivot, todayIso])
+
+  useEffect(() => {
+    if (activeSection !== 'timetable') setCalendarOpen(false)
+  }, [activeSection])
+
+  useEffect(() => {
+    if (!calendarOpen) return
+    const handleMouseDown = (e: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setCalendarOpen(false)
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCalendarOpen(false)
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [calendarOpen])
+
+  const calendarGrid = useMemo(() => {
+    const firstDay = new Date(Date.UTC(calYear, calMonth, 1))
+    const startDow = firstDay.getUTCDay()
+    const leadingEmpties = startDow === 0 ? 6 : startDow - 1
+    const daysInMonth = new Date(Date.UTC(calYear, calMonth + 1, 0)).getUTCDate()
+    const cells: Array<{ dayNum: number | null; iso: string | null }> = []
+    for (let i = 0; i < leadingEmpties; i++) cells.push({ dayNum: null, iso: null })
+    for (let d = 1; d <= daysInMonth; d++) {
+      const mm = String(calMonth + 1).padStart(2, '0')
+      const dd = String(d).padStart(2, '0')
+      cells.push({ dayNum: d, iso: `${calYear}-${mm}-${dd}` })
+    }
+    return cells
+  }, [calYear, calMonth])
+
+  const activeWeekIsoSet = useMemo(
+    () => new Set(liveWeekMeta.days.map((d) => d.isoDate)),
+    [liveWeekMeta]
+  )
+
+  const shiftCalMonth = (delta: number) => {
+    const next = new Date(Date.UTC(calYear, calMonth + delta, 1))
+    setCalYear(next.getUTCFullYear())
+    setCalMonth(next.getUTCMonth())
+  }
+
   // Deep-jump handoffs from Overview
   const [timetableSelection, setTimetableSelection] = useState<{
     lesson?: LessonItem
     isToday?: boolean
     event?: TimetableEvent
   } | null>(null)
+
+  const handlePickCalendarDate = (isoDate: string) => {
+    const parts = isoDate.split('-').map(Number)
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return
+    const utcDay = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2])).getUTCDay()
+    const dayMap: Record<number, string> = {
+      1: 'Monday',
+      2: 'Tuesday',
+      3: 'Wednesday',
+      4: 'Thursday',
+      5: 'Friday'
+    }
+    const targetDayName = dayMap[utcDay] || 'Monday'
+    const targetWeekMonday = getSchoolWeekMondayIso(isoDate)
+    onSelectDate(targetWeekMonday)
+    onSelectDay(targetDayName)
+    setTimetableSelection(null)
+    setCalendarOpen(false)
+  }
+
+  const handleShiftTimetable = (direction: -1 | 1) => {
+    if (timetableViewMode === 'week') {
+      onShiftWeek(direction * 7)
+      return
+    }
+    const order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    const idx = order.indexOf(selectedDay)
+    if (direction === 1) {
+      if (idx >= 0 && idx < 4) {
+        onSelectDay(order[idx + 1])
+      } else {
+        onShiftWeek(7)
+        onSelectDay('Monday')
+      }
+    } else {
+      if (idx > 0) {
+        onSelectDay(order[idx - 1])
+      } else {
+        onShiftWeek(-7)
+        onSelectDay('Friday')
+      }
+    }
+    setTimetableSelection(null)
+  }
+
+  const handleJumpToday = () => {
+    const today = getTodayIsoString()
+    onSelectDate(getSchoolWeekMondayIso(today))
+    onSelectDay(getTodayDayName())
+    setTimetableSelection(null)
+    setCalendarOpen(false)
+  }
   const [deadlineSelection, setDeadlineSelection] = useState<TimetableEvent | null>(null)
   const [gradeSelection, setGradeSelection] = useState<{ grade: GradeItem; subject: string } | null>(null)
   const [mailSelection, setMailSelection] = useState<MessageItem | null>(null)
@@ -280,7 +422,7 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
       {/* Right Main Window Pane */}
       <div className="flex-1 min-w-0 h-full flex flex-col bg-[var(--mac-canvas-bg)]">
         {/* 52px Unified macOS 27 Toolbar */}
-        <header className="mac-toolbar-surface h-[52px] px-5 border-b border-[var(--mac-row-divider)] flex items-center justify-between gap-4 shrink-0 select-none z-10">
+        <header className="mac-toolbar-surface h-[52px] px-5 border-b border-[var(--mac-row-divider)] flex items-center justify-between gap-4 shrink-0 select-none z-20 relative">
           <div className="flex items-center gap-3 min-w-0">
             {sidebarCollapsed && (
               <MacToolbarButton
@@ -310,42 +452,153 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
                 <MacToolbarCapsuleGroup>
                   <button
                     type="button"
-                    onClick={() => onShiftWeek(-7)}
-                    aria-label={pickText(lang, { pl: 'Poprzedni tydzień', en: 'Previous week' })}
+                    onClick={() => handleShiftTimetable(-1)}
+                    aria-label={
+                      timetableViewMode === 'day'
+                        ? pickText(lang, { pl: 'Poprzedni dzień', en: 'Previous day' })
+                        : pickText(lang, { pl: 'Poprzedni tydzień', en: 'Previous week' })
+                    }
                     className="h-[28px] w-[28px] rounded-full inline-flex items-center justify-center hover:bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] cursor-pointer transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
-                    onClick={() => onSelectDate(getTodayIsoString())}
+                    onClick={handleJumpToday}
                     className="h-[28px] px-2.5 rounded-full text-[12px] font-medium hover:bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] cursor-pointer transition-colors"
                   >
                     {pickText(lang, { pl: 'Dzisiaj', en: 'Today' })}
                   </button>
                   <button
                     type="button"
-                    onClick={() => onShiftWeek(7)}
-                    aria-label={pickText(lang, { pl: 'Następny tydzień', en: 'Next week' })}
+                    onClick={() => handleShiftTimetable(1)}
+                    aria-label={
+                      timetableViewMode === 'day'
+                        ? pickText(lang, { pl: 'Następny dzień', en: 'Next day' })
+                        : pickText(lang, { pl: 'Następny tydzień', en: 'Next week' })
+                    }
                     className="h-[28px] w-[28px] rounded-full inline-flex items-center justify-center hover:bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] cursor-pointer transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </MacToolbarCapsuleGroup>
 
-                <div className="relative h-[36px] rounded-full mac-glass-pill px-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--mac-label-1)] tabular-nums shrink-0 hover:brightness-[0.98] dark:hover:brightness-110 transition-all">
-                  <Calendar className="w-3.5 h-3.5 text-[var(--mac-label-2)] shrink-0" />
-                  <span>{liveWeekMeta.rangeLabel}</span>
-                  {isLoadingWeek && <span className="w-1.5 h-1.5 rounded-full bg-[var(--mac-blue)] animate-pulse" />}
-                  <input
-                    type="date"
-                    value={currentWeekPivot}
-                    onChange={(e) => {
-                      if (e.target.value) onSelectDate(e.target.value)
-                    }}
+                <div ref={calendarRef} className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setCalendarOpen((o) => !o)}
                     aria-label={t.dateLabel}
-                    className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                  />
+                    aria-expanded={calendarOpen}
+                    className={cn(
+                      'h-[36px] rounded-full px-3.5 inline-flex items-center gap-1.5 text-[12px] font-medium tabular-nums cursor-pointer transition-all outline-none mac-focus-ring',
+                      calendarOpen
+                        ? 'bg-[var(--mac-blue)] text-white shadow-[0_2px_10px_rgba(0,136,255,0.28)]'
+                        : 'mac-glass-pill text-[var(--mac-label-1)] hover:brightness-[0.98] dark:hover:brightness-110'
+                    )}
+                  >
+                    <Calendar
+                      className={cn(
+                        'w-3.5 h-3.5 shrink-0',
+                        calendarOpen ? 'text-white' : 'text-[var(--mac-label-2)]'
+                      )}
+                    />
+                    <span>
+                      {timetableViewMode === 'day' && activeDaySlot
+                        ? `${getDayAbbr(activeDaySlot.dayName, lang)}, ${activeDaySlot.dateDot.slice(0, 5)}`
+                        : liveWeekMeta.rangeLabel}
+                    </span>
+                    {isLoadingWeek && (
+                      <span
+                        className={cn(
+                          'w-1.5 h-1.5 rounded-full animate-pulse',
+                          calendarOpen ? 'bg-white' : 'bg-[var(--mac-blue)]'
+                        )}
+                      />
+                    )}
+                  </button>
+
+                  {calendarOpen && (
+                    <div className="absolute right-0 top-[calc(100%+8px)] w-[276px] p-3.5 mac-popover-surface border border-[var(--mac-glass-pill-border)] z-50 select-none">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
+                          {monthNames[calMonth]} {calYear}
+                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => shiftCalMonth(-1)}
+                            aria-label={pickText(lang, { pl: 'Poprzedni miesiąc', en: 'Previous month' })}
+                            className="w-6 h-6 rounded-full hover:bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] inline-flex items-center justify-center cursor-pointer transition-colors"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleJumpToday}
+                            className="h-6 px-2 rounded-full bg-[var(--mac-fill-3)] hover:bg-[var(--mac-fill-2)] text-[11px] font-medium text-[var(--mac-label-1)] inline-flex items-center justify-center cursor-pointer transition-colors"
+                          >
+                            {pickText(lang, { pl: 'Dzisiaj', en: 'Today' })}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => shiftCalMonth(1)}
+                            aria-label={pickText(lang, { pl: 'Następny miesiąc', en: 'Next month' })}
+                            className="w-6 h-6 rounded-full hover:bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] inline-flex items-center justify-center cursor-pointer transition-colors"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-[var(--mac-label-2)] mb-2.5 leading-snug">
+                        {timetableViewMode === 'week'
+                          ? pickText(lang, {
+                              pl: 'Wybierz dzień, aby przejść do tygodnia i dnia',
+                              en: 'Pick a day to jump to its week & day'
+                            })
+                          : pickText(lang, { pl: 'Wybierz dzień zajęć', en: 'Pick a school day' })}
+                      </p>
+
+                      <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] font-semibold text-[var(--mac-label-3)] mb-1">
+                        {weekdayHeaders.map((w, i) => (
+                          <span key={i}>{w}</span>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-0.5">
+                        {calendarGrid.map((cell, idx) => {
+                          if (!cell.dayNum || !cell.iso) {
+                            return <div key={`empty-${idx}`} className="h-8" />
+                          }
+                          const isSelectedCell = activeDaySlot?.isoDate === cell.iso
+                          const isTodayCell = cell.iso === todayIso
+                          const isInWeekCell = activeWeekIsoSet.has(cell.iso)
+                          const isWeekend = idx % 7 === 5 || idx % 7 === 6
+
+                          return (
+                            <button
+                              key={cell.iso}
+                              type="button"
+                              onClick={() => handlePickCalendarDate(cell.iso!)}
+                              className={cn(
+                                'h-8 rounded-full text-[12px] font-medium flex items-center justify-center cursor-pointer tabular-nums transition-all',
+                                isSelectedCell
+                                  ? 'bg-[var(--mac-blue)] text-white font-bold shadow-[0_1px_4px_rgba(0,136,255,0.35)]'
+                                  : isInWeekCell
+                                    ? 'bg-[var(--ios-blue-subtle)]/55 text-[var(--mac-label-1)] font-semibold hover:bg-[var(--ios-blue-subtle)]'
+                                    : isWeekend
+                                      ? 'text-[var(--mac-label-3)] hover:bg-[var(--mac-fill-3)] hover:text-[var(--mac-label-2)]'
+                                      : 'text-[var(--mac-label-1)] hover:bg-[var(--mac-fill-3)]',
+                                isTodayCell && !isSelectedCell && 'ring-1 ring-[var(--mac-blue)] text-[var(--mac-blue)] font-semibold'
+                              )}
+                            >
+                              {cell.dayNum}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <MacSegmentedControl<'week' | 'day'>

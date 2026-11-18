@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import {
   AlertCircle,
   BookOpen,
@@ -128,6 +128,8 @@ export function DesktopTimetableView({
   const todayIso = useMemo(() => getTodayIsoString(), [])
   const liveWeek = useMemo(() => computeLiveWeekDays(currentWeekPivot), [currentWeekPivot])
   const isEn = lang !== 'pl'
+  const hasInitializedTodayRef = useRef(false)
+  const lastSyncedDayKeyRef = useRef('')
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentMinutes(getCurrentTimeMinutes()), 15000)
@@ -136,6 +138,8 @@ export function DesktopTimetableView({
 
   useEffect(() => {
     if (initialInspectorSelection?.lesson) {
+      hasInitializedTodayRef.current = true
+      lastSyncedDayKeyRef.current = `${selectedDay}__${timetableData?.weekStart || ''}`
       setInspector({
         kind: 'lesson',
         lesson: initialInspectorSelection.lesson,
@@ -144,36 +148,67 @@ export function DesktopTimetableView({
         isToday: Boolean(initialInspectorSelection.isToday)
       })
     } else if (initialInspectorSelection?.event) {
+      hasInitializedTodayRef.current = true
+      lastSyncedDayKeyRef.current = `${selectedDay}__${timetableData?.weekStart || ''}`
       setInspector({ kind: 'event', event: initialInspectorSelection.event })
     }
-  }, [initialInspectorSelection, selectedDay])
+  }, [initialInspectorSelection, selectedDay, timetableData?.weekStart])
 
-  // Auto-select today's current/next lesson (or selected day's first active lesson) when data loads
+  // Auto-select current/next lesson on initial load, and re-sync when user switches day or week
   useEffect(() => {
-    if (inspector || initialInspectorSelection || !timetableData?.schedule?.length) return
+    if (!timetableData?.schedule?.length) return
 
-    const todayMatch = timetableData.schedule.find(
-      (d) => (d.isToday || d.isoDate === todayIso) && d.lessons.length > 0
-    )
-    const selectedMatch = timetableData.schedule.find(
-      (d) => d.dayName === selectedDay && d.lessons.length > 0
-    )
-    const targetDay =
-      todayMatch || selectedMatch || timetableData.schedule.find((d) => d.lessons.length > 0)
+    if (!hasInitializedTodayRef.current) {
+      if (initialInspectorSelection) return
+      const todayMatch = timetableData.schedule.find(
+        (d) => (d.isToday || d.isoDate === todayIso) && d.lessons.length > 0
+      )
+      const selectedMatch = timetableData.schedule.find(
+        (d) => d.dayName === selectedDay && d.lessons.length > 0
+      )
+      const targetDay =
+        todayMatch || selectedMatch || timetableData.schedule.find((d) => d.lessons.length > 0)
 
-    if (targetDay) {
-      const chosen = pickDefaultLessonForDay(targetDay, getCurrentTimeMinutes(), todayIso)
-      if (chosen) {
-        setInspector({
-          kind: 'lesson',
-          lesson: chosen,
-          dayName: targetDay.dayName,
-          dateStr: targetDay.date,
-          isToday: Boolean(targetDay.isToday || targetDay.isoDate === todayIso)
-        })
+      if (targetDay) {
+        hasInitializedTodayRef.current = true
+        lastSyncedDayKeyRef.current = `${targetDay.dayName}__${timetableData.weekStart || ''}`
+        if (todayMatch && todayMatch.dayName !== selectedDay) {
+          onSelectDay(todayMatch.dayName)
+        }
+        const chosen = pickDefaultLessonForDay(targetDay, getCurrentTimeMinutes(), todayIso)
+        if (chosen) {
+          setInspector({
+            kind: 'lesson',
+            lesson: chosen,
+            dayName: targetDay.dayName,
+            dateStr: targetDay.date,
+            isToday: Boolean(targetDay.isToday || targetDay.isoDate === todayIso)
+          })
+        }
       }
+      return
     }
-  }, [timetableData, selectedDay, inspector, initialInspectorSelection, todayIso])
+
+    const curKey = `${selectedDay}__${timetableData.weekStart || ''}`
+    if (curKey !== lastSyncedDayKeyRef.current) {
+      lastSyncedDayKeyRef.current = curKey
+      const dayObj = timetableData.schedule.find((d) => d.dayName === selectedDay)
+      if (dayObj && dayObj.lessons.length > 0) {
+        const chosen = pickDefaultLessonForDay(dayObj, getCurrentTimeMinutes(), todayIso)
+        if (chosen) {
+          setInspector({
+            kind: 'lesson',
+            lesson: chosen,
+            dayName: dayObj.dayName,
+            dateStr: dayObj.date,
+            isToday: Boolean(dayObj.isToday || dayObj.isoDate === todayIso)
+          })
+          return
+        }
+      }
+      setInspector(null)
+    }
+  }, [timetableData, selectedDay, initialInspectorSelection, todayIso, onSelectDay])
 
   const filterDayEvents = (events: TimetableEvent[] = []) =>
     events.filter((ev) => {
@@ -483,7 +518,7 @@ export function DesktopTimetableView({
                         isToday
                           ? 'bg-[var(--ios-blue-subtle)]/55'
                           : isDaySelected
-                            ? 'bg-[var(--mac-fill-4)]'
+                            ? 'bg-[var(--ios-blue-subtle)]/30'
                             : 'hover:bg-[var(--mac-fill-4)]'
                       )}
                     >
@@ -491,7 +526,7 @@ export function DesktopTimetableView({
                         <div
                           className={cn(
                             'text-[12px] font-semibold truncate',
-                            isToday ? 'text-[var(--mac-blue)]' : 'text-[var(--mac-label-1)]'
+                            isToday || isDaySelected ? 'text-[var(--mac-blue)]' : 'text-[var(--mac-label-1)]'
                           )}
                         >
                           {getWeekdayLongLabel(slot.dayName, lang)}
@@ -505,7 +540,9 @@ export function DesktopTimetableView({
                           'w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center tabular-nums shrink-0',
                           isToday
                             ? 'bg-[var(--mac-blue)] text-white'
-                            : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]'
+                            : isDaySelected
+                              ? 'bg-[var(--mac-label-1)] text-[var(--mac-window-bg)]'
+                              : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]'
                         )}
                       >
                         {slot.dateNum}
@@ -598,6 +635,7 @@ export function DesktopTimetableView({
                       {liveWeek.days.map((slot) => {
                         const dayData = timetableData.schedule?.find((d) => d.dayName === slot.dayName)
                         const isToday = Boolean(dayData?.isToday || slot.isoDate === todayIso)
+                        const isDaySelected = selectedDay === slot.dayName
                         const slotLessons = (dayData?.lessons || []).filter(
                           (l) => Number(l.number) === period.num
                         )
@@ -608,7 +646,9 @@ export function DesktopTimetableView({
                               key={`${slot.dayName}-${period.num}-empty`}
                               className={cn(
                                 'p-1.5 flex items-center justify-center min-w-0',
-                                isToday && 'bg-[var(--ios-blue-subtle)]/10'
+                                isToday
+                                  ? 'bg-[var(--ios-blue-subtle)]/10'
+                                  : isDaySelected && 'bg-[var(--mac-fill-5)]/60'
                               )}
                             >
                               <span className="text-[11px] text-[var(--mac-label-4)]">—</span>
@@ -621,7 +661,9 @@ export function DesktopTimetableView({
                             key={`${slot.dayName}-${period.num}`}
                             className={cn(
                               'p-1 flex flex-col gap-1 min-w-0',
-                              isToday && 'bg-[var(--ios-blue-subtle)]/10'
+                              isToday
+                                ? 'bg-[var(--ios-blue-subtle)]/10'
+                                : isDaySelected && 'bg-[var(--mac-fill-5)]/60'
                             )}
                           >
                             {slotLessons.map((lesson, lIdx) => {

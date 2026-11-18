@@ -278,7 +278,7 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
       />
 
       {/* Right Main Window Pane */}
-      <div className="flex-1 min-w-0 h-full flex flex-col bg-[var(--mac-window-bg)]">
+      <div className="flex-1 min-w-0 h-full flex flex-col bg-[var(--mac-canvas-bg)]">
         {/* 52px Unified macOS 27 Toolbar */}
         <header className="mac-toolbar-surface h-[52px] px-5 border-b border-[var(--mac-row-divider)] flex items-center justify-between gap-4 shrink-0 select-none z-10">
           <div className="flex items-center gap-3 min-w-0">
@@ -440,7 +440,7 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
         </header>
 
         {/* Active Desktop Feature Canvas */}
-        <main className="flex-1 min-h-0 overflow-hidden bg-[var(--mac-window-bg)]">
+        <main className="flex-1 min-h-0 overflow-hidden bg-[var(--mac-canvas-bg)]">
           {activeSection === 'overview' && (
             <div className="h-full overflow-y-auto">
               <DesktopOverview

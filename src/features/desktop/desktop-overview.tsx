@@ -250,7 +250,7 @@ export function DesktopOverview({
                     <span
                       key={i}
                       className={cn(
-                        'min-w-[24px] h-[24px] px-1 rounded-[7px] text-[12px] font-semibold flex items-center justify-center tabular-nums',
+                        'min-w-[24px] h-[24px] px-1 rounded-[9px] text-[12px] font-semibold flex items-center justify-center tabular-nums',
                         st.bg,
                         st.text
                       )}
@@ -345,75 +345,106 @@ export function DesktopOverview({
           >
             {displayDay && displayDay.lessons.length > 0 ? (
               <div className="mac-divide-y">
-                {displayDay.lessons.map((lesson, idx) => {
-                  const r = parseLessonTimeRange(lesson.time)
-                  const isActive =
-                    isDisplayToday &&
-                    !lesson.isCancelled &&
-                    r.isValid &&
-                    currentMinutes >= r.startMinutes &&
-                    currentMinutes <= r.endMinutes
-                  const isPassed = isDisplayToday && r.isValid && currentMinutes > r.endMinutes
-                  return (
-                    <button
-                      key={`${lesson.number}-${lesson.subject}-${idx}`}
-                      type="button"
-                      onClick={() => onOpenLessonInTimetable(displayDay.dayName, lesson)}
-                      className={cn(
-                        'w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer',
-                        lesson.isCancelled && 'opacity-45',
-                        isPassed && !lesson.isCancelled && 'opacity-65',
-                        isActive && 'bg-[var(--ios-blue-subtle)]/40'
-                      )}
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <span
-                          className={cn(
-                            'w-6 h-6 rounded-full text-[11px] font-semibold flex items-center justify-center shrink-0 tabular-nums',
-                            isActive
-                              ? 'bg-[var(--mac-blue)] text-white'
-                              : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]'
-                          )}
+                {(() => {
+                  const maxLessonNum = displayDay.lessons.reduce(
+                    (max, l) => Math.max(max, Number(l.number) || 0),
+                    9
+                  )
+                  const slots = Array.from({ length: maxLessonNum + 1 }, (_, n) => n)
+                  return slots.flatMap((slotNum) => {
+                    const slotLessons = displayDay.lessons.filter((l) => Number(l.number) === slotNum)
+                    if (slotLessons.length === 0) {
+                      return [
+                        <div
+                          key={`empty-slot-${slotNum}`}
+                          className="w-full px-4 py-2 flex items-center justify-between gap-3 text-left opacity-55"
                         >
-                          {lesson.number}
-                        </span>
-                        <span className="text-[12px] text-[var(--mac-label-2)] tabular-nums w-[86px] shrink-0">
-                          {lesson.time}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div
-                            className={cn(
-                              'text-[13px] font-semibold text-[var(--mac-label-1)] truncate',
-                              lesson.isCancelled && 'line-through text-[var(--mac-label-2)]'
-                            )}
-                          >
-                            {formatSubjectName(lesson.subject, showFullSubjectNames)}
-                          </div>
-                          <div className="text-[11px] text-[var(--mac-label-2)] truncate">
-                            {lesson.teacher || t.notSpecified}
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <span className="w-6 h-6 rounded-full bg-[var(--mac-fill-4)] text-[var(--mac-label-3)] text-[11px] font-semibold flex items-center justify-center shrink-0 tabular-nums">
+                              {slotNum}
+                            </span>
+                            <span className="text-[12px] text-[var(--mac-label-3)] tabular-nums w-[86px] shrink-0">
+                              —
+                            </span>
+                            <span className="text-[12px] text-[var(--mac-label-3)] truncate">
+                              {pickText(lang, { pl: 'Okienko', en: 'Free period' })}
+                            </span>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {lesson.isSubstitution && !lesson.isCancelled && (
-                          <span className="px-2 py-0.5 rounded-full bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)] text-[10px] font-semibold">
-                            {pickText(lang, { pl: 'Zastępstwo', en: 'Sub' })}
-                          </span>
-                        )}
-                        {lesson.isCancelled && (
-                          <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[10px] font-semibold">
-                            {pickText(lang, { pl: 'Odwołana', en: 'Cancelled' })}
-                          </span>
-                        )}
-                        {lesson.room && (
-                          <span className="px-2 py-0.5 rounded-full bg-[var(--mac-fill-2)] text-[var(--mac-label-1)] text-[11px] font-medium tabular-nums">
-                            {lesson.room}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  )
-                })}
+                      ]
+                    }
+
+                    return slotLessons.map((lesson, idx) => {
+                      const r = parseLessonTimeRange(lesson.time)
+                      const isActive =
+                        isDisplayToday &&
+                        !lesson.isCancelled &&
+                        r.isValid &&
+                        currentMinutes >= r.startMinutes &&
+                        currentMinutes <= r.endMinutes
+                      const isPassed = isDisplayToday && r.isValid && currentMinutes > r.endMinutes
+                      return (
+                        <button
+                          key={`${lesson.number}-${lesson.subject}-${idx}`}
+                          type="button"
+                          onClick={() => onOpenLessonInTimetable(displayDay.dayName, lesson)}
+                          className={cn(
+                            'w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer',
+                            lesson.isCancelled && 'opacity-45',
+                            isPassed && !lesson.isCancelled && 'opacity-65',
+                            isActive && 'bg-[var(--ios-blue-subtle)]/40'
+                          )}
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <span
+                              className={cn(
+                                'w-6 h-6 rounded-full text-[11px] font-semibold flex items-center justify-center shrink-0 tabular-nums',
+                                isActive
+                                  ? 'bg-[var(--mac-blue)] text-white'
+                                  : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]'
+                              )}
+                            >
+                              {lesson.number}
+                            </span>
+                            <span className="text-[12px] text-[var(--mac-label-2)] tabular-nums w-[86px] shrink-0">
+                              {lesson.time}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div
+                                className={cn(
+                                  'text-[13px] font-semibold text-[var(--mac-label-1)] truncate',
+                                  lesson.isCancelled && 'line-through text-[var(--mac-label-2)]'
+                                )}
+                              >
+                                {formatSubjectName(lesson.subject, showFullSubjectNames)}
+                              </div>
+                              <div className="text-[11px] text-[var(--mac-label-2)] truncate">
+                                {lesson.teacher || t.notSpecified}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {lesson.isSubstitution && !lesson.isCancelled && (
+                              <span className="px-2 py-0.5 rounded-full bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)] text-[10px] font-semibold">
+                                {pickText(lang, { pl: 'Zastępstwo', en: 'Sub' })}
+                              </span>
+                            )}
+                            {lesson.isCancelled && (
+                              <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[10px] font-semibold">
+                                {pickText(lang, { pl: 'Odwołana', en: 'Cancelled' })}
+                              </span>
+                            )}
+                            {lesson.room && (
+                              <span className="px-2 py-0.5 rounded-full bg-[var(--mac-fill-2)] text-[var(--mac-label-1)] text-[11px] font-medium tabular-nums">
+                                {lesson.room}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      )
+                    })
+                  })
+                })()}
               </div>
             ) : (
               <div className="p-8 text-center text-[13px] text-[var(--mac-label-2)] flex flex-col items-center gap-2">
@@ -455,7 +486,7 @@ export function DesktopOverview({
                       className="w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="w-[42px] h-[38px] rounded-[8px] bg-[var(--mac-fill-3)] flex flex-col items-center justify-center shrink-0 leading-none">
+                        <div className="w-[42px] h-[38px] rounded-[11px] bg-[var(--mac-fill-3)] flex flex-col items-center justify-center shrink-0 leading-none">
                           <span className="text-[13px] font-bold text-[var(--mac-label-1)] tabular-nums">
                             {dayMeta.dayNum}
                           </span>
@@ -531,7 +562,7 @@ export function DesktopOverview({
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <span
                           className={cn(
-                            'min-w-[30px] h-[30px] px-1.5 rounded-[8px] text-[13px] font-bold flex items-center justify-center shrink-0 tabular-nums',
+                            'min-w-[30px] h-[30px] px-1.5 rounded-[10px] text-[13px] font-bold flex items-center justify-center shrink-0 tabular-nums',
                             st.bg,
                             st.text
                           )}

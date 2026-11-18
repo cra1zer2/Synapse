@@ -440,12 +440,12 @@ export function DesktopTimetableView({
                                 })
                               }}
                               className={cn(
-                                'w-full p-2 rounded-[9px] text-left transition-all cursor-pointer flex flex-col gap-1 border',
+                                'w-full p-2.5 rounded-[14px] text-left transition-all cursor-pointer flex flex-col gap-1 border',
                                 isSelected
-                                  ? 'bg-[var(--mac-window-bg)] border-[var(--mac-blue)] shadow-[0_1px_4px_rgba(0,136,255,0.16)]'
+                                  ? 'bg-[var(--mac-group-bg)] border-[var(--mac-blue)] shadow-[0_2px_8px_rgba(0,136,255,0.18)]'
                                   : isActive
                                     ? 'bg-[var(--ios-blue-subtle)]/50 border-[var(--mac-blue)]/30 hover:bg-[var(--ios-blue-subtle)]/70'
-                                    : 'bg-[var(--mac-window-bg)]/80 border-transparent hover:border-[var(--mac-group-border)] hover:bg-[var(--mac-window-bg)]',
+                                    : 'bg-[var(--mac-group-bg)] border-[var(--mac-group-border)] shadow-[var(--mac-group-shadow)] hover:border-[var(--mac-fill-1)]',
                                 lesson.isCancelled && 'opacity-45'
                               )}
                             >
@@ -510,10 +510,10 @@ export function DesktopTimetableView({
                       type="button"
                       onClick={() => onSelectDay(slot.dayName)}
                       className={cn(
-                        'flex-1 py-2 px-3 rounded-[10px] text-center cursor-pointer transition-all border',
+                        'flex-1 py-2 px-3 rounded-[14px] text-center cursor-pointer transition-all border',
                         isSel
                           ? 'bg-[var(--mac-blue)] text-white border-transparent shadow-[0_2px_8px_rgba(0,136,255,0.28)]'
-                          : 'bg-[var(--mac-group-bg)] text-[var(--mac-label-1)] border-[var(--mac-group-border)] hover:bg-[var(--mac-fill-4)]'
+                          : 'bg-[var(--mac-group-bg)] text-[var(--mac-label-1)] border-[var(--mac-group-border)] shadow-[var(--mac-group-shadow)] hover:brightness-[0.98] dark:hover:brightness-110'
                       )}
                     >
                       <div className="text-[12px] font-semibold">

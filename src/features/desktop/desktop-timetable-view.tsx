@@ -1,15 +1,15 @@
 'use client'
 
-import React, { useMemo, useState, useEffect, Fragment } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import {
+  AlertCircle,
+  BookOpen,
   CalendarPlus,
   Clock,
   MapPin,
-  User,
-  BookOpen,
-  AlertCircle
+  User
 } from 'lucide-react'
-import { SmartTimetableResult, LessonItem, TimetableEvent } from '@/models/timetable.model'
+import { DaySchedule, LessonItem, SmartTimetableResult, TimetableEvent } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
 import { formatSubjectName } from '@/utils/text.util'
 import {
@@ -32,10 +32,7 @@ import {
 import { downloadEventIcs } from '@/utils/calendar.util'
 import { UiSpinner } from '@/components/ui/ui-spinner'
 import { cn } from '@/utils/cn.util'
-import {
-  MacGroupBox,
-  MacPushButton
-} from './mac-primitives'
+import { MacGroupBox, MacPushButton } from './mac-primitives'
 
 interface DesktopTimetableViewProps {
   timetableData: SmartTimetableResult | null
@@ -56,6 +53,61 @@ type TimetableInspectorItem =
   | { kind: 'lesson'; lesson: LessonItem; dayName: string; dateStr: string; isToday: boolean }
   | { kind: 'event'; event: TimetableEvent }
   | null
+
+const STANDARD_BELL_TIMES: Record<number, { start: string; end: string }> = {
+  0: { start: '07:10', end: '07:55' },
+  1: { start: '08:00', end: '08:45' },
+  2: { start: '08:50', end: '09:35' },
+  3: { start: '09:45', end: '10:30' },
+  4: { start: '10:40', end: '11:25' },
+  5: { start: '11:35', end: '12:20' },
+  6: { start: '12:40', end: '13:25' },
+  7: { start: '13:30', end: '14:15' },
+  8: { start: '14:25', end: '15:10' },
+  9: { start: '15:15', end: '16:00' }
+}
+
+function splitTimeRange(timeStr?: string): { start: string; end: string } | null {
+  if (!timeStr) return null
+  const parts = timeStr.split(/[-–]/).map((s) => s.trim())
+  if (parts.length >= 2 && parts[0] && parts[1]) {
+    return { start: parts[0], end: parts[1] }
+  }
+  return null
+}
+
+/**
+ * Picks the currently running lesson, next upcoming lesson, or last finished lesson for today;
+ * falls back to the first active lesson for non-today days.
+ */
+function pickDefaultLessonForDay(
+  day: DaySchedule,
+  currentMinutes: number,
+  todayIso: string
+): LessonItem | null {
+  if (!day.lessons.length) return null
+  const activeLessons = day.lessons.filter((l) => !l.isCancelled)
+  const pool = activeLessons.length > 0 ? activeLessons : day.lessons
+  const isTodayDay = Boolean(day.isToday || (day.isoDate && day.isoDate === todayIso))
+
+  if (isTodayDay) {
+    const inProgress = pool.find((l) => {
+      const r = parseLessonTimeRange(l.time)
+      return r.isValid && currentMinutes >= r.startMinutes && currentMinutes <= r.endMinutes
+    })
+    if (inProgress) return inProgress
+
+    const upcoming = pool.find((l) => {
+      const r = parseLessonTimeRange(l.time)
+      return r.isValid && currentMinutes < r.startMinutes
+    })
+    if (upcoming) return upcoming
+
+    return pool[pool.length - 1]
+  }
+
+  return pool[0]
+}
 
 export function DesktopTimetableView({
   timetableData,
@@ -96,24 +148,32 @@ export function DesktopTimetableView({
     }
   }, [initialInspectorSelection, selectedDay])
 
-  // Auto-select today's active/first lesson if inspector is empty once data arrives
+  // Auto-select today's current/next lesson (or selected day's first active lesson) when data loads
   useEffect(() => {
-    if (inspector || !timetableData?.schedule?.length) return
+    if (inspector || initialInspectorSelection || !timetableData?.schedule?.length) return
+
+    const todayMatch = timetableData.schedule.find(
+      (d) => (d.isToday || d.isoDate === todayIso) && d.lessons.length > 0
+    )
+    const selectedMatch = timetableData.schedule.find(
+      (d) => d.dayName === selectedDay && d.lessons.length > 0
+    )
     const targetDay =
-      timetableData.schedule.find((d) => d.isToday) ||
-      timetableData.schedule.find((d) => d.dayName === selectedDay) ||
-      timetableData.schedule.find((d) => d.lessons.length > 0)
-    if (targetDay && targetDay.lessons.length > 0) {
-      const firstActive = targetDay.lessons.find((l) => !l.isCancelled) || targetDay.lessons[0]
-      setInspector({
-        kind: 'lesson',
-        lesson: firstActive,
-        dayName: targetDay.dayName,
-        dateStr: targetDay.date,
-        isToday: targetDay.isToday
-      })
+      todayMatch || selectedMatch || timetableData.schedule.find((d) => d.lessons.length > 0)
+
+    if (targetDay) {
+      const chosen = pickDefaultLessonForDay(targetDay, getCurrentTimeMinutes(), todayIso)
+      if (chosen) {
+        setInspector({
+          kind: 'lesson',
+          lesson: chosen,
+          dayName: targetDay.dayName,
+          dateStr: targetDay.date,
+          isToday: Boolean(targetDay.isToday || targetDay.isoDate === todayIso)
+        })
+      }
     }
-  }, [timetableData, selectedDay, inspector])
+  }, [timetableData, selectedDay, inspector, initialInspectorSelection, todayIso])
 
   const filterDayEvents = (events: TimetableEvent[] = []) =>
     events.filter((ev) => {
@@ -122,12 +182,70 @@ export function DesktopTimetableView({
       return !lower.includes('zastępstw') && !lower.includes('zastepstw') && !lower.includes('nieobecn')
     })
 
+  // Canonical 0-9 (or higher) period list with inferred/standard bell times
+  const periodMetaList = useMemo(() => {
+    const allLessons = (timetableData?.schedule || []).flatMap((d) => d.lessons || [])
+    const maxPeriod = allLessons.reduce((max, l) => Math.max(max, Number(l.number) || 0), 9)
+
+    return Array.from({ length: maxPeriod + 1 }, (_, num) => {
+      let start = ''
+      let end = ''
+      for (const l of allLessons) {
+        if (Number(l.number) === num) {
+          const parsed = splitTimeRange(l.time)
+          if (parsed) {
+            start = parsed.start
+            end = parsed.end
+            break
+          }
+        }
+      }
+      if (!start && STANDARD_BELL_TIMES[num]) {
+        start = STANDARD_BELL_TIMES[num].start
+        end = STANDARD_BELL_TIMES[num].end
+      }
+      const hasAnyLesson = allLessons.some((l) => Number(l.number) === num)
+      return { num, start, end, hasAnyLesson }
+    })
+  }, [timetableData])
+
+  const hasAnyWeekEvents = useMemo(() => {
+    if (!timetableData?.schedule?.length) return false
+    return liveWeek.days.some((slot) => {
+      const dayData = timetableData.schedule.find((d) => d.dayName === slot.dayName)
+      return filterDayEvents(dayData?.events).length > 0
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timetableData, liveWeek, showHomeworks])
+
   const activeDayData = timetableData?.schedule?.find((d) => d.dayName === selectedDay)
+
+  const activeBreakBanner = useMemo(() => {
+    if (!activeDayData?.lessons?.length) return null
+    const isDayToday = Boolean(activeDayData.isToday || activeDayData.isoDate === todayIso)
+    if (!isDayToday) return null
+
+    for (let i = 0; i < activeDayData.lessons.length - 1; i++) {
+      const cur = activeDayData.lessons[i]
+      const nxt = activeDayData.lessons[i + 1]
+      const r = parseLessonTimeRange(cur.time)
+      const nextR = parseLessonTimeRange(nxt.time)
+      if (r.isValid && nextR.isValid && currentMinutes > r.endMinutes && currentMinutes < nextR.startMinutes) {
+        const total = calculateBreakDuration(cur.time, nxt.time)
+        const rem = getBreakRemainingMinutes(nxt.time)
+        return { total, rem }
+      }
+    }
+    return null
+  }, [activeDayData, todayIso, currentMinutes])
 
   const renderInspectorContent = () => {
     if (!inspector) {
       return (
-        <div className="h-full flex flex-col items-center justify-center text-center p-6 text-[var(--mac-label-2)] gap-2">
+        <MacGroupBox
+          className="flex-1"
+          contentClassName="flex-1 flex flex-col items-center justify-center text-center p-6 gap-2 text-[var(--mac-label-2)]"
+        >
           <BookOpen className="w-6 h-6 text-[var(--mac-label-3)]" strokeWidth={1.7} />
           <p className="text-[12px]">
             {pickText(lang, {
@@ -135,7 +253,7 @@ export function DesktopTimetableView({
               en: 'Select a lesson or event to inspect topic, classroom, and details.'
             })}
           </p>
-        </div>
+        </MacGroupBox>
       )
     }
 
@@ -143,18 +261,23 @@ export function DesktopTimetableView({
       const { lesson, dayName, isToday } = inspector
       const range = parseLessonTimeRange(lesson.time)
       const isActive =
-        isToday && !lesson.isCancelled && range.isValid && currentMinutes >= range.startMinutes && currentMinutes <= range.endMinutes
+        isToday &&
+        !lesson.isCancelled &&
+        range.isValid &&
+        currentMinutes >= range.startMinutes &&
+        currentMinutes <= range.endMinutes
       const minsLeft = isActive ? range.endMinutes - currentMinutes : null
 
       return (
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-3.5">
+          <MacGroupBox contentClassName="p-4 flex flex-col gap-1.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-blue)]">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-blue)] truncate">
                 {getWeekdayLongLabel(dayName, lang)} · {t.lessonNumberLabel(lesson.number)}
               </span>
               {isActive && (
-                <span className="px-2 py-0.5 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] text-[10px] font-semibold">
+                <span className="px-2 py-0.5 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] text-[10px] font-semibold shrink-0 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--mac-blue)] animate-pulse" />
                   {pickText(lang, { pl: 'Teraz trwa', en: 'Live' })}
                 </span>
               )}
@@ -165,28 +288,38 @@ export function DesktopTimetableView({
             <span className="text-[12px] text-[var(--mac-label-2)] tabular-nums">
               {lesson.time || lesson.flag || ''}
             </span>
-          </div>
 
-          <div className="flex flex-wrap gap-1.5">
-            {lesson.isCancelled && (
-              <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[11px] font-semibold">
-                {pickText(lang, { pl: 'Lekcja odwołana', en: 'Cancelled' })}
-              </span>
+            {(lesson.isCancelled || lesson.isSubstitution || lesson.isShortened) && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {lesson.isCancelled && (
+                  <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[11px] font-semibold">
+                    {pickText(lang, { pl: 'Lekcja odwołana', en: 'Cancelled' })}
+                  </span>
+                )}
+                {lesson.isSubstitution && (
+                  <span className="px-2 py-0.5 rounded-full bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)] text-[11px] font-semibold">
+                    {pickText(lang, { pl: 'Zastępstwo', en: 'Substitution' })}
+                  </span>
+                )}
+                {lesson.isShortened && (
+                  <span className="px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[11px] font-semibold">
+                    {lesson.durationMinutes} min
+                  </span>
+                )}
+              </div>
             )}
-            {lesson.isSubstitution && (
-              <span className="px-2 py-0.5 rounded-full bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)] text-[11px] font-semibold">
-                {pickText(lang, { pl: 'Zastępstwo', en: 'Substitution' })}
-              </span>
-            )}
-            {lesson.isShortened && (
-              <span className="px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[11px] font-semibold">
-                {lesson.durationMinutes} min
-              </span>
-            )}
-          </div>
+          </MacGroupBox>
 
-          <MacGroupBox title={t.lessonTopic}>
-            <p className="text-[13px] text-[var(--mac-label-1)] leading-relaxed whitespace-pre-wrap select-text">
+          <MacGroupBox
+            title={t.lessonTopic}
+            contentClassName={cn(lesson.topic && 'bg-[var(--ios-blue-subtle)]/20')}
+          >
+            <p
+              className={cn(
+                'text-[13px] leading-relaxed whitespace-pre-wrap select-text',
+                lesson.topic ? 'font-medium text-[var(--mac-label-1)]' : 'text-[var(--mac-label-2)]'
+              )}
+            >
               {lesson.topic || t.noTopicRecorded}
             </p>
           </MacGroupBox>
@@ -250,8 +383,8 @@ export function DesktopTimetableView({
           : ''
 
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-3.5">
+        <MacGroupBox contentClassName="p-4 flex flex-col gap-1.5">
           <div>
             <span className={cn('px-2 py-0.5 rounded-[6px] text-[10px] font-semibold uppercase', st.bgClass, st.textClass)}>
               {badgeLabel}
@@ -261,7 +394,7 @@ export function DesktopTimetableView({
           <span className="text-[12px] text-[var(--mac-label-2)] tabular-nums">
             {formatHumanDate(ev.isoDate || ev.date, false, lang)}
           </span>
-        </div>
+        </MacGroupBox>
 
         {scope && (
           <MacGroupBox title={pickText(lang, { pl: 'Opis / Zakres materiału', en: 'Description / Scope' })}>
@@ -310,11 +443,10 @@ export function DesktopTimetableView({
   }
 
   return (
-    <div className="h-full flex min-h-0 select-none">
+    <div className="h-full flex min-h-0 select-none bg-[var(--mac-canvas-bg)]">
       {/* Main Schedule Area */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
-        {/* Main Content Grid */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-5">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4">
           {timetableError && !timetableData ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3 text-center">
               <AlertCircle className="w-8 h-8 text-[var(--mac-red)]" />
@@ -329,32 +461,30 @@ export function DesktopTimetableView({
               <span className="text-[13px] text-[var(--mac-label-2)]">{t.loadingTimetable}</span>
             </div>
           ) : viewMode === 'week' ? (
-            <div className="grid grid-cols-5 gap-3 items-start min-w-[780px]">
-              {liveWeek.days.map((slot) => {
-                const dayData = timetableData.schedule?.find((d) => d.dayName === slot.dayName)
-                const isToday = Boolean(dayData?.isToday || slot.isoDate === todayIso)
-                const isDaySelected = selectedDay === slot.dayName
-                const events = filterDayEvents(dayData?.events)
-                const lessons = dayData?.lessons || []
+            /* Synchronized Fluid Weekly Matrix (0-9 Periods x Mon-Fri, zero horizontal clipping) */
+            <MacGroupBox noPadding className="w-full">
+              {/* Day Column Header Row */}
+              <div className="grid grid-cols-[64px_repeat(5,minmax(0,1fr))] border-b border-[var(--mac-row-divider)] bg-[var(--mac-fill-5)] [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-[var(--mac-row-divider)]">
+                <div className="px-2 py-2.5 flex items-center justify-center text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)] text-center">
+                  {pickText(lang, { pl: '# / Godz.', en: '# / Time' })}
+                </div>
+                {liveWeek.days.map((slot) => {
+                  const dayData = timetableData.schedule?.find((d) => d.dayName === slot.dayName)
+                  const isToday = Boolean(dayData?.isToday || slot.isoDate === todayIso)
+                  const isDaySelected = selectedDay === slot.dayName
 
-                return (
-                  <div
-                    key={slot.dayName}
-                    className={cn(
-                      'rounded-[12px] border flex flex-col overflow-hidden transition-colors',
-                      isToday
-                        ? 'border-[var(--mac-blue)]/40 bg-[var(--mac-group-bg)]'
-                        : 'border-[var(--mac-group-border)] bg-[var(--mac-group-bg)]'
-                    )}
-                  >
-                    {/* Day Column Header */}
+                  return (
                     <button
+                      key={slot.dayName}
                       type="button"
                       onClick={() => onSelectDay(slot.dayName)}
                       className={cn(
-                        'px-3 py-2.5 border-b border-[var(--mac-row-divider)] flex items-center justify-between gap-2 cursor-pointer transition-colors',
-                        isToday ? 'bg-[var(--ios-blue-subtle)]/55' : 'hover:bg-[var(--mac-fill-4)]',
-                        isDaySelected && !isToday && 'bg-[var(--mac-fill-4)]'
+                        'px-3 py-2.5 flex items-center justify-between gap-2 cursor-pointer transition-colors min-w-0',
+                        isToday
+                          ? 'bg-[var(--ios-blue-subtle)]/55'
+                          : isDaySelected
+                            ? 'bg-[var(--mac-fill-4)]'
+                            : 'hover:bg-[var(--mac-fill-4)]'
                       )}
                     >
                       <div className="min-w-0 text-left">
@@ -381,10 +511,21 @@ export function DesktopTimetableView({
                         {slot.dateNum}
                       </span>
                     </button>
+                  )
+                })}
+              </div>
 
-                    {/* Day Events Chips */}
-                    {events.length > 0 && (
-                      <div className="p-2 flex flex-col gap-1 border-b border-[var(--mac-row-divider)] bg-[var(--mac-fill-5)]">
+              {/* Synchronized Day Events Strip (if any day this week has events) */}
+              {hasAnyWeekEvents && (
+                <div className="grid grid-cols-[64px_repeat(5,minmax(0,1fr))] border-b border-[var(--mac-row-divider)] bg-[var(--mac-fill-5)]/60 [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-[var(--mac-row-divider)]">
+                  <div className="px-2 py-2 flex items-center justify-center text-[10px] font-semibold uppercase text-[var(--mac-label-3)]">
+                    {pickText(lang, { pl: 'Info', en: 'Events' })}
+                  </div>
+                  {liveWeek.days.map((slot) => {
+                    const dayData = timetableData.schedule?.find((d) => d.dayName === slot.dayName)
+                    const events = filterDayEvents(dayData?.events)
+                    return (
+                      <div key={`ev-${slot.dayName}`} className="p-1.5 flex flex-col gap-1 min-w-0">
                         {events.map((ev, eIdx) => {
                           const st = getEventCategoryStyle(ev.category, ev.eventType)
                           const isSelectedEv = inspector?.kind === 'event' && inspector.event === ev
@@ -407,98 +548,163 @@ export function DesktopTimetableView({
                           )
                         })}
                       </div>
-                    )}
+                    )
+                  })}
+                </div>
+              )}
 
-                    {/* Lessons List */}
-                    <div className="p-1.5 flex flex-col gap-1">
-                      {lessons.length > 0 ? (
-                        lessons.map((lesson, lIdx) => {
-                          const r = parseLessonTimeRange(lesson.time)
-                          const isActive =
-                            isToday &&
-                            !lesson.isCancelled &&
-                            r.isValid &&
-                            currentMinutes >= r.startMinutes &&
-                            currentMinutes <= r.endMinutes
-                          const isSelected =
-                            inspector?.kind === 'lesson' &&
-                            inspector.lesson === lesson &&
-                            inspector.dayName === slot.dayName
+              {/* Synchronized Period Rows (0 - maxPeriod) */}
+              <div className="mac-divide-y">
+                {periodMetaList.map((period) => {
+                  const pRange =
+                    period.start && period.end
+                      ? parseLessonTimeRange(`${period.start} - ${period.end}`)
+                      : null
+                  const hasTodayInWeek = liveWeek.days.some((s) => s.isoDate === todayIso)
+                  const isLivePeriodNow =
+                    hasTodayInWeek &&
+                    Boolean(pRange?.isValid) &&
+                    currentMinutes >= pRange!.startMinutes &&
+                    currentMinutes <= pRange!.endMinutes
 
+                  return (
+                    <div
+                      key={`period-row-${period.num}`}
+                      className="grid grid-cols-[64px_repeat(5,minmax(0,1fr))] min-h-[56px] [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-[var(--mac-row-divider)]"
+                    >
+                      {/* Col 0: Period # + Stacked Bell Time */}
+                      <div className="px-1.5 py-2 flex flex-col items-center justify-center gap-0.5 bg-[var(--mac-fill-5)]/40">
+                        <span
+                          className={cn(
+                            'w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center tabular-nums',
+                            isLivePeriodNow
+                              ? 'bg-[var(--mac-blue)] text-white'
+                              : period.hasAnyLesson
+                                ? 'bg-[var(--mac-fill-2)] text-[var(--mac-label-1)]'
+                                : 'bg-[var(--mac-fill-4)] text-[var(--mac-label-3)]'
+                          )}
+                        >
+                          {period.num}
+                        </span>
+                        {period.start && period.end && (
+                          <div className="text-[10px] leading-[12px] text-[var(--mac-label-2)] tabular-nums text-center">
+                            <div>{period.start}</div>
+                            <div>{period.end}</div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Cols 1-5: Mon-Fri Cells */}
+                      {liveWeek.days.map((slot) => {
+                        const dayData = timetableData.schedule?.find((d) => d.dayName === slot.dayName)
+                        const isToday = Boolean(dayData?.isToday || slot.isoDate === todayIso)
+                        const slotLessons = (dayData?.lessons || []).filter(
+                          (l) => Number(l.number) === period.num
+                        )
+
+                        if (slotLessons.length === 0) {
                           return (
-                            <button
-                              key={`${lesson.number}-${lIdx}`}
-                              type="button"
-                              onClick={() => {
-                                onSelectDay(slot.dayName)
-                                setInspector({
-                                  kind: 'lesson',
-                                  lesson,
-                                  dayName: slot.dayName,
-                                  dateStr: slot.dateDot,
-                                  isToday
-                                })
-                              }}
+                            <div
+                              key={`${slot.dayName}-${period.num}-empty`}
                               className={cn(
-                                'w-full p-2.5 rounded-[14px] text-left transition-all cursor-pointer flex flex-col gap-1 border',
-                                isSelected
-                                  ? 'bg-[var(--mac-group-bg)] border-[var(--mac-blue)] shadow-[0_2px_8px_rgba(0,136,255,0.18)]'
-                                  : isActive
-                                    ? 'bg-[var(--ios-blue-subtle)]/50 border-[var(--mac-blue)]/30 hover:bg-[var(--ios-blue-subtle)]/70'
-                                    : 'bg-[var(--mac-group-bg)] border-[var(--mac-group-border)] shadow-[var(--mac-group-shadow)] hover:border-[var(--mac-fill-1)]',
-                                lesson.isCancelled && 'opacity-45'
+                                'p-1.5 flex items-center justify-center min-w-0',
+                                isToday && 'bg-[var(--ios-blue-subtle)]/10'
                               )}
                             >
-                              <div className="flex items-center justify-between gap-1 text-[10px] tabular-nums">
-                                <span
+                              <span className="text-[11px] text-[var(--mac-label-4)]">—</span>
+                            </div>
+                          )
+                        }
+
+                        return (
+                          <div
+                            key={`${slot.dayName}-${period.num}`}
+                            className={cn(
+                              'p-1 flex flex-col gap-1 min-w-0',
+                              isToday && 'bg-[var(--ios-blue-subtle)]/10'
+                            )}
+                          >
+                            {slotLessons.map((lesson, lIdx) => {
+                              const r = parseLessonTimeRange(lesson.time)
+                              const isActive =
+                                isToday &&
+                                !lesson.isCancelled &&
+                                r.isValid &&
+                                currentMinutes >= r.startMinutes &&
+                                currentMinutes <= r.endMinutes
+                              const isSelected =
+                                inspector?.kind === 'lesson' &&
+                                inspector.lesson === lesson &&
+                                inspector.dayName === slot.dayName
+
+                              return (
+                                <button
+                                  key={`${lesson.number}-${lIdx}`}
+                                  type="button"
+                                  onClick={() => {
+                                    onSelectDay(slot.dayName)
+                                    setInspector({
+                                      kind: 'lesson',
+                                      lesson,
+                                      dayName: slot.dayName,
+                                      dateStr: slot.dateDot,
+                                      isToday
+                                    })
+                                  }}
                                   className={cn(
-                                    'font-medium flex items-center gap-1',
-                                    isActive ? 'text-[var(--mac-blue)] font-semibold' : 'text-[var(--mac-label-2)]',
-                                    lesson.isCancelled && 'line-through'
+                                    'w-full flex-1 p-2 rounded-[10px] text-left transition-all cursor-pointer flex flex-col justify-between gap-1 min-w-0',
+                                    isSelected
+                                      ? 'bg-[var(--ios-blue-subtle)]/65 ring-2 ring-[var(--mac-blue)]'
+                                      : isActive
+                                        ? 'bg-[var(--ios-blue-subtle)]/45 ring-1 ring-[var(--mac-blue)]/60'
+                                        : 'hover:bg-[var(--mac-fill-4)]',
+                                    lesson.isCancelled && 'opacity-45'
                                   )}
                                 >
-                                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-[var(--mac-blue)] animate-pulse" />}
-                                  #{lesson.number} · {lesson.time}
-                                </span>
-                                {lesson.room && (
-                                  <span
-                                    className={cn(
-                                      'px-1.5 py-0.2 rounded-[4px] font-semibold',
-                                      lesson.isSubstitution
-                                        ? 'bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)]'
-                                        : 'bg-[var(--mac-fill-3)] text-[var(--mac-label-1)]'
+                                  <div className="flex items-start justify-between gap-1 min-w-0">
+                                    <span
+                                      className={cn(
+                                        'text-[12px] font-semibold text-[var(--mac-label-1)] leading-snug line-clamp-2 min-w-0',
+                                        lesson.isCancelled && 'line-through text-[var(--mac-label-2)]'
+                                      )}
+                                    >
+                                      {formatSubjectName(lesson.subject, showFullSubjectNames)}
+                                    </span>
+                                    {isActive && (
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--mac-blue)] animate-pulse shrink-0 mt-1" />
                                     )}
-                                  >
-                                    {lesson.room}
-                                  </span>
-                                )}
-                              </div>
-                              <div
-                                className={cn(
-                                  'text-[12px] font-semibold text-[var(--mac-label-1)] leading-snug line-clamp-2',
-                                  lesson.isCancelled && 'line-through text-[var(--mac-label-2)]'
-                                )}
-                              >
-                                {formatSubjectName(lesson.subject, showFullSubjectNames)}
-                              </div>
-                              <div className="text-[10px] text-[var(--mac-label-2)] truncate">
-                                {lesson.teacher || t.notSpecified}
-                              </div>
-                            </button>
-                          )
-                        })
-                      ) : (
-                        <div className="py-8 px-2 text-center text-[11px] text-[var(--mac-label-3)]">
-                          {t.noLessonsDay}
-                        </div>
-                      )}
+                                  </div>
+
+                                  <div className="flex items-center justify-between gap-1.5 min-w-0">
+                                    <span className="text-[11px] text-[var(--mac-label-2)] truncate flex-1">
+                                      {lesson.teacher || t.notSpecified}
+                                    </span>
+                                    {lesson.room && (
+                                      <span
+                                        className={cn(
+                                          'px-1.5 py-0.5 rounded-[6px] text-[10px] font-semibold shrink-0 tabular-nums leading-none',
+                                          lesson.isSubstitution
+                                            ? 'bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)]'
+                                            : 'bg-[var(--mac-fill-3)] text-[var(--mac-label-1)]'
+                                        )}
+                                      >
+                                        {lesson.room}
+                                      </span>
+                                    )}
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )
+                      })}
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            </MacGroupBox>
           ) : (
-            /* Single Day Detailed View */
+            /* Single Day Detailed View with 0-9 Fixed Slots */
             <div className="max-w-3xl mx-auto flex flex-col gap-4">
               <div className="flex items-center gap-1.5">
                 {liveWeek.days.map((slot) => {
@@ -519,7 +725,16 @@ export function DesktopTimetableView({
                       <div className="text-[12px] font-semibold">
                         {getWeekdayLongLabel(slot.dayName, lang)}
                       </div>
-                      <div className={cn('text-[11px] tabular-nums', isSel ? 'text-white/85' : isTod ? 'text-[var(--mac-blue)] font-semibold' : 'text-[var(--mac-label-2)]')}>
+                      <div
+                        className={cn(
+                          'text-[11px] tabular-nums',
+                          isSel
+                            ? 'text-white/85'
+                            : isTod
+                              ? 'text-[var(--mac-blue)] font-semibold'
+                              : 'text-[var(--mac-label-2)]'
+                        )}
+                      >
                         {slot.dateDot.slice(0, 5)}
                       </div>
                     </button>
@@ -527,26 +742,62 @@ export function DesktopTimetableView({
                 })}
               </div>
 
+              {activeBreakBanner && (
+                <div className="px-4 py-2 rounded-[14px] bg-[var(--ios-blue-subtle)]/50 border border-[var(--mac-blue)]/25 text-[12px] text-[var(--mac-blue)] font-semibold flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--mac-blue)] animate-pulse" />
+                    {activeBreakBanner.rem > 0
+                      ? t.breakCountdownLabel(activeBreakBanner.rem)
+                      : `${t.breakWord} ${activeBreakBanner.total} min`}
+                  </span>
+                </div>
+              )}
+
               <MacGroupBox noPadding>
                 {activeDayData && activeDayData.lessons.length > 0 ? (
                   <div className="mac-divide-y">
-                    {activeDayData.lessons.map((lesson, idx) => {
-                      const nextLesson = activeDayData.lessons[idx + 1]
-                      const breakMins = nextLesson ? calculateBreakDuration(lesson.time, nextLesson.time) : 0
-                      const r = parseLessonTimeRange(lesson.time)
-                      const nextR = nextLesson ? parseLessonTimeRange(nextLesson.time) : null
-                      const isBreakActive =
-                        activeDayData.isToday &&
-                        r.isValid &&
-                        nextR?.isValid &&
-                        currentMinutes > r.endMinutes &&
-                        currentMinutes < nextR.startMinutes
-                      const breakRem = nextLesson ? getBreakRemainingMinutes(nextLesson.time) : 0
-                      const isSelected = inspector?.kind === 'lesson' && inspector.lesson === lesson
+                    {periodMetaList.flatMap((period) => {
+                      const slotLessons = activeDayData.lessons.filter(
+                        (l) => Number(l.number) === period.num
+                      )
+                      const isDayToday = Boolean(activeDayData.isToday || activeDayData.isoDate === todayIso)
 
-                      return (
-                        <Fragment key={`${lesson.number}-${idx}`}>
+                      if (slotLessons.length === 0) {
+                        const bellText =
+                          period.start && period.end ? `${period.start} - ${period.end}` : '—'
+                        return [
+                          <div
+                            key={`day-empty-${period.num}`}
+                            className="w-full min-h-[52px] px-4 py-2.5 flex items-center justify-between gap-4 text-left opacity-55"
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <span className="w-7 h-7 rounded-full bg-[var(--mac-fill-4)] text-[var(--mac-label-3)] text-[12px] font-semibold flex items-center justify-center shrink-0 tabular-nums">
+                                {period.num}
+                              </span>
+                              <span className="text-[12px] text-[var(--mac-label-3)] tabular-nums w-[92px] shrink-0">
+                                {bellText}
+                              </span>
+                              <span className="text-[13px] text-[var(--mac-label-3)] truncate">
+                                {pickText(lang, { pl: 'Okienko', en: 'Free period' })}
+                              </span>
+                            </div>
+                          </div>
+                        ]
+                      }
+
+                      return slotLessons.map((lesson, idx) => {
+                        const r = parseLessonTimeRange(lesson.time)
+                        const isActive =
+                          isDayToday &&
+                          !lesson.isCancelled &&
+                          r.isValid &&
+                          currentMinutes >= r.startMinutes &&
+                          currentMinutes <= r.endMinutes
+                        const isSelected = inspector?.kind === 'lesson' && inspector.lesson === lesson
+
+                        return (
                           <button
+                            key={`${lesson.number}-${idx}`}
                             type="button"
                             onClick={() =>
                               setInspector({
@@ -554,24 +805,40 @@ export function DesktopTimetableView({
                                 lesson,
                                 dayName: activeDayData.dayName,
                                 dateStr: activeDayData.date,
-                                isToday: activeDayData.isToday
+                                isToday: isDayToday
                               })
                             }
                             className={cn(
-                              'w-full px-4 py-3 flex items-center justify-between gap-4 text-left cursor-pointer transition-colors',
-                              isSelected ? 'bg-[var(--ios-blue-subtle)]/50' : 'hover:bg-[var(--mac-fill-4)]',
+                              'w-full min-h-[52px] px-4 py-2.5 flex items-center justify-between gap-4 text-left cursor-pointer transition-colors',
+                              isSelected
+                                ? 'bg-[var(--ios-blue-subtle)]/50'
+                                : isActive
+                                  ? 'bg-[var(--ios-blue-subtle)]/30 hover:bg-[var(--ios-blue-subtle)]/45'
+                                  : 'hover:bg-[var(--mac-fill-4)]',
                               lesson.isCancelled && 'opacity-45'
                             )}
                           >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
-                              <span className="w-7 h-7 rounded-[7px] bg-[var(--mac-fill-2)] text-[var(--mac-label-1)] text-[12px] font-semibold flex items-center justify-center shrink-0 tabular-nums">
+                              <span
+                                className={cn(
+                                  'w-7 h-7 rounded-full text-[12px] font-semibold flex items-center justify-center shrink-0 tabular-nums',
+                                  isActive
+                                    ? 'bg-[var(--mac-blue)] text-white'
+                                    : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-1)]'
+                                )}
+                              >
                                 {lesson.number}
                               </span>
                               <span className="text-[12px] text-[var(--mac-label-2)] tabular-nums w-[92px] shrink-0">
                                 {lesson.time}
                               </span>
                               <div className="min-w-0 flex-1">
-                                <div className={cn('text-[13px] font-semibold text-[var(--mac-label-1)] truncate', lesson.isCancelled && 'line-through')}>
+                                <div
+                                  className={cn(
+                                    'text-[13px] font-semibold text-[var(--mac-label-1)] truncate',
+                                    lesson.isCancelled && 'line-through'
+                                  )}
+                                >
                                   {formatSubjectName(lesson.subject, showFullSubjectNames)}
                                 </div>
                                 <div className="text-[12px] text-[var(--mac-label-2)] truncate">
@@ -579,27 +846,26 @@ export function DesktopTimetableView({
                                 </div>
                               </div>
                             </div>
-                            {lesson.room && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-[var(--mac-fill-2)] text-[var(--mac-label-1)] text-[12px] font-medium shrink-0">
-                                {lesson.room}
-                              </span>
-                            )}
-                          </button>
-                          {idx < activeDayData.lessons.length - 1 && breakMins > 0 && (
-                            <div className="px-4 py-1 bg-[var(--mac-fill-5)] text-[11px] text-[var(--mac-label-2)] flex items-center justify-between">
-                              <span>
-                                {isBreakActive && breakRem > 0 ? (
-                                  <span className="text-[var(--mac-blue)] font-semibold">
-                                    {t.breakCountdownLabel(breakRem)}
-                                  </span>
-                                ) : (
-                                  `${t.breakWord} ${breakMins} min`
-                                )}
-                              </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {lesson.isSubstitution && !lesson.isCancelled && (
+                                <span className="px-2 py-0.5 rounded-full bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)] text-[10px] font-semibold">
+                                  {pickText(lang, { pl: 'Zastępstwo', en: 'Sub' })}
+                                </span>
+                              )}
+                              {lesson.isCancelled && (
+                                <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[10px] font-semibold">
+                                  {pickText(lang, { pl: 'Odwołana', en: 'Cancelled' })}
+                                </span>
+                              )}
+                              {lesson.room && (
+                                <span className="px-2.5 py-0.5 rounded-full bg-[var(--mac-fill-2)] text-[var(--mac-label-1)] text-[12px] font-medium shrink-0 tabular-nums">
+                                  {lesson.room}
+                                </span>
+                              )}
                             </div>
-                          )}
-                        </Fragment>
-                      )
+                          </button>
+                        )
+                      })
                     })}
                   </div>
                 ) : (
@@ -611,8 +877,8 @@ export function DesktopTimetableView({
         </div>
       </div>
 
-      {/* Right Inspector Pane (320px) */}
-      <aside className="w-[320px] shrink-0 border-l border-[var(--mac-row-divider)] bg-[var(--mac-window-bg)] p-4 overflow-y-auto">
+      {/* Right Floating Card Inspector Column (288px) */}
+      <aside className="w-[288px] shrink-0 p-4 pl-0 overflow-y-auto flex flex-col gap-3.5">
         {renderInspectorContent()}
       </aside>
     </div>

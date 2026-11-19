@@ -22,6 +22,8 @@ import { GradesFeature, GradesSimToggleButton, useGradesFeature } from '@/featur
 import { AttendanceFeature, useAttendanceFeature } from '@/features/attendance/attendance-feature'
 import { MessagesFeature, useMessagesFeature } from '@/features/messages/messages-feature'
 import { SettingsSheet } from '@/features/settings/settings-sheet'
+import { DesktopWorkspace } from '@/features/desktop/desktop-workspace'
+import type { DesktopNavSection } from '@/features/desktop/desktop-sidebar'
 
 type DashboardSubview = 'schedule' | 'upcoming' | 'grades' | 'attendance' | 'messages' | 'announcements' | null
 
@@ -69,16 +71,37 @@ export default function Home() {
   const [tabTransitionId, setTabTransitionId] = useState(0)
   const [visitedTabs, setVisitedTabs] = useState<PrimaryTabId[]>(['schedule'])
   const tabExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isDesktop, setIsDesktop] = useState(false)
+  const [activeDesktopSection, setActiveDesktopSection] = useState<DesktopNavSection>('overview')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(min-width: 1024px)')
+    setIsDesktop(mq.matches)
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   const activeBadgeSection: TrackedBadgeSection | null = !account.isConfigured
     ? null
-    : navMode === 'tabs'
-      ? activeTab === 'schedule' || activeTab === 'grades' || activeTab === 'attendance'
-        ? activeTab
-        : null
-      : activeSubview === 'schedule' || activeSubview === 'grades' || activeSubview === 'attendance'
-        ? activeSubview
-        : null
+    : isDesktop
+      ? activeDesktopSection === 'timetable'
+        ? 'schedule'
+        : activeDesktopSection === 'grades'
+          ? 'grades'
+          : activeDesktopSection === 'attendance' ||
+              activeDesktopSection === 'attendance-journal' ||
+              activeDesktopSection === 'attendance-justifications'
+            ? 'attendance'
+            : null
+      : navMode === 'tabs'
+        ? activeTab === 'schedule' || activeTab === 'grades' || activeTab === 'attendance'
+          ? activeTab
+          : null
+        : activeSubview === 'schedule' || activeSubview === 'grades' || activeSubview === 'attendance'
+          ? activeSubview
+          : null
 
   const { badges: sectionBadges } = useSectionBadges({
     username: account.username,
@@ -145,6 +168,12 @@ export default function Home() {
     const handleDeepLinking = () => {
       try {
         const tab = new URLSearchParams(window.location.search).get('tab')
+        if (tab === 'grades') setActiveDesktopSection('grades')
+        else if (tab === 'messages') setActiveDesktopSection('inbox')
+        else if (tab === 'schedule') setActiveDesktopSection('timetable')
+        else if (tab === 'upcoming' || tab === 'events') setActiveDesktopSection('deadlines')
+        else if (tab === 'attendance') setActiveDesktopSection('attendance')
+
         if (navMode === 'tabs') {
           if (tab === 'grades') setActiveTab('grades')
           else if (tab === 'messages') setActiveTab('messages')
@@ -171,7 +200,7 @@ export default function Home() {
 
   const isPanelOverlayActive = Boolean(activeSubview || showSettings || hasAttendanceOverlay || hasMessagesOverlay)
   const isSheetOverlayActive = Boolean(hasScheduleSheet || hasGradesSheet)
-  useBodyScrollLock(isPanelOverlayActive || isSheetOverlayActive)
+  useBodyScrollLock(!isDesktop && (isPanelOverlayActive || isSheetOverlayActive))
 
   const runRefresh = async (fromPull: boolean) => {
     if (
@@ -327,6 +356,95 @@ export default function Home() {
   const isStudentUser = activeRole === 'student' || isStudentUsername(account.username)
   const canSubmitExcuse = !isStudentUser || allowStudentJustifications
   const unreadCount = messagesInbox.messages.filter((m) => !m.isRead).length
+
+  if (isDesktop) {
+    return (
+      <DesktopWorkspace
+        activeSection={activeDesktopSection}
+        onSelectSection={setActiveDesktopSection}
+        profile={account.profile}
+        username={account.username}
+        savedAccounts={account.savedAccounts}
+        onSwitchAccount={(acc) => {
+          account.handleSwitchAccount(acc)
+          setActiveDesktopSection('overview')
+        }}
+        onAddAccount={account.handleStartAddAccountVerification}
+        onConfirmAddAccount={account.handleConfirmAddAccount}
+        onResetAddAccount={account.handleResetAddAccount}
+        addAccountStep={account.addAccountStep}
+        setAddAccountStep={account.setAddAccountStep}
+        addAccountCandidate={account.addAccountCandidate}
+        addAccountError={account.addAccountError}
+        setAddAccountError={account.setAddAccountError}
+        newUsername={account.newAccUser}
+        setNewUsername={account.setNewAccUser}
+        newPassword={account.newAccPass}
+        setNewPassword={account.setNewAccPass}
+        onLogout={() => {
+          setActiveDesktopSection('overview')
+          account.handleLogout()
+        }}
+        lang={lang}
+        onSelectLang={settings.handleSelectLanguage}
+        theme={theme}
+        onSelectTheme={settings.handleSelectTheme}
+        showFullSubjectNames={showFullSubjectNames}
+        onToggleShowFullSubjectNames={settings.handleToggleShowFullSubjectNames}
+        enableGradeSimulator={enableGradeSimulator}
+        onToggleEnableGradeSimulator={settings.handleToggleEnableGradeSimulator}
+        showHomeworks={showHomeworks}
+        onToggleShowHomeworks={settings.handleToggleShowHomeworks}
+        showLuckyNumberBanner={showLuckyNumberBanner}
+        onToggleShowLuckyNumberBanner={settings.handleToggleShowLuckyNumberBanner}
+        isStudent={isStudentUser}
+        canSubmitExcuse={canSubmitExcuse}
+        allowStudentJustifications={allowStudentJustifications}
+        onToggleAllowStudentJustifications={settings.handleToggleAllowStudentJustifications}
+        timetableData={timetable.timetableData}
+        todayTimetableData={timetable.todayTimetableData}
+        gradesData={timetable.gradesData}
+        attendanceData={timetable.attendanceData}
+        timetableError={timetable.timetableError}
+        gradesError={timetable.gradesError}
+        attendanceError={timetable.attendanceError}
+        isUpdating={timetable.isUpdating}
+        isLoadingWeek={timetable.isLoadingWeek}
+        lastSyncedAt={timetable.lastSyncedAt}
+        selectedDay={timetable.selectedDay}
+        onSelectDay={timetable.setSelectedDay}
+        currentWeekPivot={timetable.currentWeekPivot}
+        onShiftWeek={timetable.shiftWeek}
+        onSelectDate={timetable.queueWeekChange}
+        onRefresh={handleManualRefresh}
+        messages={messagesInbox.messages}
+        sentMessages={messagesInbox.sentMessages}
+        announcements={messagesInbox.announcements}
+        receivers={messagesInbox.receivers}
+        isLoadingMessages={
+          messagesInbox.isLoadingMessages &&
+          messagesInbox.messages.length === 0 &&
+          messagesInbox.announcements.length === 0 &&
+          !messagesInbox.messagesError
+        }
+        ensureReceivers={messagesInbox.ensureReceivers}
+        onOpenMessage={messagesInbox.handleOpenMessage}
+        onMarkMessageRead={messagesInbox.markMessageLocal}
+        onDownloadAttachment={messagesInbox.handleDownloadAttachment}
+        onSendMessage={messagesInbox.handleSendMessage}
+        badges={{
+          schedule: sectionBadges.schedule,
+          grades: sectionBadges.grades,
+          attendance: sectionBadges.attendance,
+        }}
+        scheduleCtrl={scheduleCtrl}
+        gradesCtrl={gradesCtrl}
+        attendanceCtrl={attendanceCtrl}
+        messagesCtrl={messagesCtrl}
+        t={t}
+      />
+    )
+  }
 
   const widgetCtx: DashboardWidgetRenderContext = {
     lang,

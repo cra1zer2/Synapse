@@ -209,19 +209,14 @@ export function DesktopMessagesView({
     }
   }, [initialAnnouncement, mode])
 
-  // Select first item automatically when changing mode
+  // Reset active selection when switching folders so unread messages are never auto-opened
   useEffect(() => {
-    if (mode === 'notices') {
-      if (!selectedNotice && filteredNotices.length > 0) setSelectedNotice(filteredNotices[0])
-    } else {
-      if (filteredMessages.length > 0 && (!selectedMsg || !filteredMessages.some((m) => m.id === selectedMsg.id))) {
-        selectMessageItem(filteredMessages[0])
-      } else if (filteredMessages.length === 0) {
-        setSelectedMsg(null)
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, activeMessagesList.length, announcements.length])
+    setSelectedMsg(null)
+    setReaderContent('')
+    setReaderAttachments([])
+    setIsLoadingContent(false)
+    setSelectedNotice(null)
+  }, [mode])
 
   useEffect(() => {
     if (isComposeOpen && receivers.length === 0) {
@@ -419,11 +414,6 @@ export function DesktopMessagesView({
                   >
                     {msg.subject}
                   </div>
-                  {msg.content && (
-                    <p className="text-[12px] text-[var(--mac-label-2)] line-clamp-2 leading-snug">
-                      {msg.content}
-                    </p>
-                  )}
                 </button>
               )
             })

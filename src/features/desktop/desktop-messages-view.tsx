@@ -437,12 +437,12 @@ export function DesktopMessagesView({
       </div>
 
       {/* Right Reading Pane */}
-      <div className="flex-1 min-w-0 overflow-y-auto bg-[var(--mac-canvas-bg)]/50 p-6">
+      <div className="flex-1 min-w-0 overflow-y-auto bg-[var(--mac-canvas-bg)] p-6">
         {mode === 'notices' ? (
           selectedNotice ? (
-            <div className="max-w-3xl mx-auto flex flex-col gap-4">
-              <MacGroupBox contentClassName="p-5">
-                <div className="flex items-center justify-between gap-3">
+            <div className="max-w-3xl mx-auto">
+              <MacGroupBox noPadding>
+                <div className="p-5 flex flex-col gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)] flex items-center justify-center font-bold text-[13px] shrink-0">
                       <Megaphone className="w-4 h-4" />
@@ -456,15 +456,15 @@ export function DesktopMessagesView({
                       </div>
                     </div>
                   </div>
+                  <h2 className="text-[19px] font-bold text-[var(--mac-label-1)] leading-snug break-words">
+                    {selectedNotice.title}
+                  </h2>
                 </div>
-                <h2 className="text-[19px] font-bold text-[var(--mac-label-1)] mt-3 leading-snug">
-                  {selectedNotice.title}
-                </h2>
-              </MacGroupBox>
 
-              <div className="mac-group-box bg-[var(--mac-window-bg)] p-5 text-[14px] leading-[1.7] text-[var(--mac-label-1)] whitespace-pre-wrap select-text">
-                {renderClickableText(selectedNotice.content || t.emptyMessageContent)}
-              </div>
+                <div className="border-t border-[var(--mac-row-divider)] p-5 text-[14px] leading-[1.7] text-[var(--mac-label-1)] whitespace-pre-wrap select-text">
+                  {renderClickableText(selectedNotice.content || t.emptyMessageContent)}
+                </div>
+              </MacGroupBox>
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-[var(--mac-label-2)] gap-2">
@@ -475,90 +475,92 @@ export function DesktopMessagesView({
             </div>
           )
         ) : selectedMsg ? (
-          <div className="max-w-3xl mx-auto flex flex-col gap-4">
-            <div className="mac-group-box bg-[var(--mac-window-bg)] p-5 flex flex-col gap-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] flex items-center justify-center font-bold text-[13px] shrink-0">
-                    {resolveAvatarLetter(cleanSenderName(selectedMsg.sender), selectedMsg.sender)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
-                      {cleanSenderName(selectedMsg.sender)}
+          <div className="max-w-3xl mx-auto">
+            <MacGroupBox noPadding>
+              <div className="p-5 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] flex items-center justify-center font-bold text-[13px] shrink-0">
+                      {resolveAvatarLetter(cleanSenderName(selectedMsg.sender), selectedMsg.sender)}
                     </div>
-                    <div className="text-[12px] text-[var(--mac-label-2)] tabular-nums">
-                      {formatHumanDate(selectedMsg.date, true, lang)}
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
+                        {cleanSenderName(selectedMsg.sender)}
+                      </div>
+                      <div className="text-[12px] text-[var(--mac-label-2)] tabular-nums">
+                        {formatHumanDate(selectedMsg.date, true, lang)}
+                      </div>
                     </div>
                   </div>
+
+                  {!isNoReply && (
+                    <MacPushButton
+                      variant="tinted"
+                      size="lg"
+                      onClick={() => handleReply(selectedMsg)}
+                      icon={<Reply className="w-3.5 h-3.5" />}
+                    >
+                      {t.replyAction}
+                    </MacPushButton>
+                  )}
                 </div>
 
-                {!isNoReply && (
-                  <MacPushButton
-                    variant="tinted"
-                    size="lg"
-                    onClick={() => handleReply(selectedMsg)}
-                    icon={<Reply className="w-3.5 h-3.5" />}
-                  >
-                    {t.replyAction}
-                  </MacPushButton>
-                )}
+                <h2 className="text-[19px] font-bold text-[var(--mac-label-1)] leading-snug break-words">
+                  {selectedMsg.subject}
+                </h2>
               </div>
 
-              <h2 className="text-[19px] font-bold text-[var(--mac-label-1)] leading-snug break-words pt-1 border-t border-[var(--mac-row-divider)]">
-                {selectedMsg.subject}
-              </h2>
-            </div>
-
-            {isLoadingContent ? (
-              <div className="mac-group-box bg-[var(--mac-window-bg)] p-10 flex items-center justify-center">
-                <UiSpinner size="large" className="text-[var(--mac-blue)]" />
-              </div>
-            ) : (
-              <>
-                {readerAttachments.length > 0 && (
-                  <MacGroupBox
-                    title={pickText(lang, {
-                      pl: `Załączniki (${readerAttachments.length})`,
-                      en: `Attachments (${readerAttachments.length})`
-                    })}
-                    noPadding
-                  >
-                    <div className="mac-divide-y bg-[var(--mac-window-bg)]">
-                      {readerAttachments.map((att, idx) => (
-                        <button
-                          key={`${att.path}-${idx}`}
-                          type="button"
-                          onClick={() => handleDownload(att)}
-                          disabled={Boolean(downloadingPath)}
-                          className="w-full px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--mac-fill-4)] cursor-pointer transition-colors"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <Paperclip className="w-4 h-4 text-[var(--mac-blue)] shrink-0" />
-                            <span className="text-[13px] font-medium text-[var(--mac-label-1)] truncate">
-                              {att.name}
+              {isLoadingContent ? (
+                <div className="border-t border-[var(--mac-row-divider)] p-10 flex items-center justify-center">
+                  <UiSpinner size="large" className="text-[var(--mac-blue)]" />
+                </div>
+              ) : (
+                <>
+                  {readerAttachments.length > 0 && (
+                    <div className="border-t border-[var(--mac-row-divider)] bg-[var(--mac-fill-5)]">
+                      <div className="px-5 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)]">
+                        {pickText(lang, {
+                          pl: `Załączniki (${readerAttachments.length})`,
+                          en: `Attachments (${readerAttachments.length})`
+                        })}
+                      </div>
+                      <div className="mac-divide-y">
+                        {readerAttachments.map((att, idx) => (
+                          <button
+                            key={`${att.path}-${idx}`}
+                            type="button"
+                            onClick={() => handleDownload(att)}
+                            disabled={Boolean(downloadingPath)}
+                            className="w-full px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--mac-fill-4)] cursor-pointer transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <Paperclip className="w-4 h-4 text-[var(--mac-blue)] shrink-0" />
+                              <span className="text-[13px] font-medium text-[var(--mac-label-1)] truncate">
+                                {att.name}
+                              </span>
+                            </div>
+                            <span className="text-[12px] font-semibold text-[var(--mac-blue)] flex items-center gap-1 shrink-0">
+                              {downloadingPath === att.path ? (
+                                <UiSpinner size="small" className="text-[var(--mac-blue)]" />
+                              ) : (
+                                <>
+                                  <span>{pickText(lang, { pl: 'Pobierz', en: 'Download' })}</span>
+                                  <Download className="w-3.5 h-3.5" />
+                                </>
+                              )}
                             </span>
-                          </div>
-                          <span className="text-[12px] font-semibold text-[var(--mac-blue)] flex items-center gap-1 shrink-0">
-                            {downloadingPath === att.path ? (
-                              <UiSpinner size="small" className="text-[var(--mac-blue)]" />
-                            ) : (
-                              <>
-                                <span>{pickText(lang, { pl: 'Pobierz', en: 'Download' })}</span>
-                                <Download className="w-3.5 h-3.5" />
-                              </>
-                            )}
-                          </span>
-                        </button>
-                      ))}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </MacGroupBox>
-                )}
+                  )}
 
-                <div className="mac-group-box bg-[var(--mac-window-bg)] p-5 text-[14px] leading-[1.7] text-[var(--mac-label-1)] whitespace-pre-wrap select-text">
-                  {renderClickableText(readerContent || t.emptyMessageContent)}
-                </div>
-              </>
-            )}
+                  <div className="border-t border-[var(--mac-row-divider)] p-5 text-[14px] leading-[1.7] text-[var(--mac-label-1)] whitespace-pre-wrap select-text">
+                    {renderClickableText(readerContent || t.emptyMessageContent)}
+                  </div>
+                </>
+              )}
+            </MacGroupBox>
           </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-[var(--mac-label-2)] gap-2">

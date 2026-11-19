@@ -441,7 +441,7 @@ export function DesktopMessagesView({
         {mode === 'notices' ? (
           selectedNotice ? (
             <div className="max-w-3xl mx-auto flex flex-col gap-4">
-              <MacGroupBox className="bg-[var(--mac-window-bg)]">
+              <MacGroupBox contentClassName="p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)] flex items-center justify-center font-bold text-[13px] shrink-0">

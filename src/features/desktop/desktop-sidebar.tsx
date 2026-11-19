@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React from 'react'
 import {
   LayoutGrid,
   Calendar,
@@ -14,10 +14,7 @@ import {
   Megaphone,
   Settings,
   PanelLeft,
-  Sparkles,
-  Check,
-  ChevronsUpDown,
-  Plus
+  Sparkles
 } from 'lucide-react'
 import { SavedAccount, StudentProfile } from '@/models/account.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
@@ -76,28 +73,12 @@ export function DesktopSidebar({
   profile,
   username,
   savedAccounts,
-  onSwitchAccount,
   onOpenSettings,
-  onOpenAddAccount,
   canSubmitExcuse = false,
   badges,
   lang,
   t
 }: DesktopSidebarProps) {
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
-  const popoverRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    if (!accountMenuOpen) return
-    const handleClickOutside = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setAccountMenuOpen(false)
-      }
-    }
-    window.addEventListener('mousedown', handleClickOutside)
-    return () => window.removeEventListener('mousedown', handleClickOutside)
-  }, [accountMenuOpen])
-
   const activeAccount = savedAccounts.find((a) => a.isActive) || savedAccounts[0]
   const rawName = profile?.fullName || activeAccount?.profile?.fullName || username || 'Synapse'
   const avatarText = resolveAvatarLetter(rawName, username)
@@ -300,84 +281,30 @@ export function DesktopSidebar({
         </nav>
 
         {/* Bottom Account & Settings Footer */}
-        <div className="p-[14px] pt-2 border-t border-[var(--mac-row-divider)] shrink-0 relative" ref={popoverRef}>
-          {accountMenuOpen && (
-            <div className="mac-popover-surface absolute left-[14px] right-[14px] bottom-[62px] p-1.5 flex flex-col gap-0.5 z-50">
-              <div className="px-2.5 py-1.5 text-[11px] font-semibold text-[var(--mac-label-2)]">
-                {pickText(lang, { pl: 'Zapisane konta', en: 'Saved accounts' })}
-              </div>
-              {savedAccounts.map((acc) => {
-                const isCurrent = acc.id === activeAccount?.id
-                return (
-                  <button
-                    key={acc.id}
-                    type="button"
-                    onClick={() => {
-                      if (!isCurrent) onSwitchAccount(acc)
-                      setAccountMenuOpen(false)
-                    }}
-                    className={cn(
-                      'w-full px-2.5 py-1.5 rounded-[10px] flex items-center justify-between gap-2 text-left cursor-pointer transition-colors',
-                      isCurrent ? 'bg-[var(--mac-fill-3)]' : 'hover:bg-[var(--mac-fill-3)]'
-                    )}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[12px] font-medium text-[var(--mac-label-1)] truncate">
-                        {acc.profile?.fullName || acc.username}
-                      </div>
-                      <div className="text-[10px] text-[var(--mac-label-2)] truncate">
-                        {acc.role === 'student' ? t.studentRole : t.parentRole} · {acc.username}
-                      </div>
-                    </div>
-                    {isCurrent && <Check className="w-3.5 h-3.5 text-[var(--mac-blue)] shrink-0" strokeWidth={2.5} />}
-                  </button>
-                )
-              })}
-              <div className="h-[1px] bg-[var(--mac-row-divider)] my-1" />
-              <button
-                type="button"
-                onClick={() => {
-                  setAccountMenuOpen(false)
-                  onOpenAddAccount()
-                }}
-                className="w-full px-2.5 py-1.5 rounded-[10px] flex items-center gap-2 text-[12px] font-medium text-[var(--mac-blue)] hover:bg-[var(--mac-fill-3)] cursor-pointer transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" strokeWidth={2.3} />
-                <span>{t.addAccount}</span>
-              </button>
+        <div className="p-[14px] pt-2 border-t border-[var(--mac-row-divider)] shrink-0">
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            title={t.settingsTitle}
+            aria-label={t.settingsTitle}
+            className="w-full p-1.5 rounded-[10px] flex items-center gap-2.5 hover:bg-[var(--mac-sidebar-hover)] transition-colors cursor-pointer text-left outline-none mac-focus-ring group"
+          >
+            <div className="w-8 h-8 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] flex items-center justify-center text-[12px] font-bold shrink-0">
+              {avatarText}
             </div>
-          )}
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setAccountMenuOpen((prev) => !prev)}
-              className="flex-1 min-w-0 p-1.5 rounded-[10px] flex items-center gap-2.5 hover:bg-[var(--mac-sidebar-hover)] transition-colors cursor-pointer text-left outline-none mac-focus-ring"
-            >
-              <div className="w-8 h-8 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] flex items-center justify-center text-[12px] font-bold shrink-0">
-                {avatarText}
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold text-[var(--mac-label-1)] truncate leading-[15px]">
+                {rawName}
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-semibold text-[var(--mac-label-1)] truncate leading-[15px]">
-                  {rawName}
-                </div>
-                <div className="text-[10px] text-[var(--mac-label-2)] truncate leading-[13px] mt-0.5">
-                  {subtitle}
-                </div>
+              <div className="text-[10px] text-[var(--mac-label-2)] truncate leading-[13px] mt-0.5">
+                {subtitle}
               </div>
-              <ChevronsUpDown className="w-3.5 h-3.5 text-[var(--mac-label-3)] shrink-0" />
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              title={t.settingsTitle}
-              aria-label={t.settingsTitle}
-              className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[var(--mac-label-2)] hover:text-[var(--mac-label-1)] hover:bg-[var(--mac-sidebar-hover)] transition-colors cursor-pointer shrink-0 outline-none mac-focus-ring"
-            >
-              <Settings className="w-4 h-4" strokeWidth={1.9} />
-            </button>
-          </div>
+            </div>
+            <Settings
+              className="w-4 h-4 text-[var(--mac-label-2)] group-hover:text-[var(--mac-label-1)] transition-colors shrink-0 mr-1"
+              strokeWidth={1.9}
+            />
+          </button>
         </div>
       </div>
     </aside>

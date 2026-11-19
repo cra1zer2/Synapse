@@ -265,10 +265,9 @@ export function DesktopOverview({
         </MacGroupBox>
 
         <MacGroupBox
-          className="cursor-pointer"
-          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[112px]"
+          contentClassName="flex flex-col justify-between min-h-[112px]"
         >
-          <div onClick={() => onNavigate('attendance')} className="flex flex-col justify-between h-full gap-2">
+          <div className="flex flex-col justify-between h-full gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)]">
                 {t.attendanceRate}

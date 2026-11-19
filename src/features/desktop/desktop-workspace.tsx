@@ -650,24 +650,6 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
               </>
             )}
 
-            {activeSection === 'attendance-justifications' && allowExcuse && (
-              <MacSegmentedControl<'0' | '1' | '2' | '3'>
-                surface="toolbar"
-                value={attendanceCtrl.liveJustificationsFilter}
-                onChange={(f) => {
-                  attendanceCtrl.setLiveJustificationsFilter(f)
-                  attendanceCtrl.handleOpenLiveJustifications(f)
-                }}
-                options={[
-                  { id: '0', label: pickText(lang, { pl: 'Wszystkie', en: 'All' }) },
-                  { id: '1', label: pickText(lang, { pl: 'Wysłane', en: 'Sent' }) },
-                  { id: '2', label: pickText(lang, { pl: 'Przyjęte', en: 'Accepted' }) },
-                  { id: '3', label: pickText(lang, { pl: 'Odrzucone', en: 'Rejected' }) }
-                ]}
-                className="shrink-0"
-              />
-            )}
-
             {(activeSection === 'inbox' || activeSection === 'sent') && (
               <MacToolbarButton
                 icon={<SquarePen className="w-4 h-4 text-[var(--mac-blue)]" strokeWidth={2} />}
@@ -681,10 +663,7 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
                 <RefreshCw
                   className={cn(
                     'w-4 h-4',
-                    (isUpdating ||
-                      (activeSection === 'attendance-justifications' &&
-                        attendanceCtrl.isLoadingLiveJustifications)) &&
-                      'animate-spin text-[var(--mac-blue)]'
+                    isUpdating && 'animate-spin text-[var(--mac-blue)]'
                   )}
                   strokeWidth={1.9}
                 />
@@ -792,35 +771,6 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
               lang={lang}
               t={t}
               initialSelectedGrade={gradeSelection}
-            />
-          )}
-
-          {(activeSection === 'attendance' ||
-            activeSection === 'attendance-journal' ||
-            activeSection === 'attendance-justifications') && (
-            <DesktopAttendanceView
-              attendanceData={attendanceData}
-              attendanceError={attendanceError}
-              onRetry={onRefresh}
-              timetableData={timetableData}
-              showFullSubjectNames={showFullSubjectNames}
-              isStudent={isStudent}
-              canSubmitExcuse={canSubmitExcuse}
-              liveJustifications={attendanceCtrl.liveJustifications}
-              isLoadingLiveJustifications={attendanceCtrl.isLoadingLiveJustifications}
-              liveJustificationsFilter={attendanceCtrl.liveJustificationsFilter}
-              onChangeLiveFilter={attendanceCtrl.setLiveJustificationsFilter}
-              onLoadLiveJustifications={attendanceCtrl.handleOpenLiveJustifications}
-              onSubmitJustification={attendanceCtrl.handleSubmitJustifications}
-              subTab={
-                activeSection === 'attendance-journal'
-                  ? 'journal'
-                  : activeSection === 'attendance-justifications'
-                    ? 'justifications'
-                    : 'summary'
-              }
-              lang={lang}
-              t={t}
             />
           )}
 

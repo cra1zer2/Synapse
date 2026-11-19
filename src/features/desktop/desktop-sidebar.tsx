@@ -62,7 +62,9 @@ interface SidebarNavItem {
   label: string
   icon: React.ReactNode
   badge?: number
+  badgeText?: string
   badgeTone?: 'blue' | 'red' | 'neutral'
+  disabled?: boolean
 }
 
 export function DesktopSidebar({
@@ -129,25 +131,12 @@ export function DesktopSidebar({
       items: [
         {
           id: 'attendance',
-          label: pickText(lang, { pl: 'Podsumowanie', en: 'Summary' }),
+          label: t.attendance,
           icon: <CheckCircle2 className="w-[16px] h-[16px]" strokeWidth={1.9} />,
-          badge: badges.attendance,
-          badgeTone: 'red'
-        },
-        {
-          id: 'attendance-journal',
-          label: pickText(lang, { pl: 'Dziennik obecności', en: 'Journal' }),
-          icon: <CalendarDays className="w-[16px] h-[16px]" strokeWidth={1.9} />
-        },
-        ...(canSubmitExcuse
-          ? [
-              {
-                id: 'attendance-justifications' as const,
-                label: pickText(lang, { pl: 'Usprawiedliwienia', en: 'Justifications' }),
-                icon: <FileCheck2 className="w-[16px] h-[16px]" strokeWidth={1.9} />
-              }
-            ]
-          : [])
+          disabled: true,
+          badgeText: pickText(lang, { pl: 'W budowie', en: 'WIP' }),
+          badgeTone: 'neutral'
+        }
       ]
     },
     {
@@ -233,17 +222,22 @@ export function DesktopSidebar({
               </div>
               <div className="flex flex-col gap-0.5">
                 {group.items.map((item) => {
-                  const isActive = activeSection === item.id
+                  const isActive = !item.disabled && activeSection === item.id
                   return (
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => onSelectSection(item.id)}
+                      disabled={item.disabled}
+                      onClick={() => {
+                        if (!item.disabled) onSelectSection(item.id)
+                      }}
                       className={cn(
-                        'w-full h-[32px] px-2.5 rounded-[8px] flex items-center justify-between gap-2 text-left transition-colors duration-100 cursor-pointer outline-none mac-focus-ring',
-                        isActive
-                          ? 'bg-[var(--mac-sidebar-selected)] text-[var(--mac-label-1)] font-semibold'
-                          : 'text-[var(--mac-label-1)] hover:bg-[var(--mac-sidebar-hover)] font-normal'
+                        'w-full h-[32px] px-2.5 rounded-[8px] flex items-center justify-between gap-2 text-left transition-colors duration-100 outline-none mac-focus-ring',
+                        item.disabled
+                          ? 'opacity-55 cursor-not-allowed text-[var(--mac-label-2)] font-normal'
+                          : isActive
+                            ? 'bg-[var(--mac-sidebar-selected)] text-[var(--mac-label-1)] font-semibold cursor-pointer'
+                            : 'text-[var(--mac-label-1)] hover:bg-[var(--mac-sidebar-hover)] font-normal cursor-pointer'
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -258,19 +252,26 @@ export function DesktopSidebar({
                         <span className="text-[13px] leading-[16px] truncate">{item.label}</span>
                       </div>
 
-                      {typeof item.badge === 'number' && item.badge > 0 && (
-                        <span
-                          className={cn(
-                            'min-w-[18px] h-[18px] px-1.5 rounded-full text-[11px] font-semibold flex items-center justify-center tabular-nums leading-none shrink-0',
-                            item.badgeTone === 'red'
-                              ? 'bg-[var(--ios-red-subtle)] text-[var(--mac-red)]'
-                              : item.badgeTone === 'blue'
-                                ? 'bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)]'
-                                : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]'
-                          )}
-                        >
-                          {item.badge > 99 ? '99+' : item.badge}
+                      {item.badgeText ? (
+                        <span className="h-[18px] px-1.5 rounded-full text-[10px] font-medium flex items-center justify-center leading-none shrink-0 bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]">
+                          {item.badgeText}
                         </span>
+                      ) : (
+                        typeof item.badge === 'number' &&
+                        item.badge > 0 && (
+                          <span
+                            className={cn(
+                              'min-w-[18px] h-[18px] px-1.5 rounded-full text-[11px] font-semibold flex items-center justify-center tabular-nums leading-none shrink-0',
+                              item.badgeTone === 'red'
+                                ? 'bg-[var(--ios-red-subtle)] text-[var(--mac-red)]'
+                                : item.badgeTone === 'blue'
+                                  ? 'bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)]'
+                                  : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]'
+                            )}
+                          >
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        )
                       )}
                     </button>
                   )

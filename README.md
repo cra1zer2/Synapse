@@ -1,42 +1,51 @@
-# Synapse — "E-Dziennik" `[WIP · Alpha]`
+# Synapse — "E-Dziennik" `v2.0 Beta`
 
 **[🇬🇧 English](README.md)** · **[🇵🇱 Polski](README.pl.md)**
 
-**A fast, private, ad-free "E-Dziennik" client for Poland's Librus Synergia school portal** — built to replace cluttered web portals and paywalled mobile apps with a focused daily dashboard across phones and desktops.
+**A fast, private, ad-free "E-Dziennik" client for Poland's Librus Synergia school portal** — built to replace cluttered web portals and paywalled mobile apps with a focused daily workspace across phones and desktop monitors.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcra1zer2%2FSynapse)
 
 > **🚀 Live Preview & Instant Demo:** Open **[synapse-ten-smoky.vercel.app](https://synapse-ten-smoky.vercel.app)** and sign in with **`demo` / `demo`** (student) or **`demor` / `demo`** (parent) to explore the full app right away — no Librus account needed.
 >
-> **⚠️ WIP / Alpha Status:** Synapse is currently in **Alpha**. The **Desktop layout** and the **Bottom Navigation Bar** variation are actively in development (`WIP`), so **opening the app on a phone (with the default Widgets view) is currently recommended** for the best experience.
+> **✨ v2.0 Beta Full Release:** Synapse **v2.0.0-beta.1** unifies the full **Desktop PC Workspace** (Overview, Weekly 0–9 Timetable, Grades & What-If Simulator, Attendance & e-Excuses, Messages & Notices) with the refined **Mobile experience** (Widgets Dashboard & Bottom Navigation Bar) into one cohesive public beta release.
 
-> Subtly inspired by clean modern mobile design principles, Synapse works as an adaptive web and PWA hybrid: fluid touch cards on smartphones and an expanded multi-column workspace on desktop monitors — with zero ads, zero tracking, and no central servers.
+> Designed as an adaptive web and PWA hybrid, Synapse delivers fluid touch cards and spring transitions on smartphones alongside a multi-column macOS-inspired workspace on desktop monitors — with zero ads, zero tracking, and no central servers.
 
 ---
 
 ## Visual Overview
 
 <p align="center">
-  <a href="docs/screenshots/en/iphone-light-widgets.png" title="iPhone Pro · iOS Light + Widgets">
+  <a href="docs/screenshots/en/iphone-light-widgets.png" title="iPhone Pro · Light + Widgets">
     <img src="docs/screenshots/en/iphone-light-widgets.png" width="168" alt="Synapse iPhone Pro Light Widgets" />
   </a>
-  <a href="docs/screenshots/en/iphone-dark-widgets.png" title="iPhone Pro · iOS Dark + Widgets">
+  <a href="docs/screenshots/en/iphone-dark-widgets.png" title="iPhone Pro · Dark + Widgets">
     <img src="docs/screenshots/en/iphone-dark-widgets.png" width="168" alt="Synapse iPhone Pro Dark Widgets" />
   </a>
-  <a href="docs/screenshots/en/iphone-light-tabs.png" title="iPhone Pro · iOS Light + Bottom Bar">
+  <a href="docs/screenshots/en/iphone-light-tabs.png" title="iPhone Pro · Light + Bottom Bar">
     <img src="docs/screenshots/en/iphone-light-tabs.png" width="168" alt="Synapse iPhone Pro Light Bottom Bar" />
   </a>
-  <a href="docs/screenshots/en/iphone-dark-tabs.png" title="iPhone Pro · iOS Dark + Bottom Bar">
+  <a href="docs/screenshots/en/iphone-dark-tabs.png" title="iPhone Pro · Dark + Bottom Bar">
     <img src="docs/screenshots/en/iphone-dark-tabs.png" width="168" alt="Synapse iPhone Pro Dark Bottom Bar" />
   </a>
-  <br /><sub><b>Mobile Variations:</b> Light · Widgets &nbsp;|&nbsp; Dark · Widgets &nbsp;|&nbsp; Light · Bottom Bar &nbsp;|&nbsp; Dark · Bottom Bar</sub>
+  <br /><sub><b>Mobile Variations (1206×2622):</b> Light · Widgets &nbsp;|&nbsp; Dark · Widgets &nbsp;|&nbsp; Light · Bottom Bar &nbsp;|&nbsp; Dark · Bottom Bar</sub>
 </p>
 
 <p align="center">
-  <a href="docs/screenshots/en/desktop-workspace.png" title="Desktop Workspace (Deprecated · WIP)">
-    <img src="docs/screenshots/en/desktop-workspace.png" width="684" alt="Synapse Desktop Workspace (Deprecated / WIP)" />
+  <a href="docs/screenshots/en/desktop-workspace.png" title="Desktop Workspace · Light Overview (1440p)">
+    <img src="docs/screenshots/en/desktop-workspace.png" width="708" alt="Synapse Desktop Workspace Light Overview (2560x1440)" />
   </a>
-  <br /><sub>⚠️ <b>Desktop Workspace [Deprecated · WIP]:</b> The desktop screenshot above is <b>outdated/deprecated</b> and currently removed from the live build — a completely redesigned PC layout is planned and in active development (<code>WIP</code>).</sub>
+</p>
+
+<p align="center">
+  <a href="docs/screenshots/en/desktop-timetable-dark.png" title="Desktop Workspace · Dark Weekly Timetable (1440p)">
+    <img src="docs/screenshots/en/desktop-timetable-dark.png" width="350" alt="Synapse Desktop Workspace Dark Weekly Timetable (2560x1440)" />
+  </a>
+  <a href="docs/screenshots/en/desktop-attendance.png" title="Desktop Workspace · Light Attendance & e-Excuses (1440p)">
+    <img src="docs/screenshots/en/desktop-attendance.png" width="350" alt="Synapse Desktop Workspace Light Attendance (2560x1440)" />
+  </a>
+  <br /><sub><b>Desktop Workspace (1440p · 2560×1440):</b> Light · Overview &nbsp;|&nbsp; Dark · Weekly 0–9 Timetable &nbsp;|&nbsp; Light · Attendance Summary</sub>
 </p>
 
 ---
@@ -47,27 +56,27 @@ After the shutdown of popular open-source Android gradebook clients, thousands o
 
 **Synapse** solves that everyday pain cleanly:
 - **Actually fast in daily use** — opens straight into cached local data and silently syncs updates in the background instead of reloading heavy multi-page web tables.
-- **Privately self-hosted for free** — no shared third-party backend ever holds your school credentials. You deploy your own private copy on Vercel in a minute (or run it locally) and add it straight to your phone's home screen.
+- **Privately self-hosted for free** — no shared third-party backend ever holds your school credentials. You deploy your own private copy on Vercel in a minute (or run it locally) and add it straight to your phone's home screen or desktop browser.
 - **Built for both students and parents** — switch effortlessly between student and parent accounts, inspect subject deviations, or send e-excuses in seconds.
 
 ---
 
 ## Key Capabilities
 
-- **Today at a Glance**: Live lesson status, break timer, room changes, recent grades, and unread messages on one customizable home view.
+- **Adaptive Mobile & Desktop Workspace**:
+  - **Mobile (`< 1024px`)**: Choose between a customizable **Widgets Dashboard** (drag-reorder cards and toggle visibility) or a native **Bottom Navigation Bar** (`Schedule`, `Grades`, `Attendance`, `Messages`) with synchronized edge swipe-back gestures and unified spring transitions.
+  - **Desktop PC (`≥ 1024px`)**: Collapsible sidebar with live unread/alert badges, 4-column **Overview** KPIs alongside a 0–9 period schedule, **Weekly 0–9 Timetable** matrix with an interactive calendar popover and live lesson focus, **Grades** with pencil-mode What-If simulation, **Attendance** (Summary KPIs, Deviation Journal, and parent e-Justifications), split-pane **Messages & Notices**, and a dedicated **Settings** dialog.
 - **Timetable, Exams & Calendar Export**: Automatic merging of double periods, highlighted substitutions/cancellations, upcoming exams/homework timeline, and one-tap `.ics` export to external calendars.
-- **Weighted Grades & Interactive What-If Simulator**: Instant semester and full-year GPA calculation (`+0.5 / -0.25`), restrained typography that flags only alert marks (`nb`, `0`, `1`) in red, and a top-bar `+` simulation mode with pulsing subject selection and a spacious modal sheet for testing hypothetical grades and weights.
+- **Weighted Grades & Interactive What-If Simulator**: Instant semester and full-year GPA calculation (`+0.5 / -0.25`), restrained typography that flags only alert marks (`nb`, `0`, `1`) in red, and a `+` / pencil simulation mode for testing hypothetical grades and weights across both mobile and desktop.
 - **Attendance & Parent e-Excuses**: Daily presence indicators separated from the deviation journal (`nb`, `usp`, `sp`, `sL`, `zw`), threshold alerts (`50%` / `75%`), and direct e-excuse submissions with live approval tracking.
 - **Messages & School Notices**: Distraction-free inbox, sent folder, staff directory lookup, attachment downloads, and announcements.
 - **Extensible Localization & Live Translation**: Seamless interface switching via `LANGUAGE_REGISTRY` (`PL / EN` ready for additional languages) paired with automatic real-time Google Translate rendering of dynamic Librus content (subjects, lesson topics, exam & homework details, grade categories/comments, absence types, messages, and announcements) while keeping names, classrooms, dates, and attachments untouched.
 
 ### Customization & Controls
 
-Tailor both visual design systems, layout, and grading behavior directly from **Settings**:
-- **Dual Design Systems (`iOS` & `Material 3 Expressive`)**: Switch live between layered iOS Glass/Grouped styling and Google Pixel Android 16 Material 3 Expressive surfaces.
-- **Dynamic Material You Palettes**: Pick from 8 curated Material 3 color presets or generate a custom tonal palette for light and dark modes from any HEX / color-wheel seed.
-- **Navigation & Home Screen Layout**: Choose between the customizable **Widgets Dashboard** (drag-reorder cards and toggle **Grades**, **Lesson Plan**, **Tests & Deadlines**, **Messages**, **Attendance**) or a native **Bottom Navigation Bar** (`Schedule`, `Grades`, `Attendance`, `Messages`).
-- **Themes, Display & Simulator**: Choose Light, Dark, or System themes, toggle unabbreviated subject names, today's attendance dots strip on phones, homework visibility, the lucky number banner, and the **What-If Grade Simulator**.
+Tailor themes, layout, and grading behavior directly from **Settings** (on both mobile and desktop):
+- **Themes & Display**: Switch between Light, Dark, or System themes; toggle full unabbreviated subject names, today's attendance dots strip on phones, homework visibility, the lucky number banner, and the **What-If Grade Simulator**.
+- **Mobile Navigation & Home Screen Layout**: Switch between the customizable **Widgets Dashboard** (drag-reorder and toggle **Grades**, **Lesson Plan**, **Tests & Deadlines**, **Messages**, **Attendance**) or the **Bottom Navigation Bar**.
 - **Multi-Account & Diagnostics**: Add and switch between multiple Student and Parent profiles, optionally allow absence excuses from student accounts, and inspect live per-endpoint **Request Timings**.
 
 ---
@@ -117,10 +126,10 @@ Built with **Next.js 15** (App Router & Server Actions), **React 19**, **TypeScr
 ```text
 src/
 ├── app/            # Next.js entrypoints, shell orchestration & Server Actions (actions.ts)
-├── components/ui/  # Theme-adaptive iOS & Material Design 3 UI primitives
+├── components/ui/  # iOS-inspired mobile UI primitives, sheets & edge-swipe panels
 ├── config/         # Extensible language registry & dictionaries (LANGUAGE_REGISTRY / PL / EN)
-├── features/       # Plug-and-play feature modules (auth, dashboard, schedule, grades, attendance, messages, settings)
-├── hooks/          # Local-first sync, account management, settings & scroll physics
+├── features/       # Feature modules (auth, dashboard, desktop, schedule, grades, attendance, messages, settings)
+├── hooks/          # Local-first sync, account management, settings & motion physics
 ├── models/         # Typed domain models for timetable, grades, attendance & messages
 ├── services/       # Custom session/cookie jar, Gateway client, parsers, translation & demo generator
 └── utils/          # Weighted GPA math, time/break helpers, .ics calendar export & formatting

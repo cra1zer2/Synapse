@@ -277,7 +277,7 @@ export function MacSegmentedControl<T extends string | number>({
               type="button"
               onClick={() => onChange(opt.id)}
               className={cn(
-                'h-[28px] px-3 rounded-full text-[12px] leading-[15px] inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-150 select-none outline-none',
+                'h-[28px] px-3 rounded-full text-[12px] leading-[15px] inline-flex items-center justify-center gap-1.5 min-w-0 cursor-pointer transition-all duration-150 select-none outline-none',
                 isActive
                   ? 'bg-[var(--mac-blue-overglass)] text-white font-semibold shadow-[0_1px_4px_rgba(0,120,240,0.32)]'
                   : 'text-[var(--mac-label-1)]/80 font-medium hover:text-[var(--mac-label-1)] hover:bg-[var(--mac-fill-3)]'
@@ -318,7 +318,7 @@ export function MacSegmentedControl<T extends string | number>({
             type="button"
             onClick={() => onChange(opt.id)}
             className={cn(
-              'h-[24px] px-3 rounded-full text-[12px] leading-[15px] inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-150 select-none outline-none flex-1',
+              'h-[24px] px-3 rounded-full text-[12px] leading-[15px] inline-flex items-center justify-center gap-1.5 min-w-0 cursor-pointer transition-all duration-150 select-none outline-none flex-1',
               isActive
                 ? 'bg-[var(--mac-blue)] text-white font-semibold shadow-[0_1px_3px_rgba(0,136,255,0.3)]'
                 : 'text-[var(--mac-label-2)] font-medium hover:text-[var(--mac-label-1)]'

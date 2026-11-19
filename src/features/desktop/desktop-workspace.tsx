@@ -650,6 +650,24 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
               </>
             )}
 
+            {activeSection === 'attendance-justifications' && allowExcuse && (
+              <MacSegmentedControl<'0' | '1' | '2' | '3'>
+                surface="toolbar"
+                value={attendanceCtrl.liveJustificationsFilter}
+                onChange={(f) => {
+                  attendanceCtrl.setLiveJustificationsFilter(f)
+                  attendanceCtrl.handleOpenLiveJustifications(f)
+                }}
+                options={[
+                  { id: '0', label: pickText(lang, { pl: 'Wszystkie', en: 'All' }) },
+                  { id: '1', label: pickText(lang, { pl: 'Wysłane', en: 'Sent' }) },
+                  { id: '2', label: pickText(lang, { pl: 'Przyjęte', en: 'Accepted' }) },
+                  { id: '3', label: pickText(lang, { pl: 'Odrzucone', en: 'Rejected' }) }
+                ]}
+                className="shrink-0"
+              />
+            )}
+
             {(activeSection === 'inbox' || activeSection === 'sent') && (
               <MacToolbarButton
                 icon={<SquarePen className="w-4 h-4 text-[var(--mac-blue)]" strokeWidth={2} />}
@@ -661,13 +679,28 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
             <MacToolbarButton
               icon={
                 <RefreshCw
-                  className={cn('w-4 h-4', isUpdating && 'animate-spin text-[var(--mac-blue)]')}
+                  className={cn(
+                    'w-4 h-4',
+                    (isUpdating ||
+                      (activeSection === 'attendance-justifications' &&
+                        attendanceCtrl.isLoadingLiveJustifications)) &&
+                      'animate-spin text-[var(--mac-blue)]'
+                  )}
                   strokeWidth={1.9}
                 />
               }
               label={t.refresh}
-              disabled={isUpdating}
-              onClick={onRefresh}
+              disabled={
+                isUpdating ||
+                (activeSection === 'attendance-justifications' &&
+                  attendanceCtrl.isLoadingLiveJustifications)
+              }
+              onClick={() => {
+                onRefresh()
+                if (activeSection === 'attendance-justifications' && allowExcuse) {
+                  attendanceCtrl.handleOpenLiveJustifications(attendanceCtrl.liveJustificationsFilter)
+                }
+              }}
             />
 
             {sidebarCollapsed && (

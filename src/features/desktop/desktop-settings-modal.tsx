@@ -3,15 +3,22 @@
 import React, { useState, useEffect } from 'react'
 import {
   Activity,
+  AlertCircle,
   Check,
   Copy,
+  Eye,
+  EyeOff,
+  Lock,
   LogOut,
   Palette,
   Play,
   Plus,
+  ShieldCheck,
   SlidersHorizontal,
   Trash2,
-  UserCircle2
+  User,
+  UserCircle2,
+  X
 } from 'lucide-react'
 import { SavedAccount, StudentProfile } from '@/models/account.model'
 import {
@@ -31,14 +38,13 @@ import {
   subscribeToLogs
 } from '@/utils/request-logger.util'
 import { runDisplayDiagnosticsAction } from '@/app/actions'
-import { AuthView } from '@/features/auth/auth-view'
 import { cn } from '@/utils/cn.util'
 import {
   MacDialogWindow,
   MacFormRow,
   MacGroupBox,
+  MacPopupSelect,
   MacPushButton,
-  MacSegmentedControl,
   MacSwitch
 } from './mac-primitives'
 
@@ -123,6 +129,7 @@ export function DesktopSettingsModal({
 }: DesktopSettingsModalProps) {
   const [pane, setPane] = useState<DesktopSettingsPane>(initialPane)
   const [showAddForm, setShowAddForm] = useState(initialShowAddAccount)
+  const [showPass, setShowPass] = useState(false)
 
   // Diagnostics state
   const [logs, setLogs] = useState<RequestLogItem[]>([])
@@ -133,6 +140,7 @@ export function DesktopSettingsModal({
     if (isOpen) {
       setPane(initialPane)
       setShowAddForm(initialShowAddAccount)
+      setShowPass(false)
     }
   }, [isOpen, initialPane, initialShowAddAccount])
 
@@ -229,8 +237,8 @@ export function DesktopSettingsModal({
       isOpen={isOpen}
       onClose={onClose}
       title={t.settingsTitle}
-      widthClass="max-w-[780px]"
-      heightClass="h-[540px]"
+      widthClass="max-w-[860px]"
+      heightClass="h-[620px]"
       noPadding
     >
       <div className="h-full flex min-h-0 select-none">
@@ -263,45 +271,260 @@ export function DesktopSettingsModal({
         </aside>
 
         {/* Settings Content Pane */}
-        <div className="flex-1 min-w-0 overflow-y-auto p-5 flex flex-col gap-5">
+        <div className="flex-1 min-w-0 overflow-y-auto p-6 flex flex-col gap-5 bg-[var(--mac-canvas-bg)]">
           {pane === 'account' &&
             (showAddForm ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[15px] font-bold text-[var(--mac-label-1)]">{t.addAccount}</h3>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="text-[17px] font-bold text-[var(--mac-label-1)] leading-snug">
+                      {t.addAccount}
+                    </h3>
+                    <p className="text-[12px] text-[var(--mac-label-2)] mt-0.5 leading-snug">
+                      {pickText(currentLang, {
+                        pl: 'Połącz kolejne konto ucznia lub rodzica z Librus Synergia.',
+                        en: 'Connect another Librus Synergia student or parent account.'
+                      })}
+                    </p>
+                  </div>
                   <MacPushButton
                     size="rg"
-                    variant="ghost"
+                    variant="bordered"
                     onClick={() => {
                       setShowAddForm(false)
+                      setShowPass(false)
                       onResetAddAccount()
                     }}
                   >
                     {t.cancel}
                   </MacPushButton>
                 </div>
-                <AuthView
-                  authStep={addAccountStep}
-                  username={newUsername}
-                  setUsername={setNewUsername}
-                  password={newPassword}
-                  setPassword={setNewPassword}
-                  authError={addAccountError}
-                  onClearError={() => setAddAccountError(null)}
-                  verifiedCandidate={addAccountCandidate}
-                  onStartVerification={onAddAccount}
-                  onConfirmLogin={() => {
-                    if (onConfirmAddAccount()) setShowAddForm(false)
-                  }}
-                  onBackToInput={() => setAddAccountStep('input')}
-                  onCancel={() => {
-                    setShowAddForm(false)
-                    onResetAddAccount()
-                  }}
-                  isSubView
-                  lang={currentLang}
-                  t={t}
-                />
+
+                {addAccountError && (
+                  <div className="rounded-[14px] bg-[var(--ios-red-subtle)] border border-[var(--mac-red)]/25 p-3.5 flex items-start gap-3">
+                    <AlertCircle className="w-4 h-4 text-[var(--mac-red)] shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0 text-[12px] text-[var(--mac-red)] leading-relaxed">
+                      {addAccountError}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAddAccountError(null)}
+                      aria-label={t.closeLabel}
+                      className="w-5 h-5 rounded-full hover:bg-[var(--mac-red)]/15 text-[var(--mac-red)] flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {(addAccountStep === 'input' || addAccountStep === 'verifying') && (
+                  <form onSubmit={onAddAccount} className="flex flex-col gap-4">
+                    <MacGroupBox
+                      title={pickText(currentLang, {
+                        pl: 'Dane logowania Librus Synergia',
+                        en: 'Librus Synergia Credentials'
+                      })}
+                      contentClassName="p-4 flex flex-col gap-3.5"
+                    >
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)]">
+                          {pickText(currentLang, { pl: 'Login Synergia', en: 'Synergia Login' })}
+                        </label>
+                        <div className="h-[40px] px-3.5 rounded-[10px] bg-[var(--mac-fill-4)] border border-[var(--mac-group-border)] flex items-center gap-2.5 mac-input-focus transition-shadow">
+                          <User className="w-4 h-4 text-[var(--mac-label-2)] shrink-0" />
+                          <input
+                            type="text"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            autoComplete="username"
+                            spellCheck={false}
+                            disabled={addAccountStep === 'verifying'}
+                            value={newUsername}
+                            onChange={(e) => {
+                              setNewUsername(e.target.value)
+                              if (addAccountError) setAddAccountError(null)
+                            }}
+                            placeholder={pickText(currentLang, {
+                              pl: 'np. 1234567u lub demo',
+                              en: 'e.g. 1234567u or demo'
+                            })}
+                            className="w-full bg-transparent text-[13px] text-[var(--mac-label-1)] placeholder-[var(--mac-label-3)] outline-none disabled:opacity-50"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)]">
+                          {pickText(currentLang, { pl: 'Hasło', en: 'Password' })}
+                        </label>
+                        <div className="h-[40px] px-3.5 rounded-[10px] bg-[var(--mac-fill-4)] border border-[var(--mac-group-border)] flex items-center gap-2.5 mac-input-focus transition-shadow">
+                          <Lock className="w-4 h-4 text-[var(--mac-label-2)] shrink-0" />
+                          <input
+                            type={showPass ? 'text' : 'password'}
+                            autoComplete="current-password"
+                            disabled={addAccountStep === 'verifying'}
+                            value={newPassword}
+                            onChange={(e) => {
+                              setNewPassword(e.target.value)
+                              if (addAccountError) setAddAccountError(null)
+                            }}
+                            placeholder={pickText(currentLang, {
+                              pl: 'Wpisz hasło do konta',
+                              en: 'Enter account password'
+                            })}
+                            className="w-full bg-transparent text-[13px] text-[var(--mac-label-1)] placeholder-[var(--mac-label-3)] outline-none disabled:opacity-50"
+                          />
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => setShowPass((p) => !p)}
+                            disabled={addAccountStep === 'verifying'}
+                            aria-label={
+                              showPass
+                                ? pickText(currentLang, { pl: 'Ukryj hasło', en: 'Hide password' })
+                                : pickText(currentLang, { pl: 'Pokaż hasło', en: 'Show password' })
+                            }
+                            className="w-7 h-7 rounded-full hover:bg-[var(--mac-fill-3)] text-[var(--mac-label-2)] hover:text-[var(--mac-label-1)] flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                          >
+                            {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 pt-1 border-t border-[var(--mac-row-divider)] text-[11px]">
+                        <button
+                          type="button"
+                          disabled={addAccountStep === 'verifying'}
+                          onClick={() => {
+                            setNewUsername('demo')
+                            setNewPassword('demo')
+                            if (addAccountError) setAddAccountError(null)
+                          }}
+                          className="font-semibold text-[var(--mac-blue)] hover:underline cursor-pointer disabled:opacity-50"
+                        >
+                          {pickText(currentLang, {
+                            pl: 'Użyj konta demo (demo / demo)',
+                            en: 'Fill demo credentials (demo / demo)'
+                          })}
+                        </button>
+                        <span className="text-[var(--mac-label-2)] text-right">
+                          {pickText(currentLang, {
+                            pl: 'Dane logowania są zapisywane wyłącznie lokalnie',
+                            en: 'Credentials are stored locally only'
+                          })}
+                        </span>
+                      </div>
+                    </MacGroupBox>
+
+                    <div className="flex items-center justify-end gap-2.5">
+                      <MacPushButton
+                        type="button"
+                        variant="bordered"
+                        size="xl"
+                        disabled={addAccountStep === 'verifying'}
+                        onClick={() => {
+                          setShowAddForm(false)
+                          setShowPass(false)
+                          onResetAddAccount()
+                        }}
+                      >
+                        {t.cancel}
+                      </MacPushButton>
+                      <MacPushButton
+                        type="submit"
+                        variant="prominent"
+                        size="xl"
+                        loading={addAccountStep === 'verifying'}
+                        disabled={!newUsername.trim() || !newPassword || addAccountStep === 'verifying'}
+                      >
+                        {addAccountStep === 'verifying'
+                          ? pickText(currentLang, { pl: 'Weryfikacja konta...', en: 'Verifying...' })
+                          : pickText(currentLang, { pl: 'Zweryfikuj i kontynuuj', en: 'Verify & Continue' })}
+                      </MacPushButton>
+                    </div>
+                  </form>
+                )}
+
+                {addAccountStep === 'preview' && addAccountCandidate && (
+                  <div className="flex flex-col gap-4">
+                    <MacGroupBox contentClassName="p-4 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-14 h-14 rounded-full bg-[var(--mac-blue)] text-white text-[20px] font-bold flex items-center justify-center shrink-0">
+                          {resolveAvatarLetter(addAccountCandidate.fullName, newUsername)}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-[18px] font-bold text-[var(--mac-label-1)] leading-snug truncate">
+                            {addAccountCandidate.fullName}
+                          </h4>
+                          <span className="inline-flex items-center mt-1 px-2.5 py-0.5 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] text-[11px] font-semibold">
+                            {addAccountCandidate.role === 'student'
+                              ? pickText(currentLang, { pl: 'Konto ucznia', en: 'Student Account' })
+                              : pickText(currentLang, { pl: 'Konto rodzica', en: 'Parent Account' })}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-3 py-1 rounded-full bg-[var(--ios-green-subtle)] text-[var(--mac-green)] text-[12px] font-semibold inline-flex items-center gap-1.5 shrink-0">
+                        <ShieldCheck className="w-4 h-4" />
+                        {pickText(currentLang, { pl: 'Tożsamość potwierdzona', en: 'Verified' })}
+                      </span>
+                    </MacGroupBox>
+
+                    <MacGroupBox
+                      title={pickText(currentLang, { pl: 'Dane konta', en: 'Account Details' })}
+                      noPadding
+                    >
+                      <MacFormRow
+                        title={pickText(currentLang, { pl: 'Login', en: 'Login' })}
+                        trailing={
+                          <span className="text-[13px] font-medium text-[var(--mac-label-2)] tabular-nums">
+                            {newUsername.trim()}
+                          </span>
+                        }
+                      />
+                      <MacFormRow
+                        title={pickText(currentLang, { pl: 'Klasa', en: 'Class' })}
+                        trailing={
+                          <span className="text-[13px] font-medium text-[var(--mac-label-2)]">
+                            {sanitizeAccountLabel(addAccountCandidate.className) || '—'}
+                          </span>
+                        }
+                      />
+                      <MacFormRow
+                        isLast
+                        title={pickText(currentLang, { pl: 'Szkoła', en: 'School' })}
+                        trailing={
+                          <span className="text-[13px] font-medium text-[var(--mac-label-2)] text-right max-w-[340px] truncate">
+                            {sanitizeAccountLabel(addAccountCandidate.schoolName) || '—'}
+                          </span>
+                        }
+                      />
+                    </MacGroupBox>
+
+                    <div className="flex items-center justify-end gap-2.5 pt-1">
+                      <MacPushButton
+                        type="button"
+                        variant="bordered"
+                        size="xl"
+                        onClick={() => setAddAccountStep('input')}
+                      >
+                        {pickText(currentLang, { pl: 'Zmień konto', en: 'Change Account' })}
+                      </MacPushButton>
+                      <MacPushButton
+                        type="button"
+                        variant="prominent"
+                        size="xl"
+                        onClick={() => {
+                          if (onConfirmAddAccount()) {
+                            setShowAddForm(false)
+                            setShowPass(false)
+                          }
+                        }}
+                      >
+                        {pickText(currentLang, { pl: 'Zapisz konto', en: 'Save Account' })}
+                      </MacPushButton>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <>
@@ -395,16 +618,16 @@ export function DesktopSettingsModal({
                   en: 'Choose macOS 27 light, dark, or automatic theme'
                 })}
                 trailing={
-                  <MacSegmentedControl<AppTheme>
+                  <MacPopupSelect
+                    wrapperClassName="w-[150px]"
                     value={currentTheme}
-                    onChange={onSelectTheme}
-                    options={[
-                      { id: 'system', label: t.themeSystem },
-                      { id: 'light', label: t.themeLight },
-                      { id: 'dark', label: t.themeDark }
-                    ]}
-                    className="w-[220px]"
-                  />
+                    onChange={(e) => onSelectTheme(e.target.value as AppTheme)}
+                    aria-label={t.appTheme}
+                  >
+                    <option value="system">{t.themeSystem}</option>
+                    <option value="light">{t.themeLight}</option>
+                    <option value="dark">{t.themeDark}</option>
+                  </MacPopupSelect>
                 }
               />
               <MacFormRow
@@ -415,12 +638,18 @@ export function DesktopSettingsModal({
                   en: 'Interface language and automatic Librus content translation'
                 })}
                 trailing={
-                  <MacSegmentedControl<AppLanguage>
+                  <MacPopupSelect
+                    wrapperClassName="w-[150px]"
                     value={currentLang}
-                    onChange={onSelectLang}
-                    options={SUPPORTED_LANGUAGES.map((l) => ({ id: l.id, label: l.nativeName }))}
-                    className="w-[180px]"
-                  />
+                    onChange={(e) => onSelectLang(e.target.value as AppLanguage)}
+                    aria-label={t.appLanguage}
+                  >
+                    {SUPPORTED_LANGUAGES.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.nativeName}
+                      </option>
+                    ))}
+                  </MacPopupSelect>
                 }
               />
             </MacGroupBox>

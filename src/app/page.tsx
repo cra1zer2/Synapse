@@ -88,9 +88,13 @@ export default function Home() {
     : isDesktop
       ? activeDesktopSection === 'timetable'
         ? 'schedule'
-        : activeDesktopSection === 'grades' || activeDesktopSection === 'attendance'
-          ? activeDesktopSection
-          : null
+        : activeDesktopSection === 'grades'
+          ? 'grades'
+          : activeDesktopSection === 'attendance' ||
+              activeDesktopSection === 'attendance-journal' ||
+              activeDesktopSection === 'attendance-justifications'
+            ? 'attendance'
+            : null
       : navMode === 'tabs'
         ? activeTab === 'schedule' || activeTab === 'grades' || activeTab === 'attendance'
           ? activeTab

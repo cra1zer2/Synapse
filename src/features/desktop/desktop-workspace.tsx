@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Archive, Calendar, ChevronLeft, ChevronRight, PanelLeft, RefreshCw, Settings, SquarePen } from 'lucide-react'
+import { Archive, Calendar, ChevronLeft, ChevronRight, PanelLeft, Pencil, RefreshCw, Settings, SquarePen } from 'lucide-react'
 import { SavedAccount, StudentProfile } from '@/models/account.model'
 import { SmartTimetableResult, LessonItem, TimetableEvent } from '@/models/timetable.model'
 import { GradesResult, GradeItem } from '@/models/grade.model'
@@ -28,7 +28,6 @@ import {
 } from '@/utils/date.util'
 import { cn } from '@/utils/cn.util'
 import {
-  MacSearchField,
   MacSegmentedControl,
   MacToolbarButton,
   MacToolbarCapsuleGroup
@@ -37,8 +36,8 @@ import { DesktopNavSection, DesktopSidebar } from './desktop-sidebar'
 import { DesktopOverview } from './desktop-overview'
 import { DesktopTimetableView } from './desktop-timetable-view'
 import { DesktopDeadlinesView } from './desktop-deadlines-view'
-import { DesktopGradesView } from './desktop-grades-view'
-import { DesktopAttendanceSubTab, DesktopAttendanceView } from './desktop-attendance-view'
+import { DesktopGradesTermFilter, DesktopGradesView } from './desktop-grades-view'
+import { DesktopAttendanceView } from './desktop-attendance-view'
 import { DesktopMessagesView } from './desktop-messages-view'
 import { DesktopSettingsModal, DesktopSettingsPane } from './desktop-settings-modal'
 
@@ -200,10 +199,9 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
 
   // View controls lifted into macOS 27 52px Unified Toolbar
   const [timetableViewMode, setTimetableViewMode] = useState<'week' | 'day'>('week')
-  const [deadlinesViewMode, setDeadlinesViewMode] = useState<'list' | 'calendar'>('list')
-  const [deadlinesSearchQuery, setDeadlinesSearchQuery] = useState('')
   const [deadlinesShowArchived, setDeadlinesShowArchived] = useState(false)
-  const [attendanceSubTab, setAttendanceSubTab] = useState<DesktopAttendanceSubTab>('summary')
+  const [gradesTermFilter, setGradesTermFilter] = useState<DesktopGradesTermFilter>('s1')
+  const [gradesEditMode, setGradesEditMode] = useState(false)
 
   const liveWeekMeta = useMemo(() => computeLiveWeekDays(currentWeekPivot), [currentWeekPivot])
   const allowExcuse = canSubmitExcuse !== undefined ? canSubmitExcuse : !isStudent
@@ -376,7 +374,11 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
       case 'grades':
         return t.grades
       case 'attendance':
-        return t.attendance
+        return `${t.attendance} · ${pickText(lang, { pl: 'Podsumowanie', en: 'Summary' })}`
+      case 'attendance-journal':
+        return `${t.attendance} · ${pickText(lang, { pl: 'Dziennik obecności', en: 'Journal' })}`
+      case 'attendance-justifications':
+        return `${t.attendance} · ${pickText(lang, { pl: 'Usprawiedliwienia', en: 'Justifications' })}`
       case 'inbox':
         return t.messagesInbox
       case 'sent':
@@ -408,6 +410,7 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
           setSettingsAddAccount(true)
           setSettingsOpen(true)
         }}
+        canSubmitExcuse={allowExcuse}
         badges={{
           schedule: badges.schedule,
           grades: badges.grades,
@@ -490,7 +493,7 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
                     aria-label={t.dateLabel}
                     aria-expanded={calendarOpen}
                     className={cn(
-                      'h-[36px] rounded-full px-3.5 inline-flex items-center gap-1.5 text-[12px] font-medium tabular-nums cursor-pointer transition-all outline-none mac-focus-ring',
+                      'h-[36px] w-[136px] justify-center rounded-full px-3 inline-flex items-center gap-1.5 text-[12px] font-medium tabular-nums cursor-pointer transition-all outline-none mac-focus-ring',
                       calendarOpen
                         ? 'bg-[var(--mac-blue)] text-white shadow-[0_2px_10px_rgba(0,136,255,0.28)]'
                         : 'mac-glass-pill text-[var(--mac-label-1)] hover:brightness-[0.98] dark:hover:brightness-110'
@@ -615,47 +618,36 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
             )}
 
             {activeSection === 'deadlines' && (
+              <MacToolbarButton
+                active={deadlinesShowArchived}
+                icon={<Archive className="w-3.5 h-3.5" />}
+                label={pickText(lang, { pl: 'Archiwum', en: 'Past' })}
+                onClick={() => setDeadlinesShowArchived((p) => !p)}
+              />
+            )}
+
+            {activeSection === 'grades' && (
               <>
-                <MacSearchField
+                {enableGradeSimulator && (
+                  <MacToolbarButton
+                    active={gradesEditMode}
+                    icon={<Pencil className="w-3.5 h-3.5" />}
+                    label={pickText(lang, { pl: 'Symulator', en: 'What-If' })}
+                    onClick={() => setGradesEditMode((e) => !e)}
+                  />
+                )}
+                <MacSegmentedControl<DesktopGradesTermFilter>
                   surface="toolbar"
-                  value={deadlinesSearchQuery}
-                  onChange={setDeadlinesSearchQuery}
-                  placeholder={pickText(lang, { pl: 'Szukaj terminu...', en: 'Search deadlines...' })}
-                  className="w-[190px]"
-                />
-                <MacToolbarButton
-                  active={deadlinesShowArchived}
-                  icon={<Archive className="w-3.5 h-3.5" />}
-                  label={pickText(lang, { pl: 'Archiwum', en: 'Past' })}
-                  onClick={() => setDeadlinesShowArchived((p) => !p)}
-                />
-                <MacSegmentedControl<'list' | 'calendar'>
-                  surface="toolbar"
-                  value={deadlinesViewMode}
-                  onChange={setDeadlinesViewMode}
+                  value={gradesTermFilter}
+                  onChange={setGradesTermFilter}
                   options={[
-                    { id: 'list', label: pickText(lang, { pl: 'Lista', en: 'List' }) },
-                    { id: 'calendar', label: pickText(lang, { pl: 'Kalendarz', en: 'Calendar' }) }
+                    { id: 's1', label: pickText(lang, { pl: 'Semestr 1', en: 'Term 1' }) },
+                    { id: 's2', label: pickText(lang, { pl: 'Semestr 2', en: 'Term 2' }) },
+                    { id: 'all', label: pickText(lang, { pl: 'Oba', en: 'Both' }) }
                   ]}
                   className="shrink-0"
                 />
               </>
-            )}
-
-            {activeSection === 'attendance' && (
-              <MacSegmentedControl<DesktopAttendanceSubTab>
-                surface="toolbar"
-                value={!allowExcuse && attendanceSubTab === 'justifications' ? 'summary' : attendanceSubTab}
-                onChange={setAttendanceSubTab}
-                options={[
-                  { id: 'summary', label: pickText(lang, { pl: 'Podsumowanie', en: 'Summary' }) },
-                  { id: 'journal', label: pickText(lang, { pl: 'Dziennik', en: 'Journal' }) },
-                  ...(allowExcuse
-                    ? [{ id: 'justifications' as const, label: pickText(lang, { pl: 'Usprawiedliwienia', en: 'Justifications' }) }]
-                    : [])
-                ]}
-                className="shrink-0"
-              />
             )}
 
             {(activeSection === 'inbox' || activeSection === 'sent') && (
@@ -749,8 +741,6 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
               showFullSubjectNames={showFullSubjectNames}
               lang={lang}
               t={t}
-              viewMode={deadlinesViewMode}
-              searchQuery={deadlinesSearchQuery}
               showArchived={deadlinesShowArchived}
               initialSelectedEvent={deadlineSelection}
             />
@@ -763,13 +753,18 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
               onRetry={onRefresh}
               showFullSubjectNames={showFullSubjectNames}
               enableGradeSimulator={enableGradeSimulator}
+              termFilter={gradesTermFilter}
+              isEditMode={gradesEditMode}
+              onToggleEditMode={setGradesEditMode}
               lang={lang}
               t={t}
               initialSelectedGrade={gradeSelection}
             />
           )}
 
-          {activeSection === 'attendance' && (
+          {(activeSection === 'attendance' ||
+            activeSection === 'attendance-journal' ||
+            activeSection === 'attendance-justifications') && (
             <DesktopAttendanceView
               attendanceData={attendanceData}
               attendanceError={attendanceError}
@@ -784,7 +779,13 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
               onChangeLiveFilter={attendanceCtrl.setLiveJustificationsFilter}
               onLoadLiveJustifications={attendanceCtrl.handleOpenLiveJustifications}
               onSubmitJustification={attendanceCtrl.handleSubmitJustifications}
-              subTab={attendanceSubTab}
+              subTab={
+                activeSection === 'attendance-journal'
+                  ? 'journal'
+                  : activeSection === 'attendance-justifications'
+                    ? 'justifications'
+                    : 'summary'
+              }
               lang={lang}
               t={t}
             />

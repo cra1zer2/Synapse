@@ -52,7 +52,15 @@ interface DesktopTimetableViewProps {
 type TimetableInspectorItem =
   | { kind: 'lesson'; lesson: LessonItem; dayName: string; dateStr: string; isToday: boolean }
   | { kind: 'event'; event: TimetableEvent }
+  | { kind: 'day'; dayName: string; dateStr: string; isoDate: string; isToday: boolean }
   | null
+
+function resolveEventScope(ev: TimetableEvent, isEn: boolean): string {
+  const title = getEventPrimaryTitle(ev, true, isEn)
+  if (ev.description && ev.description !== title) return ev.description
+  if (ev.title && ev.title !== title) return ev.title
+  return ''
+}
 
 const STANDARD_BELL_TIMES: Record<number, { start: string; end: string }> = {
   0: { start: '07:10', end: '07:55' },
@@ -255,6 +263,22 @@ export function DesktopTimetableView({
 
   const activeDayData = timetableData?.schedule?.find((d) => d.dayName === selectedDay)
 
+  const handleInspectDay = (
+    slot: { dayName: string; dateDot: string; isoDate: string },
+    isToday: boolean
+  ) => {
+    hasInitializedTodayRef.current = true
+    lastSyncedDayKeyRef.current = `${slot.dayName}__${timetableData?.weekStart || ''}`
+    onSelectDay(slot.dayName)
+    setInspector({
+      kind: 'day',
+      dayName: slot.dayName,
+      dateStr: slot.dateDot,
+      isoDate: slot.isoDate,
+      isToday
+    })
+  }
+
   const activeBreakBanner = useMemo(() => {
     if (!activeDayData?.lessons?.length) return null
     const isDayToday = Boolean(activeDayData.isToday || activeDayData.isoDate === todayIso)
@@ -366,7 +390,7 @@ export function DesktopTimetableView({
                   <User className="w-3.5 h-3.5" />
                   {t.teacherLabel}
                 </span>
-                <span className="font-medium text-[var(--mac-label-1)] text-right truncate">
+                <span className="font-medium text-[var(--mac-label-1)] text-right break-words">
                   {lesson.teacher || t.notSpecified}
                 </span>
               </div>
@@ -406,16 +430,187 @@ export function DesktopTimetableView({
       )
     }
 
+    if (inspector.kind === 'day') {
+      const dayData = timetableData?.schedule?.find((d) => d.dayName === inspector.dayName)
+      const dayEvents = filterDayEvents(dayData?.events)
+      const dayLessons = dayData?.lessons || []
+      const dayChanges = dayLessons.filter(
+        (l) => l.isCancelled || l.isSubstitution || l.isShortened
+      )
+      const activeCount = dayLessons.filter((l) => !l.isCancelled).length
+
+      return (
+        <div className="flex flex-col gap-3.5">
+          <MacGroupBox contentClassName="p-4 flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-blue)] truncate">
+                {pickText(lang, { pl: 'Podgląd dnia', en: 'Day Overview' })}
+              </span>
+              {inspector.isToday && (
+                <span className="px-2 py-0.5 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] text-[10px] font-semibold shrink-0">
+                  {pickText(lang, { pl: 'Dzisiaj', en: 'Today' })}
+                </span>
+              )}
+            </div>
+            <div>
+              <h3 className="text-[17px] font-bold text-[var(--mac-label-1)] leading-snug">
+                {getWeekdayLongLabel(inspector.dayName, lang)}
+              </h3>
+              <span className="text-[12px] text-[var(--mac-label-2)] tabular-nums">
+                {formatHumanDate(inspector.isoDate || inspector.dateStr, false, lang)}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <span className="px-2.5 py-0.5 rounded-full bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] text-[11px] font-medium tabular-nums">
+                {activeCount} {pickText(lang, { pl: 'lekcji', en: 'lessons' })}
+              </span>
+              <span
+                className={cn(
+                  'px-2.5 py-0.5 rounded-full text-[11px] font-semibold tabular-nums',
+                  dayEvents.length > 0
+                    ? 'bg-[var(--ios-red-subtle)] text-[var(--mac-red)]'
+                    : 'bg-[var(--mac-fill-3)] text-[var(--mac-label-2)]'
+                )}
+              >
+                {dayEvents.length} {pickText(lang, { pl: 'wydarzeń', en: 'events' })}
+              </span>
+            </div>
+          </MacGroupBox>
+
+          <MacGroupBox
+            title={pickText(lang, { pl: 'Sprawdziany i wydarzenia', en: 'Tests & Events' })}
+            noPadding={dayEvents.length > 0}
+          >
+            {dayEvents.length > 0 ? (
+              <div className="mac-divide-y">
+                {dayEvents.map((ev, eIdx) => {
+                  const st = getEventCategoryStyle(ev.category, ev.eventType)
+                  const badgeLabel = resolveEventBadgeLabel(ev, isEn)
+                  const title = getEventPrimaryTitle(ev, true, isEn)
+                  const scope = resolveEventScope(ev, isEn)
+
+                  return (
+                    <div key={`${ev.id || eIdx}-${title}`} className="p-3.5 flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span
+                            className={cn(
+                              'px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase shrink-0',
+                              st.bgClass,
+                              st.textClass
+                            )}
+                          >
+                            {badgeLabel}
+                          </span>
+                          {ev.lessonNumber !== undefined && (
+                            <span className="text-[11px] text-[var(--mac-label-2)] tabular-nums truncate">
+                              {t.lessonNumberLabel(ev.lessonNumber)}
+                            </span>
+                          )}
+                        </div>
+                        {ev.isoDate && (
+                          <button
+                            type="button"
+                            onClick={() => downloadEventIcs(ev)}
+                            title={t.exportCalendarIcs}
+                            aria-label={t.exportCalendarIcs}
+                            className="w-6 h-6 rounded-full hover:bg-[var(--mac-fill-3)] text-[var(--mac-blue)] inline-flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                          >
+                            <CalendarPlus className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="text-[13px] font-semibold text-[var(--mac-label-1)] leading-snug select-text">
+                        {title}
+                      </div>
+                      {scope && (
+                        <p className="text-[12px] text-[var(--mac-label-2)] leading-relaxed whitespace-pre-wrap select-text">
+                          {scope}
+                        </p>
+                      )}
+                      {ev.teacher && (
+                        <div className="text-[11px] text-[var(--mac-label-3)] truncate">
+                          {ev.teacher}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-[12px] text-[var(--mac-label-2)] leading-relaxed">
+                {pickText(lang, {
+                  pl: 'Brak sprawdzianów i wydarzeń w tym dniu.',
+                  en: 'No tests or events scheduled for this day.'
+                })}
+              </p>
+            )}
+          </MacGroupBox>
+
+          {dayChanges.length > 0 && (
+            <MacGroupBox
+              title={pickText(lang, { pl: 'Zmiany w planie', en: 'Schedule Changes' })}
+              noPadding
+            >
+              <div className="mac-divide-y">
+                {dayChanges.map((lesson, lIdx) => (
+                  <button
+                    key={`${lesson.number}-${lIdx}`}
+                    type="button"
+                    onClick={() =>
+                      setInspector({
+                        kind: 'lesson',
+                        lesson,
+                        dayName: inspector.dayName,
+                        dateStr: inspector.dateStr,
+                        isToday: inspector.isToday
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={cn(
+                          'text-[12px] font-semibold text-[var(--mac-label-1)] truncate',
+                          lesson.isCancelled && 'line-through text-[var(--mac-label-2)]'
+                        )}
+                      >
+                        #{lesson.number} · {formatSubjectName(lesson.subject, showFullSubjectNames)}
+                      </div>
+                      <div className="text-[11px] text-[var(--mac-label-2)] truncate">
+                        {lesson.teacher || t.notSpecified}
+                      </div>
+                    </div>
+                    <span
+                      className={cn(
+                        'px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0',
+                        lesson.isCancelled
+                          ? 'bg-[var(--ios-red-subtle)] text-[var(--mac-red)]'
+                          : lesson.isSubstitution
+                            ? 'bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)]'
+                            : 'bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)]'
+                      )}
+                    >
+                      {lesson.isCancelled
+                        ? pickText(lang, { pl: 'Odwołana', en: 'Cancelled' })
+                        : lesson.isSubstitution
+                          ? pickText(lang, { pl: 'Zastępstwo', en: 'Sub' })
+                          : `${lesson.durationMinutes} min`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </MacGroupBox>
+          )}
+        </div>
+      )
+    }
+
     const ev = inspector.event
     const st = getEventCategoryStyle(ev.category, ev.eventType)
     const badgeLabel = resolveEventBadgeLabel(ev, isEn)
     const title = getEventPrimaryTitle(ev, true, isEn)
-    const scope =
-      ev.description && ev.description !== title
-        ? ev.description
-        : ev.title && ev.title !== title
-          ? ev.title
-          : ''
+    const scope = resolveEventScope(ev, isEn)
 
     return (
       <div className="flex flex-col gap-3.5">
@@ -499,7 +694,7 @@ export function DesktopTimetableView({
             /* Synchronized Fluid Weekly Matrix (0-9 Periods x Mon-Fri, zero horizontal clipping) */
             <MacGroupBox noPadding className="w-full">
               {/* Day Column Header Row */}
-              <div className="grid grid-cols-[64px_repeat(5,minmax(0,1fr))] border-b border-[var(--mac-row-divider)] bg-[var(--mac-fill-5)] [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-[var(--mac-row-divider)]">
+              <div className="grid grid-cols-[56px_repeat(5,minmax(0,1fr))] border-b border-[var(--mac-row-divider)] bg-[var(--mac-fill-5)] [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-[var(--mac-row-divider)]">
                 <div className="px-2 py-2.5 flex items-center justify-center text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)] text-center">
                   {pickText(lang, { pl: '# / Godz.', en: '# / Time' })}
                 </div>
@@ -507,19 +702,22 @@ export function DesktopTimetableView({
                   const dayData = timetableData.schedule?.find((d) => d.dayName === slot.dayName)
                   const isToday = Boolean(dayData?.isToday || slot.isoDate === todayIso)
                   const isDaySelected = selectedDay === slot.dayName
+                  const isInspectingThisDay =
+                    inspector?.kind === 'day' && inspector.dayName === slot.dayName
 
                   return (
                     <button
                       key={slot.dayName}
                       type="button"
-                      onClick={() => onSelectDay(slot.dayName)}
+                      onClick={() => handleInspectDay(slot, isToday)}
                       className={cn(
-                        'px-3 py-2.5 flex items-center justify-between gap-2 cursor-pointer transition-colors min-w-0',
+                        'px-2.5 py-2.5 flex items-center justify-between gap-1.5 cursor-pointer transition-colors min-w-0',
                         isToday
                           ? 'bg-[var(--ios-blue-subtle)]/55'
                           : isDaySelected
                             ? 'bg-[var(--ios-blue-subtle)]/30'
-                            : 'hover:bg-[var(--mac-fill-4)]'
+                            : 'hover:bg-[var(--mac-fill-4)]',
+                        isInspectingThisDay && 'ring-2 ring-inset ring-[var(--mac-blue)]/65'
                       )}
                     >
                       <div className="min-w-0 text-left">
@@ -537,7 +735,7 @@ export function DesktopTimetableView({
                       </div>
                       <span
                         className={cn(
-                          'w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center tabular-nums shrink-0',
+                          'w-[22px] h-[22px] rounded-full text-[10px] font-bold flex items-center justify-center tabular-nums shrink-0',
                           isToday
                             ? 'bg-[var(--mac-blue)] text-white'
                             : isDaySelected
@@ -554,7 +752,7 @@ export function DesktopTimetableView({
 
               {/* Synchronized Day Events Strip (if any day this week has events) */}
               {hasAnyWeekEvents && (
-                <div className="grid grid-cols-[64px_repeat(5,minmax(0,1fr))] border-b border-[var(--mac-row-divider)] bg-[var(--mac-fill-5)]/60 [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-[var(--mac-row-divider)]">
+                <div className="grid grid-cols-[56px_repeat(5,minmax(0,1fr))] border-b border-[var(--mac-row-divider)] bg-[var(--mac-fill-5)]/60 [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-[var(--mac-row-divider)]">
                   <div className="px-2 py-2 flex items-center justify-center text-[10px] font-semibold uppercase text-[var(--mac-label-3)]">
                     {pickText(lang, { pl: 'Info', en: 'Events' })}
                   </div>
@@ -607,7 +805,7 @@ export function DesktopTimetableView({
                   return (
                     <div
                       key={`period-row-${period.num}`}
-                      className="grid grid-cols-[64px_repeat(5,minmax(0,1fr))] min-h-[56px] [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-[var(--mac-row-divider)]"
+                      className="grid grid-cols-[56px_repeat(5,minmax(0,1fr))] min-h-[64px] [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-[var(--mac-row-divider)]"
                     >
                       {/* Col 0: Period # + Stacked Bell Time */}
                       <div className="px-1.5 py-2 flex flex-col items-center justify-center gap-0.5 bg-[var(--mac-fill-5)]/40">
@@ -706,7 +904,8 @@ export function DesktopTimetableView({
                                   <div className="flex items-start justify-between gap-1 min-w-0">
                                     <span
                                       className={cn(
-                                        'text-[12px] font-semibold text-[var(--mac-label-1)] leading-snug line-clamp-2 min-w-0',
+                                        'text-[12px] font-semibold text-[var(--mac-label-1)] leading-snug min-w-0',
+                                        showFullSubjectNames ? 'line-clamp-3' : 'line-clamp-2',
                                         lesson.isCancelled && 'line-through text-[var(--mac-label-2)]'
                                       )}
                                     >
@@ -810,7 +1009,7 @@ export function DesktopTimetableView({
                         return [
                           <div
                             key={`day-empty-${period.num}`}
-                            className="w-full min-h-[52px] px-4 py-2.5 flex items-center justify-between gap-4 text-left opacity-55"
+                            className="w-full h-[62px] min-h-[62px] px-4 py-2.5 flex items-center justify-between gap-4 text-left opacity-55"
                           >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
                               <span className="w-7 h-7 rounded-full bg-[var(--mac-fill-4)] text-[var(--mac-label-3)] text-[12px] font-semibold flex items-center justify-center shrink-0 tabular-nums">
@@ -851,7 +1050,7 @@ export function DesktopTimetableView({
                               })
                             }
                             className={cn(
-                              'w-full min-h-[52px] px-4 py-2.5 flex items-center justify-between gap-4 text-left cursor-pointer transition-colors',
+                              'w-full min-h-[62px] px-4 py-2.5 flex items-center justify-between gap-4 text-left cursor-pointer transition-colors',
                               isSelected
                                 ? 'bg-[var(--ios-blue-subtle)]/50'
                                 : isActive
@@ -919,8 +1118,8 @@ export function DesktopTimetableView({
         </div>
       </div>
 
-      {/* Right Floating Card Inspector Column (288px) */}
-      <aside className="w-[288px] shrink-0 p-4 pl-0 overflow-y-auto flex flex-col gap-3.5">
+      {/* Right Floating Card Inspector Column (320px) */}
+      <aside className="w-[320px] shrink-0 p-4 pl-0 overflow-y-auto flex flex-col gap-3.5">
         {renderInspectorContent()}
       </aside>
     </div>

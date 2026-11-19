@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { Calendar, CalendarClock, CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { SmartTimetableResult, TimetableEvent } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
@@ -29,8 +29,6 @@ interface DesktopDeadlinesViewProps {
   showFullSubjectNames: boolean
   lang: AppLanguage
   t: AppDictionary
-  viewMode: 'list' | 'calendar'
-  searchQuery: string
   showArchived: boolean
   initialSelectedEvent?: TimetableEvent | null
 }
@@ -43,8 +41,6 @@ export function DesktopDeadlinesView({
   showFullSubjectNames,
   lang,
   t,
-  viewMode,
-  searchQuery,
   showArchived,
   initialSelectedEvent
 }: DesktopDeadlinesViewProps) {
@@ -63,6 +59,7 @@ export function DesktopDeadlinesView({
   const [calYear, setCalYear] = useState(todayYear)
   const [calMonth, setCalMonth] = useState(todayMonth)
   const [selectedDateIso, setSelectedDateIso] = useState(todayIso)
+  const hasAutoSelectedRef = useRef(Boolean(initialSelectedEvent))
 
   useEffect(() => {
     if (initialSelectedEvent) {
@@ -117,7 +114,6 @@ export function DesktopDeadlinesView({
   }, [allEvents, showArchived, todayIso])
 
   const filteredEvents = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
     return allEvents.filter((ev) => {
       if (!showArchived && ev.isoDate < todayIso) return false
       if (categoryFilter === 'exam' && ev.category !== 'exam') return false
@@ -129,22 +125,19 @@ export function DesktopDeadlinesView({
       ) {
         return false
       }
-      if (!q) return true
-      return (
-        (ev.title || '').toLowerCase().includes(q) ||
-        (ev.subjectName || '').toLowerCase().includes(q) ||
-        (ev.description || '').toLowerCase().includes(q) ||
-        (ev.teacher || '').toLowerCase().includes(q) ||
-        (ev.eventType || '').toLowerCase().includes(q)
-      )
+      return true
     })
-  }, [allEvents, showArchived, categoryFilter, searchQuery, todayIso])
+  }, [allEvents, showArchived, categoryFilter, todayIso])
 
   useEffect(() => {
-    if (!selectedEvent && filteredEvents.length > 0) {
+    if (!hasAutoSelectedRef.current && filteredEvents.length > 0) {
+      hasAutoSelectedRef.current = true
       setSelectedEvent(filteredEvents[0])
+      if (filteredEvents[0].isoDate) {
+        setSelectedDateIso(filteredEvents[0].isoDate)
+      }
     }
-  }, [filteredEvents, selectedEvent])
+  }, [filteredEvents])
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, TimetableEvent[]> = {}
@@ -196,7 +189,7 @@ export function DesktopDeadlinesView({
         <div className="py-12 flex flex-col items-center justify-center text-center gap-2 text-[var(--mac-label-2)]">
           <CalendarClock className="w-6 h-6 text-[var(--mac-label-3)]" />
           <span className="text-[12px]">
-            {pickText(lang, { pl: 'Wybierz termin z listy lub kalendarza', en: 'Select a deadline to inspect' })}
+            {pickText(lang, { pl: 'Brak wydarzeń w wybranym dniu', en: 'No deadlines on selected day' })}
           </span>
         </div>
       )
@@ -307,257 +300,148 @@ export function DesktopDeadlinesView({
 
         {/* Content Body */}
         <div className="flex-1 min-h-0 overflow-y-auto p-5">
-          {viewMode === 'list' ? (
-            filteredEvents.length > 0 ? (
-              <MacGroupBox noPadding>
-                <div className="mac-divide-y">
-                  {filteredEvents.map((ev, idx) => {
-                    const st = getEventCategoryStyle(ev.category, ev.eventType)
-                    const dayMeta = formatDayDate(ev.isoDate, lang)
-                    const badgeLabel = resolveEventBadgeLabel(ev, isEn)
-                    const primaryTitle = getEventPrimaryTitle(ev, showFullSubjectNames, isEn)
-                    const isSelected = selectedEvent === ev
-                    const isPast = ev.isoDate < todayIso
-                    return (
-                      <button
-                        key={`${ev.isoDate}-${idx}`}
-                        type="button"
-                        onClick={() => setSelectedEvent(ev)}
-                        className={cn(
-                          'w-full px-4 py-3 flex items-center justify-between gap-4 text-left transition-colors cursor-pointer',
-                          isSelected ? 'bg-[var(--ios-blue-subtle)]/50' : 'hover:bg-[var(--mac-fill-4)]',
-                          isPast && 'opacity-55'
-                        )}
-                      >
-                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                          <div className="w-[46px] h-[42px] rounded-[9px] bg-[var(--mac-fill-3)] flex flex-col items-center justify-center shrink-0 leading-none">
-                            <span className="text-[14px] font-bold text-[var(--mac-label-1)] tabular-nums">
-                              {dayMeta.dayNum}
-                            </span>
-                            <span className="text-[9px] uppercase font-semibold text-[var(--mac-label-2)] mt-0.5">
-                              {dayMeta.monthName}
-                            </span>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={cn(
-                                  'px-2 py-0.5 rounded-[5px] text-[10px] font-semibold uppercase tracking-wide shrink-0',
-                                  st.bgClass,
-                                  st.textClass
-                                )}
-                              >
-                                {badgeLabel}
-                              </span>
-                              <span className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
-                                {primaryTitle}
-                              </span>
-                            </div>
-                            {ev.description && (
-                              <p className="text-[12px] text-[var(--mac-label-2)] truncate mt-0.5">
-                                {ev.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
-                          <span className="text-[11px] font-medium text-[var(--mac-label-2)]">
-                            {dayMeta.weekday}
-                          </span>
-                          {ev.lessonNumber !== undefined && (
-                            <span className="text-[11px] text-[var(--mac-label-3)] tabular-nums">
-                              {t.lessonNumberLabel(ev.lessonNumber)}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </MacGroupBox>
-            ) : (
-              <div className="py-20 flex flex-col items-center justify-center gap-2 text-[var(--mac-label-2)]">
-                <Calendar className="w-8 h-8 text-[var(--mac-label-3)]" />
-                <span className="text-[14px] font-medium">
-                  {pickText(lang, { pl: 'Brak pasujących wydarzeń', en: 'No matching deadlines' })}
-                </span>
-              </div>
-            )
-          ) : (
-            /* Full Month Desktop Calendar Grid */
-            <MacGroupBox
-              title={`${monthNames[calMonth]} ${calYear}`}
-              trailing={
-                <div className="flex items-center gap-1.5">
-                  <MacPushButton
-                    size="sm"
-                    variant="bordered"
-                    onClick={() => {
-                      setCalYear(todayYear)
-                      setCalMonth(todayMonth)
-                      setSelectedDateIso(todayIso)
-                    }}
-                  >
-                    {pickText(lang, { pl: 'Dzisiaj', en: 'Today' })}
-                  </MacPushButton>
-                  <MacPushButton
-                    size="sm"
-                    variant="bordered"
-                    onClick={() => shiftMonth(-1)}
-                    icon={<ChevronLeft className="w-3.5 h-3.5" />}
-                  />
-                  <MacPushButton
-                    size="sm"
-                    variant="bordered"
-                    onClick={() => shiftMonth(1)}
-                    icon={<ChevronRight className="w-3.5 h-3.5" />}
-                  />
-                </div>
-              }
-              noPadding
-            >
-              <div className="grid grid-cols-7 border-b border-[var(--mac-row-divider)] bg-[var(--mac-fill-5)]">
-                {weekdayHeaders.map((w, i) => (
-                  <div
-                    key={i}
-                    className="py-2 text-center text-[11px] font-semibold uppercase text-[var(--mac-label-2)]"
-                  >
-                    {w}
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 [&>*:not(:nth-child(7n))]:border-r [&>*]:border-b [&>*]:border-[var(--mac-row-divider)]">
-                {calendarGrid.map((cell, idx) => {
-                  if (!cell.dayNum || !cell.iso) {
-                    return <div key={`empty-${idx}`} className="min-h-[104px] bg-[var(--mac-fill-5)]/50" />
-                  }
-                  const dayEvs = eventsByDate[cell.iso] || []
-                  const isToday = cell.iso === todayIso
-                  const isSel = cell.iso === selectedDateIso
+          {filteredEvents.length > 0 ? (
+            <MacGroupBox noPadding>
+              <div className="mac-divide-y">
+                {filteredEvents.map((ev, idx) => {
+                  const st = getEventCategoryStyle(ev.category, ev.eventType)
+                  const dayMeta = formatDayDate(ev.isoDate, lang)
+                  const badgeLabel = resolveEventBadgeLabel(ev, isEn)
+                  const primaryTitle = getEventPrimaryTitle(ev, showFullSubjectNames, isEn)
+                  const isSelected = selectedEvent === ev
+                  const isPast = ev.isoDate < todayIso
                   return (
-                    <div
-                      key={cell.iso}
-                      onClick={() => setSelectedDateIso(cell.iso!)}
+                    <button
+                      key={`${ev.isoDate}-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        setSelectedEvent(ev)
+                        if (ev.isoDate) setSelectedDateIso(ev.isoDate)
+                      }}
                       className={cn(
-                        'min-h-[104px] p-2 flex flex-col gap-1 cursor-pointer transition-colors',
-                        isSel ? 'bg-[var(--ios-blue-subtle)]/35' : 'hover:bg-[var(--mac-fill-4)]'
+                        'w-full px-4 py-3 flex items-center justify-between gap-4 text-left transition-colors cursor-pointer',
+                        isSelected ? 'bg-[var(--ios-blue-subtle)]/50' : 'hover:bg-[var(--mac-fill-4)]',
+                        isPast && 'opacity-55'
                       )}
                     >
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={cn(
-                            'w-6 h-6 rounded-full text-[11px] font-semibold flex items-center justify-center tabular-nums',
-                            isToday
-                              ? 'bg-[var(--mac-blue)] text-white'
-                              : isSel
-                                ? 'bg-[var(--mac-fill-1)] text-[var(--mac-label-1)]'
-                                : 'text-[var(--mac-label-2)]'
-                          )}
-                        >
-                          {cell.dayNum}
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        {dayEvs.slice(0, 3).map((ev, eIdx) => {
-                          const st = getEventCategoryStyle(ev.category, ev.eventType)
-                          return (
-                            <button
-                              key={eIdx}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedDateIso(cell.iso!)
-                                setSelectedEvent(ev)
-                              }}
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        <div className="w-[46px] h-[42px] rounded-[9px] bg-[var(--mac-fill-3)] flex flex-col items-center justify-center shrink-0 leading-none">
+                          <span className="text-[14px] font-bold text-[var(--mac-label-1)] tabular-nums">
+                            {dayMeta.dayNum}
+                          </span>
+                          <span className="text-[9px] uppercase font-semibold text-[var(--mac-label-2)] mt-0.5">
+                            {dayMeta.monthName}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span
                               className={cn(
-                                'w-full px-1.5 py-0.5 rounded-[5px] text-left text-[10px] font-medium truncate cursor-pointer',
+                                'px-2 py-0.5 rounded-[5px] text-[10px] font-semibold uppercase tracking-wide shrink-0',
                                 st.bgClass,
-                                st.textClass,
-                                selectedEvent === ev && 'ring-1 ring-[var(--mac-blue)]'
+                                st.textClass
                               )}
                             >
-                              {getEventPrimaryTitle(ev, showFullSubjectNames, isEn)}
-                            </button>
-                          )
-                        })}
-                        {dayEvs.length > 3 && (
-                          <span className="text-[10px] text-[var(--mac-label-2)] pl-1">
-                            +{dayEvs.length - 3}
+                              {badgeLabel}
+                            </span>
+                            <span className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
+                              {primaryTitle}
+                            </span>
+                          </div>
+                          {ev.description && (
+                            <p className="text-[12px] text-[var(--mac-label-2)] truncate mt-0.5">
+                              {ev.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
+                        <span className="text-[11px] font-medium text-[var(--mac-label-2)]">
+                          {dayMeta.weekday}
+                        </span>
+                        {ev.lessonNumber !== undefined && (
+                          <span className="text-[11px] text-[var(--mac-label-3)] tabular-nums">
+                            {t.lessonNumberLabel(ev.lessonNumber)}
                           </span>
                         )}
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
             </MacGroupBox>
+          ) : (
+            <div className="py-20 flex flex-col items-center justify-center gap-2 text-[var(--mac-label-2)]">
+              <Calendar className="w-8 h-8 text-[var(--mac-label-3)]" />
+              <span className="text-[14px] font-medium">
+                {pickText(lang, { pl: 'Brak pasujących wydarzeń', en: 'No matching deadlines' })}
+              </span>
+            </div>
           )}
         </div>
       </div>
 
       {/* Right Inspector Pane (320px): Mini Month Calendar + Selected Event Inspector */}
       <aside className="w-[320px] shrink-0 border-l border-[var(--mac-row-divider)] bg-[var(--mac-window-bg)] p-4 overflow-y-auto flex flex-col gap-5">
-        {viewMode === 'list' && (
-          <MacGroupBox
-            title={`${monthNames[calMonth]} ${calYear}`}
-            trailing={
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => shiftMonth(-1)}
-                  className="w-5 h-5 rounded-full hover:bg-[var(--mac-fill-3)] flex items-center justify-center cursor-pointer"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => shiftMonth(1)}
-                  className="w-5 h-5 rounded-full hover:bg-[var(--mac-fill-3)] flex items-center justify-center cursor-pointer"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            }
-          >
-            <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] font-semibold text-[var(--mac-label-3)] mb-1">
-              {weekdayHeaders.map((w, i) => (
-                <span key={i}>{w}</span>
-              ))}
+        <MacGroupBox
+          title={`${monthNames[calMonth]} ${calYear}`}
+          trailing={
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => shiftMonth(-1)}
+                className="w-5 h-5 rounded-full hover:bg-[var(--mac-fill-3)] flex items-center justify-center cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => shiftMonth(1)}
+                className="w-5 h-5 rounded-full hover:bg-[var(--mac-fill-3)] flex items-center justify-center cursor-pointer"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div className="grid grid-cols-7 gap-0.5">
-              {calendarGrid.map((cell, idx) => {
-                if (!cell.dayNum || !cell.iso) return <div key={idx} className="h-7" />
-                const dayEvs = eventsByDate[cell.iso] || []
-                const isToday = cell.iso === todayIso
-                const isSel = cell.iso === selectedDateIso
-                return (
-                  <button
-                    key={cell.iso}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDateIso(cell.iso!)
-                      if (dayEvs.length > 0) setSelectedEvent(dayEvs[0])
-                    }}
-                    className={cn(
-                      'relative h-7 rounded-[6px] text-[11px] font-medium flex items-center justify-center cursor-pointer tabular-nums transition-colors',
-                      isToday
-                        ? 'bg-[var(--mac-blue)] text-white font-bold'
-                        : isSel
-                          ? 'bg-[var(--mac-fill-1)] text-[var(--mac-label-1)] font-semibold'
-                          : 'text-[var(--mac-label-1)] hover:bg-[var(--mac-fill-3)]'
-                    )}
-                  >
-                    {cell.dayNum}
-                    {dayEvs.length > 0 && !isToday && (
-                      <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-[var(--mac-blue)]" />
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </MacGroupBox>
-        )}
+          }
+        >
+          <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] font-semibold text-[var(--mac-label-3)] mb-1">
+            {weekdayHeaders.map((w, i) => (
+              <span key={i}>{w}</span>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-0.5">
+            {calendarGrid.map((cell, idx) => {
+              if (!cell.dayNum || !cell.iso) return <div key={idx} className="h-7" />
+              const dayEvs = eventsByDate[cell.iso] || []
+              const isToday = cell.iso === todayIso
+              const isSel = cell.iso === selectedDateIso
+              return (
+                <button
+                  key={cell.iso}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDateIso(cell.iso!)
+                    setSelectedEvent(dayEvs[0] || null)
+                  }}
+                  className={cn(
+                    'relative h-7 rounded-[6px] text-[11px] font-medium flex items-center justify-center cursor-pointer tabular-nums transition-colors',
+                    isToday
+                      ? 'bg-[var(--mac-blue)] text-white font-bold'
+                      : isSel
+                        ? 'bg-[var(--mac-fill-1)] text-[var(--mac-label-1)] font-semibold'
+                        : 'text-[var(--mac-label-1)] hover:bg-[var(--mac-fill-3)]'
+                  )}
+                >
+                  {cell.dayNum}
+                  {dayEvs.length > 0 && !isToday && (
+                    <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-[var(--mac-blue)]" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </MacGroupBox>
 
         <div className="flex-1">{renderEventDetailInspector()}</div>
       </aside>

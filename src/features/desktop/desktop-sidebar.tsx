@@ -5,6 +5,8 @@ import {
   LayoutGrid,
   Calendar,
   CalendarClock,
+  CalendarDays,
+  FileCheck2,
   GraduationCap,
   CheckCircle2,
   Inbox,
@@ -29,6 +31,8 @@ export type DesktopNavSection =
   | 'deadlines'
   | 'grades'
   | 'attendance'
+  | 'attendance-journal'
+  | 'attendance-justifications'
   | 'inbox'
   | 'sent'
   | 'notices'
@@ -44,6 +48,7 @@ interface DesktopSidebarProps {
   onSwitchAccount: (account: SavedAccount) => void
   onOpenSettings: () => void
   onOpenAddAccount: () => void
+  canSubmitExcuse?: boolean
   badges: {
     schedule: number
     grades: number
@@ -74,6 +79,7 @@ export function DesktopSidebar({
   onSwitchAccount,
   onOpenSettings,
   onOpenAddAccount,
+  canSubmitExcuse = false,
   badges,
   lang,
   t
@@ -134,14 +140,33 @@ export function DesktopSidebar({
           icon: <GraduationCap className="w-[16px] h-[16px]" strokeWidth={1.9} />,
           badge: badges.grades,
           badgeTone: 'blue'
-        },
+        }
+      ]
+    },
+    {
+      title: t.attendance,
+      items: [
         {
           id: 'attendance',
-          label: t.attendance,
+          label: pickText(lang, { pl: 'Podsumowanie', en: 'Summary' }),
           icon: <CheckCircle2 className="w-[16px] h-[16px]" strokeWidth={1.9} />,
           badge: badges.attendance,
           badgeTone: 'red'
-        }
+        },
+        {
+          id: 'attendance-journal',
+          label: pickText(lang, { pl: 'Dziennik obecności', en: 'Journal' }),
+          icon: <CalendarDays className="w-[16px] h-[16px]" strokeWidth={1.9} />
+        },
+        ...(canSubmitExcuse
+          ? [
+              {
+                id: 'attendance-justifications' as const,
+                label: pickText(lang, { pl: 'Usprawiedliwienia', en: 'Justifications' }),
+                icon: <FileCheck2 className="w-[16px] h-[16px]" strokeWidth={1.9} />
+              }
+            ]
+          : [])
       ]
     },
     {

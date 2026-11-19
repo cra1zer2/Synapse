@@ -32,9 +32,10 @@ import { cn } from '@/utils/cn.util'
 import {
   MacGroupBox,
   MacPopupSelect,
-  MacPushButton,
-  MacSegmentedControl
+  MacPushButton
 } from './mac-primitives'
+
+export type DesktopGradesTermFilter = 's1' | 's2' | 'all'
 
 interface DesktopGradesViewProps {
   gradesData: GradesResult | null
@@ -42,6 +43,9 @@ interface DesktopGradesViewProps {
   onRetry: () => void
   showFullSubjectNames: boolean
   enableGradeSimulator: boolean
+  termFilter: DesktopGradesTermFilter
+  isEditMode: boolean
+  onToggleEditMode: (val: boolean) => void
   lang: AppLanguage
   t: AppDictionary
   initialSelectedGrade?: { grade: GradeItem; subject: string } | null
@@ -69,11 +73,13 @@ export function DesktopGradesView({
   onRetry,
   showFullSubjectNames,
   enableGradeSimulator,
+  termFilter,
+  isEditMode,
+  onToggleEditMode,
   lang,
   t,
   initialSelectedGrade
 }: DesktopGradesViewProps) {
-  const [inspectorTab, setInspectorTab] = useState<'details' | 'simulator'>('details')
   const [selectedDetail, setSelectedDetail] = useState<{
     grade: GradeItem
     subject: string
@@ -100,9 +106,9 @@ export function DesktopGradesView({
         subject: initialSelectedGrade.subject,
         key: ''
       })
-      setInspectorTab('details')
+      onToggleEditMode(false)
     }
-  }, [initialSelectedGrade])
+  }, [initialSelectedGrade, onToggleEditMode])
 
   useEffect(() => {
     if (!simSubject && subjects.length > 0) {
@@ -110,21 +116,8 @@ export function DesktopGradesView({
     }
   }, [subjects, simSubject])
 
-  useEffect(() => {
-    if (!selectedDetail && subjects.length > 0) {
-      for (const s of subjects) {
-        const g = s.semester2[0] || s.semester1[0]
-        if (g) {
-          setSelectedDetail({
-            grade: g,
-            subject: s.subject,
-            key: s.semester2[0] ? 's2-0' : 's1-0'
-          })
-          break
-        }
-      }
-    }
-  }, [subjects, selectedDetail])
+  const inspectorTab: 'details' | 'simulator' =
+    isEditMode && enableGradeSimulator ? 'simulator' : 'details'
 
   // Compute averages (base and effective with simulation) per semester & full year
   const metrics = useMemo(() => {
@@ -251,14 +244,6 @@ export function DesktopGradesView({
     return added + edited
   }, [simulatedBySubject, realOverridesBySubject])
 
-  const openSimForSubject = (subjectName: string, target?: ActiveGradeEditTarget | null, gradeVal?: string, weightVal?: number) => {
-    setSimSubject(subjectName)
-    setEditTarget(target || null)
-    if (gradeVal) setSimGradeVal(gradeVal)
-    if (weightVal) setSimWeightVal(weightVal)
-    setInspectorTab('simulator')
-  }
-
   const handleApplySimAction = () => {
     if (!simSubject) return
     if (editTarget?.kind === 'real') {
@@ -308,12 +293,26 @@ export function DesktopGradesView({
     }))
   }
 
+  const openSimForSubject = (
+    subjectName: string,
+    target: ActiveGradeEditTarget | null,
+    initialGrade = '5',
+    initialWeight = 2
+  ) => {
+    setSimSubject(subjectName)
+    setEditTarget(target)
+    setSimGradeVal(initialGrade)
+    setSimWeightVal(initialWeight)
+    onToggleEditMode(true)
+  }
+
   const renderGradeChip = (g: GradeItem, subjectName: string, gradeKey: string) => {
     const ov = enableGradeSimulator ? realOverridesBySubject[subjectName]?.[gradeKey] : undefined
     const displayed = ov ? ov.grade : g.grade
     const st = getGradeBadgeStyle(displayed)
     const isSelected =
-      inspectorTab === 'details' && selectedDetail?.grade === g && selectedDetail?.subject === subjectName
+      (inspectorTab === 'details' && selectedDetail?.grade === g && selectedDetail?.subject === subjectName) ||
+      (inspectorTab === 'simulator' && editTarget?.kind === 'real' && editTarget.key === gradeKey && simSubject === subjectName)
 
     return (
       <button
@@ -322,7 +321,7 @@ export function DesktopGradesView({
         onClick={(e) => {
           e.stopPropagation()
           setSelectedDetail({ grade: g, subject: subjectName, key: gradeKey })
-          if (ov && enableGradeSimulator) {
+          if (isEditMode && enableGradeSimulator) {
             openSimForSubject(
               subjectName,
               {
@@ -332,11 +331,9 @@ export function DesktopGradesView({
                 originalWeight: g.weight || 1,
                 category: g.category
               },
-              ov.grade,
-              ov.weight
+              ov ? ov.grade : normalizeInitialGrade(g.grade),
+              ov ? ov.weight : normalizeInitialWeight(g.weight)
             )
-          } else {
-            setInspectorTab('details')
           }
         }}
         title={`${g.category || t.grades} · ${t.weight} ${g.weight}`}
@@ -458,17 +455,21 @@ export function DesktopGradesView({
                     <th className="py-2.5 px-4 w-[240px]">
                       {pickText(lang, { pl: 'Przedmiot', en: 'Subject' })}
                     </th>
-                    <th className="py-2.5 px-3">
-                      {pickText(lang, { pl: 'Semestr 1', en: 'Term 1' })}
-                    </th>
-                    <th className="py-2.5 px-3">
-                      {pickText(lang, { pl: 'Semestr 2', en: 'Term 2' })}
-                    </th>
-                    <th className="py-2.5 px-3 text-right w-[90px]">
+                    {(termFilter === 'all' || termFilter === 's1') && (
+                      <th className="py-2.5 px-3">
+                        {pickText(lang, { pl: 'Semestr 1', en: 'Term 1' })}
+                      </th>
+                    )}
+                    {(termFilter === 'all' || termFilter === 's2') && (
+                      <th className="py-2.5 px-3">
+                        {pickText(lang, { pl: 'Semestr 2', en: 'Term 2' })}
+                      </th>
+                    )}
+                    <th className="py-2.5 px-3 text-right w-[86px]">
                       {pickText(lang, { pl: 'Średnia', en: 'Average' })}
                     </th>
-                    {enableGradeSimulator && (
-                      <th className="py-2.5 px-3 text-right w-[56px]">
+                    {enableGradeSimulator && isEditMode && (
+                      <th className="py-2.5 px-3 text-right w-[52px]">
                         <span className="sr-only">What-If</span>
                       </th>
                     )}
@@ -480,7 +481,12 @@ export function DesktopGradesView({
                     const simList = enableGradeSimulator ? simulatedBySubject[sub.subject] || [] : []
                     const ovMap = enableGradeSimulator ? realOverridesBySubject[sub.subject] || {} : {}
                     const hasSim = simList.length > 0 || Object.keys(ovMap).length > 0
-                    const avgNum = m?.effectiveAvg
+                    const avgNum =
+                      termFilter === 's1'
+                        ? m?.sem1EffAvg
+                        : termFilter === 's2'
+                          ? m?.sem2EffAvg
+                          : m?.effectiveAvg
                     const avgStr = avgNum !== null && avgNum !== undefined ? avgNum.toFixed(2) : '—'
                     const isDanger = typeof avgNum === 'number' && avgNum < 2.0
                     const isActiveRow = inspectorTab === 'simulator' && simSubject === sub.subject
@@ -493,7 +499,7 @@ export function DesktopGradesView({
                           isActiveRow ? 'bg-[var(--ios-blue-subtle)]/30' : 'hover:bg-[var(--mac-fill-4)]'
                         )}
                       >
-                        <td className="py-3 px-4 align-top">
+                        <td className="py-3 px-4 align-middle">
                           <div className="text-[13px] font-semibold text-[var(--mac-label-1)] leading-snug">
                             {formatSubjectName(sub.subject, showFullSubjectNames)}
                           </div>
@@ -504,41 +510,62 @@ export function DesktopGradesView({
                           )}
                         </td>
 
-                        <td className="py-2.5 px-3 align-middle">
-                          <div className="flex flex-wrap items-center gap-1">
-                            {sub.semester1.length > 0 ? (
-                              sub.semester1.map((g, idx) => renderGradeChip(g, sub.subject, `s1-${idx}`))
-                            ) : (
-                              <span className="text-[11px] text-[var(--mac-label-3)]">—</span>
-                            )}
-                          </div>
-                        </td>
+                        {(termFilter === 'all' || termFilter === 's1') && (
+                          <td className="py-2.5 px-3 align-middle">
+                            <div className="flex flex-wrap items-center gap-1">
+                              {sub.semester1.map((g, idx) => renderGradeChip(g, sub.subject, `s1-${idx}`))}
+                              {termFilter === 's1' &&
+                                simList.map((sg) => (
+                                  <button
+                                    key={sg.id}
+                                    type="button"
+                                    onClick={() =>
+                                      openSimForSubject(
+                                        sub.subject,
+                                        { kind: 'sim', id: sg.id },
+                                        normalizeInitialGrade(sg.grade),
+                                        normalizeInitialWeight(sg.weight)
+                                      )
+                                    }
+                                    className="min-w-[26px] h-[26px] px-1.5 rounded-[7px] border border-dashed border-[var(--mac-blue)] bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] text-[12px] font-semibold flex items-center justify-center cursor-pointer tabular-nums"
+                                  >
+                                    {sg.grade}
+                                  </button>
+                                ))}
+                              {sub.semester1.length === 0 && (termFilter !== 's1' || simList.length === 0) && (
+                                <span className="text-[11px] text-[var(--mac-label-3)]">—</span>
+                              )}
+                            </div>
+                          </td>
+                        )}
 
-                        <td className="py-2.5 px-3 align-middle">
-                          <div className="flex flex-wrap items-center gap-1">
-                            {sub.semester2.map((g, idx) => renderGradeChip(g, sub.subject, `s2-${idx}`))}
-                            {simList.map((sg) => (
-                              <button
-                                key={sg.id}
-                                type="button"
-                                onClick={() =>
-                                  openSimForSubject(
-                                    sub.subject,
-                                    { kind: 'sim', id: sg.id },
-                                    normalizeInitialGrade(sg.grade),
-                                    normalizeInitialWeight(sg.weight)
-                                  )
-                                }
-                                className="min-w-[26px] h-[26px] px-1.5 rounded-[7px] border border-dashed border-[var(--mac-blue)] bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] text-[12px] font-semibold flex items-center justify-center cursor-pointer tabular-nums"
-                              >
-                                {sg.grade}
-                              </button>
-                            ))}
-                            {sub.semester2.length === 0 && simList.length === 0 && (
-                              <span className="text-[11px] text-[var(--mac-label-3)]">—</span>
-                            )}
-                          </div>
-                        </td>
+                        {(termFilter === 'all' || termFilter === 's2') && (
+                          <td className="py-2.5 px-3 align-middle">
+                            <div className="flex flex-wrap items-center gap-1">
+                              {sub.semester2.map((g, idx) => renderGradeChip(g, sub.subject, `s2-${idx}`))}
+                              {simList.map((sg) => (
+                                <button
+                                  key={sg.id}
+                                  type="button"
+                                  onClick={() =>
+                                    openSimForSubject(
+                                      sub.subject,
+                                      { kind: 'sim', id: sg.id },
+                                      normalizeInitialGrade(sg.grade),
+                                      normalizeInitialWeight(sg.weight)
+                                    )
+                                  }
+                                  className="min-w-[26px] h-[26px] px-1.5 rounded-[7px] border border-dashed border-[var(--mac-blue)] bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] text-[12px] font-semibold flex items-center justify-center cursor-pointer tabular-nums"
+                                >
+                                  {sg.grade}
+                                </button>
+                              ))}
+                              {sub.semester2.length === 0 && simList.length === 0 && (
+                                <span className="text-[11px] text-[var(--mac-label-3)]">—</span>
+                              )}
+                            </div>
+                          </td>
+                        )}
 
                         <td className="py-2.5 px-3 text-right align-middle">
                           <span
@@ -560,7 +587,7 @@ export function DesktopGradesView({
                           )}
                         </td>
 
-                        {enableGradeSimulator && (
+                        {enableGradeSimulator && isEditMode && (
                           <td className="py-2.5 px-3 text-right align-middle">
                             <button
                               type="button"
@@ -589,17 +616,6 @@ export function DesktopGradesView({
 
       {/* Right Docked Inspector Pane (350px) */}
       <aside className="w-[350px] shrink-0 border-l border-[var(--mac-row-divider)] bg-[var(--mac-window-bg)] p-4 overflow-y-auto flex flex-col gap-4">
-        {enableGradeSimulator && (
-          <MacSegmentedControl<'details' | 'simulator'>
-            value={inspectorTab}
-            onChange={setInspectorTab}
-            options={[
-              { id: 'details', label: pickText(lang, { pl: 'Szczegóły oceny', en: 'Grade Info' }) },
-              { id: 'simulator', label: pickText(lang, { pl: 'Symulator What-If', en: 'What-If Sim' }) }
-            ]}
-          />
-        )}
-
         {inspectorTab === 'details' || !enableGradeSimulator ? (
           selectedDetail ? (
             <div className="flex flex-col gap-4">

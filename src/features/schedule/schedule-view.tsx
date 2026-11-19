@@ -16,7 +16,6 @@ import {
   getEventPrimaryTitle,
   resolveEventBadgeLabel
 } from '@/utils/badge.util'
-import { UiBadge } from '@/components/ui/ui-badge'
 import { UiBreakDivider, UiCard } from '@/components/ui/ui-controls'
 import { UiEmptyState } from '@/components/ui/ui-empty-state'
 import { UiSpinner } from '@/components/ui/ui-spinner'
@@ -229,11 +228,6 @@ export function ScheduleView({
   }, [currentDaySchedule, showHomeworks])
 
   const dayLessons = currentDaySchedule?.lessons || []
-  const hasAnyActiveLesson = dayLessons.some((l) => !l.isCancelled)
-  const hasLaterStart = Boolean(hasAnyActiveLesson && dayLessons[0]?.isCancelled)
-  const hasEarlierFinish = Boolean(
-    hasAnyActiveLesson && dayLessons.length > 1 && dayLessons[dayLessons.length - 1]?.isCancelled
-  )
 
   return (
     <section className="w-full flex flex-col gap-3.5 pb-12 select-none">
@@ -355,13 +349,6 @@ export function ScheduleView({
           </div>
         ) : (
           <div key={selectedDay} className={cn('flex flex-col gap-2.5', dayAnimClass)}>
-            {(hasLaterStart || hasEarlierFinish) && (
-              <div className="flex flex-wrap items-center gap-1.5 px-1">
-                {hasLaterStart && <UiBadge variant="orange" size="sm" text={t.laterStartLabel} />}
-                {hasEarlierFinish && <UiBadge variant="blue" size="sm" text={t.earlierFinishLabel} />}
-              </div>
-            )}
-
             {!hideDayEvents && displayEvents.length > 0 && (
               <div className="flex flex-col gap-2 pb-1">
                 {displayEvents.map((ev, i) => {

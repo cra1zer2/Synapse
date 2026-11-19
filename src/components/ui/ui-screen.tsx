@@ -33,6 +33,26 @@ function applyPanelTransform(
   if (opacity !== undefined) panelEl.style.opacity = opacity
 }
 
+function findRootCompanions(underPanel: HTMLElement | null): HTMLElement[] {
+  if (typeof document === 'undefined' || !underPanel || underPanel.dataset.iosRootPanel !== 'true') {
+    return []
+  }
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-ios-root-companion="true"]'))
+}
+
+function applyCompanionsTransform(
+  companions: HTMLElement[],
+  transition: string,
+  transform: string,
+  willChange?: string
+) {
+  for (const el of companions) {
+    el.style.transition = transition
+    el.style.transform = transform
+    if (willChange !== undefined) el.style.willChange = willChange
+  }
+}
+
 interface UiScreenProps {
   isOpen?: boolean
   onClose?: () => void
@@ -87,6 +107,7 @@ export function UiScreen({
   const panelRef = useRef<HTMLDivElement | null>(null)
   const backdropRef = useRef<HTMLDivElement | null>(null)
   const underPanelRef = useRef<HTMLDivElement | HTMLElement | null>(null)
+  const underCompanionsRef = useRef<HTMLElement[]>([])
   const resolvedZIndex =
     zIndex ??
     (className.includes('z-[80]')
@@ -191,6 +212,8 @@ export function UiScreen({
     const backdrop = backdropRef.current
     const underPanel = findUnderlyingPanel(panel)
     underPanelRef.current = underPanel
+    const companions = findRootCompanions(underPanel)
+    underCompanionsRef.current = companions
     if (panel) {
       panel.style.pointerEvents = 'none'
       panel.style.transition = IOS_PANEL_TRANSITION
@@ -203,6 +226,7 @@ export function UiScreen({
       backdrop.style.opacity = '0'
     }
     applyPanelTransform(underPanel, IOS_PANEL_TRANSITION, 'translate3d(0, 0, 0)', 'transform', '1')
+    applyCompanionsTransform(companions, IOS_PANEL_TRANSITION, 'translate3d(0, 0, 0)', 'transform')
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
     closeTimerRef.current = setTimeout(() => {
       isClosingRef.current = false
@@ -212,6 +236,7 @@ export function UiScreen({
         underPanelRef.current.style.transform =
           underPanelRef.current.dataset.iosRootPanel === 'true' ? 'none' : 'translate3d(0, 0, 0)'
       }
+      applyCompanionsTransform(underCompanionsRef.current, IOS_PANEL_TRANSITION, 'translate3d(0, 0, 0)', 'auto')
       setIsVisible(false)
       setIsRendered(false)
       onClose()
@@ -246,6 +271,7 @@ export function UiScreen({
     isSwiping.current = true
     hasLockedHorizontal.current = false
     underPanelRef.current = findUnderlyingPanel(panelRef.current)
+    underCompanionsRef.current = findRootCompanions(underPanelRef.current)
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -266,6 +292,10 @@ export function UiScreen({
         underPanelRef.current.style.transition = 'none'
         underPanelRef.current.style.willChange = 'transform'
       }
+      for (const el of underCompanionsRef.current) {
+        el.style.transition = 'none'
+        el.style.willChange = 'transform'
+      }
     }
     const now = performance.now()
     const dt = now - lastTouchTime.current
@@ -282,6 +312,7 @@ export function UiScreen({
     applyPanelTransform(panelRef.current, 'none', 'translate3d(' + deltaX + 'px, 0, 0)')
     if (backdropRef.current) backdropRef.current.style.opacity = String(1 - progress)
     applyPanelTransform(underPanelRef.current, 'none', 'translate3d(' + underOffset + '%, 0, 0)')
+    applyCompanionsTransform(underCompanionsRef.current, 'none', 'translate3d(' + underOffset + '%, 0, 0)')
   }
 
   const handleTouchEnd = () => {
@@ -300,6 +331,7 @@ export function UiScreen({
     const panel = panelRef.current
     const backdrop = backdropRef.current
     const underPanel = underPanelRef.current
+    const companions = underCompanionsRef.current
     if (shouldClose && onClose) {
       isClosingRef.current = true
       const remaining = Math.max(0, 1 - progress)
@@ -314,6 +346,7 @@ export function UiScreen({
         backdrop.style.opacity = '0'
       }
       applyPanelTransform(underPanel, panelTransition, 'translate3d(0, 0, 0)', 'transform', '1')
+      applyCompanionsTransform(companions, panelTransition, 'translate3d(0, 0, 0)', 'transform')
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
       closeTimerRef.current = setTimeout(() => {
         isClosingRef.current = false
@@ -323,6 +356,7 @@ export function UiScreen({
           underPanelRef.current.style.transform =
             underPanelRef.current.dataset.iosRootPanel === 'true' ? 'none' : 'translate3d(0, 0, 0)'
         }
+        applyCompanionsTransform(underCompanionsRef.current, IOS_PANEL_TRANSITION, 'translate3d(0, 0, 0)', 'auto')
         setIsVisible(false)
         setIsRendered(false)
         onClose()
@@ -337,11 +371,16 @@ export function UiScreen({
         backdrop.style.opacity = '1'
       }
       applyPanelTransform(underPanel, panelTransition, 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)', 'transform')
+      applyCompanionsTransform(companions, panelTransition, 'translate3d(-' + IOS_PARALLAX_PERCENT + '%, 0, 0)', 'transform')
       if (snapTimerRef.current) clearTimeout(snapTimerRef.current)
       snapTimerRef.current = setTimeout(() => {
         if (panelRef.current) panelRef.current.style.transition = IOS_PANEL_TRANSITION
         if (backdropRef.current) backdropRef.current.style.transition = IOS_BACKDROP_TRANSITION
         if (underPanelRef.current) underPanelRef.current.style.transition = IOS_PANEL_TRANSITION
+        for (const el of underCompanionsRef.current) {
+          el.style.transition = IOS_PANEL_TRANSITION
+          el.style.willChange = 'auto'
+        }
       }, snapDurationMs)
     }
   }

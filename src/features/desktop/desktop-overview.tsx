@@ -49,7 +49,7 @@ interface DesktopOverviewProps {
   lang: AppLanguage
   t: AppDictionary
   onNavigate: (section: DesktopNavSection) => void
-  onOpenLessonInTimetable: (dayName: string, lesson: LessonItem) => void
+  onOpenLessonInTimetable: (dayName: string, lesson: LessonItem, isoDate?: string) => void
   onOpenEventInDeadlines: (ev: TimetableEvent) => void
   onOpenGradeInGrades: (grade: GradeItem, subject: string) => void
 }
@@ -183,12 +183,11 @@ export function DesktopOverview({
     : t.schedule
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto px-6 py-5 flex flex-col gap-5 select-none">
-      {/* Top 4 KPI Group Boxes */}
+    <div className="w-full max-w-[1440px] mx-auto px-6 py-3.5 flex flex-col gap-3.5 select-none">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5">
         <MacGroupBox
           className="cursor-pointer"
-          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[112px]"
+          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
         >
           <div onClick={() => onNavigate('timetable')} className="flex flex-col justify-between h-full gap-2">
             <div className="flex items-center justify-between">
@@ -230,7 +229,7 @@ export function DesktopOverview({
 
         <MacGroupBox
           className="cursor-pointer"
-          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[112px]"
+          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
         >
           <div onClick={() => onNavigate('grades')} className="flex flex-col justify-between h-full gap-2">
             <div className="flex items-center justify-between">
@@ -265,9 +264,10 @@ export function DesktopOverview({
         </MacGroupBox>
 
         <MacGroupBox
-          contentClassName="flex flex-col justify-between min-h-[112px]"
+          className="cursor-pointer"
+          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
         >
-          <div className="flex flex-col justify-between h-full gap-2">
+          <div onClick={() => onNavigate('attendance')} className="flex flex-col justify-between h-full gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)]">
                 {t.attendanceRate}
@@ -303,7 +303,7 @@ export function DesktopOverview({
 
         <MacGroupBox
           className="cursor-pointer"
-          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[112px]"
+          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
         >
           <div onClick={() => onNavigate('inbox')} className="flex flex-col justify-between h-full gap-2">
             <div className="flex items-center justify-between">
@@ -324,10 +324,8 @@ export function DesktopOverview({
         </MacGroupBox>
       </div>
 
-      {/* Main 12-Column Overview Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* Left 7 Columns: Today's / Next Day's Schedule */}
-        <div className="lg:col-span-7 h-full flex flex-col gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
+        <div className="lg:col-span-7 h-full flex flex-col gap-3.5">
           <MacGroupBox
             title={dayTitle}
             className="flex-1 h-full"
@@ -358,7 +356,7 @@ export function DesktopOverview({
                       return [
                         <div
                           key={`empty-slot-${slotNum}`}
-                          className="w-full flex-1 min-h-[54px] px-4 py-2.5 flex items-center justify-between gap-3 text-left opacity-55"
+                          className="w-full flex-1 min-h-[46px] px-4 py-1.5 flex items-center justify-between gap-3 text-left opacity-55"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <span className="w-6 h-6 rounded-full bg-[var(--mac-fill-4)] text-[var(--mac-label-3)] text-[11px] font-semibold flex items-center justify-center shrink-0 tabular-nums">
@@ -388,9 +386,9 @@ export function DesktopOverview({
                         <button
                           key={`${lesson.number}-${lesson.subject}-${idx}`}
                           type="button"
-                          onClick={() => onOpenLessonInTimetable(displayDay.dayName, lesson)}
+                          onClick={() => onOpenLessonInTimetable(displayDay.dayName, lesson, displayDay.isoDate)}
                           className={cn(
-                            'w-full flex-1 min-h-[54px] px-4 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer',
+                            'w-full flex-1 min-h-[46px] px-4 py-1.5 flex items-center justify-between gap-3 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer',
                             lesson.isCancelled && 'opacity-45',
                             isPassed && !lesson.isCancelled && 'opacity-65',
                             isActive && 'bg-[var(--ios-blue-subtle)]/40'
@@ -456,8 +454,7 @@ export function DesktopOverview({
           </MacGroupBox>
         </div>
 
-        {/* Right 5 Columns: Upcoming Deadlines & Recent Grades */}
-        <div className="lg:col-span-5 h-full flex flex-col gap-5">
+        <div className="lg:col-span-5 h-full flex flex-col gap-3.5">
           <MacGroupBox
             title={pickText(lang, { pl: 'Nadchodzące sprawdziany i terminy', en: 'Upcoming Tests & Deadlines' })}
             className="flex-1"
@@ -486,7 +483,7 @@ export function DesktopOverview({
                       key={`${ev.isoDate}-${idx}`}
                       type="button"
                       onClick={() => onOpenEventInDeadlines(ev)}
-                      className="w-full flex-1 px-4 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer"
+                      className="w-full flex-1 px-4 py-2 flex items-center justify-between gap-3 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-[42px] h-[38px] rounded-[11px] bg-[var(--mac-fill-3)] flex flex-col items-center justify-center shrink-0 leading-none">
@@ -562,7 +559,7 @@ export function DesktopOverview({
                       key={`${g.id || idx}-${g.grade}`}
                       type="button"
                       onClick={() => onOpenGradeInGrades(g, subjectName)}
-                      className="w-full flex-1 px-4 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer"
+                      className="w-full flex-1 px-4 py-2 flex items-center justify-between gap-3 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <span

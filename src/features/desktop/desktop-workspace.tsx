@@ -28,6 +28,7 @@ import {
 } from '@/utils/date.util'
 import { cn } from '@/utils/cn.util'
 import {
+  MacPopupSelect,
   MacSegmentedControl,
   MacToolbarButton,
   MacToolbarCapsuleGroup
@@ -36,8 +37,15 @@ import { DesktopNavSection, DesktopSidebar } from './desktop-sidebar'
 import { DesktopOverview } from './desktop-overview'
 import { DesktopTimetableView } from './desktop-timetable-view'
 import { DesktopDeadlinesView } from './desktop-deadlines-view'
-import { DesktopGradesTermFilter, DesktopGradesView } from './desktop-grades-view'
-import { DesktopAttendanceView } from './desktop-attendance-view'
+import {
+  DesktopGradesAddedFilter,
+  DesktopGradesTermFilter,
+  DesktopGradesView
+} from './desktop-grades-view'
+import {
+  DesktopAttendanceView,
+  DesktopExcuseModeTab
+} from './desktop-attendance-view'
 import { DesktopMessagesView } from './desktop-messages-view'
 import { DesktopSettingsModal, DesktopSettingsPane } from './desktop-settings-modal'
 
@@ -201,7 +209,9 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
   const [timetableViewMode, setTimetableViewMode] = useState<'week' | 'day'>('week')
   const [deadlinesShowArchived, setDeadlinesShowArchived] = useState(false)
   const [gradesTermFilter, setGradesTermFilter] = useState<DesktopGradesTermFilter>('s1')
+  const [gradesAddedFilter, setGradesAddedFilter] = useState<DesktopGradesAddedFilter>('all')
   const [gradesEditMode, setGradesEditMode] = useState(false)
+  const [excuseMode, setExcuseMode] = useState<DesktopExcuseModeTab>('nb')
 
   const liveWeekMeta = useMemo(() => computeLiveWeekDays(currentWeekPivot), [currentWeekPivot])
   const allowExcuse = canSubmitExcuse !== undefined ? canSubmitExcuse : !isStudent
@@ -288,7 +298,6 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
     setCalMonth(next.getUTCMonth())
   }
 
-  // Deep-jump handoffs from Overview
   const [timetableSelection, setTimetableSelection] = useState<{
     lesson?: LessonItem
     isToday?: boolean
@@ -636,6 +645,22 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
                     onClick={() => setGradesEditMode((e) => !e)}
                   />
                 )}
+                <MacPopupSelect
+                  surface="toolbar"
+                  value={gradesAddedFilter}
+                  onChange={(e) => setGradesAddedFilter(e.target.value as DesktopGradesAddedFilter)}
+                  aria-label={pickText(lang, { pl: 'Filtr dodania ocen', en: 'Filter grades by date added' })}
+                >
+                  <option value="all">
+                    {pickText(lang, { pl: 'Wszystkie', en: 'All' })}
+                  </option>
+                  <option value="since-last-visit">
+                    {pickText(lang, { pl: 'Od ostatniego wejścia', en: 'Since last visit' })}
+                  </option>
+                  <option value="this-week">
+                    {pickText(lang, { pl: 'Ten tydzień', en: 'This week' })}
+                  </option>
+                </MacPopupSelect>
                 <MacSegmentedControl<DesktopGradesTermFilter>
                   surface="toolbar"
                   value={gradesTermFilter}
@@ -648,6 +673,24 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
                   className="shrink-0"
                 />
               </>
+            )}
+
+            {activeSection === 'attendance-justifications' && allowExcuse && (
+              <MacSegmentedControl<DesktopExcuseModeTab>
+                surface="toolbar"
+                value={excuseMode}
+                onChange={setExcuseMode}
+                options={[
+                  {
+                    id: 'nb',
+                    label: pickText(lang, { pl: 'Zaległe nb', en: 'Unexcused' }),
+                    badge: attendanceData?.unexcusedAbsences?.length || undefined
+                  },
+                  { id: 'range', label: pickText(lang, { pl: 'Zakres dat', en: 'Date range' }) },
+                  { id: 'hours', label: pickText(lang, { pl: 'Godziny', en: 'Hours' }) }
+                ]}
+                className="shrink-0"
+              />
             )}
 
             {(activeSection === 'inbox' || activeSection === 'sent') && (
@@ -663,7 +706,10 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
                 <RefreshCw
                   className={cn(
                     'w-4 h-4',
-                    isUpdating && 'animate-spin text-[var(--mac-blue)]'
+                    (isUpdating ||
+                      (activeSection === 'attendance-justifications' &&
+                        attendanceCtrl.isLoadingLiveJustifications)) &&
+                      'animate-spin text-[var(--mac-blue)]'
                   )}
                   strokeWidth={1.9}
                 />
@@ -712,9 +758,16 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
                 lang={lang}
                 t={t}
                 onNavigate={onSelectSection}
-                onOpenLessonInTimetable={(dayName, lesson) => {
+                onOpenLessonInTimetable={(dayName, lesson, isoDate) => {
+                  if (isoDate) {
+                    onSelectDate(getSchoolWeekMondayIso(isoDate))
+                  }
                   onSelectDay(dayName)
-                  setTimetableSelection({ lesson, isToday: true })
+                  setTimetableViewMode('day')
+                  setTimetableSelection({
+                    lesson,
+                    isToday: isoDate ? isoDate === getTodayIsoString() : true
+                  })
                   onSelectSection('timetable')
                 }}
                 onOpenEventInDeadlines={(ev) => {
@@ -766,11 +819,45 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
               showFullSubjectNames={showFullSubjectNames}
               enableGradeSimulator={enableGradeSimulator}
               termFilter={gradesTermFilter}
+              addedFilter={gradesAddedFilter}
+              onChangeAddedFilter={setGradesAddedFilter}
               isEditMode={gradesEditMode}
               onToggleEditMode={setGradesEditMode}
               lang={lang}
               t={t}
               initialSelectedGrade={gradeSelection}
+            />
+          )}
+
+          {(activeSection === 'attendance' ||
+            activeSection === 'attendance-journal' ||
+            activeSection === 'attendance-justifications') && (
+            <DesktopAttendanceView
+              attendanceData={attendanceData}
+              attendanceError={attendanceError}
+              onRetry={onRefresh}
+              timetableData={timetableData}
+              showFullSubjectNames={showFullSubjectNames}
+              isStudent={isStudent}
+              canSubmitExcuse={canSubmitExcuse}
+              liveJustifications={attendanceCtrl.liveJustifications}
+              isLoadingLiveJustifications={attendanceCtrl.isLoadingLiveJustifications}
+              liveJustificationsFilter={attendanceCtrl.liveJustificationsFilter}
+              onChangeLiveFilter={attendanceCtrl.setLiveJustificationsFilter}
+              onLoadLiveJustifications={attendanceCtrl.handleOpenLiveJustifications}
+              onSubmitJustification={attendanceCtrl.handleSubmitJustifications}
+              onFetchWeekTimetable={attendanceCtrl.handleFetchWeekTimetable}
+              excuseMode={excuseMode}
+              onChangeExcuseMode={setExcuseMode}
+              subTab={
+                activeSection === 'attendance-journal'
+                  ? 'journal'
+                  : activeSection === 'attendance-justifications'
+                    ? 'justifications'
+                    : 'summary'
+              }
+              lang={lang}
+              t={t}
             />
           )}
 

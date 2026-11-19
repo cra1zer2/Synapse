@@ -136,6 +136,20 @@ export function isWarsawWeekend(): boolean {
   }
 }
 
+export function getSchoolDayName(isoDate: string): string {
+  const parts = parseIsoParts(isoDate)
+  if (!parts) return 'Monday'
+  const utcDay = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2])).getUTCDay()
+  const schoolDays: Record<number, string> = {
+    1: 'Monday',
+    2: 'Tuesday',
+    3: 'Wednesday',
+    4: 'Thursday',
+    5: 'Friday'
+  }
+  return schoolDays[utcDay] || 'Monday'
+}
+
 export function normalizeToMondayIso(dateStr: string): string {
   const parts = parseIsoParts(dateStr)
   if (!parts) return dateStr

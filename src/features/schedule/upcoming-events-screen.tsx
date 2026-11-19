@@ -70,7 +70,12 @@ export function UpcomingEventsScreen({
 
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isFilterMounted, setIsFilterMounted] = useState(false)
+  const [isFilterVisible, setIsFilterVisible] = useState(false)
   const filterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isSwappingContent, setIsSwappingContent] = useState(false)
+  const contentSwapKey = viewMode + '-' + categoryFilter + '-' + showArchived + '-' + (searchQuery ? 'search' : 'all')
+  const prevContentKeyRef = useRef(contentSwapKey)
+  const contentSwapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!showHomeworks && categoryFilter === 'homework') {
@@ -80,15 +85,39 @@ export function UpcomingEventsScreen({
 
   useEffect(() => {
     if (filterTimerRef.current) clearTimeout(filterTimerRef.current)
+    let raf1 = 0
+    let raf2 = 0
     if (isFilterOpen) {
       setIsFilterMounted(true)
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => {
+          setIsFilterVisible(true)
+        })
+      })
     } else {
+      setIsFilterVisible(false)
       filterTimerRef.current = setTimeout(() => setIsFilterMounted(false), 200)
     }
     return () => {
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
       if (filterTimerRef.current) clearTimeout(filterTimerRef.current)
     }
   }, [isFilterOpen])
+
+  useEffect(() => {
+    if (contentSwapKey === prevContentKeyRef.current) return
+    prevContentKeyRef.current = contentSwapKey
+    setIsSwappingContent(true)
+    if (contentSwapTimerRef.current) clearTimeout(contentSwapTimerRef.current)
+    contentSwapTimerRef.current = setTimeout(() => {
+      setIsSwappingContent(false)
+      contentSwapTimerRef.current = null
+    }, 200)
+    return () => {
+      if (contentSwapTimerRef.current) clearTimeout(contentSwapTimerRef.current)
+    }
+  }, [contentSwapKey])
 
   const [calYear, setCalYear] = useState<number>(todayYear)
   const [calMonth, setCalMonth] = useState<number>(todayMonthIndex)
@@ -384,16 +413,16 @@ export function UpcomingEventsScreen({
           <>
             <div
               className={cn(
-                'fixed inset-0 z-30 transition-opacity duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]',
-                isFilterOpen ? 'opacity-100 bg-black/35 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                'fixed inset-0 z-40 transition-opacity duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]',
+                isFilterVisible ? 'opacity-100 bg-black/35 pointer-events-auto' : 'opacity-0 pointer-events-none'
               )}
               onClick={() => setIsFilterOpen(false)}
             />
             <div
               style={{ boxShadow: 'var(--ios-modal-shadow)' }}
               className={cn(
-                'ios-glass-modal absolute right-0 top-[50px] z-40 w-64 rounded-[26px] p-2 flex flex-col gap-0.5 origin-top-right transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]',
-                isFilterOpen
+                'ios-glass-modal absolute right-0 top-[50px] z-50 w-64 rounded-[26px] p-2 flex flex-col gap-0.5 origin-top-right transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]',
+                isFilterVisible
                   ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
                   : 'opacity-0 scale-90 -translate-y-2 pointer-events-none'
               )}
@@ -471,8 +500,8 @@ export function UpcomingEventsScreen({
       </div>
 
       <div
-        key={viewMode + '-' + categoryFilter + '-' + showArchived + '-' + (searchQuery ? 'search' : 'all')}
-        className="ios-content-swap flex flex-col gap-3"
+        key={contentSwapKey}
+        className={cn('flex flex-col gap-3', isSwappingContent && 'ios-content-swap')}
       >
         {isLoading && allEvents.length === 0 ? (
           <div className="flex flex-col gap-2 pt-1">

@@ -12,6 +12,7 @@ export interface GradeItem {
   weight: number
   category: string
   date: string
+  addDate?: string
   teacher: string
   description?: string
   isRecent: boolean

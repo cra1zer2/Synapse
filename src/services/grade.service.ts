@@ -258,6 +258,7 @@ export async function fetchStudentGrades(
             const numeric = parseGradeValue(gradeStr)
             const effectiveWeight = catInfo.countToAvg ? catInfo.weight : 0
 
+            const rawAddDate = String(g.AddDate || g.Date || '').trim()
             const dateStr = String(g.Date || g.AddDate || '').split(' ')[0]
             const teacherId = Number(g.AddedBy?.Id)
             const teacherName = userNames.get(teacherId) || ''
@@ -272,6 +273,7 @@ export async function fetchStudentGrades(
                 weight: effectiveWeight,
                 category: catInfo.name,
                 date: dateStr,
+                addDate: rawAddDate || undefined,
                 teacher: teacherName,
                 description: teacherComment,
                 isRecent: recent

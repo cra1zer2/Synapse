@@ -1,8 +1,8 @@
 'use client'
 
-import React, { ReactNode, useEffect } from 'react'
+import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronsUpDown, Search, X } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, ChevronsUpDown, Search, X } from 'lucide-react'
 import { cn } from '@/utils/cn.util'
 import { UiSpinner } from '@/components/ui/ui-spinner'
 
@@ -348,19 +348,31 @@ export function MacSegmentedControl<T extends string | number>({
 
 interface MacPopupSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   wrapperClassName?: string
+  surface?: 'content' | 'toolbar'
 }
 
 export function MacPopupSelect({
   wrapperClassName = '',
   className = '',
+  surface = 'content',
   children,
   ...rest
 }: MacPopupSelectProps) {
+  const isToolbar = surface === 'toolbar'
   return (
-    <div className={cn('relative inline-flex items-center w-full', wrapperClassName)}>
+    <div
+      className={cn(
+        'relative inline-flex items-center',
+        isToolbar ? 'w-auto shrink-0' : 'w-full',
+        wrapperClassName
+      )}
+    >
       <select
         className={cn(
-          'w-full h-[28px] rounded-full bg-[var(--mac-fill-2)] hover:bg-[var(--mac-fill-1)] px-3 pr-7 text-[12px] font-medium text-[var(--mac-label-1)] appearance-none outline-none mac-focus-ring cursor-pointer transition-colors',
+          'rounded-full text-[var(--mac-label-1)] appearance-none outline-none mac-focus-ring cursor-pointer transition-all duration-150',
+          isToolbar
+            ? 'w-auto h-[36px] mac-glass-pill hover:brightness-[0.98] dark:hover:brightness-110 pl-3.5 pr-8 text-[13px] font-medium'
+            : 'w-full h-[28px] bg-[var(--mac-fill-2)] hover:bg-[var(--mac-fill-1)] px-3 pr-7 text-[12px] font-medium',
           className
         )}
         {...rest}
@@ -368,7 +380,10 @@ export function MacPopupSelect({
         {children}
       </select>
       <ChevronsUpDown
-        className="w-3.5 h-3.5 text-[var(--mac-label-2)] pointer-events-none absolute right-2.5 shrink-0"
+        className={cn(
+          'w-3.5 h-3.5 text-[var(--mac-label-2)] pointer-events-none absolute shrink-0',
+          isToolbar ? 'right-3' : 'right-2.5'
+        )}
         strokeWidth={2}
       />
     </div>
@@ -542,5 +557,207 @@ export function MacDialogWindow({
       </div>
     </div>,
     document.body
+  )
+}
+
+/* === Custom macOS Date Picker (Popover Calendar) === */
+
+function toIsoDateLocal(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function formatDisplayDate(iso: string): string {
+  const parts = iso.split('-')
+  if (parts.length !== 3) return iso
+  return `${parts[2]}.${parts[1]}.${parts[0]}`
+}
+
+export function MacDatePicker({
+  value,
+  onChange,
+  lang = 'pl',
+  className = '',
+  buttonClassName = '',
+  align = 'left'
+}: {
+  value: string
+  onChange: (iso: string) => void
+  lang?: string
+  className?: string
+  buttonClassName?: string
+  align?: 'left' | 'right'
+}) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const todayIso = useMemo(() => toIsoDateLocal(new Date()), [])
+
+  const [cursorMonth, setCursorMonth] = useState(() => {
+    const parsed = value ? new Date(`${value}T12:00:00`) : new Date()
+    const valid = !isNaN(parsed.getTime()) ? parsed : new Date()
+    return new Date(valid.getFullYear(), valid.getMonth(), 1)
+  })
+
+  useEffect(() => {
+    if (!open || !value) return
+    const parsed = new Date(`${value}T12:00:00`)
+    if (!isNaN(parsed.getTime())) {
+      setCursorMonth(new Date(parsed.getFullYear(), parsed.getMonth(), 1))
+    }
+  }, [open, value])
+
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('mousedown', onPointerDown)
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('mousedown', onPointerDown)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  const isPl = lang === 'pl'
+  const weekdays = isPl
+    ? ['Po', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Ni']
+    : ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+
+  const monthLabel = useMemo(() => {
+    return cursorMonth.toLocaleDateString(isPl ? 'pl-PL' : 'en-US', {
+      month: 'long',
+      year: 'numeric'
+    })
+  }, [cursorMonth, isPl])
+
+  const cells = useMemo(() => {
+    const year = cursorMonth.getFullYear()
+    const month = cursorMonth.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const offset = (firstDay.getDay() + 6) % 7
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const list: Array<{ iso: string | null; dayNum?: number }> = []
+    for (let i = 0; i < offset; i++) list.push({ iso: null })
+    for (let d = 1; d <= daysInMonth; d++) {
+      list.push({
+        iso: toIsoDateLocal(new Date(year, month, d)),
+        dayNum: d
+      })
+    }
+    return list
+  }, [cursorMonth])
+
+  return (
+    <div ref={containerRef} className={cn('relative inline-block', className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className={cn(
+          'h-[32px] w-full px-3 rounded-[8px] bg-[var(--mac-fill-4)] hover:bg-[var(--mac-fill-3)] border border-[var(--mac-group-border)] flex items-center justify-between gap-2 text-[12px] font-medium text-[var(--mac-label-1)] tabular-nums transition-colors cursor-pointer outline-none mac-focus-ring',
+          open && 'border-[var(--mac-blue)] ring-2 ring-[var(--ios-blue-subtle)]',
+          buttonClassName
+        )}
+      >
+        <span>{value ? formatDisplayDate(value) : '—'}</span>
+        <Calendar className="w-3.5 h-3.5 text-[var(--mac-label-2)] shrink-0" strokeWidth={1.9} />
+      </button>
+
+      {open && (
+        <div
+          className={cn(
+            'absolute top-[calc(100%+6px)] z-50 w-[256px] mac-popover p-3 select-none',
+            align === 'right' ? 'right-0' : 'left-0'
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 mb-2.5">
+            <button
+              type="button"
+              onClick={() =>
+                setCursorMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))
+              }
+              className="w-6 h-6 rounded-[6px] hover:bg-[var(--mac-fill-3)] flex items-center justify-center text-[var(--mac-label-2)] hover:text-[var(--mac-label-1)] cursor-pointer transition-colors"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-[12px] font-semibold text-[var(--mac-label-1)] capitalize">
+              {monthLabel}
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setCursorMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))
+              }
+              className="w-6 h-6 rounded-[6px] hover:bg-[var(--mac-fill-3)] flex items-center justify-center text-[var(--mac-label-2)] hover:text-[var(--mac-label-1)] cursor-pointer transition-colors"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-7 gap-0.5 text-center mb-1">
+            {weekdays.map((wd) => (
+              <div
+                key={wd}
+                className="text-[10px] font-semibold text-[var(--mac-label-3)] py-1"
+              >
+                {wd}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-0.5">
+            {cells.map((cell, idx) => {
+              if (!cell.iso) {
+                return <div key={`empty-${idx}`} className="h-7" />
+              }
+              const isSelected = cell.iso === value
+              const isToday = cell.iso === todayIso
+              const isWeekend = idx % 7 === 5 || idx % 7 === 6
+              return (
+                <button
+                  key={cell.iso}
+                  type="button"
+                  onClick={() => {
+                    onChange(cell.iso!)
+                    setOpen(false)
+                  }}
+                  className={cn(
+                    'h-7 rounded-full text-[11px] font-medium flex items-center justify-center tabular-nums cursor-pointer transition-colors',
+                    isSelected
+                      ? 'bg-[var(--mac-blue)] text-white font-bold shadow-[0_1px_4px_rgba(0,136,255,0.35)]'
+                      : isWeekend
+                        ? 'text-[var(--mac-label-2)] hover:bg-[var(--mac-fill-3)]'
+                        : 'text-[var(--mac-label-1)] hover:bg-[var(--mac-fill-3)]',
+                    isToday && !isSelected && 'ring-1 ring-[var(--mac-blue)] text-[var(--mac-blue)] font-semibold'
+                  )}
+                >
+                  {cell.dayNum}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="mt-2 pt-2 border-t border-[var(--mac-row-divider)] flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                onChange(todayIso)
+                setOpen(false)
+              }}
+              className="text-[11px] font-semibold text-[var(--mac-blue)] hover:underline cursor-pointer px-1"
+            >
+              {isPl ? 'Dzisiaj' : 'Today'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

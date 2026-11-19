@@ -10,6 +10,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { SquarePen } from 'lucide-react'
 import { MessageItem, MessageAttachment, AnnouncementItem, ReceiverItem } from '@/models/message.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
+import { useSubTabMotion } from '@/hooks/subtab-motion.hook'
 import { UiScreen } from '@/components/ui/ui-screen'
 import { UiIconButton } from '@/components/ui/ui-button'
 import { UiSegmentedControl } from '@/components/ui/ui-controls'
@@ -30,7 +31,7 @@ export function useMessagesFeature({
 }: UseMessagesFeatureOptions) {
   const [isComposeOpen, setIsComposeOpen] = useState(false)
   const [messagesSubTab, setMessagesSubTab] = useState<'inbox' | 'sent' | 'notices'>('inbox')
-  const [messagesSubDir, setMessagesSubDir] = useState<1 | -1>(1)
+  const { animClass: subTabAnimClass, trigger: triggerSubTabMotion } = useSubTabMotion(230)
   const [isReaderOverlayOpen, setIsReaderOverlayOpen] = useState(false)
 
   const openMessages = useCallback(() => {
@@ -45,21 +46,22 @@ export function useMessagesFeature({
 
   const handleSelectMessagesSubTab = useCallback(
     (tab: 'inbox' | 'sent' | 'notices') => {
+      if (tab === messagesSubTab) return
       const order = { inbox: 0, sent: 1, notices: 2 } as const
-      setMessagesSubDir(order[tab] >= order[messagesSubTab] ? 1 : -1)
+      triggerSubTabMotion(order[tab] >= order[messagesSubTab] ? 1 : -1)
       setMessagesSubTab(tab)
       if (tab === 'inbox' || tab === 'sent') {
         setCurrentFolder(tab)
       }
     },
-    [setCurrentFolder, messagesSubTab]
+    [setCurrentFolder, messagesSubTab, triggerSubTabMotion]
   )
 
   return {
     isComposeOpen,
     setIsComposeOpen,
     messagesSubTab,
-    messagesSubDir,
+    subTabAnimClass,
     isReaderOverlayOpen,
     setIsReaderOverlayOpen,
     openMessages,
@@ -149,7 +151,7 @@ export function MessagesFeature({
           />
           <div
             key={controller.messagesSubTab}
-            className={controller.messagesSubDir >= 0 ? 'tab-enter-right' : 'tab-enter-left'}
+            className={controller.subTabAnimClass}
           >
             <MessagesView
               mode={controller.messagesSubTab === 'notices' ? 'announcements' : 'messages'}

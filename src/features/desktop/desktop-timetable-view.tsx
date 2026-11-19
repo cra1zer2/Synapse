@@ -148,11 +148,12 @@ export function DesktopTimetableView({
     if (initialInspectorSelection?.lesson) {
       hasInitializedTodayRef.current = true
       lastSyncedDayKeyRef.current = `${selectedDay}__${timetableData?.weekStart || ''}`
+      const matchingDay = timetableData?.schedule?.find((d) => d.dayName === selectedDay)
       setInspector({
         kind: 'lesson',
         lesson: initialInspectorSelection.lesson,
         dayName: selectedDay,
-        dateStr: '',
+        dateStr: matchingDay?.date || '',
         isToday: Boolean(initialInspectorSelection.isToday)
       })
     } else if (initialInspectorSelection?.event) {

@@ -140,9 +140,9 @@
   --mac-fill-4: rgba(0, 0, 0, 0.03);
   --mac-fill-5: rgba(0, 0, 0, 0.02);
 
-  --mac-label-1: rgba(0, 0, 0, 0.85);
-  --mac-label-2: rgba(0, 0, 0, 0.50);
-  --mac-label-3: rgba(0, 0, 0, 0.25);
+  --mac-label-1: #242426;
+  --mac-label-2: #7c7c80;
+  --mac-label-3: #b8b8bc;
   --mac-label-4: rgba(0, 0, 0, 0.10);
 
   --mac-blue: #0088ff;
@@ -250,9 +250,9 @@
   --mac-fill-4: rgba(255, 255, 255, 0.03);
   --mac-fill-5: rgba(255, 255, 255, 0.02);
 
-  --mac-label-1: rgba(255, 255, 255, 0.96);
-  --mac-label-2: rgba(255, 255, 255, 0.55);
-  --mac-label-3: rgba(255, 255, 255, 0.25);
+  --mac-label-1: #f5f5f7;
+  --mac-label-2: #98989d;
+  --mac-label-3: #565659;
   --mac-label-4: rgba(255, 255, 255, 0.10);
 
   --mac-blue: #0091ff;
@@ -678,12 +678,12 @@ html.is-windows .divide-y > * + *::before {
   }
 }
 
-/* === Material 3 Design System === */
+/* === Tab & Sub-tab Motion System === */
 
 @keyframes tab-slide-in-right {
   from {
     opacity: 0;
-    transform: translate3d(28px, 0, 0);
+    transform: translate3d(18px, 0, 0);
   }
   to {
     opacity: 1;
@@ -694,7 +694,7 @@ html.is-windows .divide-y > * + *::before {
 @keyframes tab-slide-in-left {
   from {
     opacity: 0;
-    transform: translate3d(-28px, 0, 0);
+    transform: translate3d(-18px, 0, 0);
   }
   to {
     opacity: 1;
@@ -709,7 +709,7 @@ html.is-windows .divide-y > * + *::before {
   }
   to {
     opacity: 0;
-    transform: translate3d(-20px, 0, 0);
+    transform: translate3d(-14px, 0, 0);
   }
 }
 
@@ -720,27 +720,75 @@ html.is-windows .divide-y > * + *::before {
   }
   to {
     opacity: 0;
-    transform: translate3d(20px, 0, 0);
+    transform: translate3d(14px, 0, 0);
+  }
+}
+
+@keyframes subtab-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translate3d(14px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes subtab-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translate3d(-14px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes ios-action-in {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
 .tab-enter-right {
-  animation: tab-slide-in-right 280ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+  animation: tab-slide-in-right 260ms cubic-bezier(0.32, 0.72, 0, 1) both;
   will-change: transform, opacity;
 }
 
 .tab-enter-left {
-  animation: tab-slide-in-left 280ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+  animation: tab-slide-in-left 260ms cubic-bezier(0.32, 0.72, 0, 1) both;
   will-change: transform, opacity;
 }
 
 .tab-exit-left {
-  animation: tab-slide-out-left 180ms cubic-bezier(0.2, 0, 0, 1) both;
+  animation: tab-slide-out-left 160ms cubic-bezier(0.32, 0.72, 0, 1) both;
   will-change: transform, opacity;
 }
 
 .tab-exit-right {
-  animation: tab-slide-out-right 180ms cubic-bezier(0.2, 0, 0, 1) both;
+  animation: tab-slide-out-right 160ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  will-change: transform, opacity;
+}
+
+.subtab-enter-right {
+  animation: subtab-slide-in-right 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  will-change: transform, opacity;
+}
+
+.subtab-enter-left {
+  animation: subtab-slide-in-left 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  will-change: transform, opacity;
+}
+
+.ios-action-in {
+  animation: ios-action-in 200ms cubic-bezier(0.32, 0.72, 0, 1) both;
   will-change: transform, opacity;
 }
 
@@ -785,4 +833,18 @@ html.dark .sim-block-shimmer::after {
     rgba(255, 255, 255, 0.035) 58%,
     transparent 76%
   );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-enter-right,
+  .tab-enter-left,
+  .tab-exit-left,
+  .tab-exit-right,
+  .subtab-enter-right,
+  .subtab-enter-left,
+  .ios-reveal,
+  .ios-content-swap,
+  .ios-action-in {
+    animation-duration: 0.01ms !important;
+  }
 }

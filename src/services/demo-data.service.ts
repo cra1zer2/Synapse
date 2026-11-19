@@ -14,6 +14,30 @@ import { isDemoParentAccount } from '@/utils/account.util'
 import { getSchoolWeekMondayIso, getTodayIsoString } from '@/utils/date.util'
 export { getDemoGrades } from '@/services/demo/grades.demo'
 
+function shiftSchoolDays(baseIso: string, deltaSchoolDays: number) {
+    const [y, m, d] = baseIso.split('-').map(Number)
+    const dt = new Date(Date.UTC(y || 2026, (m || 1) - 1, d || 1))
+    let remaining = Math.abs(deltaSchoolDays)
+    const step = deltaSchoolDays >= 0 ? 1 : -1
+    while (remaining > 0) {
+        dt.setUTCDate(dt.getUTCDate() + step)
+        const dow = dt.getUTCDay()
+        if (dow !== 0 && dow !== 6) remaining--
+    }
+    const isoDate = dt.toISOString().slice(0, 10)
+    const [, mm, dd] = isoDate.split('-')
+    const yyyy = isoDate.slice(0, 4)
+    const weekdaysPl = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']
+    const weekdaysEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    return {
+        isoDate,
+        displayDate: `${dd}.${mm}`,
+        dotDate: `${dd}.${mm}.${yyyy}`,
+        weekdayPl: weekdaysPl[dt.getUTCDay()],
+        weekdayEn: weekdaysEn[dt.getUTCDay()]
+    }
+}
+
 export function getDemoStudentProfile(username: string): StudentProfile {
     const isParent = isDemoParentAccount(username)
     return {
@@ -338,6 +362,20 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
             flag: null,
             teacherAbsent: false,
             topic: s('Bazy danych: relacje, klucze obce i normalizacja tabel', 'Relational databases: foreign keys and normalization')
+        },
+        {
+            number: 7,
+            subject: s('Język angielski', 'English'),
+            teacher: 'mgr Anna Wiśniewska',
+            room: '108',
+            time: '13:35 - 14:20',
+            durationMinutes: 45,
+            isShortened: false,
+            isCancelled: false,
+            isSubstitution: false,
+            flag: null,
+            teacherAbsent: false,
+            topic: s('Debata oksfordzka: etyka sztucznej inteligencji', 'Oxford debate: ethics of artificial intelligence')
         }
     ]
 
@@ -382,7 +420,7 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
             isSubstitution: false,
             flag: null,
             teacherAbsent: false,
-            topic: s('Dziady cz. III Adama Mickiewicza jako dramat narodowy', 'Forefathers Eve Part III as a national drama')
+            topic: s('Dziady cz. III Adama Mickiewicza jako dramat narodowy', 'Forefathers’ Eve Part III as a national drama')
         },
         {
             number: 4,
@@ -400,17 +438,17 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
         },
         {
             number: 5,
-            subject: s('Godzina wychowawcza', 'Homeroom Class'),
-            teacher: 'dr Jan Nowak',
-            room: '204',
+            subject: s('Informatyka', 'Computer Science'),
+            teacher: 'inż. Piotr Kowalczyk',
+            room: 'Lab IT 1',
             time: '11:45 - 12:30',
             durationMinutes: 45,
             isShortened: false,
             isCancelled: false,
-            isSubstitution: false,
-            flag: null,
+            isSubstitution: true,
+            flag: s('Zastępstwo', 'Substitution'),
             teacherAbsent: false,
-            topic: s('Organizacja próbnego egzaminu maturalnego i sprawy bieżące', 'Organization of mock exams and class matters')
+            topic: s('Zastępstwo za Godzinę wychowawczą: Struktury grafowe w Pythonie', 'Substitution for Homeroom: Graph structures in Python')
         },
         {
             number: 6,
@@ -425,6 +463,34 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
             flag: null,
             teacherAbsent: false,
             topic: s('Systemy wyborcze i funkcjonowanie parlamentu', 'Electoral systems and parliamentary proceedings')
+        },
+        {
+            number: 7,
+            subject: s('Historia', 'History'),
+            teacher: 'mgr Krzysztof Zieliński',
+            room: '114',
+            time: '13:35 - 14:20',
+            durationMinutes: 45,
+            isShortened: false,
+            isCancelled: false,
+            isSubstitution: false,
+            flag: null,
+            teacherAbsent: false,
+            topic: s('Odbudowa gospodarcza i reforma walutowa Władysława Grabskiego', 'Economic reconstruction and currency reform in interwar Poland')
+        },
+        {
+            number: 8,
+            subject: s('Biologia', 'Biology'),
+            teacher: 'mgr Ewa Wójcik',
+            room: '215',
+            time: '14:25 - 15:10',
+            durationMinutes: 45,
+            isShortened: false,
+            isCancelled: true,
+            isSubstitution: false,
+            flag: s('Odwołana', 'Cancelled'),
+            teacherAbsent: true,
+            topic: s('Lekcja odwołana — konferencja metodyczna nauczyciela', 'Cancelled — teacher methodological conference')
         }
     ]
 
@@ -483,7 +549,7 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
             isSubstitution: false,
             flag: null,
             teacherAbsent: false,
-            topic: s('Poetyka baroku w twórczości Mikołaja Sępa Szarzyńskiego', 'Baroque poetry of Mikolaj Sep Szarzynski')
+            topic: s('Poetyka baroku w twórczości Mikołaja Sępa Szarzyńskiego', 'Baroque poetry of Mikołaj Sęp Szarzyński')
         },
         {
             number: 5,
@@ -498,19 +564,48 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
             flag: null,
             teacherAbsent: false,
             topic: s('Trening obwodowy i ogólnorozwojowy', 'Circuit and conditioning training')
+        },
+        {
+            number: 6,
+            subject: s('Chemia', 'Chemistry'),
+            teacher: 'dr Beata Mazur',
+            room: '102',
+            time: '12:40 - 13:25',
+            durationMinutes: 45,
+            isShortened: false,
+            isCancelled: false,
+            isSubstitution: false,
+            flag: null,
+            teacherAbsent: false,
+            topic: s('Hydroliza soli i skala pH roztworów wodnych', 'Salt hydrolysis and pH scale of aqueous solutions')
+        },
+        {
+            number: 7,
+            subject: s('Język angielski', 'English'),
+            teacher: 'mgr Anna Wiśniewska',
+            room: '108',
+            time: '13:35 - 14:20',
+            durationMinutes: 45,
+            isShortened: false,
+            isCancelled: false,
+            isSubstitution: false,
+            flag: null,
+            teacherAbsent: false,
+            topic: s('Mock Speaking Exam: Part 3 Collaborative Task', 'Mock Speaking Exam: Part 3 Collaborative Task')
         }
     ]
 
     const eventsMon: TimetableEvent[] = [
         {
             id: 'ev-1',
-            title: s('Praca domowa: Zadania z pochodnych', 'Homework: Derivative exercises'),
+            title: s('Kartkówka: Pochodne funkcji złożonych', 'Quiz: Derivatives of composite functions'),
             date: dayDates[0].displayDate,
             isoDate: dayDates[0].isoDate,
             isAbsence: false,
-            category: 'homework',
+            category: 'quiz',
             subjectName: s('Matematyka', 'Mathematics'),
-            description: s('Zadania 1-6 ze zbioru Kłaczkowa, str. 142', 'Exercises 1-6 from textbook, page 142'),
+            lessonNumber: 1,
+            description: s('Wzory na pochodne i zadania 1-6 ze zbioru Kłaczkowa', 'Derivative formulas and textbook exercises 1-6'),
             teacher: 'dr Jan Nowak'
         }
     ]
@@ -524,6 +619,7 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
             isAbsence: false,
             category: 'quiz',
             subjectName: s('Język angielski', 'English'),
+            lessonNumber: 5,
             description: s('Słownictwo ze stron 64-68 podręcznika', 'Vocabulary from textbook pages 64-68'),
             teacher: 'mgr Anna Wiśniewska'
         }
@@ -538,7 +634,8 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
             isAbsence: false,
             category: 'exam',
             subjectName: s('Fizyka', 'Physics'),
-            description: s('Dział 3 podręcznika: prawo Coulomba, natężenie pola, potencjał', 'Chapter 3: Coulombs law, electric field, potential'),
+            lessonNumber: 3,
+            description: s('Dział 3 podręcznika: prawo Coulomba, natężenie pola, potencjał', 'Chapter 3: Coulomb’s law, electric field, potential'),
             teacher: 'dr hab. Tomasz Lewandowski'
         }
     ]
@@ -546,6 +643,18 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
     const eventsThu: TimetableEvent[] = [
         {
             id: 'ev-4',
+            title: s('Kartkówka: Dziady cz. III — znajomość lektury', 'Quiz: Forefathers’ Eve Part III'),
+            date: dayDates[3].displayDate,
+            isoDate: dayDates[3].isoDate,
+            isAbsence: false,
+            category: 'quiz',
+            subjectName: s('Język polski', 'Polish'),
+            lessonNumber: 3,
+            description: s('Sceny więzienne, Wielka Improwizacja i Widzenie ks. Piotra', 'Prison scenes, Great Improvisation, and Father Piotr’s Vision'),
+            teacher: 'mgr Maria Dąbrowska'
+        },
+        {
+            id: 'ev-4b',
             title: s('Oddanie konspektu wypracowania', 'Essay outline submission'),
             date: dayDates[3].displayDate,
             isoDate: dayDates[3].isoDate,
@@ -612,6 +721,13 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
         }
     ]
 
+    const up0 = shiftSchoolDays(todayIso, 0)
+    const up1 = shiftSchoolDays(todayIso, 1)
+    const up2 = shiftSchoolDays(todayIso, 2)
+    const up3 = shiftSchoolDays(todayIso, 3)
+    const up5 = shiftSchoolDays(todayIso, 5)
+    const up7 = shiftSchoolDays(todayIso, 7)
+
     const calendarEvents: TimetableEvent[] = [
         ...eventsMon,
         ...eventsTue,
@@ -619,26 +735,73 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
         ...eventsThu,
         ...eventsFri,
         {
-            id: 'ev-cal-1',
-            title: s('Sprawdzian: Rachunek różniczkowy', 'Exam: Differential Calculus'),
-            date: dayDates[2].displayDate,
-            isoDate: dayDates[2].isoDate,
+            id: 'ev-cal-today',
+            title: s('Sprawdzian: Rachunek różniczkowy i ekstrema', 'Exam: Differential Calculus & Extrema'),
+            date: up0.displayDate,
+            isoDate: up0.isoDate,
             isAbsence: false,
             category: 'exam',
             subjectName: s('Matematyka', 'Mathematics'),
-            description: s('Granice, pochodne, ekstrema lokalne, optymalizacja.', 'Limits, derivatives, local extrema, optimization.'),
+            lessonNumber: 1,
+            description: s('Granice, pochodne, ekstrema lokalne i optymalizacja.', 'Limits, derivatives, local extrema, and optimization.'),
             teacher: 'dr Jan Nowak'
         },
         {
-            id: 'ev-cal-2',
-            title: s('Oddanie projektu zespołowego', 'Team Project Submission'),
-            date: dayDates[4].displayDate,
-            isoDate: dayDates[4].isoDate,
+            id: 'ev-cal-next1',
+            title: s('Oddanie projektu zespołowego (API + Baza)', 'Team Project Submission (API + DB)'),
+            date: up1.displayDate,
+            isoDate: up1.isoDate,
             isAbsence: false,
             category: 'homework',
             subjectName: s('Informatyka', 'Computer Science'),
-            description: s('Repozytorium GitHub i dokumentacja techniczna.', 'GitHub repository and technical documentation.'),
+            lessonNumber: 2,
+            description: s('Repozytorium GitHub, testy oraz dokumentacja techniczna.', 'GitHub repository, unit tests, and technical docs.'),
             teacher: 'inż. Piotr Kowalczyk'
+        },
+        {
+            id: 'ev-cal-next2',
+            title: s('Sprawdzian: II Rzeczpospolita 1918–1939', 'Exam: Second Polish Republic 1918–1939'),
+            date: up2.displayDate,
+            isoDate: up2.isoDate,
+            isAbsence: false,
+            category: 'exam',
+            subjectName: s('Historia', 'History'),
+            lessonNumber: 2,
+            description: s('Odbudowa państwa, konstytucja marcowa i polityka zagraniczna.', 'State reconstruction, March Constitution, and foreign policy.'),
+            teacher: 'mgr Krzysztof Zieliński'
+        },
+        {
+            id: 'ev-cal-next3',
+            title: s('Kartkówka: Słownictwo C1 — Środowisko', 'Quiz: C1 Vocabulary — Environment'),
+            date: up3.displayDate,
+            isoDate: up3.isoDate,
+            isAbsence: false,
+            category: 'quiz',
+            subjectName: s('Język angielski', 'English'),
+            lessonNumber: 4,
+            description: s('Unit 6 wordlist + kolokacje egzaminacyjne.', 'Unit 6 wordlist + exam collocations.'),
+            teacher: 'mgr Anna Wiśniewska'
+        },
+        {
+            id: 'ev-cal-next5',
+            title: s('Próbna matura z chemii (poziom rozszerzony)', 'Mock Chemistry Exam (Extended Level)'),
+            date: up5.displayDate,
+            isoDate: up5.isoDate,
+            isAbsence: false,
+            category: 'exam',
+            subjectName: s('Chemia', 'Chemistry'),
+            lessonNumber: 1,
+            description: s('Arkusz CKE w sali gimnastycznej, zbiórka o 08:45.', 'Mock exam in the main sports hall at 08:45.'),
+            teacher: 'dr Beata Mazur'
+        },
+        {
+            id: 'ev-cal-next7',
+            title: s('Dzień Otwarty Uczelni Technicznych', 'Technical Universities Open Day'),
+            date: up7.displayDate,
+            isoDate: up7.isoDate,
+            isAbsence: false,
+            category: 'info',
+            description: s('Wyjście zorganizowane dla klas czwartych (9:00–13:00).', 'Organized visit for 4th-year students (9:00 AM–1:00 PM).')
         }
     ]
 
@@ -652,130 +815,366 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
 
 export function getDemoAttendance(translate: boolean = false): AttendanceResult {
     const s = (pl: string, en: string) => (translate ? en : pl)
+    const todayIso = getTodayIsoString()
+    const d0 = shiftSchoolDays(todayIso, 0)
+    const d1 = shiftSchoolDays(todayIso, -1)
+    const d2 = shiftSchoolDays(todayIso, -2)
+    const d4 = shiftSchoolDays(todayIso, -4)
+    const d6 = shiftSchoolDays(todayIso, -6)
+    const d9 = shiftSchoolDays(todayIso, -9)
+    const d12 = shiftSchoolDays(todayIso, -12)
 
-    const unexcusedAbsences: AbsenceDetail[] = [
+    const nbType = s('Nieobecność nieusprawiedliwiona', 'Unexcused absence')
+    const uType = s('Nieobecność usprawiedliwiona', 'Excused absence')
+    const spType = s('Spóźnienie', 'Late arrival')
+    const zwType = s('Zwolnienie z zajęć', 'Exempt / Excused release')
+
+    const absPolish: AbsenceDetail[] = [
         {
             id: 101,
-            date: '04.11.2026',
+            date: d1.dotDate,
             lessonNumber: 1,
             time: '08:00 - 08:45',
             subject: s('Język polski', 'Polish'),
             teacher: 'mgr Maria Dąbrowska',
             type: 'nb',
-            typeName: s('Nieobecność nieusprawiedliwiona', 'Unexcused absence'),
+            typeName: nbType,
             isUnexcused: true
         },
         {
+            id: 103,
+            date: d2.dotDate,
+            lessonNumber: 4,
+            time: '10:45 - 11:30',
+            subject: s('Język polski', 'Polish'),
+            teacher: 'mgr Maria Dąbrowska',
+            type: 'nb',
+            typeName: nbType,
+            isUnexcused: true
+        },
+        {
+            id: 105,
+            date: d6.dotDate,
+            lessonNumber: 2,
+            time: '08:55 - 09:40',
+            subject: s('Język polski', 'Polish'),
+            teacher: 'mgr Maria Dąbrowska',
+            type: 'u',
+            typeName: uType,
+            isUnexcused: false
+        },
+        {
+            id: 106,
+            date: d9.dotDate,
+            lessonNumber: 3,
+            time: '09:50 - 10:35',
+            subject: s('Język polski', 'Polish'),
+            teacher: 'mgr Maria Dąbrowska',
+            type: 'sp',
+            typeName: spType,
+            isUnexcused: false
+        }
+    ]
+
+    const absMath: AbsenceDetail[] = [
+        {
             id: 102,
-            date: '04.11.2026',
+            date: d1.dotDate,
             lessonNumber: 2,
             time: '08:55 - 09:40',
             subject: s('Matematyka', 'Mathematics'),
             teacher: 'dr Jan Nowak',
             type: 'nb',
-            typeName: s('Nieobecność nieusprawiedliwiona', 'Unexcused absence'),
+            typeName: nbType,
             isUnexcused: true
+        },
+        {
+            id: 107,
+            date: d6.dotDate,
+            lessonNumber: 1,
+            time: '08:00 - 08:45',
+            subject: s('Matematyka', 'Mathematics'),
+            teacher: 'dr Jan Nowak',
+            type: 'u',
+            typeName: uType,
+            isUnexcused: false
+        },
+        {
+            id: 108,
+            date: d12.dotDate,
+            lessonNumber: 3,
+            time: '09:50 - 10:35',
+            subject: s('Matematyka', 'Mathematics'),
+            teacher: 'dr Jan Nowak',
+            type: 'u',
+            typeName: uType,
+            isUnexcused: false
         }
+    ]
+
+    const absPhysics: AbsenceDetail[] = [
+        {
+            id: 104,
+            date: d4.dotDate,
+            lessonNumber: 2,
+            time: '08:55 - 09:40',
+            subject: s('Fizyka', 'Physics'),
+            teacher: 'dr hab. Tomasz Lewandowski',
+            type: 'nb',
+            typeName: nbType,
+            isUnexcused: true
+        },
+        {
+            id: 109,
+            date: d6.dotDate,
+            lessonNumber: 3,
+            time: '09:50 - 10:35',
+            subject: s('Fizyka', 'Physics'),
+            teacher: 'dr hab. Tomasz Lewandowski',
+            type: 'u',
+            typeName: uType,
+            isUnexcused: false
+        }
+    ]
+
+    const absPe: AbsenceDetail[] = [
+        {
+            id: 110,
+            date: d6.dotDate,
+            lessonNumber: 6,
+            time: '12:40 - 13:25',
+            subject: s('Wychowanie fizyczne', 'Physical Education'),
+            teacher: 'mgr Robert Kamiński',
+            type: 'zw',
+            typeName: zwType,
+            isUnexcused: false
+        },
+        {
+            id: 111,
+            date: d12.dotDate,
+            lessonNumber: 6,
+            time: '12:40 - 13:25',
+            subject: s('Wychowanie fizyczne', 'Physical Education'),
+            teacher: 'mgr Robert Kamiński',
+            type: 'u',
+            typeName: uType,
+            isUnexcused: false
+        },
+        {
+            id: 112,
+            date: d12.dotDate,
+            lessonNumber: 7,
+            time: '13:35 - 14:20',
+            subject: s('Wychowanie fizyczne', 'Physical Education'),
+            teacher: 'mgr Robert Kamiński',
+            type: 'u',
+            typeName: uType,
+            isUnexcused: false
+        }
+    ]
+
+    const absChem: AbsenceDetail[] = [
+        {
+            id: 113,
+            date: d9.dotDate,
+            lessonNumber: 1,
+            time: '08:00 - 08:45',
+            subject: s('Chemia', 'Chemistry'),
+            teacher: 'dr Beata Mazur',
+            type: 'u',
+            typeName: uType,
+            isUnexcused: false
+        },
+        {
+            id: 114,
+            date: d4.dotDate,
+            lessonNumber: 5,
+            time: '11:45 - 12:30',
+            subject: s('Chemia', 'Chemistry'),
+            teacher: 'dr Beata Mazur',
+            type: 'u',
+            typeName: uType,
+            isUnexcused: false
+        }
+    ]
+
+    const absEng: AbsenceDetail[] = [
+        {
+            id: 115,
+            date: d6.dotDate,
+            lessonNumber: 4,
+            time: '10:45 - 11:30',
+            subject: s('Język angielski', 'English'),
+            teacher: 'mgr Anna Wiśniewska',
+            type: 'u',
+            typeName: uType,
+            isUnexcused: false
+        },
+        {
+            id: 116,
+            date: d9.dotDate,
+            lessonNumber: 5,
+            time: '11:45 - 12:30',
+            subject: s('Język angielski', 'English'),
+            teacher: 'mgr Anna Wiśniewska',
+            type: 'sp',
+            typeName: spType,
+            isUnexcused: false
+        }
+    ]
+
+    const unexcusedAbsences: AbsenceDetail[] = [
+        absPolish[0],
+        absMath[0],
+        absPolish[1],
+        absPhysics[0]
     ]
 
     const subjects: SubjectAttendance[] = [
         {
-            subject: s('Matematyka', 'Mathematics'),
-            totalLessons: 42,
-            absentLessons: 2,
-            excusedCount: 1,
-            unexcusedCount: 1,
-            percentage: 95.2,
-            status: 'safe',
-            absences: [unexcusedAbsences[1]]
-        },
-        {
             subject: s('Język polski', 'Polish'),
             totalLessons: 36,
-            absentLessons: 2,
-            excusedCount: 1,
+            absentLessons: 4,
+            excusedCount: 2,
+            unexcusedCount: 2,
+            percentage: 88.9,
+            status: 'safe',
+            absences: absPolish
+        },
+        {
+            subject: s('Matematyka', 'Mathematics'),
+            totalLessons: 44,
+            absentLessons: 4,
+            excusedCount: 3,
             unexcusedCount: 1,
-            percentage: 94.4,
+            percentage: 90.9,
             status: 'safe',
-            absences: [unexcusedAbsences[0]]
-        },
-        {
-            subject: s('Informatyka', 'Computer Science'),
-            totalLessons: 38,
-            absentLessons: 0,
-            excusedCount: 0,
-            unexcusedCount: 0,
-            percentage: 100.0,
-            status: 'safe',
-            absences: []
-        },
-        {
-            subject: s('Język angielski', 'English'),
-            totalLessons: 34,
-            absentLessons: 1,
-            excusedCount: 1,
-            unexcusedCount: 0,
-            percentage: 97.1,
-            status: 'safe',
-            absences: []
+            absences: absMath
         },
         {
             subject: s('Fizyka', 'Physics'),
             totalLessons: 28,
+            absentLessons: 3,
+            excusedCount: 2,
+            unexcusedCount: 1,
+            percentage: 89.3,
+            status: 'safe',
+            absences: absPhysics
+        },
+        {
+            subject: s('Chemia', 'Chemistry'),
+            totalLessons: 22,
+            absentLessons: 3,
+            excusedCount: 3,
+            unexcusedCount: 0,
+            percentage: 86.4,
+            status: 'safe',
+            absences: absChem
+        },
+        {
+            subject: s('Wychowanie fizyczne', 'Physical Education'),
+            totalLessons: 32,
+            absentLessons: 4,
+            excusedCount: 4,
+            unexcusedCount: 0,
+            percentage: 87.5,
+            status: 'safe',
+            absences: absPe
+        },
+        {
+            subject: s('Język angielski', 'English'),
+            totalLessons: 36,
+            absentLessons: 2,
+            excusedCount: 2,
+            unexcusedCount: 0,
+            percentage: 94.4,
+            status: 'safe',
+            absences: absEng
+        },
+        {
+            subject: s('Biologia', 'Biology'),
+            totalLessons: 22,
             absentLessons: 1,
             excusedCount: 1,
             unexcusedCount: 0,
-            percentage: 96.4,
+            percentage: 95.5,
+            status: 'safe',
+            absences: [
+                {
+                    id: 117,
+                    date: d12.dotDate,
+                    lessonNumber: 2,
+                    time: '08:55 - 09:40',
+                    subject: s('Biologia', 'Biology'),
+                    teacher: 'mgr Ewa Wójcik',
+                    type: 'u',
+                    typeName: uType,
+                    isUnexcused: false
+                }
+            ]
+        },
+        {
+            subject: s('Geografia', 'Geography'),
+            totalLessons: 20,
+            absentLessons: 1,
+            excusedCount: 1,
+            unexcusedCount: 0,
+            percentage: 95.0,
+            status: 'safe',
+            absences: [
+                {
+                    id: 118,
+                    date: d6.dotDate,
+                    lessonNumber: 5,
+                    time: '11:45 - 12:30',
+                    subject: s('Geografia', 'Geography'),
+                    teacher: 'mgr Paweł Szymański',
+                    type: 'u',
+                    typeName: uType,
+                    isUnexcused: false
+                }
+            ]
+        },
+        {
+            subject: s('Informatyka', 'Computer Science'),
+            totalLessons: 30,
+            absentLessons: 0,
+            excusedCount: 0,
+            unexcusedCount: 0,
+            percentage: 100.0,
             status: 'safe',
             absences: []
         },
         {
             subject: s('Historia', 'History'),
-            totalLessons: 22,
+            totalLessons: 20,
             absentLessons: 0,
             excusedCount: 0,
             unexcusedCount: 0,
             percentage: 100.0,
             status: 'safe',
             absences: []
-        },
-        {
-            subject: s('Wychowanie fizyczne', 'Physical Education'),
-            totalLessons: 30,
-            absentLessons: 2,
-            excusedCount: 2,
-            unexcusedCount: 0,
-            percentage: 93.3,
-            status: 'safe',
-            absences: []
         }
     ]
 
-    const todayIso = getTodayIsoString()
-    const todayParts = todayIso.split('-')
-    const todayShort = todayParts.length === 3 ? `${todayParts[2]}.${todayParts[1]}` : todayIso
-
     const legacyTable: LegacyAttendanceTable = {
         summary: {
-            u: 6,
-            nu: 2,
-            total: 8,
-            sp: 1,
-            zw: 0,
+            u: 18,
+            nu: 4,
+            total: 22,
+            sp: 2,
+            zw: 1,
             sl: 0
         },
         days: [
             {
-                date: todayShort,
-                isoDate: todayIso,
+                date: d0.displayDate,
+                isoDate: d0.isoDate,
                 weekday: s('Dzisiaj', 'Today'),
                 lessons: {
                     1: { symbol: 'OB', type: 'ob' },
                     2: { symbol: 'OB', type: 'ob' },
-                    3: { symbol: 'OB', type: 'ob' },
-                    4: { symbol: 'OB', type: 'ob' },
-                    5: { symbol: 'OB', type: 'ob' },
-                    6: { symbol: 'OB', type: 'ob' }
+                    3: { symbol: 'OB', type: 'ob' }
                 },
                 uCount: 0,
                 nuCount: 0,
@@ -785,14 +1184,15 @@ export function getDemoAttendance(translate: boolean = false): AttendanceResult 
                 slCount: 0
             },
             {
-                date: '04.11',
-                isoDate: '2026-11-04',
-                weekday: s('Środa', 'Wednesday'),
+                date: d1.displayDate,
+                isoDate: d1.isoDate,
+                weekday: translate ? d1.weekdayEn : d1.weekdayPl,
                 lessons: {
                     1: { symbol: 'nb', type: 'nb' },
                     2: { symbol: 'nb', type: 'nb' },
                     3: { symbol: 'OB', type: 'ob' },
-                    4: { symbol: 'OB', type: 'ob' }
+                    4: { symbol: 'OB', type: 'ob' },
+                    5: { symbol: 'OB', type: 'ob' }
                 },
                 uCount: 0,
                 nuCount: 2,
@@ -802,20 +1202,94 @@ export function getDemoAttendance(translate: boolean = false): AttendanceResult 
                 slCount: 0
             },
             {
-                date: '28.10',
-                isoDate: '2026-10-28',
-                weekday: s('Środa', 'Wednesday'),
+                date: d2.displayDate,
+                isoDate: d2.isoDate,
+                weekday: translate ? d2.weekdayEn : d2.weekdayPl,
+                lessons: {
+                    1: { symbol: 'OB', type: 'ob' },
+                    2: { symbol: 'OB', type: 'ob' },
+                    3: { symbol: 'OB', type: 'ob' },
+                    4: { symbol: 'nb', type: 'nb' },
+                    5: { symbol: 'OB', type: 'ob' }
+                },
+                uCount: 0,
+                nuCount: 1,
+                totalCount: 1,
+                spCount: 0,
+                zwCount: 0,
+                slCount: 0
+            },
+            {
+                date: d4.displayDate,
+                isoDate: d4.isoDate,
+                weekday: translate ? d4.weekdayEn : d4.weekdayPl,
+                lessons: {
+                    1: { symbol: 'OB', type: 'ob' },
+                    2: { symbol: 'nb', type: 'nb' },
+                    3: { symbol: 'OB', type: 'ob' },
+                    4: { symbol: 'OB', type: 'ob' },
+                    5: { symbol: 'u', type: 'u' }
+                },
+                uCount: 1,
+                nuCount: 1,
+                totalCount: 2,
+                spCount: 0,
+                zwCount: 0,
+                slCount: 0
+            },
+            {
+                date: d6.displayDate,
+                isoDate: d6.isoDate,
+                weekday: translate ? d6.weekdayEn : d6.weekdayPl,
                 lessons: {
                     1: { symbol: 'u', type: 'u' },
                     2: { symbol: 'u', type: 'u' },
                     3: { symbol: 'u', type: 'u' },
                     4: { symbol: 'u', type: 'u' },
                     5: { symbol: 'u', type: 'u' },
-                    6: { symbol: 'u', type: 'u' }
+                    6: { symbol: 'zw', type: 'zw' }
                 },
-                uCount: 6,
+                uCount: 5,
                 nuCount: 0,
-                totalCount: 6,
+                totalCount: 5,
+                spCount: 0,
+                zwCount: 1,
+                slCount: 0
+            },
+            {
+                date: d9.displayDate,
+                isoDate: d9.isoDate,
+                weekday: translate ? d9.weekdayEn : d9.weekdayPl,
+                lessons: {
+                    1: { symbol: 'u', type: 'u' },
+                    2: { symbol: 'OB', type: 'ob' },
+                    3: { symbol: 'sp', type: 'sp' },
+                    4: { symbol: 'OB', type: 'ob' },
+                    5: { symbol: 'sp', type: 'sp' }
+                },
+                uCount: 1,
+                nuCount: 0,
+                totalCount: 1,
+                spCount: 2,
+                zwCount: 0,
+                slCount: 0
+            },
+            {
+                date: d12.displayDate,
+                isoDate: d12.isoDate,
+                weekday: translate ? d12.weekdayEn : d12.weekdayPl,
+                lessons: {
+                    1: { symbol: 'OB', type: 'ob' },
+                    2: { symbol: 'u', type: 'u' },
+                    3: { symbol: 'u', type: 'u' },
+                    4: { symbol: 'OB', type: 'ob' },
+                    5: { symbol: 'OB', type: 'ob' },
+                    6: { symbol: 'u', type: 'u' },
+                    7: { symbol: 'u', type: 'u' }
+                },
+                uCount: 4,
+                nuCount: 0,
+                totalCount: 4,
                 spCount: 0,
                 zwCount: 0,
                 slCount: 0
@@ -824,11 +1298,11 @@ export function getDemoAttendance(translate: boolean = false): AttendanceResult 
     }
 
     return {
-        overallPercentage: 96.8,
+        overallPercentage: 92.4,
         overallStatus: 'safe',
-        totalScheduled: 250,
-        totalAbsent: 8,
-        safeAbsencesRemaining: 117,
+        totalScheduled: 290,
+        totalAbsent: 22,
+        safeAbsencesRemaining: 123,
         lessonsToRecover: 0,
         subjects,
         unexcusedAbsences,
@@ -842,7 +1316,7 @@ export function getDemoMessagesBundle(): MessagesActionResult {
             id: 1,
             sender: 'dr Jan Nowak (Wychowawca)',
             subject: 'Organizacja wyjścia do Teatru Narodowego',
-            date: '11.11.2026 14:20',
+            date: '19.11.2026 08:20',
             isRead: false,
             hasAttachments: true,
             folder: 'inbox',
@@ -867,7 +1341,7 @@ dr Jan Nowak`,
             id: 2,
             sender: 'mgr Anna Wiśniewska (Język angielski)',
             subject: 'Debate motions & preparation guidelines for C1',
-            date: '10.11.2026 18:45',
+            date: '18.11.2026 18:45',
             isRead: false,
             hasAttachments: false,
             folder: 'inbox',
@@ -886,9 +1360,32 @@ Anna Wiśniewska`
         },
         {
             id: 3,
+            sender: 'inż. Piotr Kowalczyk (Informatyka)',
+            subject: 'Kryteria oceny projektu zaliczeniowego i repozytorium GitHub',
+            date: '17.11.2026 14:10',
+            isRead: false,
+            hasAttachments: true,
+            folder: 'inbox',
+            content: `Dzień dobry,
+
+Przypominam o terminie oddania projektów zespołowych z baz danych i architektury klient-serwer. Repozytoria powinny zawierać plik README, skrypt migracji bazy oraz testy integracyjne.
+
+Prezentacje projektów odbędą się podczas dwóch kolejnych zajęć laboratoryjnych.
+
+Pozdrawiam,
+inż. Piotr Kowalczyk`,
+            attachments: [
+                {
+                    name: 'Kryteria_oceny_projektu_4T.pdf',
+                    path: 'demo/kryteria_projektu.pdf'
+                }
+            ]
+        },
+        {
+            id: 4,
             sender: 'dr hab. Tomasz Lewandowski (Fizyka)',
             subject: 'Wyniki I etapu Olimpiady Fizycznej',
-            date: '06.11.2026 16:10',
+            date: '14.11.2026 16:10',
             isRead: true,
             hasAttachments: true,
             folder: 'inbox',
@@ -906,16 +1403,28 @@ dr hab. Tomasz Lewandowski`,
             ]
         },
         {
-            id: 4,
+            id: 5,
+            sender: 'mgr Maria Dąbrowska (Język polski)',
+            subject: 'Tematy prac pisemnych z literatury romantycznej',
+            date: '11.11.2026 12:30',
+            isRead: true,
+            hasAttachments: false,
+            folder: 'inbox',
+            content: `Szanowni Uczniowie,
+
+Proszę o wybranie jednego z tematów konspektów omówionych na lekcji i przesłanie wstępnej bibliografii do czwartku. Prace będą omawiane indywidualnie podczas konsultacji.`
+        },
+        {
+            id: 6,
             sender: 'Sekretariat Szkoły',
             subject: 'Przedłużenie ważności mLegitymacji i legitymacji plastikowych',
-            date: '02.11.2026 09:15',
+            date: '06.11.2026 09:15',
             isRead: true,
             hasAttachments: false,
             folder: 'inbox',
             content: `Przypominamy, że kody QR do aplikacji mObywatel (mLegitymacja) oraz naklejki holograficzne na tradycyjne legitymacje szkolne są wydawane w pokoju nr 12 w godzinach 8:00 - 15:00.
 
-Uczniowie klas IV proszeni są o dopełnienie formalności do 20 listopada.`
+Uczniowie klas IV proszeni są o dopełnienie formalności do końca miesiąca.`
         }
     ]
 
@@ -924,11 +1433,31 @@ Uczniowie klas IV proszeni są o dopełnienie formalności do 20 listopada.`
             id: 10,
             sender: 'Aleksander Kowalski',
             subject: 'Odp: Organizacja wyjścia do Teatru Narodowego',
-            date: '11.11.2026 15:00',
+            date: '19.11.2026 09:05',
             isRead: true,
             hasAttachments: false,
             folder: 'sent',
             content: 'Dziękuję za informację Panie Profesorze. Będę punktualnie na zbiórce o 17:15.'
+        },
+        {
+            id: 11,
+            sender: 'Aleksander Kowalski',
+            subject: 'Link do repozytorium projektu zespołowego (gr. 2)',
+            date: '17.11.2026 15:40',
+            isRead: true,
+            hasAttachments: false,
+            folder: 'sent',
+            content: 'Dzień dobry, przesyłam link do naszego repozytorium GitHub oraz dokumentacji API przed jutrzejszym oddaniem projektu.'
+        },
+        {
+            id: 12,
+            sender: 'Aleksander Kowalski',
+            subject: 'Prośba o konsultacje przed II etapem Olimpiady Fizycznej',
+            date: '14.11.2026 17:15',
+            isRead: true,
+            hasAttachments: false,
+            folder: 'sent',
+            content: 'Panie Profesorze, dziękuję bardzo za wiadomość! Chciałbym dopytać o zakres doświadczeń z elektromagnetyzmu na zajęciach w środę.'
         }
     ]
 
@@ -936,9 +1465,23 @@ Uczniowie klas IV proszeni są o dopełnienie formalności do 20 listopada.`
         {
             id: 1,
             author: 'Dyrekcja Szkoły',
+            title: 'Harmonogram próbnych egzaminów maturalnych w semestrze zimowym',
+            date: '18.11.2026',
+            content: 'Informujemy klasy czwarte, że próbne egzaminy maturalne odbędą się zgodnie z harmonogramem opublikowanym w terminarzu szkoły. W dniach egzaminów obowiązuje strój galowy oraz punktualne stawienie się w auli o godz. 08:45.'
+        },
+        {
+            id: 2,
+            author: 'Samorząd Uczniowski',
+            title: 'Zbiórka charytatywna oraz kiermasz książek w bibliotece',
+            date: '14.11.2026',
+            content: 'Zapraszamy wszystkich uczniów do udziału w corocznym kiermaszu podręczników i beletrystyki w czytelni szkolnej na parterze podczas długich przerw.'
+        },
+        {
+            id: 3,
+            author: 'Dyrekcja Szkoły',
             title: 'Dni wolne od zajęć dydaktyczno-wychowawczych w I semestrze',
             date: '03.11.2026',
-            content: 'Informujemy, że zgodnie z Rozporządzeniem MEN oraz uchwałą Rady Pedagogicznej, dniami dodatkowo wolnymi od zajęć dydaktycznych będą: 10 listopada oraz 2 stycznia. W tych dniach szkoła zapewnia opiekę świetlicową na pisemny wniosek rodziców złożony w sekretariacie najpóźniej na 3 dni przed dniem wolnym.'
+            content: 'Informujemy, że zgodnie z Rozporządzeniem MEN oraz uchwałą Rady Pedagogicznej, dniami dodatkowo wolnymi od zajęć dydaktycznych będą: 2 stycznia oraz 4 stycznia. W tych dniach szkoła zapewnia opiekę świetlicową.'
         }
     ]
 

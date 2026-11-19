@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import {
   AlertCircle,
+  CalendarDays,
   Check,
   CheckCircle2,
+  RefreshCw,
   Send
 } from 'lucide-react'
 import {
@@ -14,10 +16,16 @@ import {
   SubjectAttendance
 } from '@/models/attendance.model'
 import { LiveJustificationItem } from '@/models/justification.model'
-import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
+import { SmartTimetableResult, LessonItem, DaySchedule } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
 import { formatSubjectName, formatPolishPlural } from '@/utils/text.util'
-import { formatDayDate, formatHumanDate, getDatesList, getTodayIsoString } from '@/utils/date.util'
+import {
+  formatDayDate,
+  formatHumanDate,
+  getDatesList,
+  getSchoolWeekMondayIso,
+  getTodayIsoString
+} from '@/utils/date.util'
 import { getAttendanceTypeStyle, getJustificationStatusMeta } from '@/utils/badge.util'
 import {
   PendingJustificationRecord,
@@ -28,9 +36,49 @@ import {
 } from '@/utils/justification.util'
 import { UiSpinner } from '@/components/ui/ui-spinner'
 import { cn } from '@/utils/cn.util'
-import { MacGroupBox, MacPushButton, MacSegmentedControl } from './mac-primitives'
+import {
+  MacDatePicker,
+  MacGroupBox,
+  MacPopupSelect,
+  MacPushButton,
+  MacSegmentedControl
+} from './mac-primitives'
 
 export type DesktopAttendanceSubTab = 'summary' | 'journal' | 'justifications'
+export type DesktopExcuseModeTab = 'nb' | 'range' | 'hours'
+
+function formatCompactLessonRange(lessons: number[]): string {
+  const sorted = Array.from(new Set(lessons)).filter((n) => !Number.isNaN(n)).sort((a, b) => a - b)
+  if (sorted.length === 0) return ''
+  const parts: string[] = []
+  let start = sorted[0]
+  let prev = sorted[0]
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === prev + 1) {
+      prev = sorted[i]
+    } else {
+      parts.push(start === prev ? `${start}` : `${start}–${prev}`)
+      start = sorted[i]
+      prev = sorted[i]
+    }
+  }
+  parts.push(start === prev ? `${start}` : `${start}–${prev}`)
+  return parts.join(', ')
+}
+
+function shiftIsoDate(baseIso: string, deltaDays: number): string {
+  const parts = baseIso.split('-').map(Number)
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return baseIso
+  const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + deltaDays))
+  return dt.toISOString().slice(0, 10)
+}
+
+function toIsoDateString(raw: string): string {
+  const trimmed = raw.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
+  const m = trimmed.match(/^(\d{2})\.(\d{2})\.(\d{4})$/)
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : ''
+}
 
 interface DesktopAttendanceViewProps {
   attendanceData: AttendanceResult | null
@@ -51,12 +99,13 @@ interface DesktopAttendanceViewProps {
     lessons: number[]
     message: string
   }) => Promise<{ ok: boolean; error?: string }>
+  onFetchWeekTimetable?: (weekStartIso: string) => Promise<SmartTimetableResult | null>
+  excuseMode?: DesktopExcuseModeTab
+  onChangeExcuseMode?: (mode: DesktopExcuseModeTab) => void
   subTab: DesktopAttendanceSubTab
   lang: AppLanguage
   t: AppDictionary
 }
-
-type ExcuseModeTab = 'nb' | 'range' | 'hours'
 
 export function DesktopAttendanceView({
   attendanceData,
@@ -72,6 +121,9 @@ export function DesktopAttendanceView({
   onChangeLiveFilter,
   onLoadLiveJustifications,
   onSubmitJustification,
+  onFetchWeekTimetable,
+  excuseMode,
+  onChangeExcuseMode,
   subTab: requestedSubTab,
   lang,
   t
@@ -80,21 +132,91 @@ export function DesktopAttendanceView({
   const [selectedJournalDay, setSelectedJournalDay] = useState<LegacyAttendanceDay | null>(null)
   const [pendingList, setPendingList] = useState<PendingJustificationRecord[]>([])
 
-  // Composer state
   const todayIso = useMemo(() => getTodayIsoString(), [])
-  const [excuseTab, setExcuseTab] = useState<ExcuseModeTab>('nb')
+  const [internalExcuseTab, setInternalExcuseTab] = useState<DesktopExcuseModeTab>('nb')
+  const excuseTab = excuseMode ?? internalExcuseTab
+  const setExcuseTab = (mode: DesktopExcuseModeTab) => {
+    setInternalExcuseTab(mode)
+    onChangeExcuseMode?.(mode)
+  }
   const [parentMessage, setParentMessage] = useState('')
   const [selectedNbMap, setSelectedNbMap] = useState<Record<string, boolean>>({})
   const [dateFrom, setDateFrom] = useState(todayIso)
   const [dateTo, setDateTo] = useState(todayIso)
   const [selectedDayIso, setSelectedDayIso] = useState(todayIso)
   const [selectedHoursMap, setSelectedHoursMap] = useState<Record<number, boolean>>({})
+  const [showManualHoursFallback, setShowManualHoursFallback] = useState(false)
   const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'done'>('idle')
   const [submitFailures, setSubmitFailures] = useState<Array<{ date: string; error: string }>>([])
+  const [extraWeekSchedules, setExtraWeekSchedules] = useState<Record<string, SmartTimetableResult>>({})
+  const [loadingWeekIso, setLoadingWeekIso] = useState<string | null>(null)
+  const attemptedWeeksRef = useRef<Set<string>>(new Set())
+
+  const selectedWeekIso = useMemo(() => getSchoolWeekMondayIso(selectedDayIso), [selectedDayIso])
 
   const allowExcuse = canSubmitExcuse !== undefined ? canSubmitExcuse : !isStudent
   const subTab: DesktopAttendanceSubTab =
     !allowExcuse && requestedSubTab === 'justifications' ? 'summary' : requestedSubTab
+
+  useEffect(() => {
+    setShowManualHoursFallback(false)
+  }, [selectedDayIso])
+
+  useEffect(() => {
+    setSubmitState('idle')
+  }, [excuseTab])
+
+  useEffect(() => {
+    if (!onFetchWeekTimetable || subTab !== 'justifications') return
+    const targetWeeks: string[] = []
+    if (excuseTab === 'hours' && selectedDayIso) {
+      targetWeeks.push(selectedWeekIso)
+    } else if (excuseTab === 'range' && dateFrom && dateTo) {
+      const dates = getDatesList(dateFrom, dateTo)
+      for (const d of dates) {
+        const wIso = getSchoolWeekMondayIso(d)
+        if (!targetWeeks.includes(wIso)) targetWeeks.push(wIso)
+        if (targetWeeks.length >= 3) break
+      }
+    }
+
+    const missingWeek = targetWeeks.find((wIso) => {
+      if (attemptedWeeksRef.current.has(wIso)) return false
+      if (timetableData?.weekStart === wIso) return false
+      if (extraWeekSchedules[wIso]) return false
+      if (excuseTab === 'hours' && wIso === selectedWeekIso && timetableData?.schedule?.some((d) => d.isoDate === selectedDayIso)) {
+        return false
+      }
+      return true
+    })
+    if (!missingWeek) return
+
+    attemptedWeeksRef.current.add(missingWeek)
+    let cancelled = false
+    setLoadingWeekIso(missingWeek)
+    onFetchWeekTimetable(missingWeek)
+      .then((res) => {
+        if (!cancelled && res) {
+          setExtraWeekSchedules((prev) => ({ ...prev, [missingWeek]: res }))
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingWeekIso((cur) => (cur === missingWeek ? null : cur))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [
+    onFetchWeekTimetable,
+    subTab,
+    excuseTab,
+    selectedDayIso,
+    selectedWeekIso,
+    dateFrom,
+    dateTo,
+    timetableData,
+    extraWeekSchedules
+  ])
 
   useEffect(() => {
     if (attendanceData?.subjects) {
@@ -102,7 +224,6 @@ export function DesktopAttendanceView({
     }
   }, [attendanceData?.subjects])
 
-  // Fetch live justifications automatically when switching to the justifications tab
   useEffect(() => {
     if (subTab === 'justifications' && allowExcuse && liveJustifications.length === 0 && !isLoadingLiveJustifications) {
       onLoadLiveJustifications(liveJustificationsFilter)
@@ -121,9 +242,7 @@ export function DesktopAttendanceView({
   }, [attendanceData?.subjects])
 
   useEffect(() => {
-    if (!selectedSubject && sortedSubjects.length > 0) {
-      setSelectedSubject(sortedSubjects[0])
-    } else if (selectedSubject && sortedSubjects.length > 0) {
+    if (selectedSubject && sortedSubjects.length > 0) {
       const refreshed = sortedSubjects.find((s) => s.subject === selectedSubject.subject)
       if (refreshed) setSelectedSubject(refreshed)
     }
@@ -217,7 +336,6 @@ export function DesktopAttendanceView({
     return cols
   }, [journalDays])
 
-  // Composer helpers
   const groupedNbDays = useMemo(() => {
     if (!attendanceData) return []
     const map: Record<string, { date: string; isoDate: string; lessons: AbsenceDetail[] }> = {}
@@ -228,10 +346,12 @@ export function DesktopAttendanceView({
       }
       map[abs.date].lessons.push(abs)
     })
-    return Object.values(map).map((g) => {
-      g.lessons.sort((a, b) => a.lessonNumber - b.lessonNumber)
-      return g
-    })
+    return Object.values(map)
+      .map((g) => {
+        g.lessons.sort((a, b) => a.lessonNumber - b.lessonNumber)
+        return g
+      })
+      .sort((a, b) => b.isoDate.localeCompare(a.isoDate))
   }, [attendanceData])
 
   useEffect(() => {
@@ -246,6 +366,18 @@ export function DesktopAttendanceView({
     setSelectedNbMap(initial)
   }, [groupedNbDays, pendingList])
 
+  const totalActionableNbCount = useMemo(() => {
+    let total = 0
+    for (const g of groupedNbDays) {
+      for (const l of g.lessons) {
+        if (!isLessonJustificationPending(pendingList, g.isoDate, g.date, l.lessonNumber)) {
+          total++
+        }
+      }
+    }
+    return total
+  }, [groupedNbDays, pendingList])
+
   const selectedNbCount = useMemo(() => {
     return Object.entries(selectedNbMap).filter(([k, checked]) => {
       if (!checked) return false
@@ -255,6 +387,32 @@ export function DesktopAttendanceView({
       return !isLessonJustificationPending(pendingList, g.isoDate, date, Number(numStr))
     }).length
   }, [selectedNbMap, groupedNbDays, pendingList])
+
+  const toggleAllNb = () => {
+    const allSelected = totalActionableNbCount > 0 && selectedNbCount === totalActionableNbCount
+    const next: Record<string, boolean> = {}
+    groupedNbDays.forEach((g) => {
+      g.lessons.forEach((abs) => {
+        if (!isLessonJustificationPending(pendingList, g.isoDate, abs.date, abs.lessonNumber)) {
+          next[`${abs.date}_${abs.lessonNumber}`] = !allSelected
+        }
+      })
+    })
+    setSelectedNbMap(next)
+  }
+
+  const unexcusedLessonNumsForSelectedDay = useMemo(() => {
+    const nums = new Set<number>()
+    if (!attendanceData) return nums
+    const selectedDisplay = selectedDayIso.split('-').reverse().join('.')
+    for (const abs of attendanceData.unexcusedAbsences) {
+      const aIso = abs.date.includes('.') ? abs.date.split('.').reverse().join('-') : abs.date
+      if (aIso === selectedDayIso || abs.date === selectedDisplay) {
+        nums.add(abs.lessonNumber)
+      }
+    }
+    return nums
+  }, [attendanceData, selectedDayIso])
 
   const rangePlan = useMemo(() => {
     if (!attendanceData || excuseTab !== 'range') return { days: [] as Array<{ dateIso: string; dateDisplay: string; lessons: number[] }>, totalLessons: 0 }
@@ -274,7 +432,10 @@ export function DesktopAttendanceView({
       if (matched.length > 0) {
         lessonNums = matched.map((a) => a.lessonNumber).filter((n) => !isLessonJustificationPending(pendingList, dIso, dDisplay, n))
       } else {
-        const matchedDay = timetableData?.schedule.find((s) => s.isoDate === dIso)
+        const wIso = getSchoolWeekMondayIso(dIso)
+        const matchedDay =
+          timetableData?.schedule.find((s) => s.isoDate === dIso) ||
+          extraWeekSchedules[wIso]?.schedule.find((s) => s.isoDate === dIso)
         const cands = matchedDay?.lessons?.length ? matchedDay.lessons.map((l) => l.number) : [1, 2, 3, 4, 5, 6, 7]
         lessonNums = cands.filter((n) => !isLessonJustificationPending(pendingList, dIso, dDisplay, n))
       }
@@ -284,12 +445,10 @@ export function DesktopAttendanceView({
       }
     })
     return { days, totalLessons: total }
-  }, [excuseTab, dateFrom, dateTo, attendanceData, timetableData, pendingList])
+  }, [excuseTab, dateFrom, dateTo, attendanceData, timetableData, extraWeekSchedules, pendingList])
 
   const dayLessonsForHours = useMemo(() => {
-    const matched = timetableData?.schedule.find((d) => d.isoDate === selectedDayIso)
-    if (matched?.lessons?.length) return matched.lessons
-    return Array.from({ length: 8 }, (_, i) => ({
+    const manualFallback = Array.from({ length: 8 }, (_, i) => ({
       number: i + 1,
       subject: t.lessonNumberLabel(i + 1),
       time: '',
@@ -302,7 +461,27 @@ export function DesktopAttendanceView({
       flag: null,
       teacherAbsent: false
     })) as LessonItem[]
-  }, [timetableData, selectedDayIso, t])
+
+    const matched: DaySchedule | undefined =
+      timetableData?.schedule.find((d) => d.isoDate === selectedDayIso) ||
+      extraWeekSchedules[selectedWeekIso]?.schedule.find((d) => d.isoDate === selectedDayIso)
+
+    if (matched?.lessons?.length) {
+      return { lessons: matched.lessons, isScheduledData: true }
+    }
+
+    const weekLoaded =
+      Boolean(extraWeekSchedules[selectedWeekIso]) ||
+      timetableData?.weekStart === selectedWeekIso ||
+      Boolean(timetableData?.schedule?.some((d) => d.isoDate === selectedDayIso)) ||
+      attemptedWeeksRef.current.has(selectedWeekIso)
+
+    if (weekLoaded || onFetchWeekTimetable) {
+      return { lessons: showManualHoursFallback ? manualFallback : [], isScheduledData: false }
+    }
+
+    return { lessons: manualFallback, isScheduledData: false }
+  }, [timetableData, extraWeekSchedules, selectedWeekIso, selectedDayIso, showManualHoursFallback, onFetchWeekTimetable, t])
 
   const selectedHoursList = useMemo(
     () => Object.entries(selectedHoursMap).filter(([, c]) => c).map(([n]) => Number(n)).sort((a, b) => a - b),
@@ -457,15 +636,8 @@ export function DesktopAttendanceView({
                       )}
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-start gap-2">
-                          <span className="text-[13px] font-semibold text-[var(--mac-label-1)] leading-snug">
-                            {formatSubjectName(sub.subject, showFullSubjectNames)}
-                          </span>
-                          {activeNb > 0 && (
-                            <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[10px] font-semibold tabular-nums shrink-0 whitespace-nowrap mt-0.5">
-                              {activeNb} nb
-                            </span>
-                          )}
+                        <div className="text-[13px] font-semibold text-[var(--mac-label-1)] leading-snug">
+                          {formatSubjectName(sub.subject, showFullSubjectNames)}
                         </div>
                         <div className="text-[11px] text-[var(--mac-label-2)] mt-0.5 tabular-nums">
                           {t.missedLessonsCount(sub.absentLessons)} {t.ofScheduled(sub.totalLessons)}
@@ -473,6 +645,13 @@ export function DesktopAttendanceView({
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0">
+                        <div className="w-12 flex justify-end shrink-0">
+                          {activeNb > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[10px] font-semibold tabular-nums whitespace-nowrap">
+                              {activeNb} nb
+                            </span>
+                          )}
+                        </div>
                         <div className="w-24 h-[5px] rounded-full bg-[var(--mac-fill-2)] overflow-hidden">
                           <div
                             className={cn('h-full rounded-full', isDanger ? 'bg-[var(--mac-red)]' : 'bg-[var(--mac-green)]')}
@@ -548,7 +727,15 @@ export function DesktopAttendanceView({
                 </MacGroupBox>
               </>
             ) : (
-              <div className="py-16 text-center text-[12px] text-[var(--mac-label-2)]">{t.noAbsencesRecorded}</div>
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center text-[var(--mac-label-3)] px-6">
+                <CheckCircle2 className="w-7 h-7 stroke-[1.5]" />
+                <span className="text-[12px] text-[var(--mac-label-2)]">
+                  {pickText(lang, {
+                    pl: 'Wybierz przedmiot, aby zobaczyć szczegóły',
+                    en: 'Select a subject to view details'
+                  })}
+                </span>
+              </div>
             )}
           </aside>
         </div>
@@ -695,7 +882,15 @@ export function DesktopAttendanceView({
                 </MacGroupBox>
               </div>
             ) : (
-              <div className="py-16 text-center text-[12px] text-[var(--mac-label-2)]">{t.noAbsencesRecorded}</div>
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center text-[var(--mac-label-3)] px-6">
+                <CheckCircle2 className="w-7 h-7 stroke-[1.5]" />
+                <span className="text-[12px] text-[var(--mac-label-2)]">
+                  {pickText(lang, {
+                    pl: 'Wybierz przedmiot, aby zobaczyć szczegóły',
+                    en: 'Select a subject to view details'
+                  })}
+                </span>
+              </div>
             )}
           </aside>
         </div>
@@ -703,349 +898,545 @@ export function DesktopAttendanceView({
 
       {/* TAB 3: JUSTIFICATIONS COMPOSER + LIVE LIBRUS STATUSES */}
       {subTab === 'justifications' && allowExcuse && (
-        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 p-5 overflow-hidden bg-[var(--mac-canvas-bg)]">
-          {/* Left 5 cols: Justification Composer */}
-          <div className="lg:col-span-5 overflow-y-auto flex flex-col gap-3.5 pr-1">
-            <div>
-              <h3 className="text-[15px] font-bold text-[var(--mac-label-1)]">
-                {pickText(lang, { pl: 'Wyślij usprawiedliwienie', en: 'Submit Justification' })}
-              </h3>
-              <p className="text-[12px] text-[var(--mac-label-2)] mt-0.5">
-                {pickText(lang, {
-                  pl: 'Wybierz nieobecności, zakres dni lub pojedyncze godziny lekcyjne.',
-                  en: 'Select unexcused absences, a date range, or specific periods.'
-                })}
-              </p>
-            </div>
-
-            <MacSegmentedControl<ExcuseModeTab>
-              value={excuseTab}
-              onChange={(m) => {
-                setExcuseTab(m)
-                setSubmitState('idle')
-              }}
-              options={[
-                { id: 'nb', label: pickText(lang, { pl: 'Zaległe nb', en: 'Unexcused nb' }) },
-                { id: 'range', label: pickText(lang, { pl: 'Zakres dat', en: 'Date range' }) },
-                { id: 'hours', label: pickText(lang, { pl: 'Godziny', en: 'Hours' }) }
-              ]}
-              className="w-full shrink-0"
-            />
-
-            <form onSubmit={handleSubmitExcuse} className="flex flex-col gap-3.5">
+        <div className="flex-1 min-h-0 flex">
+          <form
+            onSubmit={handleSubmitExcuse}
+            className="flex-1 min-w-0 flex flex-col min-h-0 bg-[var(--mac-canvas-bg)]"
+          >
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-4">
               {excuseTab === 'nb' && (
-                <MacGroupBox
-                  title={`${pickText(lang, { pl: 'Wybrane do usprawiedliwienia', en: 'Selected absences' })}: ${selectedNbCount}`}
-                  noPadding
-                >
-                  {groupedNbDays.length > 0 ? (
-                    <div className="mac-divide-y max-h-[300px] overflow-y-auto">
-                      {groupedNbDays.map((g) => {
-                        const actionable = g.lessons.filter(
-                          (l) => !isLessonJustificationPending(pendingList, g.isoDate, g.date, l.lessonNumber)
-                        )
-                        const allDayChecked =
-                          actionable.length > 0 &&
-                          actionable.every((l) => Boolean(selectedNbMap[`${g.date}_${l.lessonNumber}`]))
-
-                        const toggleDay = () => {
-                          setSelectedNbMap((prev) => {
-                            const next = { ...prev }
-                            actionable.forEach((l) => {
-                              next[`${g.date}_${l.lessonNumber}`] = !allDayChecked
-                            })
-                            return next
-                          })
-                        }
-
-                        return (
-                          <div key={g.date} className="flex flex-col">
-                            <div className="px-3.5 py-2 bg-[var(--mac-fill-5)] flex items-center justify-between gap-2 text-[11px] font-semibold text-[var(--mac-label-2)] tabular-nums">
-                              <span>{g.date}</span>
-                              {actionable.length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={toggleDay}
-                                  className="text-[var(--mac-blue)] hover:underline cursor-pointer font-semibold"
-                                >
-                                  {allDayChecked
-                                    ? pickText(lang, { pl: 'Odznacz dzień', en: 'Unselect day' })
-                                    : pickText(lang, { pl: 'Zaznacz dzień', en: 'Select day' })}
-                                </button>
-                              )}
-                            </div>
-                            <div className="mac-divide-y">
-                              {g.lessons.map((l) => {
-                                const isPend = isLessonJustificationPending(
-                                  pendingList,
-                                  g.isoDate,
-                                  g.date,
-                                  l.lessonNumber
-                                )
-                                const key = `${g.date}_${l.lessonNumber}`
-                                const checked = Boolean(selectedNbMap[key])
-                                return (
-                                  <button
-                                    key={key}
-                                    type="button"
-                                    disabled={isPend}
-                                    onClick={() =>
-                                      setSelectedNbMap((prev) => ({ ...prev, [key]: !prev[key] }))
-                                    }
-                                    className={cn(
-                                      'w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-left transition-colors',
-                                      isPend
-                                        ? 'opacity-65 cursor-default'
-                                        : checked
-                                          ? 'bg-[var(--ios-blue-subtle)]/25 cursor-pointer hover:bg-[var(--ios-blue-subtle)]/35'
-                                          : 'cursor-pointer hover:bg-[var(--mac-fill-4)]'
-                                    )}
-                                  >
-                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                      <span
-                                        className={cn(
-                                          'w-4 h-4 rounded-[5px] flex items-center justify-center shrink-0 transition-colors border',
-                                          isPend
-                                            ? 'bg-[var(--ios-orange-subtle)] border-transparent text-[var(--mac-orange)]'
-                                            : checked
-                                              ? 'bg-[var(--mac-blue)] border-[var(--mac-blue)] text-white'
-                                              : 'bg-transparent border-[var(--mac-label-3)]'
-                                        )}
-                                      >
-                                        {!isPend && checked && <Check className="w-3 h-3" strokeWidth={3} />}
-                                      </span>
-                                      <span className="w-6 h-6 rounded-full bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums">
-                                        {l.lessonNumber}
-                                      </span>
-                                      <span className="text-[13px] font-medium text-[var(--mac-label-1)] leading-snug">
-                                        {formatSubjectName(l.subject, showFullSubjectNames)}
-                                      </span>
-                                    </div>
-                                    {isPend ? (
-                                      <span className="px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[10px] font-semibold shrink-0 whitespace-nowrap">
-                                        {t.pendingJustification}
-                                      </span>
-                                    ) : (
-                                      <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[10px] font-semibold uppercase shrink-0">
-                                        nb
-                                      </span>
-                                    )}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <div className="p-6 text-center text-[12px] text-[var(--mac-label-2)]">
-                      {pickText(lang, { pl: 'Brak nieusprawiedliwionych godzin', en: 'All absences excused' })}
-                    </div>
-                  )}
-                </MacGroupBox>
-              )}
-
-              {excuseTab === 'range' && (
-                <MacGroupBox contentClassName="p-3.5 flex flex-col gap-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[11px] font-medium text-[var(--mac-label-2)] block mb-1">
-                        {pickText(lang, { pl: 'Od dnia', en: 'From' })}
-                      </label>
-                      <input
-                        type="date"
-                        value={dateFrom}
-                        onChange={(e) => setDateFrom(e.target.value)}
-                        className="w-full h-[34px] px-3 rounded-[8px] bg-[var(--mac-fill-4)] border border-[var(--mac-group-border)] text-[12px] font-medium text-[var(--mac-label-1)] outline-none mac-input-focus"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-medium text-[var(--mac-label-2)] block mb-1">
-                        {pickText(lang, { pl: 'Do dnia', en: 'To' })}
-                      </label>
-                      <input
-                        type="date"
-                        value={dateTo}
-                        onChange={(e) => setDateTo(e.target.value)}
-                        className="w-full h-[34px] px-3 rounded-[8px] bg-[var(--mac-fill-4)] border border-[var(--mac-group-border)] text-[12px] font-medium text-[var(--mac-label-1)] outline-none mac-input-focus"
-                      />
-                    </div>
-                  </div>
-                  <div className="text-[12px] text-[var(--mac-label-2)] flex items-center justify-between pt-2 border-t border-[var(--mac-row-divider)]">
-                    <span>{pickText(lang, { pl: 'Lekcji do wysłania:', en: 'Periods queued:' })}</span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] text-[11px] font-semibold tabular-nums">
-                      {rangePlan.totalLessons}
-                    </span>
-                  </div>
-                </MacGroupBox>
-              )}
-
-              {excuseTab === 'hours' && (
                 <>
-                  <MacGroupBox contentClassName="p-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <label className="text-[12px] font-medium text-[var(--mac-label-2)] shrink-0">
-                        {t.dateLabel}
-                      </label>
-                      <input
-                        type="date"
-                        value={selectedDayIso}
-                        onChange={(e) => {
-                          setSelectedDayIso(e.target.value)
-                          setSelectedHoursMap({})
-                        }}
-                        className="h-[32px] px-3 rounded-[8px] bg-[var(--mac-fill-4)] border border-[var(--mac-group-border)] text-[12px] font-medium text-[var(--mac-label-1)] outline-none mac-input-focus"
-                      />
-                    </div>
-                    {(() => {
-                      const allSel =
-                        dayLessonsForHours.length > 0 &&
-                        dayLessonsForHours.every((l) => Boolean(selectedHoursMap[l.number]))
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (allSel) {
-                              setSelectedHoursMap({})
-                            } else {
-                              const next: Record<number, boolean> = {}
-                              dayLessonsForHours.forEach((l) => {
-                                next[l.number] = true
-                              })
-                              setSelectedHoursMap(next)
-                            }
-                          }}
-                          className="text-[11px] font-semibold text-[var(--mac-blue)] hover:underline cursor-pointer shrink-0 whitespace-nowrap"
-                        >
-                          {allSel
-                            ? pickText(lang, { pl: 'Wyczyść', en: 'Clear all' })
-                            : pickText(lang, { pl: 'Zaznacz wszystkie', en: 'Select all' })}
-                        </button>
-                      )
-                    })()}
-                  </MacGroupBox>
-
-                  <MacGroupBox
-                    title={`${pickText(lang, { pl: 'Godziny lekcyjne', en: 'School periods' })} (${selectedHoursList.length})`}
-                    noPadding
-                  >
-                    <div className="mac-divide-y max-h-[260px] overflow-y-auto">
-                      {dayLessonsForHours.map((l) => {
-                        const active = Boolean(selectedHoursMap[l.number])
-                        return (
-                          <button
-                            key={l.number}
-                            type="button"
-                            onClick={() =>
-                              setSelectedHoursMap((p) => ({ ...p, [l.number]: !p[l.number] }))
-                            }
-                            className={cn(
-                              'w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-left cursor-pointer transition-colors',
-                              active
-                                ? 'bg-[var(--ios-blue-subtle)]/25 hover:bg-[var(--ios-blue-subtle)]/35'
-                                : 'hover:bg-[var(--mac-fill-4)]'
-                            )}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                              <span
-                                className={cn(
-                                  'w-4 h-4 rounded-[5px] flex items-center justify-center shrink-0 transition-colors border',
-                                  active
-                                    ? 'bg-[var(--mac-blue)] border-[var(--mac-blue)] text-white'
-                                    : 'bg-transparent border-[var(--mac-label-3)]'
-                                )}
-                              >
-                                {active && <Check className="w-3 h-3" strokeWidth={3} />}
-                              </span>
-                              <span className="w-6 h-6 rounded-full bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums">
-                                {l.number}
-                              </span>
-                              <span className="text-[13px] font-medium text-[var(--mac-label-1)] leading-snug">
-                                {formatSubjectName(l.subject, showFullSubjectNames)}
-                              </span>
-                            </div>
-                            {l.time && (
-                              <span className="text-[11px] text-[var(--mac-label-2)] tabular-nums shrink-0">
-                                {l.time}
-                              </span>
-                            )}
-                          </button>
-                        )
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[12px] text-[var(--mac-label-2)] tabular-nums">
+                      {pickText(lang, {
+                        pl: `Wybrano ${selectedNbCount} z ${totalActionableNbCount} nieobecności`,
+                        en: `Selected ${selectedNbCount} of ${totalActionableNbCount} absences`
                       })}
-                    </div>
+                    </span>
+                    {totalActionableNbCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={toggleAllNb}
+                        className="text-[12px] font-semibold text-[var(--mac-blue)] hover:underline cursor-pointer"
+                      >
+                        {selectedNbCount === totalActionableNbCount
+                          ? pickText(lang, { pl: 'Odznacz wszystko', en: 'Unselect all' })
+                          : pickText(lang, { pl: 'Zaznacz wszystko', en: 'Select all' })}
+                      </button>
+                    )}
+                  </div>
+
+                  <MacGroupBox className={groupedNbDays.length === 0 ? 'flex-1' : undefined} noPadding>
+                    {groupedNbDays.length > 0 ? (
+                      <div className="mac-divide-y">
+                        {groupedNbDays.map((g) => {
+                          const actionable = g.lessons.filter(
+                            (l) => !isLessonJustificationPending(pendingList, g.isoDate, g.date, l.lessonNumber)
+                          )
+                          const allDayChecked =
+                            actionable.length > 0 &&
+                            actionable.every((l) => Boolean(selectedNbMap[`${g.date}_${l.lessonNumber}`]))
+                          const dayMeta = formatDayDate(g.isoDate, lang)
+
+                          const toggleDay = () => {
+                            setSelectedNbMap((prev) => {
+                              const next = { ...prev }
+                              actionable.forEach((l) => {
+                                next[`${g.date}_${l.lessonNumber}`] = !allDayChecked
+                              })
+                              return next
+                            })
+                          }
+
+                          return (
+                            <div key={g.date} className="flex flex-col">
+                              <div className="px-4 py-2 bg-[var(--mac-fill-5)] flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-[11px] font-semibold text-[var(--mac-label-1)]">
+                                    {dayMeta.weekday} · {formatHumanDate(g.isoDate, false, lang)}
+                                  </span>
+                                  <span className="text-[11px] text-[var(--mac-label-3)] tabular-nums">
+                                    ({g.lessons.length})
+                                  </span>
+                                </div>
+                                {actionable.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={toggleDay}
+                                    className="text-[11px] font-semibold text-[var(--mac-blue)] hover:underline cursor-pointer shrink-0"
+                                  >
+                                    {allDayChecked
+                                      ? pickText(lang, { pl: 'Odznacz dzień', en: 'Unselect day' })
+                                      : pickText(lang, { pl: 'Zaznacz dzień', en: 'Select day' })}
+                                  </button>
+                                )}
+                              </div>
+                              <div className="mac-divide-y">
+                                {g.lessons.map((l) => {
+                                  const isPend = isLessonJustificationPending(
+                                    pendingList,
+                                    g.isoDate,
+                                    g.date,
+                                    l.lessonNumber
+                                  )
+                                  const key = `${g.date}_${l.lessonNumber}`
+                                  const checked = Boolean(selectedNbMap[key])
+                                  return (
+                                    <button
+                                      key={key}
+                                      type="button"
+                                      disabled={isPend}
+                                      onClick={() =>
+                                        setSelectedNbMap((prev) => ({ ...prev, [key]: !prev[key] }))
+                                      }
+                                      className={cn(
+                                        'w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left transition-colors',
+                                        isPend
+                                          ? 'opacity-65 cursor-default'
+                                          : checked
+                                            ? 'bg-[var(--ios-blue-subtle)]/25 cursor-pointer hover:bg-[var(--ios-blue-subtle)]/35'
+                                            : 'cursor-pointer hover:bg-[var(--mac-fill-4)]'
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                        <span
+                                          className={cn(
+                                            'w-4 h-4 rounded-[5px] flex items-center justify-center shrink-0 transition-colors border',
+                                            isPend
+                                              ? 'bg-[var(--ios-orange-subtle)] border-transparent text-[var(--mac-orange)]'
+                                              : checked
+                                                ? 'bg-[var(--mac-blue)] border-[var(--mac-blue)] text-white'
+                                                : 'bg-transparent border-[var(--mac-label-3)]'
+                                          )}
+                                        >
+                                          {!isPend && checked && <Check className="w-3 h-3" strokeWidth={3} />}
+                                        </span>
+                                        <span className="w-6 h-6 rounded-full bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums">
+                                          {l.lessonNumber}
+                                        </span>
+                                        <span className="text-[13px] font-medium text-[var(--mac-label-1)] truncate">
+                                          {formatSubjectName(l.subject, showFullSubjectNames)}
+                                        </span>
+                                      </div>
+                                      {isPend ? (
+                                        <span className="px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[10px] font-semibold shrink-0 whitespace-nowrap">
+                                          {t.pendingJustification}
+                                        </span>
+                                      ) : l.teacher ? (
+                                        <span className="text-[11px] text-[var(--mac-label-2)] truncate max-w-[160px] shrink-0">
+                                          {l.teacher}
+                                        </span>
+                                      ) : null}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="py-20 flex flex-col items-center justify-center gap-2 text-center text-[var(--mac-label-2)]">
+                        <CheckCircle2 className="w-7 h-7 text-[var(--mac-label-3)] stroke-[1.5]" />
+                        <span className="text-[13px] font-medium">
+                          {pickText(lang, { pl: 'Brak nieusprawiedliwionych godzin', en: 'All absences excused' })}
+                        </span>
+                      </div>
+                    )}
                   </MacGroupBox>
                 </>
               )}
 
-              <div>
-                <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)] block mb-1">
-                  {pickText(lang, { pl: 'Treść wiadomości dla wychowawcy', en: 'Message to homeroom teacher' })}
-                </label>
-                <textarea
-                  rows={3}
-                  value={parentMessage}
-                  onChange={(e) => setParentMessage(e.target.value)}
-                  placeholder={t.commentPlaceholder}
-                  className="w-full p-2.5 rounded-[10px] bg-[var(--mac-group-bg)] border border-[var(--mac-group-border)] text-[13px] text-[var(--mac-label-1)] placeholder-[var(--mac-label-2)] outline-none mac-input-focus resize-none"
-                />
-              </div>
+              {excuseTab === 'range' && (
+                <>
+                  <MacGroupBox noPadding>
+                    <div className="mac-divide-y">
+                      <div className="p-4 grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)] block mb-1.5">
+                            {pickText(lang, { pl: 'Od dnia', en: 'From' })}
+                          </label>
+                          <MacDatePicker
+                            value={dateFrom}
+                            onChange={(iso) => {
+                              setDateFrom(iso)
+                              if (iso > dateTo) setDateTo(iso)
+                            }}
+                            lang={lang}
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)] block mb-1.5">
+                            {pickText(lang, { pl: 'Do dnia', en: 'To' })}
+                          </label>
+                          <MacDatePicker
+                            value={dateTo}
+                            onChange={(iso) => {
+                              setDateTo(iso)
+                              if (iso < dateFrom) setDateFrom(iso)
+                            }}
+                            lang={lang}
+                            align="right"
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+                      <div className="px-4 py-2.5 bg-[var(--mac-fill-5)] flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {[
+                            {
+                              label: pickText(lang, { pl: 'Dzisiaj', en: 'Today' }),
+                              from: todayIso,
+                              to: todayIso
+                            },
+                            {
+                              label: pickText(lang, { pl: 'Wczoraj', en: 'Yesterday' }),
+                              from: shiftIsoDate(todayIso, -1),
+                              to: shiftIsoDate(todayIso, -1)
+                            },
+                            {
+                              label: pickText(lang, { pl: 'Ostatnie 3 dni', en: 'Last 3 days' }),
+                              from: shiftIsoDate(todayIso, -2),
+                              to: todayIso
+                            },
+                            {
+                              label: pickText(lang, { pl: 'Ten tydzień', en: 'This week' }),
+                              from: getSchoolWeekMondayIso(todayIso),
+                              to: todayIso
+                            }
+                          ].map((preset) => {
+                            const active = dateFrom === preset.from && dateTo === preset.to
+                            return (
+                              <button
+                                key={preset.label}
+                                type="button"
+                                onClick={() => {
+                                  setDateFrom(preset.from)
+                                  setDateTo(preset.to)
+                                }}
+                                className={cn(
+                                  'h-[24px] px-2.5 rounded-full text-[11px] font-medium cursor-pointer transition-colors',
+                                  active
+                                    ? 'bg-[var(--mac-blue)] text-white'
+                                    : 'bg-[var(--mac-fill-3)] hover:bg-[var(--mac-fill-2)] text-[var(--mac-label-1)]'
+                                )}
+                              >
+                                {preset.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] text-[11px] font-semibold tabular-nums shrink-0">
+                          {pickText(lang, {
+                            pl: `${rangePlan.days.length} dni · ${rangePlan.totalLessons} lekcji`,
+                            en: `${rangePlan.days.length}d · ${rangePlan.totalLessons} periods`
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </MacGroupBox>
 
-              <MacPushButton
-                type="submit"
-                variant="prominent"
-                size="xl"
-                loading={submitState === 'submitting'}
-                disabled={
-                  submitState === 'submitting' ||
-                  (excuseTab === 'nb' && selectedNbCount === 0) ||
-                  (excuseTab === 'range' && rangePlan.totalLessons === 0) ||
-                  (excuseTab === 'hours' && selectedHoursList.length === 0)
-                }
-                icon={<Send className="w-3.5 h-3.5" />}
-                className="w-full"
-              >
-                {excuseTab === 'nb'
-                  ? pickText(lang, { pl: `Wyślij (${selectedNbCount})`, en: `Submit (${selectedNbCount})` })
-                  : excuseTab === 'range'
-                    ? pickText(lang, {
-                        pl: `Wyślij okres (${rangePlan.totalLessons} ${formatPolishPlural(rangePlan.totalLessons, 'lekcja', 'lekcje', 'lekcji')})`,
-                        en: `Submit range (${rangePlan.totalLessons})`
-                      })
-                    : pickText(lang, { pl: `Wyślij (${selectedHoursList.length})`, en: `Submit (${selectedHoursList.length})` })}
-              </MacPushButton>
+                  <MacGroupBox
+                    title={pickText(lang, { pl: 'Podgląd wysyłki', en: 'Submission preview' })}
+                    noPadding
+                  >
+                    {rangePlan.days.length > 0 ? (
+                      <div className="mac-divide-y">
+                        {rangePlan.days.map((d) => {
+                          const meta = formatDayDate(d.dateIso, lang)
+                          return (
+                            <div
+                              key={d.dateIso}
+                              className="px-4 py-2.5 flex items-center justify-between gap-3"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-[38px] h-[36px] rounded-[10px] bg-[var(--mac-fill-3)] flex flex-col items-center justify-center shrink-0 leading-none">
+                                  <span className="text-[12px] font-bold text-[var(--mac-label-1)] tabular-nums">
+                                    {meta.dayNum}
+                                  </span>
+                                  <span className="text-[9px] uppercase font-semibold text-[var(--mac-label-2)] mt-0.5">
+                                    {meta.monthName}
+                                  </span>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
+                                    {meta.weekday} · {formatHumanDate(d.dateIso, false, lang)}
+                                  </div>
+                                  <div className="text-[11px] text-[var(--mac-label-2)] tabular-nums">
+                                    {d.lessons.length}{' '}
+                                    {pickText(lang, {
+                                      pl: formatPolishPlural(d.lessons.length, 'lekcja', 'lekcje', 'lekcji'),
+                                      en: d.lessons.length === 1 ? 'period' : 'periods'
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-[12px] font-medium text-[var(--mac-label-2)] tabular-nums shrink-0">
+                                {pickText(lang, { pl: 'Lekcje', en: 'Periods' })} {formatCompactLessonRange(d.lessons)}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="py-12 text-center text-[12px] text-[var(--mac-label-2)]">
+                        {pickText(lang, {
+                          pl: 'Brak lekcji do usprawiedliwienia w wybranym zakresie',
+                          en: 'No lessons to justify in the selected range'
+                        })}
+                      </div>
+                    )}
+                  </MacGroupBox>
+                </>
+              )}
 
+              {excuseTab === 'hours' && (
+                <>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2.5">
+                      <MacDatePicker
+                        value={selectedDayIso}
+                        onChange={(iso) => {
+                          setSelectedDayIso(iso)
+                          setSelectedHoursMap({})
+                        }}
+                        lang={lang}
+                        className="w-[148px]"
+                      />
+                      <span className="text-[12px] font-medium text-[var(--mac-label-2)]">
+                        {formatDayDate(selectedDayIso, lang).weekday}
+                      </span>
+                    </div>
+                    {dayLessonsForHours.lessons.length > 0 &&
+                      (() => {
+                        const allSel = dayLessonsForHours.lessons.every((l) => Boolean(selectedHoursMap[l.number]))
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (allSel) {
+                                setSelectedHoursMap({})
+                              } else {
+                                const next: Record<number, boolean> = {}
+                                dayLessonsForHours.lessons.forEach((l) => {
+                                  next[l.number] = true
+                                })
+                                setSelectedHoursMap(next)
+                              }
+                            }}
+                            className="text-[12px] font-semibold text-[var(--mac-blue)] hover:underline cursor-pointer shrink-0 whitespace-nowrap"
+                          >
+                            {allSel
+                              ? pickText(lang, { pl: 'Wyczyść', en: 'Clear all' })
+                              : pickText(lang, { pl: 'Zaznacz wszystkie', en: 'Select all' })}
+                          </button>
+                        )
+                      })()}
+                  </div>
+
+                  <MacGroupBox
+                    className={
+                      loadingWeekIso === selectedWeekIso || dayLessonsForHours.lessons.length === 0
+                        ? 'flex-1'
+                        : undefined
+                    }
+                    noPadding
+                  >
+                    {loadingWeekIso === selectedWeekIso ? (
+                      <div className="py-16 flex flex-col items-center justify-center gap-2 text-[var(--mac-label-2)]">
+                        <UiSpinner size="small" className="text-[var(--mac-blue)]" />
+                        <span className="text-[12px]">
+                          {pickText(lang, { pl: 'Pobieranie planu lekcji...', en: 'Loading timetable...' })}
+                        </span>
+                      </div>
+                    ) : dayLessonsForHours.lessons.length > 0 ? (
+                      <div className="mac-divide-y">
+                        {dayLessonsForHours.lessons.map((l) => {
+                          const active = Boolean(selectedHoursMap[l.number])
+                          const isNb = unexcusedLessonNumsForSelectedDay.has(l.number)
+                          return (
+                            <button
+                              key={l.number}
+                              type="button"
+                              onClick={() =>
+                                setSelectedHoursMap((p) => ({ ...p, [l.number]: !p[l.number] }))
+                              }
+                              className={cn(
+                                'w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left cursor-pointer transition-colors',
+                                active
+                                  ? 'bg-[var(--ios-blue-subtle)]/25 hover:bg-[var(--ios-blue-subtle)]/35'
+                                  : 'hover:bg-[var(--mac-fill-4)]'
+                              )}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <span
+                                  className={cn(
+                                    'w-4 h-4 rounded-[5px] flex items-center justify-center shrink-0 transition-colors border',
+                                    active
+                                      ? 'bg-[var(--mac-blue)] border-[var(--mac-blue)] text-white'
+                                      : 'bg-transparent border-[var(--mac-label-3)]'
+                                  )}
+                                >
+                                  {active && <Check className="w-3 h-3" strokeWidth={3} />}
+                                </span>
+                                <span className="w-6 h-6 rounded-full bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums">
+                                  {l.number}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-[13px] font-medium text-[var(--mac-label-1)] truncate">
+                                    {formatSubjectName(l.subject, showFullSubjectNames)}
+                                  </div>
+                                  {l.teacher && (
+                                    <div className="text-[11px] text-[var(--mac-label-2)] truncate">
+                                      {l.teacher}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {isNb && (
+                                  <span className="px-1.5 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[10px] font-semibold uppercase">
+                                    nb
+                                  </span>
+                                )}
+                                {l.time && (
+                                  <span className="text-[11px] text-[var(--mac-label-2)] tabular-nums">
+                                    {l.time}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="py-16 px-6 flex flex-col items-center justify-center gap-3 text-center text-[var(--mac-label-2)]">
+                        <CalendarDays className="w-7 h-7 text-[var(--mac-label-3)] stroke-[1.5]" />
+                        <span className="text-[13px] font-medium">
+                          {pickText(lang, {
+                            pl: 'Brak zaplanowanych lekcji w tym dniu',
+                            en: 'No lessons scheduled on this day'
+                          })}
+                        </span>
+                        <MacPushButton
+                          type="button"
+                          size="sm"
+                          variant="tinted"
+                          onClick={() => setShowManualHoursFallback(true)}
+                        >
+                          {pickText(lang, {
+                            pl: 'Wybierz godziny ręcznie (1–8)',
+                            en: 'Select periods manually (1–8)'
+                          })}
+                        </MacPushButton>
+                      </div>
+                    )}
+                  </MacGroupBox>
+                </>
+              )}
+            </div>
+
+            <div className="shrink-0 border-t border-[var(--mac-row-divider)] bg-[var(--mac-window-bg)] px-5 py-3 flex flex-col gap-2">
               {submitState === 'done' && submitFailures.length === 0 && (
-                <div className="px-3 py-2 rounded-[9px] bg-[var(--ios-green-subtle)] text-[var(--mac-green)] text-[12px] font-medium flex items-center gap-2">
+                <div className="px-3 py-1.5 rounded-[8px] bg-[var(--ios-green-subtle)] text-[var(--mac-green)] text-[12px] font-medium flex items-center gap-2">
                   <Check className="w-4 h-4 shrink-0" />
-                  <span>{pickText(lang, { pl: 'Usprawiedliwienie wysłane do Synergii.', en: 'Justification sent to Synergia.' })}</span>
+                  <span>
+                    {pickText(lang, {
+                      pl: 'Usprawiedliwienie wysłane do Synergii.',
+                      en: 'Justification sent to Synergia.'
+                    })}
+                  </span>
                 </div>
               )}
               {submitFailures.length > 0 && (
-                <div className="px-3 py-2 rounded-[9px] bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[12px]">
+                <div className="px-3 py-1.5 rounded-[8px] bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[12px]">
                   {submitFailures[0].date}: {submitFailures[0].error}
                 </div>
               )}
-            </form>
-          </div>
 
-          {/* Right 7 cols: Live Librus Justification Statuses */}
-          <div className="lg:col-span-7 overflow-y-auto flex flex-col gap-3.5 min-h-0">
-            {isLoadingLiveJustifications ? (
-              <MacGroupBox
-                title={t.liveJustificationsTitle}
-                className="flex-1"
-                contentClassName="py-20 flex flex-col items-center justify-center gap-2"
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={parentMessage}
+                  onChange={(e) => setParentMessage(e.target.value)}
+                  placeholder={t.commentPlaceholder}
+                  className="flex-1 h-[38px] px-3.5 rounded-[10px] bg-[var(--mac-fill-4)] border border-[var(--mac-group-border)] text-[13px] text-[var(--mac-label-1)] placeholder-[var(--mac-label-2)] outline-none mac-input-focus"
+                />
+                <MacPushButton
+                  type="submit"
+                  variant="prominent"
+                  size="xl"
+                  loading={submitState === 'submitting'}
+                  disabled={
+                    submitState === 'submitting' ||
+                    (excuseTab === 'nb' && selectedNbCount === 0) ||
+                    (excuseTab === 'range' && rangePlan.totalLessons === 0) ||
+                    (excuseTab === 'hours' && selectedHoursList.length === 0)
+                  }
+                  icon={<Send className="w-3.5 h-3.5" />}
+                  className="shrink-0 px-5"
+                >
+                  {excuseTab === 'nb'
+                    ? pickText(lang, { pl: `Wyślij (${selectedNbCount})`, en: `Submit (${selectedNbCount})` })
+                    : excuseTab === 'range'
+                      ? pickText(lang, {
+                          pl: `Wyślij okres (${rangePlan.totalLessons})`,
+                          en: `Submit (${rangePlan.totalLessons})`
+                        })
+                      : pickText(lang, {
+                          pl: `Wyślij (${selectedHoursList.length})`,
+                          en: `Submit (${selectedHoursList.length})`
+                        })}
+                </MacPushButton>
+              </div>
+            </div>
+          </form>
+
+          <aside className="w-[360px] shrink-0 border-l border-[var(--mac-row-divider)] bg-[var(--mac-window-bg)] flex flex-col min-h-0">
+            <div className="px-4 py-3 border-b border-[var(--mac-row-divider)] flex items-center justify-between gap-2 shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[12px] font-semibold text-[var(--mac-label-1)] truncate">
+                  {t.liveJustificationsTitle}
+                </span>
+                <span className="h-[18px] px-1.5 rounded-full bg-[var(--mac-fill-2)] text-[var(--mac-label-2)] text-[11px] font-semibold tabular-nums flex items-center justify-center shrink-0">
+                  {liveJustifications.length}
+                </span>
+              </div>
+              <MacPopupSelect
+                wrapperClassName="!w-auto shrink-0"
+                className="!w-auto"
+                value={liveJustificationsFilter}
+                onChange={(e) => {
+                  const f = e.target.value as '0' | '1' | '2' | '3'
+                  onChangeLiveFilter(f)
+                  onLoadLiveJustifications(f)
+                }}
               >
-                <UiSpinner size="large" className="text-[var(--mac-blue)]" />
-                <span className="text-[12px] text-[var(--mac-label-2)]">{t.updatingStatus}</span>
-              </MacGroupBox>
-            ) : liveJustifications.length > 0 ? (
-              <MacGroupBox title={t.liveJustificationsTitle} noPadding>
+                <option value="0">{pickText(lang, { pl: 'Wszystkie', en: 'All' })}</option>
+                <option value="1">{pickText(lang, { pl: 'Wysłane', en: 'Sent' })}</option>
+                <option value="2">{pickText(lang, { pl: 'Przyjęte', en: 'Accepted' })}</option>
+                <option value="3">{pickText(lang, { pl: 'Odrzucone', en: 'Rejected' })}</option>
+              </MacPopupSelect>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {isLoadingLiveJustifications ? (
+                <div className="py-20 flex flex-col items-center justify-center gap-2">
+                  <UiSpinner size="large" className="text-[var(--mac-blue)]" />
+                  <span className="text-[12px] text-[var(--mac-label-2)]">{t.updatingStatus}</span>
+                </div>
+              ) : liveJustifications.length > 0 ? (
                 <div className="mac-divide-y">
                   {liveJustifications.map((item) => {
                     const code =
-                      item.statusCode === 'accepted' ? 1 : item.statusCode === 'rejected' ? 2 : item.statusCode === 'pending' ? 0 : item.statusRaw || 0
+                      item.statusCode === 'accepted'
+                        ? 1
+                        : item.statusCode === 'rejected'
+                          ? 2
+                          : item.statusCode === 'pending'
+                            ? 0
+                            : item.statusRaw || 0
                     const meta = getJustificationStatusMeta(code, t)
                     const badgeColor =
                       meta.variant === 'green'
@@ -1055,23 +1446,60 @@ export function DesktopAttendanceView({
                           : meta.variant === 'orange'
                             ? 'bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)]'
                             : 'bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)]'
+
+                    const uniqueIsoDates = Array.from(
+                      new Set((item.dates || []).map(toIsoDateString).filter(Boolean))
+                    )
+                    const itemLessons = Array.isArray(item.lessons) ? item.lessons : []
+                    const singleIso = uniqueIsoDates.length === 1 ? uniqueIsoDates[0] : null
+                    const dayChipMeta = singleIso ? formatDayDate(singleIso, lang) : null
+                    const primaryTitle =
+                      singleIso && itemLessons.length > 0
+                        ? `${pickText(lang, {
+                            pl: itemLessons.length === 1 ? 'Lekcja' : 'Lekcje',
+                            en: itemLessons.length === 1 ? 'Period' : 'Periods'
+                          })} ${formatCompactLessonRange(itemLessons)}`
+                        : item.periodStr
+
                     return (
-                      <div key={item.id} className="p-3.5 flex flex-col gap-1.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="text-[13px] font-semibold text-[var(--mac-label-1)]">{item.periodStr}</div>
-                            <div className="text-[11px] text-[var(--mac-label-2)] tabular-nums">
-                              {item.count} {pickText(lang, { pl: 'godz.', en: 'periods' })} ·{' '}
-                              {formatHumanDate(item.sentAt, true, lang)}
-                              {item.teacher ? ` · ${item.teacher}` : ''}
+                      <div key={item.id} className="px-4 py-3 flex flex-col gap-2">
+                        <div className="flex items-start justify-between gap-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className="w-[38px] h-[38px] rounded-[10px] bg-[var(--mac-fill-3)] flex flex-col items-center justify-center shrink-0 leading-none">
+                              {dayChipMeta ? (
+                                <>
+                                  <span className="text-[12px] font-bold text-[var(--mac-label-1)] tabular-nums">
+                                    {dayChipMeta.dayNum}
+                                  </span>
+                                  <span className="text-[9px] uppercase font-semibold text-[var(--mac-label-2)] mt-0.5">
+                                    {dayChipMeta.monthName}
+                                  </span>
+                                </>
+                              ) : (
+                                <CalendarDays className="w-4 h-4 text-[var(--mac-label-2)]" strokeWidth={1.8} />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
+                                {primaryTitle}
+                              </div>
+                              <div className="text-[11px] text-[var(--mac-label-2)] tabular-nums truncate mt-0.5">
+                                {item.count} {pickText(lang, { pl: 'godz.', en: 'periods' })} ·{' '}
+                                {formatHumanDate(item.sentAt, true, lang)}
+                              </div>
+                              {item.teacher && (
+                                <div className="text-[11px] text-[var(--mac-label-3)] truncate">
+                                  {item.teacher}
+                                </div>
+                              )}
                             </div>
                           </div>
-                          <span className={cn('px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0', badgeColor)}>
+                          <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0', badgeColor)}>
                             {meta.label}
                           </span>
                         </div>
                         {item.comment && (
-                          <div className="text-[12px] text-[var(--mac-label-1)] bg-[var(--mac-fill-4)] px-3 py-1.5 rounded-[7px]">
+                          <div className="text-[11.5px] text-[var(--mac-label-1)] bg-[var(--mac-fill-4)] px-2.5 py-1.5 rounded-[7px]">
                             {item.comment}
                           </div>
                         )}
@@ -1079,17 +1507,23 @@ export function DesktopAttendanceView({
                     )
                   })}
                 </div>
-              </MacGroupBox>
-            ) : (
-              <MacGroupBox
-                title={t.liveJustificationsTitle}
-                contentClassName="py-16 text-center text-[13px] text-[var(--mac-label-2)] flex flex-col items-center gap-2"
-              >
-                <CheckCircle2 className="w-7 h-7 text-[var(--mac-label-3)]" />
-                <span>{t.liveJustificationsEmpty}</span>
-              </MacGroupBox>
-            )}
-          </div>
+              ) : (
+                <div className="py-20 px-6 flex flex-col items-center justify-center gap-3 text-center text-[var(--mac-label-2)]">
+                  <CheckCircle2 className="w-7 h-7 text-[var(--mac-label-3)] stroke-[1.5]" />
+                  <span className="text-[12px]">{t.liveJustificationsEmpty}</span>
+                  <MacPushButton
+                    type="button"
+                    size="sm"
+                    variant="tinted"
+                    icon={<RefreshCw className="w-3 h-3" />}
+                    onClick={() => onLoadLiveJustifications(liveJustificationsFilter)}
+                  >
+                    {t.refresh}
+                  </MacPushButton>
+                </div>
+              )}
+            </div>
+          </aside>
         </div>
       )}
     </div>

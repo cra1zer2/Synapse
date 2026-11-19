@@ -1,16 +1,16 @@
-# Synapse — "E-Dziennik" `[WIP · Alpha]`
+# Synapse — "E-Dziennik" `v2.0 Beta`
 
 **[🇬🇧 English](README.md)** · **[🇵🇱 Polski](README.pl.md)**
 
-**Szybki, prywatny i pozbawiony reklam "E-Dziennik" (klient Librus Synergia)** — stworzony, by zastąpić przeładowany portal webowy oraz płatne aplikacje mobilne lekkim, czytelnym widokiem na telefon i komputer.
+**Szybki, prywatny i pozbawiony reklam "E-Dziennik" (klient Librus Synergia)** — stworzony, by zastąpić przeładowany portal webowy oraz płatne aplikacje mobilne przejrzystą przestrzenią roboczą na telefon i komputer.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcra1zer2%2FSynapse)
 
 > **🚀 Podgląd na żywo i szybkie Demo:** Otwórz **[synapse-ten-smoky.vercel.app](https://synapse-ten-smoky.vercel.app)** i wpisz **`demo` / `demo`** (uczeń) lub **`demor` / `demo`** (rodzic), aby od razu przetestować aplikację na żywo bez własnego konta Librus.
 >
-> **⚠️ Status WIP / Alpha:** Projekt znajduje się obecnie w fazie **Alpha**. **Układ komputerowy (PC layout)** oraz wariant z **dolnym paskiem nawigacji (Bottom Nav Bar)** są jeszcze w trakcie przebudowy (`WIP`), dlatego **na ten moment zaleca się otwieranie aplikacji z telefonu (w domyślnym widoku widżetów)**.
+> **✨ Pełne wydanie v2.0 Beta:** Wersja **v2.0.0-beta.1** łączy kompletny **układ komputerowy (Desktop PC Workspace)** (Pulpit, Tygodniowy plan 0–9, Oceny z symulatorem „Co jeśli?”, Frekwencja z e-Usprawiedliwieniami, Wiadomości i Ogłoszenia) z dopracowaną **wersją mobilną** (Widżety oraz Dolny pasek nawigacji) w jednym wydaniu publicznej bety.
 
-> Subtelnie inspirowany nowoczesnym wzornictwem mobilnym, Synapse działa jako responsywna hybryda aplikacji webowej i PWA: wygodne karty dotykowe na smartfonie oraz dwukolumnowy układ na szerokim ekranie — bez reklam, śledzenia i zewnętrznych serwerów.
+> Zaprojektowany jako responsywna hybryda aplikacji webowej i PWA: płynne karty dotykowe oraz sprężyste przejścia na smartfonie i wielokolumnowe okno robocze w stylu macOS na monitorze — bez reklam, śledzenia i zewnętrznych serwerów.
 
 ---
 
@@ -29,14 +29,23 @@
   <a href="docs/screenshots/pl/iphone-dark-tabs.png" title="iPhone Pro · Ciemny + Pasek dolny">
     <img src="docs/screenshots/pl/iphone-dark-tabs.png" width="168" alt="Synapse iPhone Pro Ciemny Pasek dolny" />
   </a>
-  <br /><sub><b>Warianty mobilne:</b> Jasny · Widżety &nbsp;|&nbsp; Ciemny · Widżety &nbsp;|&nbsp; Jasny · Pasek dolny &nbsp;|&nbsp; Ciemny · Pasek dolny</sub>
+  <br /><sub><b>Warianty mobilne (1206×2622):</b> Jasny · Widżety &nbsp;|&nbsp; Ciemny · Widżety &nbsp;|&nbsp; Jasny · Pasek dolny &nbsp;|&nbsp; Ciemny · Pasek dolny</sub>
 </p>
 
 <p align="center">
-  <a href="docs/screenshots/pl/desktop-workspace.png" title="Widok desktopowy (Przestarzały · WIP)">
-    <img src="docs/screenshots/pl/desktop-workspace.png" width="684" alt="Układ desktopowy Synapse (Deprecated / WIP)" />
+  <a href="docs/screenshots/pl/desktop-workspace.png" title="Układ komputerowy · Jasny Pulpit (1440p)">
+    <img src="docs/screenshots/pl/desktop-workspace.png" width="708" alt="Synapse Układ komputerowy Jasny Pulpit (2560x1440)" />
   </a>
-  <br /><sub>⚠️ <b>Widok desktopowy [Deprecated · WIP]:</b> Powyższy zrzut ekranu z wersji PC jest <b>nieaktualny (deprecated)</b> i został tymczasowo wyłączony — układ komputerowy zostanie zaprojektowany od nowa i jest obecnie w trakcie prac (<code>WIP</code>).</sub>
+</p>
+
+<p align="center">
+  <a href="docs/screenshots/pl/desktop-timetable-dark.png" title="Układ komputerowy · Ciemny Plan tygodnia (1440p)">
+    <img src="docs/screenshots/pl/desktop-timetable-dark.png" width="350" alt="Synapse Układ komputerowy Ciemny Plan tygodnia (2560x1440)" />
+  </a>
+  <a href="docs/screenshots/pl/desktop-attendance.png" title="Układ komputerowy · Jasna Frekwencja i e-Usprawiedliwienia (1440p)">
+    <img src="docs/screenshots/pl/desktop-attendance.png" width="350" alt="Synapse Układ komputerowy Jasna Frekwencja (2560x1440)" />
+  </a>
+  <br /><sub><b>Układ komputerowy (1440p · 2560×1440):</b> Jasny · Pulpit &nbsp;|&nbsp; Ciemny · Tygodniowy plan 0–9 &nbsp;|&nbsp; Jasny · Frekwencja</sub>
 </p>
 
 ---
@@ -47,27 +56,27 @@ Po zakończeniu wsparcia dla popularnych open-source’owych aplikacji mobilnych
 
 **Synapse** rozwiązuje ten codzienny problem:
 - **Błyskawiczne działanie na co dzień** — otwiera się natychmiast z lokalnej pamięci podręcznej i dyskretnie synchronizuje zmiany w tle zamiast za każdym razem przeładowywać ciężkie tabele HTML.
-- **Własna, prywatna instancja za darmo** — żaden wspólny serwer osób trzecich nie przechowuje Twojego hasła. W minutę stawiasz własną kopię na Vercel (albo lokalnie) i dodajesz ją do ekranu głównego telefonu.
+- **Własna, prywatna instancja za darmo** — żaden wspólny serwer osób trzecich nie przechowuje Twojego hasła. W minutę stawiasz własną kopię na Vercel (albo lokalnie) i dodajesz ją do ekranu głównego telefonu lub otwierasz na komputerze.
 - **Dla ucznia i dla rodzica** — szybkie przełączanie między kontami, czytelne odchylenia frekwencji i wygodne wysyłanie e-usprawiedliwień.
 
 ---
 
 ## Główne możliwości
 
-- **Dzień szkolny w jednym spojrzeniu**: Status trwającej lekcji, odliczanie do końca przerwy, wyróżnione zmiany sal, ostatnie oceny i nieprzeczytane wiadomości na konfigurowalnym pulpicie.
+- **Adaptacyjny interfejs na telefon i komputer**:
+  - **Telefon (`< 1024px`)**: Wybierz konfigurowalne **Widżety** (zmiana kolejności i widoczności kart) lub natywny **Dolny pasek nawigacji** (`Plan`, `Oceny`, `Frekwencja`, `Wiadomości`) ze zsynchronizowanym gestem cofania z krawędzi i spójnymi animacjami sprężynowymi.
+  - **Komputer (`≥ 1024px`)**: Zwijany panel boczny z licznikami nieprzeczytanych i alertów, 4-kolumnowy **Pulpit** ze stałą siatką lekcji 0–9, **Tygodniowa macierz planu 0–9** z interaktywnym kalendarzem i podglądem bieżącej lekcji, **Oceny** z trybem symulacji (ołówek), **Frekwencja** (Podsumowanie KPI, Dziennik odchyleń oraz e-Usprawiedliwienia), dzielony widok **Wiadomości i Ogłoszeń** oraz okno **Ustawień**.
 - **Plan lekcji, terminarz i eksport `.ics`**: Automatyczne łączenie lekcji dwugodzinnych, czytelne oznaczenia zastępstw i odwołań, lista sprawdzianów i zadań domowych oraz eksport do kalendarza systemowego.
-- **Średnia ważona i interaktywny symulator ocen**: Natychmiastowa średnia za semestr i cały rok (`+0.5 / -0.25`), stonowana kolorystyka wyróżniająca na czerwono wyłącznie oceny alarmowe (`nb`, `0`, `1`) oraz przycisk `+` na górnym pasku przełączający listę przedmiotów w tryb symulacji z przestronnym oknem wyboru oceny i wagi.
+- **Średnia ważona i interaktywny symulator ocen**: Natychmiastowa średnia za semestr i cały rok (`+0.5 / -0.25`), stonowana kolorystyka wyróżniająca na czerwono wyłącznie oceny alarmowe (`nb`, `0`, `1`) oraz tryb symulacji `+` / edycji w wersjach mobilnej i komputerowej.
 - **Frekwencja, dziennik odchyleń i e-Usprawiedliwienia**: Dzisiejsze obecności (`OB`) oddzielone od dziennika odchyleń (`nb`, `usp`, `sp`, `sL`, `zw`), progi ostrzegawcze (`50%` / `75%`) oraz wysyłanie i śledzenie e-usprawiedliwień z konta rodzica.
 - **Wiadomości i Ogłoszenia**: Czysta skrzynka odbiorcza i wysłane, wygodne wyszukiwanie nauczycieli, pobieranie załączników oraz ogłoszenia szkolne.
 - **Rozszerzalne tłumaczenia i języki (`LANGUAGE_REGISTRY`)**: Błyskawiczne przełączanie interfejsu (`PL / EN` z gotową architekturą pod kolejne języki) oraz tłumaczenie w locie przez Google Translate dynamicznych treści z Librusa (przedmioty, tematy lekcji, opisy sprawdzianów i zadań, komentarze ocen, wiadomości i ogłoszenia) bez modyfikowania nazwisk, sal, dat i plików.
 
 ### Personalizacja i ustawienia
 
-Dopasuj system projektowy, układ ekranu i funkcje bezpośrednio w **Ustawieniach**:
-- **Dwa systemy projektowe (`iOS` i `Material 3 Expressive`)**: Przełączaj na żywo między stylem iOS (szkło i pogrupowane karty) a Material 3 Expressive znanym z Google Pixel (Android 16).
-- **Dynamiczne palety Material You**: Wybierz jeden z 8 gotowych motywów kolorystycznych lub wygeneruj pełną paletę tonalną jasną/ciemną z własnego koloru HEX.
-- **Tryby nawigacji i ekran główny**: Korzystaj z konfigurowalnych **Widżetów** (zmiana kolejności oraz ukrywanie kart: **Oceny**, **Plan lekcji**, **Sprawdziany i terminy**, **Wiadomości**, **Frekwencja**) albo z natywnego **Dolnego paska nawigacji** (`Plan`, `Oceny`, `Frekwencja`, `Wiadomości`).
-- **Motywy, widok i symulator**: Tryb jasny, ciemny lub systemowy, pełne nazwy przedmiotów, pasek dzisiejszej obecności na telefonie, widoczność zadań domowych, powiadomienie o szczęśliwym numerku oraz **Symulator ocen (Co jeśli?)**.
+Dopasuj motyw, układ ekranu i funkcje bezpośrednio w **Ustawieniach** (na telefonie i komputerze):
+- **Motywy i wygląd**: Tryb jasny, ciemny lub systemowy, pełne nazwy przedmiotów, pasek dzisiejszej obecności na telefonie, widoczność zadań domowych, powiadomienie o szczęśliwym numerku oraz **Symulator ocen (Co jeśli?)**.
+- **Tryby nawigacji mobilnej i ekran główny**: Korzystaj z konfigurowalnych **Widżetów** (zmiana kolejności oraz ukrywanie kart: **Oceny**, **Plan lekcji**, **Sprawdziany i terminy**, **Wiadomości**, **Frekwencja**) albo z natywnego **Dolnego paska nawigacji**.
 - **Wiele kont i diagnostyka**: Dodawaj i przełączaj konta Ucznia oraz Rodzica, opcjonalnie odblokuj e-usprawiedliwienia dla konta ucznia i sprawdzaj czasy odpowiedzi w podglądzie **Czas zapytań**.
 
 ---
@@ -117,10 +126,10 @@ Zbudowano przy użyciu **Next.js 15** (App Router i Server Actions), **React 19*
 ```text
 src/
 ├── app/            # Punkty wejścia Next.js, powłoka aplikacji i Server Actions (actions.ts)
-├── components/ui/  # Bazowe prymitywy interfejsu adaptacyjne dla motywów iOS i Material Design 3
+├── components/ui/  # Mobilne prymitywy interfejsu iOS, arkusze oraz panele ze swipe-back
 ├── config/         # Rozszerzalny rejestr języków i słowniki (LANGUAGE_REGISTRY / PL / EN)
-├── features/       # Modułowe sekcje funkcji (auth, dashboard, schedule, grades, attendance, messages, settings)
-├── hooks/          # Synchronizacja local-first, obsługa wielu kont, ustawienia i fizyka przewijania
+├── features/       # Modułowe sekcje (auth, dashboard, desktop, schedule, grades, attendance, messages, settings)
+├── hooks/          # Synchronizacja local-first, obsługa wielu kont, ustawienia i fizyka animacji
 ├── models/         # Typowane modele domenowe planu, ocen, frekwencji i wiadomości
 ├── services/       # Silnik sesji/cookie jar, klient Gateway, parsery, tłumaczenia i generator demo
 └── utils/          # Obliczenia średniej ważonej, okna czasowe lekcji, eksport .ics i formatowanie

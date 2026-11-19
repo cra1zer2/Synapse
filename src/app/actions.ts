@@ -138,6 +138,34 @@ export async function syncAllUserDataAction(
   }
 }
 
+export async function getTimetableWeekAction(
+  username: string,
+  pass: string,
+  translate: boolean | AppLanguage = false,
+  targetDateIso?: string
+): Promise<{ success: boolean; data?: SmartTimetableResult; error?: string }> {
+  try {
+    const cleanUser = String(username || '').trim()
+    const cleanPass = String(pass || '').trim()
+    if (!cleanUser || !cleanPass) {
+      return { success: false, error: 'Brak danych logowania' }
+    }
+    const translateTarget = resolveActionTranslateTarget(translate)
+    if (isDemoAccount(cleanUser)) {
+      return {
+        success: true,
+        data: getDemoSmartTimetable(targetDateIso, Boolean(translateTarget))
+      }
+    }
+    return await fetchSmartTimetable(cleanUser, cleanPass, translateTarget, targetDateIso)
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: toErrorMessage(error)
+    }
+  }
+}
+
 export async function getStudentProfileAction(
   username: string,
   pass: string

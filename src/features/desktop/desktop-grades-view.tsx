@@ -13,7 +13,7 @@ import {
 import { GradeItem, GradesResult } from '@/models/grade.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
 import { formatSubjectName } from '@/utils/text.util'
-import { formatHumanDate } from '@/utils/date.util'
+import { formatHumanDate, getSchoolWeekMondayIso, getTodayIsoString } from '@/utils/date.util'
 import { getGradeBadgeStyle } from '@/utils/badge.util'
 import {
   GradeCalcInput,
@@ -36,6 +36,28 @@ import {
 } from './mac-primitives'
 
 export type DesktopGradesTermFilter = 's1' | 's2' | 'all'
+export type DesktopGradesAddedFilter = 'all' | 'since-last-visit' | 'this-week'
+
+const LAST_VISIT_STORAGE_KEY = 'synapse_grades_last_visit_at'
+
+function matchesGradeAddedFilter(
+  g: GradeItem,
+  filter: DesktopGradesAddedFilter,
+  prevVisitMs: number,
+  weekStartIso: string
+): boolean {
+  if (filter === 'all') return true
+  const raw = (g.addDate || g.date || '').trim()
+  if (!raw) return false
+  const datePart = raw.split(/[T ]/)[0]
+  if (filter === 'this-week') {
+    return Boolean(datePart && datePart >= weekStartIso)
+  }
+  const hasTime = /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(raw)
+  const parsed = new Date(hasTime ? raw.replace(' ', 'T') : `${datePart}T23:59:59`)
+  if (isNaN(parsed.getTime())) return false
+  return parsed.getTime() > prevVisitMs
+}
 
 interface DesktopGradesViewProps {
   gradesData: GradesResult | null
@@ -44,6 +66,8 @@ interface DesktopGradesViewProps {
   showFullSubjectNames: boolean
   enableGradeSimulator: boolean
   termFilter: DesktopGradesTermFilter
+  addedFilter: DesktopGradesAddedFilter
+  onChangeAddedFilter: (val: DesktopGradesAddedFilter) => void
   isEditMode: boolean
   onToggleEditMode: (val: boolean) => void
   lang: AppLanguage
@@ -74,6 +98,8 @@ export function DesktopGradesView({
   showFullSubjectNames,
   enableGradeSimulator,
   termFilter,
+  addedFilter,
+  onChangeAddedFilter,
   isEditMode,
   onToggleEditMode,
   lang,
@@ -94,10 +120,44 @@ export function DesktopGradesView({
   const [editTarget, setEditTarget] = useState<ActiveGradeEditTarget | null>(null)
   const [simGradeVal, setSimGradeVal] = useState<string>('5')
   const [simWeightVal, setSimWeightVal] = useState<number>(2)
+  const [prevVisitMs, setPrevVisitMs] = useState<number>(() => Date.now() - 24 * 60 * 60 * 1000)
+
+  const weekStartIso = useMemo(() => getSchoolWeekMondayIso(getTodayIsoString()), [])
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(LAST_VISIT_STORAGE_KEY)
+      const parsed = saved ? Number(saved) : NaN
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        setPrevVisitMs(parsed)
+      }
+      window.localStorage.setItem(LAST_VISIT_STORAGE_KEY, String(Date.now()))
+    } catch {
+    }
+  }, [])
 
   const subjects = useMemo(() => {
     return [...(gradesData?.subjects || [])].sort((a, b) => a.subject.localeCompare(b.subject))
   }, [gradesData?.subjects])
+
+  const filteredSubjectRows = useMemo(() => {
+    return subjects
+      .map((sub) => {
+        const s1Items = sub.semester1
+          .map((g, idx) => ({ g, key: `s1-${idx}` }))
+          .filter(({ g }) => matchesGradeAddedFilter(g, addedFilter, prevVisitMs, weekStartIso))
+        const s2Items = sub.semester2
+          .map((g, idx) => ({ g, key: `s2-${idx}` }))
+          .filter(({ g }) => matchesGradeAddedFilter(g, addedFilter, prevVisitMs, weekStartIso))
+        return { sub, s1Items, s2Items }
+      })
+      .filter(({ s1Items, s2Items }) => {
+        if (addedFilter === 'all') return true
+        if (termFilter === 's1') return s1Items.length > 0
+        if (termFilter === 's2') return s2Items.length > 0
+        return s1Items.length > 0 || s2Items.length > 0
+      })
+  }, [subjects, addedFilter, termFilter, prevVisitMs, weekStartIso])
 
   useEffect(() => {
     if (initialSelectedGrade) {
@@ -111,10 +171,11 @@ export function DesktopGradesView({
   }, [initialSelectedGrade, onToggleEditMode])
 
   useEffect(() => {
-    if (!simSubject && subjects.length > 0) {
-      setSimSubject(subjects[0].subject)
+    if (!isEditMode) {
+      setSimSubject(null)
+      setEditTarget(null)
     }
-  }, [subjects, simSubject])
+  }, [isEditMode])
 
   const inspectorTab: 'details' | 'simulator' =
     isEditMode && enableGradeSimulator ? 'simulator' : 'details'
@@ -432,7 +493,6 @@ export function DesktopGradesView({
           </MacGroupBox>
         </div>
 
-        {/* Grades Data Table */}
         {gradesError && !gradesData ? (
           <div className="py-20 flex flex-col items-center justify-center gap-3 text-center">
             <AlertCircle className="w-8 h-8 text-[var(--mac-red)]" />
@@ -446,7 +506,7 @@ export function DesktopGradesView({
             <UiSpinner size="large" className="text-[var(--mac-blue)]" />
             <span className="text-[13px] text-[var(--mac-label-2)]">{t.loadingTimetable}</span>
           </div>
-        ) : subjects.length > 0 ? (
+        ) : filteredSubjectRows.length > 0 ? (
           <MacGroupBox noPadding>
             <div className="w-full overflow-x-auto">
               <table className="w-full border-collapse text-left">
@@ -476,7 +536,7 @@ export function DesktopGradesView({
                   </tr>
                 </thead>
                 <tbody className="mac-divide-y">
-                  {subjects.map((sub) => {
+                  {filteredSubjectRows.map(({ sub, s1Items, s2Items }) => {
                     const m = metrics.bySubject.get(sub.subject)
                     const simList = enableGradeSimulator ? simulatedBySubject[sub.subject] || [] : []
                     const ovMap = enableGradeSimulator ? realOverridesBySubject[sub.subject] || {} : {}
@@ -494,8 +554,14 @@ export function DesktopGradesView({
                     return (
                       <tr
                         key={sub.subject}
+                        onClick={() => {
+                          if (inspectorTab === 'simulator') {
+                            openSimForSubject(sub.subject, null)
+                          }
+                        }}
                         className={cn(
                           'transition-colors',
+                          inspectorTab === 'simulator' && 'cursor-pointer',
                           isActiveRow ? 'bg-[var(--ios-blue-subtle)]/30' : 'hover:bg-[var(--mac-fill-4)]'
                         )}
                       >
@@ -513,7 +579,7 @@ export function DesktopGradesView({
                         {(termFilter === 'all' || termFilter === 's1') && (
                           <td className="py-2.5 px-3 align-middle">
                             <div className="flex flex-wrap items-center gap-1">
-                              {sub.semester1.map((g, idx) => renderGradeChip(g, sub.subject, `s1-${idx}`))}
+                              {s1Items.map(({ g, key }) => renderGradeChip(g, sub.subject, key))}
                               {termFilter === 's1' &&
                                 simList.map((sg) => (
                                   <button
@@ -532,7 +598,7 @@ export function DesktopGradesView({
                                     {sg.grade}
                                   </button>
                                 ))}
-                              {sub.semester1.length === 0 && (termFilter !== 's1' || simList.length === 0) && (
+                              {s1Items.length === 0 && (termFilter !== 's1' || simList.length === 0) && (
                                 <span className="text-[11px] text-[var(--mac-label-3)]">—</span>
                               )}
                             </div>
@@ -542,7 +608,7 @@ export function DesktopGradesView({
                         {(termFilter === 'all' || termFilter === 's2') && (
                           <td className="py-2.5 px-3 align-middle">
                             <div className="flex flex-wrap items-center gap-1">
-                              {sub.semester2.map((g, idx) => renderGradeChip(g, sub.subject, `s2-${idx}`))}
+                              {s2Items.map(({ g, key }) => renderGradeChip(g, sub.subject, key))}
                               {simList.map((sg) => (
                                 <button
                                   key={sg.id}
@@ -560,7 +626,7 @@ export function DesktopGradesView({
                                   {sg.grade}
                                 </button>
                               ))}
-                              {sub.semester2.length === 0 && simList.length === 0 && (
+                              {s2Items.length === 0 && simList.length === 0 && (
                                 <span className="text-[11px] text-[var(--mac-label-3)]">—</span>
                               )}
                             </div>
@@ -606,6 +672,18 @@ export function DesktopGradesView({
               </table>
             </div>
           </MacGroupBox>
+        ) : subjects.length > 0 ? (
+          <div className="py-16 flex flex-col items-center justify-center gap-3 text-center text-[var(--mac-label-2)]">
+            <GraduationCap className="w-8 h-8 text-[var(--mac-label-3)]" />
+            <span className="text-[13px] font-medium">
+              {addedFilter === 'since-last-visit'
+                ? pickText(lang, { pl: 'Brak nowych ocen od ostatniego wejścia', en: 'No new grades since your last visit' })
+                : pickText(lang, { pl: 'Brak ocen dodanych w tym tygodniu', en: 'No grades added this week' })}
+            </span>
+            <MacPushButton variant="tinted" size="sm" onClick={() => onChangeAddedFilter('all')}>
+              {pickText(lang, { pl: 'Pokaż wszystkie', en: 'Show all' })}
+            </MacPushButton>
+          </div>
         ) : (
           <div className="py-20 flex flex-col items-center justify-center gap-2 text-[var(--mac-label-2)]">
             <GraduationCap className="w-8 h-8 text-[var(--mac-label-3)]" />
@@ -721,10 +799,13 @@ export function DesktopGradesView({
                 className="w-full"
                 value={simSubject || ''}
                 onChange={(e) => {
-                  setSimSubject(e.target.value)
+                  setSimSubject(e.target.value || null)
                   setEditTarget(null)
                 }}
               >
+                <option value="">
+                  {pickText(lang, { pl: 'Wybierz przedmiot...', en: 'Select a subject...' })}
+                </option>
                 {subjects.map((s) => (
                   <option key={s.subject} value={s.subject}>
                     {formatSubjectName(s.subject, showFullSubjectNames)}
@@ -733,6 +814,18 @@ export function DesktopGradesView({
               </MacPopupSelect>
             </div>
 
+            {!simSubject ? (
+              <div className="py-16 flex flex-col items-center justify-center gap-2 text-center text-[var(--mac-label-3)] px-4">
+                <Calculator className="w-7 h-7 stroke-[1.5]" />
+                <span className="text-[12px] text-[var(--mac-label-2)] leading-relaxed">
+                  {pickText(lang, {
+                    pl: 'Wybierz przedmiot w tabeli lub z listy powyżej, aby rozpocząć symulację ocen.',
+                    en: 'Select a subject from the table or above to start simulating grades.'
+                  })}
+                </span>
+              </div>
+            ) : (
+              <>
             {activeSimMetrics && (
               <div className="grid grid-cols-3 gap-2">
                 <div className="mac-group-box p-2.5 text-center">
@@ -926,6 +1019,8 @@ export function DesktopGradesView({
                   ))}
                 </div>
               </MacGroupBox>
+            )}
+              </>
             )}
           </div>
         )}

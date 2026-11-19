@@ -93,10 +93,10 @@ export function GradesSimToggleButton({
       aria-label={label}
       aria-pressed={active}
       className={cn(
-        'w-[34px] h-[34px] flex items-center justify-center shrink-0 cursor-pointer select-none transition-all duration-200',
+        'w-[34px] h-[34px] flex items-center justify-center shrink-0 cursor-pointer select-none transition-all duration-200 active:scale-90',
         active
           ? 'rounded-full bg-[var(--ios-blue)] text-white shadow-[var(--ios-primary-pill-shadow)]'
-          : 'rounded-full ios-glass-control text-[var(--ios-blue)] active:scale-90'
+          : 'rounded-full ios-glass-control text-[var(--ios-blue)]'
       )}
     >
       <Plus

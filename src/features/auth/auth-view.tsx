@@ -502,13 +502,7 @@ export function AuthView({
                     >
                       demo / demo
                     </button>
-                    <span className="lg:hidden">
-                      {pickText(displayLang, {
-                        pl: ' (najlepiej otwierać z telefonu · PC i dolny pasek w WIP).',
-                        en: ' (best viewed on a phone · PC & bottom bar are WIP).'
-                      })}
-                    </span>
-                    <span className="hidden lg:inline">.</span>
+                    .
                   </p>
                 )}
 

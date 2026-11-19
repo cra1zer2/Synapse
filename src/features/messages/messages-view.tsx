@@ -302,9 +302,9 @@ export function MessagesView({
             type="button"
             onClick={() => setOnlyUnread((prev) => !prev)}
             className={cn(
-              'h-[42px] px-3.5 sm:px-4 rounded-full text-[13px] font-medium tracking-[-0.1px] shrink-0 transition-colors cursor-pointer select-none',
+              'h-[42px] px-3.5 sm:px-4 rounded-full text-[13px] font-semibold tracking-[-0.1px] shrink-0 transition-all duration-150 active:scale-95 cursor-pointer select-none',
               onlyUnread
-                ? 'bg-[var(--ios-blue)] text-white shadow-[var(--ios-primary-pill-shadow)] font-semibold'
+                ? 'bg-[var(--ios-blue)] text-white shadow-[var(--ios-primary-pill-shadow)]'
                 : 'ios-element-pill text-[var(--ios-secondary)] hover:text-[var(--ios-label)]'
             )}
           >

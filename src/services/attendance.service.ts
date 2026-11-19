@@ -204,7 +204,9 @@ export async function fetchAttendanceMetrics(
                 if (!dayMap[dateStr].lessons[lessonNo]) {
                     dayMap[dateStr].lessons[lessonNo] = {
                         symbol: 'OB',
-                        type: 'ob'
+                        type: 'ob',
+                        subject: subjectName,
+                        teacher: teacherName || undefined
                     }
                 }
             } else {
@@ -233,7 +235,9 @@ export async function fetchAttendanceMetrics(
 
                 dayMap[dateStr].lessons[lessonNo] = {
                     symbol: typeInfo.type === 'sl' ? 'sL' : (typeInfo.type === 'ob' ? 'NB' : typeInfo.type.toUpperCase()),
-                    type: typeInfo.type === 'ob' ? 'nb' : typeInfo.type
+                    type: typeInfo.type === 'ob' ? 'nb' : typeInfo.type,
+                    subject: subjectName,
+                    teacher: teacherName || undefined
                 }
 
                 if (typeInfo.type === 'sl') {
@@ -364,6 +368,11 @@ const textsToTranslate = new Set<string>()
             })
             parsedAbsences.forEach(collectAbsence)
             unexcusedAbsences.forEach(collectAbsence)
+            sortedDays.forEach((d) => {
+                Object.values(d.lessons).forEach((l) => {
+                    if (l?.subject) textsToTranslate.add(l.subject)
+                })
+            })
 
             const map = await translateBatch(Array.from(textsToTranslate), targetCode)
             const visitedAbsences = new Set<(typeof parsedAbsences)[number]>()
@@ -380,6 +389,13 @@ const textsToTranslate = new Set<string>()
                 s.absences.forEach(applyAbsence)
             })
             unexcusedAbsences.forEach(applyAbsence)
+            sortedDays.forEach((d) => {
+                Object.values(d.lessons).forEach((l) => {
+                    if (l?.subject && map[l.subject]) {
+                        l.subject = map[l.subject]
+                    }
+                })
+            })
         }
 
         const result: AttendanceResult = {

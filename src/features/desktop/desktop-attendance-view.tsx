@@ -550,11 +550,11 @@ export function DesktopAttendanceView({
           <div className="flex-1 min-w-0 overflow-y-auto p-5 flex flex-col gap-4">
             <div className="grid grid-cols-5 gap-2.5">
               {[
-                { label: pickText(lang, { pl: 'Nieusp. (nb)', en: 'Unexcused (nb)' }), val: journalSummary.nu, tone: 'text-[var(--mac-red)]' },
-                { label: pickText(lang, { pl: 'Usprawiedl. (u)', en: 'Excused (u)' }), val: journalSummary.u, tone: 'text-[var(--mac-green)]' },
-                { label: pickText(lang, { pl: 'Spóźnienia (sp)', en: 'Late (sp)' }), val: journalSummary.sp, tone: 'text-[var(--mac-orange)]' },
-                { label: pickText(lang, { pl: 'Zwolnienia (zw)', en: 'Dismissed (zw)' }), val: journalSummary.zw, tone: 'text-[var(--mac-purple)]' },
-                { label: pickText(lang, { pl: 'Razem nieob.', en: 'Total missed' }), val: journalSummary.total, tone: 'text-[var(--mac-label-1)]' }
+                { label: pickText(lang, { pl: 'Nieusp. (nb)', en: 'Unexc. (nb)' }), val: journalSummary.nu, tone: 'text-[var(--mac-red)]' },
+                { label: pickText(lang, { pl: 'Uspraw. (u)', en: 'Excused (u)' }), val: journalSummary.u, tone: 'text-[var(--mac-green)]' },
+                { label: pickText(lang, { pl: 'Spóźn. (sp)', en: 'Late (sp)' }), val: journalSummary.sp, tone: 'text-[var(--mac-orange)]' },
+                { label: pickText(lang, { pl: 'Zwoln. (zw)', en: 'Dismiss. (zw)' }), val: journalSummary.zw, tone: 'text-[var(--mac-purple)]' },
+                { label: pickText(lang, { pl: 'Razem', en: 'Total' }), val: journalSummary.total, tone: 'text-[var(--mac-label-1)]' }
               ].map((stat) => (
                 <MacGroupBox key={stat.label}>
                   <div className="text-[11px] font-semibold uppercase text-[var(--mac-label-2)] truncate">{stat.label}</div>
@@ -649,13 +649,33 @@ export function DesktopAttendanceView({
                       .filter(([, l]) => l && l.type !== 'ob')
                       .sort(([a], [b]) => Number(a) - Number(b))
                       .map(([num, l]) => {
+                        const lessonNum = Number(num)
                         const st = getAttendanceTypeStyle(l.type)
+                        const matchedAbsence = (attendanceData?.subjects || [])
+                          .flatMap((s) => s.absences)
+                          .find(
+                            (a) =>
+                              (a.date === selectedJournalDay.date ||
+                                a.date === selectedJournalDay.isoDate) &&
+                              a.lessonNumber === lessonNum
+                          )
+                        const resolvedSubject = l.subject || matchedAbsence?.subject
+                        const resolvedTeacher = l.teacher || matchedAbsence?.teacher
                         return (
-                          <div key={num} className="px-3.5 py-2.5 flex items-center justify-between gap-2 text-[12px]">
-                            <span className="font-medium text-[var(--mac-label-1)]">
-                              {t.lessonNumberLabel(Number(num))}
-                            </span>
-                            <span className={cn('px-2 py-0.5 rounded-[5px] text-[11px] font-semibold', st.bgClass, st.textClass)}>
+                          <div key={num} className="px-3.5 py-2.5 flex items-center justify-between gap-3 text-[12px]">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-semibold text-[var(--mac-label-1)] leading-snug truncate">
+                                {resolvedSubject
+                                  ? `${lessonNum}. ${formatSubjectName(resolvedSubject, showFullSubjectNames)}`
+                                  : t.lessonNumberLabel(lessonNum)}
+                              </div>
+                              {resolvedTeacher && (
+                                <div className="text-[11px] text-[var(--mac-label-2)] truncate">
+                                  {resolvedTeacher}
+                                </div>
+                              )}
+                            </div>
+                            <span className={cn('px-2 py-0.5 rounded-[5px] text-[11px] font-semibold shrink-0', st.bgClass, st.textClass)}>
                               {l.symbol}
                             </span>
                           </div>

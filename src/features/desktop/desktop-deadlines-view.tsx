@@ -33,8 +33,6 @@ interface DesktopDeadlinesViewProps {
   initialSelectedEvent?: TimetableEvent | null
 }
 
-type CategoryFilter = 'all' | 'exam' | 'quiz' | 'homework' | 'other'
-
 export function DesktopDeadlinesView({
   timetableData,
   showHomeworks,
@@ -54,7 +52,6 @@ export function DesktopDeadlinesView({
     return [parts[0], (parts[1] || 1) - 1]
   }, [todayIso])
 
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [selectedEvent, setSelectedEvent] = useState<TimetableEvent | null>(initialSelectedEvent || null)
   const [calYear, setCalYear] = useState(todayYear)
   const [calMonth, setCalMonth] = useState(todayMonth)
@@ -75,12 +72,6 @@ export function DesktopDeadlinesView({
     }
   }, [initialSelectedEvent])
 
-  useEffect(() => {
-    if (!showHomeworks && categoryFilter === 'homework') {
-      setCategoryFilter('all')
-    }
-  }, [showHomeworks, categoryFilter])
-
   const allEvents = useMemo(() => {
     if (!timetableData) return []
     const rawList = [
@@ -100,34 +91,9 @@ export function DesktopDeadlinesView({
     return deduped.sort((a, b) => a.isoDate.localeCompare(b.isoDate) || (a.lessonNumber || 99) - (b.lessonNumber || 99))
   }, [timetableData, showHomeworks])
 
-  const categoryCounts = useMemo(() => {
-    const counts = { all: 0, exam: 0, quiz: 0, homework: 0, other: 0 }
-    for (const ev of allEvents) {
-      if (!showArchived && ev.isoDate < todayIso) continue
-      counts.all++
-      if (ev.category === 'exam') counts.exam++
-      else if (ev.category === 'quiz') counts.quiz++
-      else if (ev.category === 'homework') counts.homework++
-      else counts.other++
-    }
-    return counts
-  }, [allEvents, showArchived, todayIso])
-
   const filteredEvents = useMemo(() => {
-    return allEvents.filter((ev) => {
-      if (!showArchived && ev.isoDate < todayIso) return false
-      if (categoryFilter === 'exam' && ev.category !== 'exam') return false
-      if (categoryFilter === 'quiz' && ev.category !== 'quiz') return false
-      if (categoryFilter === 'homework' && ev.category !== 'homework') return false
-      if (
-        categoryFilter === 'other' &&
-        (ev.category === 'exam' || ev.category === 'quiz' || ev.category === 'homework')
-      ) {
-        return false
-      }
-      return true
-    })
-  }, [allEvents, showArchived, categoryFilter, todayIso])
+    return allEvents.filter((ev) => showArchived || ev.isoDate >= todayIso)
+  }, [allEvents, showArchived, todayIso])
 
   useEffect(() => {
     if (!hasAutoSelectedRef.current && filteredEvents.length > 0) {
@@ -172,16 +138,6 @@ export function DesktopDeadlinesView({
     setCalYear(dt.getUTCFullYear())
     setCalMonth(dt.getUTCMonth())
   }
-
-  const filterChips: Array<{ id: CategoryFilter; label: string; count: number }> = [
-    { id: 'all', label: pickText(lang, { pl: 'Wszystkie', en: 'All' }), count: categoryCounts.all },
-    { id: 'exam', label: pickText(lang, { pl: 'Sprawdziany', en: 'Exams' }), count: categoryCounts.exam },
-    { id: 'quiz', label: pickText(lang, { pl: 'Kartkówki', en: 'Quizzes' }), count: categoryCounts.quiz },
-    ...(showHomeworks
-      ? [{ id: 'homework' as const, label: pickText(lang, { pl: 'Zadania domowe', en: 'Homework' }), count: categoryCounts.homework }]
-      : []),
-    { id: 'other', label: pickText(lang, { pl: 'Inne', en: 'Other' }), count: categoryCounts.other }
-  ]
 
   const renderEventDetailInspector = () => {
     if (!selectedEvent) {
@@ -268,36 +224,6 @@ export function DesktopDeadlinesView({
     <div className="h-full flex min-h-0 select-none">
       {/* Main Pane */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
-        {/* Category Filter Chips Bar (search, past & view switcher live in macOS 27 Unified Toolbar) */}
-        <div className="px-5 py-2.5 border-b border-[var(--mac-row-divider)] flex items-center gap-1.5 flex-wrap shrink-0">
-          {filterChips.map((chip) => {
-            const active = categoryFilter === chip.id
-            return (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => setCategoryFilter(chip.id)}
-                className={cn(
-                  'h-[28px] px-3 rounded-full text-[12px] font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors',
-                  active
-                    ? 'bg-[var(--mac-blue)] text-white font-semibold'
-                    : 'bg-[var(--mac-fill-3)] text-[var(--mac-label-1)] hover:bg-[var(--mac-fill-2)]'
-                )}
-              >
-                <span>{chip.label}</span>
-                <span
-                  className={cn(
-                    'text-[10px] px-1.5 py-0.5 rounded-full tabular-nums',
-                    active ? 'bg-white/20 text-white' : 'bg-[var(--mac-fill-2)] text-[var(--mac-label-2)]'
-                  )}
-                >
-                  {chip.count}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-
         {/* Content Body */}
         <div className="flex-1 min-h-0 overflow-y-auto p-5">
           {filteredEvents.length > 0 ? (
@@ -334,19 +260,8 @@ export function DesktopDeadlinesView({
                           </span>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                'px-2 py-0.5 rounded-[5px] text-[10px] font-semibold uppercase tracking-wide shrink-0',
-                                st.bgClass,
-                                st.textClass
-                              )}
-                            >
-                              {badgeLabel}
-                            </span>
-                            <span className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
-                              {primaryTitle}
-                            </span>
+                          <div className="text-[13px] font-semibold text-[var(--mac-label-1)] leading-snug">
+                            {primaryTitle}
                           </div>
                           {ev.description && (
                             <p className="text-[12px] text-[var(--mac-label-2)] truncate mt-0.5">
@@ -356,16 +271,15 @@ export function DesktopDeadlinesView({
                         </div>
                       </div>
 
-                      <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
-                        <span className="text-[11px] font-medium text-[var(--mac-label-2)]">
-                          {dayMeta.weekday}
-                        </span>
-                        {ev.lessonNumber !== undefined && (
-                          <span className="text-[11px] text-[var(--mac-label-3)] tabular-nums">
-                            {t.lessonNumberLabel(ev.lessonNumber)}
-                          </span>
+                      <span
+                        className={cn(
+                          'px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide shrink-0',
+                          st.bgClass,
+                          st.textClass
                         )}
-                      </div>
+                      >
+                        {badgeLabel}
+                      </span>
                     </button>
                   )
                 })}

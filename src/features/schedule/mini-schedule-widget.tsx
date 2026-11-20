@@ -345,13 +345,6 @@ export function MiniScheduleWidget({
     return list.filter((l) => !l.isCancelled).slice(0, 2)
   }, [shouldShowNextDay, nextDayLessons, todayLessons, showAllLessons, scheduleState.currentLesson, scheduleState.nextLesson])
 
-  const targetDayLessons = shouldShowNextDay ? nextDayLessons : todayLessons
-  const hasAnyActiveLesson = targetDayLessons.some((l) => !l.isCancelled)
-  const hasLaterStart = Boolean(hasAnyActiveLesson && targetDayLessons[0]?.isCancelled)
-  const hasEarlierFinish = Boolean(
-    hasAnyActiveLesson && targetDayLessons.length > 1 && targetDayLessons[targetDayLessons.length - 1]?.isCancelled
-  )
-
   const isCardEmptyOrEnded =
     !isLoading &&
     Boolean(timetableData) &&
@@ -388,12 +381,6 @@ export function MiniScheduleWidget({
           ) : badgeLabel ? (
             <UiBadge variant={'neutral'} size="sm" text={badgeLabel} />
           ) : null}
-          {!isLoading && timetableData && hasLaterStart && (
-            <UiBadge variant="orange" size="xs" text={t.laterStartLabel} className="hidden sm:inline-flex" />
-          )}
-          {!isLoading && timetableData && hasEarlierFinish && (
-            <UiBadge variant="blue" size="xs" text={t.earlierFinishLabel} className="hidden sm:inline-flex" />
-          )}
         </div>
 
         <svg width="16" height="16" className="w-4 h-4 text-[var(--ios-tertiary)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

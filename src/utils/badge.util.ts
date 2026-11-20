@@ -133,7 +133,7 @@ export function getAttendanceTypeStyle(shortType: string): {
   dotClass: string
 } {
   const short = (shortType || '').trim().toLowerCase()
-  if (short === 'nb' || short === 'nn') {
+  if (short === 'nb' || short === 'nn' || short === 'sl') {
     return {
       variant: 'red',
       bgClass: 'bg-[var(--ios-red-subtle)]',

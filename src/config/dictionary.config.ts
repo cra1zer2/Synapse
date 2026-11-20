@@ -150,8 +150,6 @@ export interface AppDictionary {
   liveJustificationsEmpty: string
   mobileTodayAttendanceTitle: string
   mobileTodayAttendanceDesc: string
-  laterStartLabel: string
-  earlierFinishLabel: string
   exportCalendarIcs: string
   pullToRefreshHint: string
   releaseToRefreshHint: string
@@ -248,8 +246,6 @@ const EN_DICTIONARY: AppDictionary = {
   liveJustificationsEmpty: 'No requests found in this status',
   mobileTodayAttendanceTitle: "Show today's attendance on phone",
   mobileTodayAttendanceDesc: "Adds today's lesson dots row to the compact dashboard widget",
-  laterStartLabel: 'Later start',
-  earlierFinishLabel: 'Earlier finish',
   exportCalendarIcs: 'Add to Calendar (.ics)',
   pullToRefreshHint: 'Pull to refresh',
   releaseToRefreshHint: 'Release to sync',
@@ -347,8 +343,6 @@ const PL_DICTIONARY: AppDictionary = {
   liveJustificationsEmpty: 'Brak wniosków w tym statusie',
   mobileTodayAttendanceTitle: 'Dzisiejsza obecność na telefonie',
   mobileTodayAttendanceDesc: 'Pokazuje pasek lekcji z dzisiaj na karcie frekwencji',
-  laterStartLabel: 'Późniejszy początek',
-  earlierFinishLabel: 'Wcześniejszy koniec',
   exportCalendarIcs: 'Dodaj do Kalendarza (.ics)',
   pullToRefreshHint: 'Pociągnij, aby odświeżyć',
   releaseToRefreshHint: 'Puść, aby zsynchronizować',

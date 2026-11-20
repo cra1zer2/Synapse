@@ -13,9 +13,14 @@ import { AttendanceResult, SubjectAttendance } from '@/models/attendance.model'
 import { SmartTimetableResult } from '@/models/timetable.model'
 import { LiveJustificationItem } from '@/models/justification.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
-import { createJustificationAction, getLiveJustificationsAction } from '@/app/actions'
+import {
+  createJustificationAction,
+  getLiveJustificationsAction,
+  getTimetableWeekAction
+} from '@/app/actions'
 import { isStudentUsername } from '@/utils/account.util'
 import { addRequestLog } from '@/utils/request-logger.util'
+import { useSubTabMotion } from '@/hooks/subtab-motion.hook'
 import { UiScreen } from '@/components/ui/ui-screen'
 import { UiSegmentedControl } from '@/components/ui/ui-controls'
 import { UiEmptyState } from '@/components/ui/ui-empty-state'
@@ -44,7 +49,7 @@ export function useAttendanceFeature({
   onJustificationSubmitted
 }: UseAttendanceFeatureOptions) {
   const [attendanceViewTab, setAttendanceViewTab] = useState<'summary' | 'journal'>('summary')
-  const [attendanceSubDir, setAttendanceSubDir] = useState<1 | -1>(1)
+  const { animClass: subTabAnimClass, trigger: triggerSubTabMotion } = useSubTabMotion(230)
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<SubjectAttendance | null>(null)
   const [showManualExcuse, setShowManualExcuse] = useState(false)
   const [excuseInitialTab, setExcuseInitialTab] = useState<'nb' | 'range' | 'hours'>('range')
@@ -81,10 +86,14 @@ export function useAttendanceFeature({
     onOpenAttendanceScreen()
   }, [onOpenAttendanceScreen])
 
-  const changeAttendanceViewTab = useCallback((next: 'summary' | 'journal') => {
-    setAttendanceSubDir(next === 'journal' ? 1 : -1)
-    setAttendanceViewTab(next)
-  }, [])
+  const changeAttendanceViewTab = useCallback(
+    (next: 'summary' | 'journal') => {
+      if (next === attendanceViewTab) return
+      triggerSubTabMotion(next === 'journal' ? 1 : -1)
+      setAttendanceViewTab(next)
+    },
+    [attendanceViewTab, triggerSubTabMotion]
+  )
 
   const handleOpenLiveJustifications = useCallback(
     async (filterVal?: '0' | '1' | '2' | '3') => {
@@ -169,9 +178,22 @@ export function useAttendanceFeature({
     [resolveParentCredentials, lang, onJustificationSubmitted]
   )
 
+  const handleFetchWeekTimetable = useCallback(
+    async (weekStartIso: string): Promise<SmartTimetableResult | null> => {
+      if (!username || !password || !weekStartIso) return null
+      try {
+        const res = await getTimetableWeekAction(username, password, lang, weekStartIso)
+        return res.success && res.data ? res.data : null
+      } catch {
+        return null
+      }
+    },
+    [username, password, lang]
+  )
+
   return {
     attendanceViewTab,
-    attendanceSubDir,
+    subTabAnimClass,
     changeAttendanceViewTab,
     selectedSubjectDetail,
     setSelectedSubjectDetail,
@@ -190,7 +212,8 @@ export function useAttendanceFeature({
     openAttendance,
     openJournal,
     handleOpenLiveJustifications,
-    handleSubmitJustifications
+    handleSubmitJustifications,
+    handleFetchWeekTimetable
   }
 }
 
@@ -250,7 +273,7 @@ export function AttendanceFeature({
       />
       <div
         key={controller.attendanceViewTab}
-        className={controller.attendanceSubDir >= 0 ? 'tab-enter-right' : 'tab-enter-left'}
+        className={controller.subTabAnimClass}
       >
         {controller.attendanceViewTab === 'summary' ? (
           <AttendanceView

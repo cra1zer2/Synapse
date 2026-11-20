@@ -52,48 +52,82 @@ export async function fetchAttendanceMetrics(
         const rawUsers = Array.isArray(usersRes?.Users) ? usersRes.Users : []
         const lessonRanges = Array.isArray(schoolsRes?.School?.LessonsRange) ? schoolsRes.School.LessonsRange : []
 
-        const typeMap = new Map<number, { type: 'nb' | 'u' | 'sl' | 'sp' | 'zw' | 'ob'; typeName: string; isUnexcused: boolean; isPresence: boolean }>()
+        type NormalizedAttendanceType = 'nb' | 'u' | 'sl' | 'sp' | 'zw' | 'ob'
+        interface AttendanceTypeMeta {
+            type: NormalizedAttendanceType
+            typeName: string
+            isUnexcused: boolean
+            isPresence: boolean
+            countsAsPresence: boolean
+        }
+
+        const typeMap = new Map<number, AttendanceTypeMeta>([
+            [1, { type: 'nb', typeName: 'Nieobecność', isUnexcused: true, isPresence: false, countsAsPresence: false }],
+            [2, { type: 'sp', typeName: 'Spóźnienie', isUnexcused: false, isPresence: false, countsAsPresence: true }],
+            [3, { type: 'u', typeName: 'Nieobecność uspr.', isUnexcused: false, isPresence: false, countsAsPresence: false }],
+            [4, { type: 'zw', typeName: 'Zwolnienie', isUnexcused: false, isPresence: false, countsAsPresence: true }],
+            [100, { type: 'ob', typeName: 'Obecność', isUnexcused: false, isPresence: true, countsAsPresence: true }]
+        ])
+
         for (const t of rawTypes) {
             const id = Number(t.Id)
             const short = String(t.Short || '').trim().toLowerCase()
             const name = String(t.Name || '').trim().toLowerCase()
+            const standardTypeId = t.StandardType?.Id !== undefined ? Number(t.StandardType.Id) : undefined
 
-            const isPresence = Boolean(
-                t.IsPresenceKind === true || 
-                short === 'ob' || 
-                short === 'o' || 
-                name === 'obecność' || 
-                name === 'obecnosc'
-            )
+            let normalizedType: NormalizedAttendanceType = 'nb'
+            let isUnexcused = true
+            let isPlainPresence = false
+            let countsAsPresence = false
 
-            let normalizedType: 'nb' | 'u' | 'sl' | 'sp' | 'zw' | 'ob' = 'nb'
-            let isUnexcused = false
-
-            if (isPresence) {
-                normalizedType = 'ob'
-                isUnexcused = false
-            } else if (short === 'u' || (name.includes('usprawiedliw') && !name.includes('nieusprawiedliw'))) {
-                normalizedType = 'u'
-                isUnexcused = false
-            } else if (short === 'sp' || name.includes('spóźnienie') || name.includes('spoznienie')) {
-                normalizedType = 'sp'
-                isUnexcused = false
-            } else if (short === 'zw' || name.includes('zwolnienie')) {
-                normalizedType = 'zw'
-                isUnexcused = false
-            } else if (short === 'sl' || name.includes('limit') || name.includes('kwalifikowane')) {
+            // Check explicit non-presence categories before IsPresenceKind (Librus marks `sp` and `zw` with IsPresenceKind: true)
+            // and check `sL` before `sp` because "Spóźnienie powyżej limitu" contains "spóźnienie".
+            if (short === 'sl' || name.includes('limit') || name.includes('kwalifikowane')) {
                 normalizedType = 'sl'
                 isUnexcused = true
-            } else {
+                isPlainPresence = false
+                countsAsPresence = false
+            } else if (short === 'sp' || name.includes('spóźnienie') || name.includes('spoznienie') || standardTypeId === 2) {
+                normalizedType = 'sp'
+                isUnexcused = false
+                isPlainPresence = false
+                countsAsPresence = t.IsPresenceKind !== false
+            } else if (short === 'zw' || name.includes('zwolnienie') || standardTypeId === 4) {
+                normalizedType = 'zw'
+                isUnexcused = false
+                isPlainPresence = false
+                countsAsPresence = t.IsPresenceKind !== false
+            } else if (short === 'u' || (name.includes('usprawiedliw') && !name.includes('nieusp')) || standardTypeId === 3) {
+                normalizedType = 'u'
+                isUnexcused = false
+                isPlainPresence = false
+                countsAsPresence = false
+            } else if (short === 'nb' || short === 'nn' || name.includes('nieobecność') || name.includes('nieobecnosc') || standardTypeId === 1) {
                 normalizedType = 'nb'
                 isUnexcused = true
+                isPlainPresence = false
+                countsAsPresence = false
+            } else if (
+                short === 'ob' ||
+                short === 'o' ||
+                short === 'on' ||
+                name.includes('obecność') ||
+                name.includes('obecnosc') ||
+                standardTypeId === 100 ||
+                t.IsPresenceKind === true
+            ) {
+                normalizedType = 'ob'
+                isUnexcused = false
+                isPlainPresence = true
+                countsAsPresence = true
             }
 
-            typeMap.set(id, { 
-                type: normalizedType, 
-                typeName: t.Name || (normalizedType === 'sl' ? 'sL' : short.toUpperCase()), 
-                isUnexcused, 
-                isPresence 
+            typeMap.set(id, {
+                type: normalizedType,
+                typeName: t.Name || (normalizedType === 'sl' ? 'sL' : short.toUpperCase()),
+                isUnexcused,
+                isPresence: isPlainPresence,
+                countsAsPresence
             })
         }
 
@@ -113,6 +147,68 @@ export async function fetchAttendanceMetrics(
                 subjectId: l.Subject ? Number(l.Subject.Id) : undefined,
                 teacherId: l.Teacher ? Number(l.Teacher.Id) : undefined
             })
+        }
+
+        const missingLessonIds = Array.from(
+            new Set(
+                rawAttendances
+                    .map((item: any) => (item.Lesson ? Number(item.Lesson.Id) : NaN))
+                    .filter((id: number) => !isNaN(id) && !lessonMap.has(id))
+            )
+        )
+        if (missingLessonIds.length > 0) {
+            for (let i = 0; i < missingLessonIds.length; i += 25) {
+                const chunk = missingLessonIds.slice(i, i + 25)
+                const extraLessonsRes = await fetchGatewayEndpoint(
+                    username,
+                    pass,
+                    `gateway/api/2.0/Lessons/${chunk.join(',')}`
+                ).catch(() => null)
+                const extraLessons = Array.isArray(extraLessonsRes?.Lessons)
+                    ? extraLessonsRes.Lessons
+                    : extraLessonsRes?.Lesson
+                      ? [extraLessonsRes.Lesson]
+                      : []
+                for (const l of extraLessons) {
+                    const lId = Number(l.Id)
+                    if (!isNaN(lId)) {
+                        lessonMap.set(lId, {
+                            subjectId: l.Subject ? Number(l.Subject.Id) : undefined,
+                            teacherId: l.Teacher ? Number(l.Teacher.Id) : undefined
+                        })
+                    }
+                }
+            }
+        }
+
+        const missingSubjectIds = Array.from(
+            new Set(
+                Array.from(lessonMap.values())
+                    .map((info) => info.subjectId)
+                    .filter((id): id is number => typeof id === 'number' && !isNaN(id) && !subjectNames.has(id))
+            )
+        )
+        if (missingSubjectIds.length > 0) {
+            for (let i = 0; i < missingSubjectIds.length; i += 25) {
+                const chunk = missingSubjectIds.slice(i, i + 25)
+                const extraSubjectsRes = await fetchGatewayEndpoint(
+                    username,
+                    pass,
+                    `gateway/api/2.0/Subjects/${chunk.join(',')}`
+                ).catch(() => null)
+                const extraSubjects = Array.isArray(extraSubjectsRes?.Subjects)
+                    ? extraSubjectsRes.Subjects
+                    : extraSubjectsRes?.Subject
+                      ? [extraSubjectsRes.Subject]
+                      : []
+                for (const s of extraSubjects) {
+                    const sId = Number(s.Id ?? s.numericIdentifier)
+                    const sName = String(s.Name ?? s.name ?? '').trim()
+                    if (!isNaN(sId) && sName) {
+                        subjectNames.set(sId, sName)
+                    }
+                }
+            }
         }
 
         const userNames = new Map<number, string>()
@@ -143,7 +239,11 @@ export async function fetchAttendanceMetrics(
             if (!dateStr) continue
 
             const isoDate = dateStr.includes('.') ? dateStr.split('.').reverse().join('-') : dateStr
-            const lessonNo = Number(item.LessonNo || 1)
+            const parsedLessonNo =
+                item.LessonNo !== undefined && item.LessonNo !== null && item.LessonNo !== ''
+                    ? Number(item.LessonNo)
+                    : NaN
+            const lessonNo = Number.isFinite(parsedLessonNo) ? parsedLessonNo : 1
 
             const lessonId = item.Lesson ? Number(item.Lesson.Id) : undefined
             const lessonInfo = lessonId ? lessonMap.get(lessonId) : undefined
@@ -160,17 +260,17 @@ export async function fetchAttendanceMetrics(
             }
 
             let timeStr = ''
-            const rangeIndex = lessonNo - 1
-            if (rangeIndex >= 0 && rangeIndex < lessonRanges.length) {
-                timeStr = `${lessonRanges[rangeIndex].From} - ${lessonRanges[rangeIndex].To}`
+            if (lessonNo >= 0 && lessonNo < lessonRanges.length && lessonRanges[lessonNo]) {
+                timeStr = `${lessonRanges[lessonNo].From} - ${lessonRanges[lessonNo].To}`
             }
 
             const typeId = item.Type ? Number(item.Type.Id) : 1
-            const typeInfo = typeMap.get(typeId) || {
-                type: 'nb' as const,
+            const typeInfo: AttendanceTypeMeta = typeMap.get(typeId) || {
+                type: 'nb',
                 typeName: 'Nieobecność nieusprawiedliwiona',
                 isUnexcused: true,
-                isPresence: false
+                isPresence: false,
+                countsAsPresence: false
             }
 
             if (!subjectStats[subjectName]) {
@@ -204,7 +304,9 @@ export async function fetchAttendanceMetrics(
                 if (!dayMap[dateStr].lessons[lessonNo]) {
                     dayMap[dateStr].lessons[lessonNo] = {
                         symbol: 'OB',
-                        type: 'ob'
+                        type: 'ob',
+                        subject: subjectName,
+                        teacher: teacherName || undefined
                     }
                 }
             } else {
@@ -223,17 +325,28 @@ export async function fetchAttendanceMetrics(
                 parsedAbsences.push(detail)
                 subjectStats[subjectName].absences.push(detail)
 
-                if (typeInfo.type === 'u' || typeInfo.type === 'zw') {
+                if (typeInfo.type === 'u') {
                     subjectStats[subjectName].justified++
                 } else if (typeInfo.isUnexcused) {
                     subjectStats[subjectName].unjustified++
                 } else if (typeInfo.type === 'sp') {
                     subjectStats[subjectName].lates++
+                    if (typeInfo.countsAsPresence) {
+                        subjectStats[subjectName].presences++
+                    }
+                } else if (typeInfo.type === 'zw') {
+                    if (typeInfo.countsAsPresence) {
+                        subjectStats[subjectName].presences++
+                    } else {
+                        subjectStats[subjectName].justified++
+                    }
                 }
 
                 dayMap[dateStr].lessons[lessonNo] = {
                     symbol: typeInfo.type === 'sl' ? 'sL' : (typeInfo.type === 'ob' ? 'NB' : typeInfo.type.toUpperCase()),
-                    type: typeInfo.type === 'ob' ? 'nb' : typeInfo.type
+                    type: typeInfo.type === 'ob' ? 'nb' : typeInfo.type,
+                    subject: subjectName,
+                    teacher: teacherName || undefined
                 }
 
                 if (typeInfo.type === 'sl') {
@@ -364,6 +477,11 @@ const textsToTranslate = new Set<string>()
             })
             parsedAbsences.forEach(collectAbsence)
             unexcusedAbsences.forEach(collectAbsence)
+            sortedDays.forEach((d) => {
+                Object.values(d.lessons).forEach((l) => {
+                    if (l?.subject) textsToTranslate.add(l.subject)
+                })
+            })
 
             const map = await translateBatch(Array.from(textsToTranslate), targetCode)
             const visitedAbsences = new Set<(typeof parsedAbsences)[number]>()
@@ -380,6 +498,13 @@ const textsToTranslate = new Set<string>()
                 s.absences.forEach(applyAbsence)
             })
             unexcusedAbsences.forEach(applyAbsence)
+            sortedDays.forEach((d) => {
+                Object.values(d.lessons).forEach((l) => {
+                    if (l?.subject && map[l.subject]) {
+                        l.subject = map[l.subject]
+                    }
+                })
+            })
         }
 
         const result: AttendanceResult = {

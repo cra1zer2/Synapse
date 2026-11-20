@@ -81,6 +81,7 @@ export function BottomNavBar({
     <>
       <div
         aria-hidden="true"
+        data-ios-root-companion="true"
         style={{
           ...mobileRecedeStyle,
           pointerEvents: 'none',
@@ -93,13 +94,14 @@ export function BottomNavBar({
       />
       <nav
         aria-label="Primary navigation"
+        data-ios-root-companion="true"
         style={mobileRecedeStyle}
         className="fixed bottom-[max(calc(env(safe-area-inset-bottom,0px)+10px),14px)] left-3 right-3 max-w-[460px] mx-auto z-30 bg-[var(--ios-glass-surface-strong)] backdrop-blur-xl backdrop-saturate-150 border border-[var(--ios-glass-border)] rounded-full p-1.5 shadow-[var(--ios-modal-shadow)] select-none"
       >
       <div className="relative grid grid-cols-4">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 w-1/4 p-[1px] transition-transform duration-[340ms] ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform"
+          className="pointer-events-none absolute inset-y-0 left-0 w-1/4 p-[1px] transition-transform duration-[300ms] ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform"
           style={{ transform: 'translate3d(' + activeIndex * 100 + '%, 0, 0)' }}
         >
           <div className="w-full h-full rounded-full bg-[var(--ios-element)]" />

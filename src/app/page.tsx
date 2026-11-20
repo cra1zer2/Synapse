@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { ArrowDown, SquarePen } from 'lucide-react'
+import { cn } from '@/utils/cn.util'
 import { getDictionary } from '@/config/dictionary.config'
 import { isStudentUsername } from '@/utils/account.util'
 import { useAppSettings } from '@/hooks/settings.hook'
@@ -22,6 +23,8 @@ import { GradesFeature, GradesSimToggleButton, useGradesFeature } from '@/featur
 import { AttendanceFeature, useAttendanceFeature } from '@/features/attendance/attendance-feature'
 import { MessagesFeature, useMessagesFeature } from '@/features/messages/messages-feature'
 import { SettingsSheet } from '@/features/settings/settings-sheet'
+import { DesktopWorkspace } from '@/features/desktop/desktop-workspace'
+import type { DesktopNavSection } from '@/features/desktop/desktop-sidebar'
 
 type DashboardSubview = 'schedule' | 'upcoming' | 'grades' | 'attendance' | 'messages' | 'announcements' | null
 
@@ -65,20 +68,43 @@ export default function Home() {
   const [hasMessagesOverlay, setHasMessagesOverlay] = useState(false)
   const [activeTab, setActiveTab] = useState<PrimaryTabId>('schedule')
   const [exitingTab, setExitingTab] = useState<PrimaryTabId | null>(null)
+  const [exitingScrollY, setExitingScrollY] = useState(0)
+  const [enteringTab, setEnteringTab] = useState<PrimaryTabId | null>(null)
   const [tabDirection, setTabDirection] = useState<1 | -1>(1)
-  const [tabTransitionId, setTabTransitionId] = useState(0)
   const [visitedTabs, setVisitedTabs] = useState<PrimaryTabId[]>(['schedule'])
   const tabExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tabEnterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isDesktop, setIsDesktop] = useState(false)
+  const [activeDesktopSection, setActiveDesktopSection] = useState<DesktopNavSection>('overview')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(min-width: 1024px)')
+    setIsDesktop(mq.matches)
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   const activeBadgeSection: TrackedBadgeSection | null = !account.isConfigured
     ? null
-    : navMode === 'tabs'
-      ? activeTab === 'schedule' || activeTab === 'grades' || activeTab === 'attendance'
-        ? activeTab
-        : null
-      : activeSubview === 'schedule' || activeSubview === 'grades' || activeSubview === 'attendance'
-        ? activeSubview
-        : null
+    : isDesktop
+      ? activeDesktopSection === 'timetable'
+        ? 'schedule'
+        : activeDesktopSection === 'grades'
+          ? 'grades'
+          : activeDesktopSection === 'attendance' ||
+              activeDesktopSection === 'attendance-journal' ||
+              activeDesktopSection === 'attendance-justifications'
+            ? 'attendance'
+            : null
+      : navMode === 'tabs'
+        ? activeTab === 'schedule' || activeTab === 'grades' || activeTab === 'attendance'
+          ? activeTab
+          : null
+        : activeSubview === 'schedule' || activeSubview === 'grades' || activeSubview === 'attendance'
+          ? activeSubview
+          : null
 
   const { badges: sectionBadges } = useSectionBadges({
     username: account.username,
@@ -137,6 +163,7 @@ export default function Home() {
   useEffect(() => {
     return () => {
       if (tabExitTimerRef.current) clearTimeout(tabExitTimerRef.current)
+      if (tabEnterTimerRef.current) clearTimeout(tabEnterTimerRef.current)
     }
   }, [])
 
@@ -145,6 +172,12 @@ export default function Home() {
     const handleDeepLinking = () => {
       try {
         const tab = new URLSearchParams(window.location.search).get('tab')
+        if (tab === 'grades') setActiveDesktopSection('grades')
+        else if (tab === 'messages') setActiveDesktopSection('inbox')
+        else if (tab === 'schedule') setActiveDesktopSection('timetable')
+        else if (tab === 'upcoming' || tab === 'events') setActiveDesktopSection('deadlines')
+        else if (tab === 'attendance') setActiveDesktopSection('attendance')
+
         if (navMode === 'tabs') {
           if (tab === 'grades') setActiveTab('grades')
           else if (tab === 'messages') setActiveTab('messages')
@@ -171,7 +204,7 @@ export default function Home() {
 
   const isPanelOverlayActive = Boolean(activeSubview || showSettings || hasAttendanceOverlay || hasMessagesOverlay)
   const isSheetOverlayActive = Boolean(hasScheduleSheet || hasGradesSheet)
-  useBodyScrollLock(isPanelOverlayActive || isSheetOverlayActive)
+  useBodyScrollLock(!isDesktop && (isPanelOverlayActive || isSheetOverlayActive))
 
   const runRefresh = async (fromPull: boolean) => {
     if (
@@ -270,15 +303,22 @@ export default function Home() {
     const prevIdx = PRIMARY_TAB_ORDER.indexOf(activeTab)
     const nextIdx = PRIMARY_TAB_ORDER.indexOf(tab)
     const dir: 1 | -1 = nextIdx >= prevIdx ? 1 : -1
+    const currentScrollY = typeof window !== 'undefined' ? Math.max(0, Math.round(window.scrollY)) : 0
     if (tabExitTimerRef.current) clearTimeout(tabExitTimerRef.current)
+    if (tabEnterTimerRef.current) clearTimeout(tabEnterTimerRef.current)
     setTabDirection(dir)
     setExitingTab(activeTab)
+    setExitingScrollY(currentScrollY)
+    setEnteringTab(tab)
     setActiveTab(tab)
-    setTabTransitionId((n) => n + 1)
     setVisitedTabs((prev) => (prev.includes(tab) ? prev : [...prev, tab]))
     tabExitTimerRef.current = setTimeout(() => {
       setExitingTab(null)
-    }, 190)
+      setExitingScrollY(0)
+    }, 170)
+    tabEnterTimerRef.current = setTimeout(() => {
+      setEnteringTab(null)
+    }, 270)
     if (tab !== 'messages') messagesCtrl.setIsComposeOpen(false)
     if (tab !== 'grades') gradesCtrl.setIsSimSelecting(false)
     if (typeof window !== 'undefined') {
@@ -288,16 +328,25 @@ export default function Home() {
 
   const getTabContainerClass = (tabId: PrimaryTabId) => {
     if (tabId === activeTab) {
-      if (tabTransitionId === 0) return 'relative w-full'
-      return 'relative w-full ' + (tabDirection >= 0 ? 'tab-enter-right' : 'tab-enter-left')
+      if (enteringTab === tabId) {
+        return 'relative w-full ' + (tabDirection >= 0 ? 'tab-enter-right' : 'tab-enter-left')
+      }
+      return 'relative w-full'
     }
     if (tabId === exitingTab) {
       return (
-        'absolute top-0 left-0 right-0 pointer-events-none ' +
+        'absolute left-4 right-4 pointer-events-none ' +
         (tabDirection >= 0 ? 'tab-exit-left' : 'tab-exit-right')
       )
     }
     return 'hidden'
+  }
+
+  const getTabContainerStyle = (tabId: PrimaryTabId): React.CSSProperties | undefined => {
+    if (tabId === exitingTab) {
+      return { top: exitingScrollY > 0 ? -exitingScrollY : 0 }
+    }
+    return undefined
   }
 
   if (!mounted) return null
@@ -327,6 +376,95 @@ export default function Home() {
   const isStudentUser = activeRole === 'student' || isStudentUsername(account.username)
   const canSubmitExcuse = !isStudentUser || allowStudentJustifications
   const unreadCount = messagesInbox.messages.filter((m) => !m.isRead).length
+
+  if (isDesktop) {
+    return (
+      <DesktopWorkspace
+        activeSection={activeDesktopSection}
+        onSelectSection={setActiveDesktopSection}
+        profile={account.profile}
+        username={account.username}
+        savedAccounts={account.savedAccounts}
+        onSwitchAccount={(acc) => {
+          account.handleSwitchAccount(acc)
+          setActiveDesktopSection('overview')
+        }}
+        onAddAccount={account.handleStartAddAccountVerification}
+        onConfirmAddAccount={account.handleConfirmAddAccount}
+        onResetAddAccount={account.handleResetAddAccount}
+        addAccountStep={account.addAccountStep}
+        setAddAccountStep={account.setAddAccountStep}
+        addAccountCandidate={account.addAccountCandidate}
+        addAccountError={account.addAccountError}
+        setAddAccountError={account.setAddAccountError}
+        newUsername={account.newAccUser}
+        setNewUsername={account.setNewAccUser}
+        newPassword={account.newAccPass}
+        setNewPassword={account.setNewAccPass}
+        onLogout={() => {
+          setActiveDesktopSection('overview')
+          account.handleLogout()
+        }}
+        lang={lang}
+        onSelectLang={settings.handleSelectLanguage}
+        theme={theme}
+        onSelectTheme={settings.handleSelectTheme}
+        showFullSubjectNames={showFullSubjectNames}
+        onToggleShowFullSubjectNames={settings.handleToggleShowFullSubjectNames}
+        enableGradeSimulator={enableGradeSimulator}
+        onToggleEnableGradeSimulator={settings.handleToggleEnableGradeSimulator}
+        showHomeworks={showHomeworks}
+        onToggleShowHomeworks={settings.handleToggleShowHomeworks}
+        showLuckyNumberBanner={showLuckyNumberBanner}
+        onToggleShowLuckyNumberBanner={settings.handleToggleShowLuckyNumberBanner}
+        isStudent={isStudentUser}
+        canSubmitExcuse={canSubmitExcuse}
+        allowStudentJustifications={allowStudentJustifications}
+        onToggleAllowStudentJustifications={settings.handleToggleAllowStudentJustifications}
+        timetableData={timetable.timetableData}
+        todayTimetableData={timetable.todayTimetableData}
+        gradesData={timetable.gradesData}
+        attendanceData={timetable.attendanceData}
+        timetableError={timetable.timetableError}
+        gradesError={timetable.gradesError}
+        attendanceError={timetable.attendanceError}
+        isUpdating={timetable.isUpdating}
+        isLoadingWeek={timetable.isLoadingWeek}
+        lastSyncedAt={timetable.lastSyncedAt}
+        selectedDay={timetable.selectedDay}
+        onSelectDay={timetable.setSelectedDay}
+        currentWeekPivot={timetable.currentWeekPivot}
+        onShiftWeek={timetable.shiftWeek}
+        onSelectDate={timetable.queueWeekChange}
+        onRefresh={handleManualRefresh}
+        messages={messagesInbox.messages}
+        sentMessages={messagesInbox.sentMessages}
+        announcements={messagesInbox.announcements}
+        receivers={messagesInbox.receivers}
+        isLoadingMessages={
+          messagesInbox.isLoadingMessages &&
+          messagesInbox.messages.length === 0 &&
+          messagesInbox.announcements.length === 0 &&
+          !messagesInbox.messagesError
+        }
+        ensureReceivers={messagesInbox.ensureReceivers}
+        onOpenMessage={messagesInbox.handleOpenMessage}
+        onMarkMessageRead={messagesInbox.markMessageLocal}
+        onDownloadAttachment={messagesInbox.handleDownloadAttachment}
+        onSendMessage={messagesInbox.handleSendMessage}
+        badges={{
+          schedule: sectionBadges.schedule,
+          grades: sectionBadges.grades,
+          attendance: sectionBadges.attendance,
+        }}
+        scheduleCtrl={scheduleCtrl}
+        gradesCtrl={gradesCtrl}
+        attendanceCtrl={attendanceCtrl}
+        messagesCtrl={messagesCtrl}
+        t={t}
+      />
+    )
+  }
 
   const widgetCtx: DashboardWidgetRenderContext = {
     lang,
@@ -414,20 +552,24 @@ export default function Home() {
           lang={lang}
           trailingAction={
             navMode === 'tabs' && activeTab === 'messages' && messagesCtrl.messagesSubTab !== 'notices' ? (
-              <UiIconButton
-                size="sm"
-                variant="subtle"
-                onClick={() => messagesCtrl.setIsComposeOpen(true)}
-                title={t.writeNewMessage}
-                aria-label={t.writeNewMessage}
-                icon={<SquarePen className="w-[16px] h-[16px] text-[var(--ios-blue)]" strokeWidth={2.2} />}
-              />
+              <div key="compose-action" className="ios-action-in">
+                <UiIconButton
+                  size="sm"
+                  variant="subtle"
+                  onClick={() => messagesCtrl.setIsComposeOpen(true)}
+                  title={t.writeNewMessage}
+                  aria-label={t.writeNewMessage}
+                  icon={<SquarePen className="w-[16px] h-[16px] text-[var(--ios-blue)]" strokeWidth={2.2} />}
+                />
+              </div>
             ) : navMode === 'tabs' && activeTab === 'grades' && enableGradeSimulator ? (
-              <GradesSimToggleButton
-                active={gradesCtrl.isSimSelecting}
-                onClick={gradesCtrl.toggleSimSelecting}
-                lang={lang}
-              />
+              <div key="sim-action" className="ios-action-in">
+                <GradesSimToggleButton
+                  active={gradesCtrl.isSimSelecting}
+                  onClick={gradesCtrl.toggleSimSelecting}
+                  lang={lang}
+                />
+              </div>
             ) : undefined
           }
           t={t}
@@ -474,9 +616,9 @@ export default function Home() {
               onDismiss={settings.handleDismissLuckyBanner}
             />
             {navMode === 'tabs' ? (
-              <div className="relative w-full overflow-x-clip">
+              <div className={cn('relative -mx-4 px-4', exitingTab && 'overflow-y-clip min-h-[calc(100dvh-160px)]')}>
                 {visitedTabs.includes('schedule') && (
-                  <div key="schedule" className={getTabContainerClass('schedule')}>
+                  <div key="schedule" className={getTabContainerClass('schedule')} style={getTabContainerStyle('schedule')}>
                     <ScheduleFeature
                       controller={scheduleCtrl}
                       mode="tab"
@@ -501,7 +643,7 @@ export default function Home() {
                   </div>
                 )}
                 {visitedTabs.includes('grades') && (
-                  <div key="grades" className={getTabContainerClass('grades')}>
+                  <div key="grades" className={getTabContainerClass('grades')} style={getTabContainerStyle('grades')}>
                     <GradesFeature
                       controller={gradesCtrl}
                       mode="tab"
@@ -518,7 +660,7 @@ export default function Home() {
                   </div>
                 )}
                 {visitedTabs.includes('attendance') && (
-                  <div key="attendance" className={getTabContainerClass('attendance')}>
+                  <div key="attendance" className={getTabContainerClass('attendance')} style={getTabContainerStyle('attendance')}>
                     <AttendanceFeature
                       controller={attendanceCtrl}
                       mode="tab"
@@ -537,7 +679,7 @@ export default function Home() {
                   </div>
                 )}
                 {visitedTabs.includes('messages') && (
-                  <div key="messages" className={getTabContainerClass('messages')}>
+                  <div key="messages" className={getTabContainerClass('messages')} style={getTabContainerStyle('messages')}>
                     <MessagesFeature
                       controller={messagesCtrl}
                       mode="tab"

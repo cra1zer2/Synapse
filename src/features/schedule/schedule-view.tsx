@@ -16,11 +16,10 @@ import {
   getEventPrimaryTitle,
   resolveEventBadgeLabel
 } from '@/utils/badge.util'
-import { UiBadge } from '@/components/ui/ui-badge'
 import { UiBreakDivider, UiCard } from '@/components/ui/ui-controls'
 import { UiEmptyState } from '@/components/ui/ui-empty-state'
 import { UiSpinner } from '@/components/ui/ui-spinner'
-import { getDayAbbr, computeLiveWeekDays, getTodayIsoString } from '@/utils/date.util'
+import { getDayAbbr, computeLiveWeekDays, getTodayIsoString, getSchoolWeekMondayIso, getSchoolDayName } from '@/utils/date.util'
 import {
   parseLessonTimeRange,
   getCurrentTimeMinutes,
@@ -28,6 +27,7 @@ import {
   getBreakRemainingMinutes
 } from '@/utils/time.util'
 import { cn } from '@/utils/cn.util'
+import { useSubTabMotion } from '@/hooks/subtab-motion.hook'
 
 interface ScheduleViewProps {
   timetableData?: SmartTimetableResult | null
@@ -130,6 +130,7 @@ export function ScheduleView({
   const [cachedLessonCount, setCachedLessonCount] = useState<number>(6)
   const activeLessonRef = useRef<HTMLDivElement>(null)
   const hasAutoScrolledRef = useRef(false)
+  const { animClass: dayAnimClass, trigger: triggerDayMotion } = useSubTabMotion(230)
 
   const currentDaySchedule: DaySchedule | undefined = timetableData?.schedule?.find(
     (d) => d.dayName === selectedDay
@@ -157,10 +158,26 @@ export function ScheduleView({
     }
   }, [currentDaySchedule])
 
+  const selectedIsoDate = liveWeek.days[selectedDayIndex]?.isoDate || currentWeekPivot
+
   const handleDaySelect = (dayName: string) => {
     if (dayName === selectedDay) return
+    const prevIdx = liveWeek.days.findIndex((d) => d.dayName === selectedDay)
+    const nextIdx = liveWeek.days.findIndex((d) => d.dayName === dayName)
+    triggerDayMotion(nextIdx >= prevIdx ? 1 : -1)
     hasAutoScrolledRef.current = false
     onSelectDay(dayName)
+  }
+
+  const handleDatePick = (isoDate: string) => {
+    if (!isoDate) return
+    const targetDayName = getSchoolDayName(isoDate)
+    const targetWeekMonday = getSchoolWeekMondayIso(isoDate)
+
+    if (targetWeekMonday !== currentWeekPivot && onSelectDate) {
+      onSelectDate(targetWeekMonday)
+    }
+    handleDaySelect(targetDayName)
   }
 
   const focusIndex = useMemo(() => {
@@ -211,11 +228,6 @@ export function ScheduleView({
   }, [currentDaySchedule, showHomeworks])
 
   const dayLessons = currentDaySchedule?.lessons || []
-  const hasAnyActiveLesson = dayLessons.some((l) => !l.isCancelled)
-  const hasLaterStart = Boolean(hasAnyActiveLesson && dayLessons[0]?.isCancelled)
-  const hasEarlierFinish = Boolean(
-    hasAnyActiveLesson && dayLessons.length > 1 && dayLessons[dayLessons.length - 1]?.isCancelled
-  )
 
   return (
     <section className="w-full flex flex-col gap-3.5 pb-12 select-none">
@@ -251,12 +263,8 @@ export function ScheduleView({
                 <Calendar className="w-4 h-4 pointer-events-none" strokeWidth={2} />
                 <input
                   type="date"
-                  value={currentWeekPivot}
-                  onChange={(e) => {
-                    if (e.target.value && onSelectDate) {
-                      onSelectDate(e.target.value)
-                    }
-                  }}
+                  value={selectedIsoDate}
+                  onChange={(e) => handleDatePick(e.target.value)}
                   className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                   aria-label={pickText(lang, { pl: 'Wybierz datę', en: 'Pick date' })}
                 />
@@ -340,14 +348,7 @@ export function ScheduleView({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-2.5">
-            {(hasLaterStart || hasEarlierFinish) && (
-              <div className="flex flex-wrap items-center gap-1.5 px-1">
-                {hasLaterStart && <UiBadge variant="orange" size="sm" text={t.laterStartLabel} />}
-                {hasEarlierFinish && <UiBadge variant="blue" size="sm" text={t.earlierFinishLabel} />}
-              </div>
-            )}
-
+          <div key={selectedDay} className={cn('flex flex-col gap-2.5', dayAnimClass)}>
             {!hideDayEvents && displayEvents.length > 0 && (
               <div className="flex flex-col gap-2 pb-1">
                 {displayEvents.map((ev, i) => {

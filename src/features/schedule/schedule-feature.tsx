@@ -10,6 +10,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { LessonItem, SmartTimetableResult, TimetableEvent } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
+import { useSubTabMotion } from '@/hooks/subtab-motion.hook'
 import { UiScreen } from '@/components/ui/ui-screen'
 import { UiSegmentedControl } from '@/components/ui/ui-controls'
 import { UiEmptyState } from '@/components/ui/ui-empty-state'
@@ -49,7 +50,7 @@ export function useScheduleFeature({
   const [selectedLesson, setSelectedLesson] = useState<{ lesson: LessonItem; isToday: boolean } | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<TimetableEvent | null>(null)
   const [scheduleSubTab, setScheduleSubTab] = useState<ScheduleSubTab>('timetable')
-  const [scheduleSubDir, setScheduleSubDir] = useState<1 | -1>(1)
+  const { animClass: subTabAnimClass, trigger: triggerSubTabMotion } = useSubTabMotion(230)
 
   const openLesson = useCallback((lesson: LessonItem, isToday: boolean) => {
     setSelectedLesson({ lesson, isToday })
@@ -87,10 +88,11 @@ export function useScheduleFeature({
 
   const changeSubTab = useCallback(
     (next: ScheduleSubTab) => {
-      setScheduleSubDir(SCHEDULE_SUBTAB_ORDER[next] >= SCHEDULE_SUBTAB_ORDER[scheduleSubTab] ? 1 : -1)
+      if (next === scheduleSubTab) return
+      triggerSubTabMotion(SCHEDULE_SUBTAB_ORDER[next] >= SCHEDULE_SUBTAB_ORDER[scheduleSubTab] ? 1 : -1)
       setScheduleSubTab(next)
     },
-    [scheduleSubTab]
+    [scheduleSubTab, triggerSubTabMotion]
   )
 
   return {
@@ -99,7 +101,7 @@ export function useScheduleFeature({
     selectedEvent,
     setSelectedEvent,
     scheduleSubTab,
-    scheduleSubDir,
+    subTabAnimClass,
     changeSubTab,
     setScheduleSubTab,
     openLesson,
@@ -200,7 +202,7 @@ export function ScheduleFeature({
       )}
       <div
         key={includeEventsTab ? controller.scheduleSubTab : 'subview-timetable'}
-        className={includeEventsTab ? (controller.scheduleSubDir >= 0 ? 'tab-enter-right' : 'tab-enter-left') : undefined}
+        className={includeEventsTab ? controller.subTabAnimClass : undefined}
       >
         {!includeEventsTab || controller.scheduleSubTab === 'timetable' ? (
           timetableData ? (

@@ -214,6 +214,7 @@ export function AttendanceView({
               const aIso = a.date.includes('.') ? a.date.split('.').reverse().join('-') : a.date
               return a.isUnexcused && !isLessonJustificationPending(pendingList, aIso, a.date, a.lessonNumber)
             }).length
+            const spCount = sub.absences.filter((a) => a.type === 'sp').length
 
             const isBelowHalf = sub.percentage < 50.0
 
@@ -231,6 +232,11 @@ export function AttendanceView({
                     {activeUnexcusedCount > 0 && (
                       <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full ios-tile bg-[var(--ios-red-subtle)] text-[var(--ios-red)] shrink-0 tabular-nums">
                         {activeUnexcusedCount} nb
+                      </span>
+                    )}
+                    {spCount > 0 && (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full ios-tile bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] shrink-0 tabular-nums">
+                        {spCount} sp
                       </span>
                     )}
                   </div>

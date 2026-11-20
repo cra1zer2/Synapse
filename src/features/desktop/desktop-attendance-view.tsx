@@ -624,6 +624,7 @@ export function DesktopAttendanceView({
                     const aIso = a.date.includes('.') ? a.date.split('.').reverse().join('-') : a.date
                     return a.isUnexcused && !isLessonJustificationPending(pendingList, aIso, a.date, a.lessonNumber)
                   }).length
+                  const spCount = sub.absences.filter((a) => a.type === 'sp').length
                   const isDanger = sub.percentage < 50
                   return (
                     <button
@@ -645,10 +646,15 @@ export function DesktopAttendanceView({
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0">
-                        <div className="w-12 flex justify-end shrink-0">
+                        <div className="min-w-12 flex items-center justify-end gap-1.5 shrink-0">
                           {activeNb > 0 && (
                             <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[10px] font-semibold tabular-nums whitespace-nowrap">
                               {activeNb} nb
+                            </span>
+                          )}
+                          {spCount > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[10px] font-semibold tabular-nums whitespace-nowrap">
+                              {spCount} sp
                             </span>
                           )}
                         </div>

@@ -1,6 +1,6 @@
 {
   "name": "synapse",
-  "version": "2.0.0-beta.1",
+  "version": "2.0.0-beta.1.1",
   "description": "\"E-Dziennik\" — Fast, private client for Librus Synergia",
   "private": true,
   "type": "module",

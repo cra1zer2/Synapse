@@ -13,6 +13,7 @@ import { UiScreen } from '@/components/ui/ui-screen'
 import { UiCard } from '@/components/ui/ui-controls'
 import { UiEmptyState } from '@/components/ui/ui-empty-state'
 import { formatSubjectName } from '@/utils/text.util'
+import { getAttendanceTypeStyle } from '@/utils/badge.util'
 import { getPendingJustifications, isLessonJustificationPending } from '@/utils/justification.util'
 import { cn } from '@/utils/cn.util'
 
@@ -109,16 +110,22 @@ export function AttendanceDetailModal({
                           {t.pendingJustification}
                         </span>
                       ) : (
-                        <span
-                          className={cn(
-                            'text-[12px] font-semibold px-2 py-0.5 rounded-full ios-tile tabular-nums',
-                            item.isUnexcused
-                              ? 'bg-[var(--ios-red-subtle)] text-[var(--ios-red)]'
-                              : 'bg-[var(--ios-green-subtle)] text-[var(--ios-green)]'
-                          )}
-                        >
-                          {item.type.toLowerCase()}
-                        </span>
+                        (() => {
+                          const badgeStyle = getAttendanceTypeStyle(
+                            item.type === 'nb' && !item.isUnexcused ? 'u' : item.type
+                          )
+                          return (
+                            <span
+                              className={cn(
+                                'text-[12px] font-semibold px-2 py-0.5 rounded-full ios-tile tabular-nums',
+                                badgeStyle.bgClass,
+                                badgeStyle.textClass
+                              )}
+                            >
+                              {item.type === 'sl' ? 'sL' : item.type.toLowerCase()}
+                            </span>
+                          )
+                        })()
                       )}
                     </div>
 

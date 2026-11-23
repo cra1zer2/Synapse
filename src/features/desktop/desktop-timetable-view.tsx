@@ -5,9 +5,11 @@ import {
   AlertCircle,
   BookOpen,
   CalendarPlus,
+  ChevronDown,
   Clock,
   MapPin,
-  User
+  User,
+  UserX
 } from 'lucide-react'
 import { DaySchedule, LessonItem, SmartTimetableResult, TimetableEvent } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
@@ -30,6 +32,10 @@ import {
   resolveEventBadgeLabel
 } from '@/utils/badge.util'
 import { downloadEventIcs } from '@/utils/calendar.util'
+import {
+  formatTeacherAbsenceSpan,
+  getTeacherAbsencesForWeek
+} from '@/utils/teacher-absence.util'
 import { UiSpinner } from '@/components/ui/ui-spinner'
 import { cn } from '@/utils/cn.util'
 import { MacGroupBox, MacPushButton } from './mac-primitives'
@@ -132,9 +138,19 @@ export function DesktopTimetableView({
   initialInspectorSelection
 }: DesktopTimetableViewProps) {
   const [inspector, setInspector] = useState<TimetableInspectorItem>(null)
+  const [showWeekAbsences, setShowWeekAbsences] = useState(false)
   const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
   const todayIso = useMemo(() => getTodayIsoString(), [])
   const liveWeek = useMemo(() => computeLiveWeekDays(currentWeekPivot), [currentWeekPivot])
+  const weekTeacherAbsences = useMemo(
+    () =>
+      getTeacherAbsencesForWeek(
+        timetableData?.teacherAbsences,
+        timetableData?.weekStart,
+        timetableData?.weekEnd
+      ),
+    [timetableData]
+  )
   const isEn = lang !== 'pl'
   const hasInitializedTodayRef = useRef(false)
   const lastSyncedDayKeyRef = useRef('')
@@ -349,7 +365,7 @@ export function DesktopTimetableView({
               {lesson.time || lesson.flag || ''}
             </span>
 
-            {(lesson.isCancelled || lesson.isSubstitution || lesson.isShortened) && (
+            {(lesson.isCancelled || lesson.isSubstitution || lesson.isShortened || lesson.teacherAbsent) && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {lesson.isCancelled && (
                   <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[11px] font-semibold">
@@ -361,6 +377,12 @@ export function DesktopTimetableView({
                     {pickText(lang, { pl: 'Zastępstwo', en: 'Substitution' })}
                   </span>
                 )}
+                {!lesson.isCancelled && !lesson.isSubstitution && lesson.teacherAbsent && (
+                  <span className="px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[11px] font-semibold inline-flex items-center gap-1">
+                    <UserX className="w-3 h-3" />
+                    {pickText(lang, { pl: 'Nauczyciel nieobecny', en: 'Teacher absent' })}
+                  </span>
+                )}
                 {lesson.isShortened && (
                   <span className="px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[11px] font-semibold">
                     {lesson.durationMinutes} min
@@ -369,6 +391,22 @@ export function DesktopTimetableView({
               </div>
             )}
           </MacGroupBox>
+
+          {!lesson.isCancelled && !lesson.isSubstitution && lesson.teacherAbsent && lesson.teacherAbsenceReason && (
+            <MacGroupBox
+              contentClassName="px-3.5 py-2.5 bg-[var(--ios-orange-subtle)]/35 flex items-start gap-2"
+            >
+              <UserX className="w-4 h-4 text-[var(--mac-orange)] shrink-0 mt-0.5" />
+              <div className="min-w-0 flex flex-col gap-0.5">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-orange)]">
+                  {pickText(lang, { pl: 'Zgłoszona nieobecność', en: 'Reported absence' })}
+                </span>
+                <span className="text-[12px] text-[var(--mac-label-1)] leading-snug">
+                  {lesson.teacherAbsenceReason}
+                </span>
+              </div>
+            </MacGroupBox>
+          )}
 
           <MacGroupBox
             title={t.lessonTopic}
@@ -677,7 +715,7 @@ export function DesktopTimetableView({
     <div className="h-full flex min-h-0 select-none bg-[var(--mac-canvas-bg)]">
       {/* Main Schedule Area */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
-        <div className="flex-1 min-h-0 overflow-y-auto p-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4">
           {timetableError && !timetableData ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3 text-center">
               <AlertCircle className="w-8 h-8 text-[var(--mac-red)]" />
@@ -691,7 +729,67 @@ export function DesktopTimetableView({
               <UiSpinner size="large" className="text-[var(--mac-blue)]" />
               <span className="text-[13px] text-[var(--mac-label-2)]">{t.loadingTimetable}</span>
             </div>
-          ) : viewMode === 'week' ? (
+          ) : (
+            <div className="w-full min-w-0 flex flex-col gap-3">
+              {weekTeacherAbsences.length > 0 && (
+                <MacGroupBox noPadding className="w-full overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowWeekAbsences((v) => !v)}
+                    className="w-full px-3.5 py-2 flex items-center justify-between gap-3 text-left hover:bg-[var(--mac-fill-4)] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-6 h-6 rounded-[7px] bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] flex items-center justify-center shrink-0">
+                        <UserX className="w-3.5 h-3.5" strokeWidth={2.1} />
+                      </span>
+                      <span className="text-[12px] font-semibold text-[var(--mac-label-1)] shrink-0">
+                        {pickText(lang, {
+                          pl: `Nieobecni nauczyciele (${weekTeacherAbsences.length})`,
+                          en: `Absent teachers (${weekTeacherAbsences.length})`
+                        })}
+                      </span>
+                      {!showWeekAbsences && (
+                        <span className="text-[12px] text-[var(--mac-label-2)] truncate">
+                          · {weekTeacherAbsences.map((a) => a.teacherName).join(', ')}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown
+                      className={cn(
+                        'w-4 h-4 text-[var(--mac-label-2)] shrink-0 transition-transform duration-200',
+                        showWeekAbsences && 'rotate-180'
+                      )}
+                    />
+                  </button>
+                  {showWeekAbsences && (
+                    <div className="border-t border-[var(--mac-row-divider)] mac-divide-y">
+                      {weekTeacherAbsences.map((abs) => (
+                        <div
+                          key={abs.id}
+                          className="px-3.5 py-2 flex items-center justify-between gap-3 text-[12px]"
+                        >
+                          <div className="min-w-0 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--mac-orange)] shrink-0" />
+                            <span className="font-medium text-[var(--mac-label-1)] truncate">
+                              {abs.teacherName}
+                            </span>
+                            {abs.reason && (
+                              <span className="text-[var(--mac-label-2)] truncate">
+                                — {abs.reason}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] font-medium text-[var(--mac-orange)] bg-[var(--ios-orange-subtle)] px-2 py-0.5 rounded-full shrink-0 tabular-nums">
+                            {formatTeacherAbsenceSpan(abs, lang)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </MacGroupBox>
+              )}
+
+              {viewMode === 'week' ? (
             /* Synchronized Fluid Weekly Matrix (0-9 Periods x Mon-Fri, zero horizontal clipping) */
             <MacGroupBox noPadding className="w-full">
               {/* Day Column Header Row */}
@@ -912,9 +1010,17 @@ export function DesktopTimetableView({
                                     >
                                       {formatSubjectName(lesson.subject, showFullSubjectNames)}
                                     </span>
-                                    {isActive && (
-                                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--mac-blue)] animate-pulse shrink-0 mt-1" />
-                                    )}
+                                    <div className="flex items-center gap-1 shrink-0 mt-1">
+                                      {!lesson.isCancelled && !lesson.isSubstitution && lesson.teacherAbsent && (
+                                        <span
+                                          title={lesson.teacherAbsenceReason || pickText(lang, { pl: 'Nauczyciel nieobecny', en: 'Teacher absent' })}
+                                          className="w-2 h-2 rounded-full bg-[var(--mac-orange)] shrink-0"
+                                        />
+                                      )}
+                                      {isActive && (
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--mac-blue)] animate-pulse shrink-0" />
+                                      )}
+                                    </div>
                                   </div>
 
                                   <div className="flex items-center justify-between gap-1.5 min-w-0">
@@ -947,8 +1053,8 @@ export function DesktopTimetableView({
             </MacGroupBox>
           ) : (
             /* Single Day Detailed View with 0-9 Fixed Slots */
-            <div className="max-w-3xl mx-auto flex flex-col gap-4">
-              <div className="flex items-center gap-1.5">
+            <div className="w-full max-w-3xl mx-auto min-w-0 flex flex-col gap-4">
+              <div className="flex items-center gap-1.5 min-w-0">
                 {liveWeek.days.map((slot) => {
                   const isSel = selectedDay === slot.dayName
                   const isTod = slot.isoDate === todayIso
@@ -958,7 +1064,7 @@ export function DesktopTimetableView({
                       type="button"
                       onClick={() => onSelectDay(slot.dayName)}
                       className={cn(
-                        'flex-1 py-2 px-3 rounded-[14px] text-center cursor-pointer transition-all border',
+                        'flex-1 min-w-0 py-2 px-2 rounded-[14px] text-center cursor-pointer transition-all border',
                         isSel
                           ? 'bg-[var(--mac-blue)] text-white border-transparent shadow-[0_2px_8px_rgba(0,136,255,0.28)]'
                           : 'bg-[var(--mac-group-bg)] text-[var(--mac-label-1)] border-[var(--mac-group-border)] shadow-[var(--mac-group-shadow)] hover:brightness-[0.98] dark:hover:brightness-110'
@@ -1077,7 +1183,8 @@ export function DesktopTimetableView({
                               <div className="min-w-0 flex-1">
                                 <div
                                   className={cn(
-                                    'text-[13px] font-semibold text-[var(--mac-label-1)] truncate',
+                                    'text-[13px] font-semibold text-[var(--mac-label-1)]',
+                                    showFullSubjectNames ? 'line-clamp-2 break-words leading-snug' : 'truncate',
                                     lesson.isCancelled && 'line-through'
                                   )}
                                 >
@@ -1089,6 +1196,11 @@ export function DesktopTimetableView({
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
+                              {!lesson.isCancelled && !lesson.isSubstitution && lesson.teacherAbsent && (
+                                <span className="px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[10px] font-semibold">
+                                  {pickText(lang, { pl: 'Nieobecny', en: 'Absent' })}
+                                </span>
+                              )}
                               {lesson.isSubstitution && !lesson.isCancelled && (
                                 <span className="px-2 py-0.5 rounded-full bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)] text-[10px] font-semibold">
                                   {pickText(lang, { pl: 'Zastępstwo', en: 'Sub' })}
@@ -1114,6 +1226,8 @@ export function DesktopTimetableView({
                   <div className="p-10 text-center text-[13px] text-[var(--mac-label-2)]">{t.noLessonsDay}</div>
                 )}
               </MacGroupBox>
+            </div>
+          )}
             </div>
           )}
         </div>

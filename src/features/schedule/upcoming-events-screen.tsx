@@ -7,11 +7,12 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Check, Filter } from 'lucide-react'
+import { Check, Filter, UserX } from 'lucide-react'
 import { TimetableEvent, SmartTimetableResult } from '@/models/timetable.model'
 import { AppLanguage, pickText } from '@/config/dictionary.config'
 import { UiCard, UiSearchBar, UiSegmentedControl } from '@/components/ui/ui-controls'
 import { getMonthNames, getTodayIsoString } from '@/utils/date.util'
+import { formatTeacherAbsenceSpan } from '@/utils/teacher-absence.util'
 import { cn } from '@/utils/cn.util'
 import { EventsListView, LayeredEventGroups, MonthEventGroup } from './events-list-view'
 import { EventsCalendarView } from './events-calendar-view'
@@ -122,6 +123,18 @@ export function UpcomingEventsScreen({
   const [calYear, setCalYear] = useState<number>(todayYear)
   const [calMonth, setCalMonth] = useState<number>(todayMonthIndex)
   const [selectedDateIso, setSelectedDateIso] = useState<string>(todayIso)
+
+  const upcomingTeacherAbsences = useMemo(() => {
+    const list = timetableData?.teacherAbsences || []
+    const q = searchQuery.trim().toLowerCase()
+    return list.filter((a) => {
+      if (!showArchived && a.dateTo < todayIso) return false
+      if (q && !a.teacherName.toLowerCase().includes(q) && !(a.reason || '').toLowerCase().includes(q)) {
+        return false
+      }
+      return true
+    })
+  }, [timetableData?.teacherAbsences, showArchived, todayIso, searchQuery])
 
   const allEvents = useMemo(() => {
     if (!timetableData) return []
@@ -522,16 +535,55 @@ export function UpcomingEventsScreen({
             </UiCard>
           </div>
         ) : viewMode === 'list' ? (
-          <EventsListView
-            filteredEvents={filteredEvents}
-            layeredGroups={layeredGroups}
-            showArchived={showArchived}
-            hasSearchOrFilter={Boolean(searchQuery || hasCustomFilter)}
-            showFullSubjectNames={showFullSubjectNames}
-            lang={lang}
-            onResetFilters={resetFilters}
-            onSelectEvent={onSelectEvent}
-          />
+          <>
+            {upcomingTeacherAbsences.length > 0 && categoryFilter === 'all' && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[12px] font-semibold uppercase tracking-wide text-[var(--ios-secondary)] px-3">
+                  {pickText(lang, {
+                    pl: `Nieobecności nauczycieli (${upcomingTeacherAbsences.length})`,
+                    en: `Teacher absences (${upcomingTeacherAbsences.length})`
+                  })}
+                </span>
+                <UiCard className="overflow-hidden divide-y divide-[var(--ios-separator)]">
+                  {upcomingTeacherAbsences.map((abs) => (
+                    <div
+                      key={abs.id}
+                      className="px-3.5 py-2.5 flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-7 h-7 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] flex items-center justify-center shrink-0 ios-tile">
+                          <UserX className="w-3.5 h-3.5" strokeWidth={2.1} />
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-[14px] font-medium text-[var(--ios-label)] truncate">
+                            {abs.teacherName}
+                          </div>
+                          {abs.reason && (
+                            <div className="text-[12px] text-[var(--ios-secondary)] truncate">
+                              {abs.reason}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-semibold text-[var(--ios-orange)] bg-[var(--ios-orange-subtle)] ios-tile px-2 py-0.5 rounded-full shrink-0 tabular-nums">
+                        {formatTeacherAbsenceSpan(abs, lang)}
+                      </span>
+                    </div>
+                  ))}
+                </UiCard>
+              </div>
+            )}
+            <EventsListView
+              filteredEvents={filteredEvents}
+              layeredGroups={layeredGroups}
+              showArchived={showArchived}
+              hasSearchOrFilter={Boolean(searchQuery || hasCustomFilter)}
+              showFullSubjectNames={showFullSubjectNames}
+              lang={lang}
+              onResetFilters={resetFilters}
+              onSelectEvent={onSelectEvent}
+            />
+          </>
         ) : (
           <EventsCalendarView
             calMonthTitle={calMonthTitle}

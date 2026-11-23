@@ -5,7 +5,7 @@
  */
 
 import { StudentProfile } from '@/models/account.model'
-import { SmartTimetableResult, DaySchedule, LessonItem, TimetableEvent } from '@/models/timetable.model'
+import { SmartTimetableResult, DaySchedule, LessonItem, TimetableEvent, TeacherAbsenceItem } from '@/models/timetable.model'
 import { GradesResult } from '@/models/grade.model'
 import { AttendanceResult, SubjectAttendance, AbsenceDetail, LegacyAttendanceTable } from '@/models/attendance.model'
 import { MessagesActionResult, MessageItem, AnnouncementItem, ReceiverItem, MessageAttachment } from '@/models/message.model'
@@ -158,7 +158,8 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
             isCancelled: false,
             isSubstitution: false,
             flag: null,
-            teacherAbsent: false,
+            teacherAbsent: true,
+            teacherAbsenceReason: s('Zwolnienie lekarskie · 11:30–14:20', 'Sick leave · 11:30–14:20'),
             topic: s('Motyw vanitas i motywy biblijne w literaturze Młodej Polski', 'Vanitas motif and biblical references in Young Poland literature')
         },
         {
@@ -172,7 +173,8 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
             isCancelled: false,
             isSubstitution: false,
             flag: null,
-            teacherAbsent: false,
+            teacherAbsent: true,
+            teacherAbsenceReason: s('Konferencja naukowa', 'Academic conference'),
             topic: s('Elektrodynamika i pole magnetyczne przewodnika z prądem', 'Electrodynamics and magnetic field of current-carrying conductor')
         }
     ]
@@ -805,11 +807,45 @@ export function getDemoSmartTimetable(targetDateIso?: string, translate: boolean
         }
     ]
 
+    const teacherAbsences: TeacherAbsenceItem[] = [
+        {
+            id: 'ta-1',
+            teacherName: 'mgr Maria Dąbrowska',
+            dateFrom: dayDates[0].isoDate,
+            dateTo: dayDates[0].isoDate,
+            timeFrom: '11:30',
+            timeTo: '14:20',
+            reason: s('Zwolnienie lekarskie', 'Sick leave')
+        },
+        {
+            id: 'ta-2',
+            teacherName: 'dr hab. Tomasz Lewandowski',
+            dateFrom: dayDates[0].isoDate,
+            dateTo: dayDates[1].isoDate,
+            reason: s('Konferencja naukowa', 'Academic conference')
+        },
+        {
+            id: 'ta-3',
+            teacherName: 'mgr Krzysztof Zieliński',
+            dateFrom: dayDates[3].isoDate,
+            dateTo: dayDates[3].isoDate,
+            reason: s('Szkolenie metodyczne', 'Methodological training')
+        },
+        {
+            id: 'ta-4',
+            teacherName: 'dr Beata Mazur',
+            dateFrom: up1.isoDate,
+            dateTo: up2.isoDate,
+            reason: s('Delegacja służbowa', 'Official delegation')
+        }
+    ]
+
     return {
         weekStart: mondayIso,
         weekEnd: fridayIso,
         schedule,
-        calendarEvents
+        calendarEvents,
+        teacherAbsences
     }
 }
 

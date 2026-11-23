@@ -86,6 +86,7 @@ interface DesktopAttendanceViewProps {
   onRetry: () => void
   timetableData: SmartTimetableResult | null
   showFullSubjectNames: boolean
+  vocationalSubjects?: string[]
   isStudent: boolean
   canSubmitExcuse: boolean
   liveJustifications: LiveJustificationItem[]
@@ -113,6 +114,7 @@ export function DesktopAttendanceView({
   onRetry,
   timetableData,
   showFullSubjectNames,
+  vocationalSubjects = [],
   isStudent,
   canSubmitExcuse,
   liveJustifications,
@@ -231,15 +233,35 @@ export function DesktopAttendanceView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subTab, allowExcuse])
 
+  const vocationalSet = useMemo(
+    () => new Set(vocationalSubjects.map((s) => s.trim().toLowerCase()).filter(Boolean)),
+    [vocationalSubjects]
+  )
+
   const sortedSubjects = useMemo(() => {
     if (!attendanceData?.subjects) return []
     return [...attendanceData.subjects].sort((a, b) => {
-      if (a.unexcusedCount > 0 && b.unexcusedCount === 0) return -1
-      if (b.unexcusedCount > 0 && a.unexcusedCount === 0) return 1
       if (a.percentage !== b.percentage) return a.percentage - b.percentage
+      if (b.absentLessons !== a.absentLessons) return b.absentLessons - a.absentLessons
       return a.subject.localeCompare(b.subject)
     })
   }, [attendanceData?.subjects])
+
+  const { vocationalList, regularList } = useMemo(() => {
+    if (vocationalSet.size === 0) {
+      return { vocationalList: [] as SubjectAttendance[], regularList: sortedSubjects }
+    }
+    const voc: SubjectAttendance[] = []
+    const reg: SubjectAttendance[] = []
+    for (const sub of sortedSubjects) {
+      if (vocationalSet.has(sub.subject.trim().toLowerCase())) {
+        voc.push(sub)
+      } else {
+        reg.push(sub)
+      }
+    }
+    return { vocationalList: voc, regularList: reg }
+  }, [sortedSubjects, vocationalSet])
 
   useEffect(() => {
     if (selectedSubject && sortedSubjects.length > 0) {
@@ -616,76 +638,128 @@ export function DesktopAttendanceView({
               </MacGroupBox>
             </div>
 
-            <MacGroupBox title={t.subjectsSection} noPadding>
-              <div className="mac-divide-y">
-                {sortedSubjects.map((sub) => {
-                  const isSel = selectedSubject?.subject === sub.subject
-                  const activeNb = sub.absences.filter((a) => {
-                    const aIso = a.date.includes('.') ? a.date.split('.').reverse().join('-') : a.date
-                    return a.isUnexcused && !isLessonJustificationPending(pendingList, aIso, a.date, a.lessonNumber)
-                  }).length
-                  const spCount = sub.absences.filter((a) => a.type === 'sp').length
-                  const isDanger = sub.percentage < 50
-                  return (
-                    <button
-                      key={sub.subject}
-                      type="button"
-                      onClick={() => setSelectedSubject(sub)}
-                      className={cn(
-                        'w-full px-4 py-3 flex items-center justify-between gap-4 text-left cursor-pointer transition-colors',
-                        isSel ? 'bg-[var(--ios-blue-subtle)]/45' : 'hover:bg-[var(--mac-fill-4)]'
-                      )}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[13px] font-semibold text-[var(--mac-label-1)] leading-snug">
-                          {formatSubjectName(sub.subject, showFullSubjectNames)}
-                        </div>
-                        <div className="text-[11px] text-[var(--mac-label-2)] mt-0.5 tabular-nums">
-                          {t.missedLessonsCount(sub.absentLessons)} {t.ofScheduled(sub.totalLessons)}
-                        </div>
+            {(() => {
+              const renderSubjectRow = (sub: SubjectAttendance, isVocational: boolean) => {
+                const isSel = selectedSubject?.subject === sub.subject
+                const activeNb = sub.absences.filter((a) => {
+                  const aIso = a.date.includes('.') ? a.date.split('.').reverse().join('-') : a.date
+                  return a.isUnexcused && !isLessonJustificationPending(pendingList, aIso, a.date, a.lessonNumber)
+                }).length
+                const spCount = sub.absences.filter((a) => a.type === 'sp').length
+                const dangerThreshold = isVocational ? 75 : 50
+                const isDanger = sub.percentage < dangerThreshold
+                return (
+                  <button
+                    key={sub.subject}
+                    type="button"
+                    onClick={() => setSelectedSubject(sub)}
+                    className={cn(
+                      'w-full px-4 py-3 flex items-center justify-between gap-4 text-left cursor-pointer transition-colors',
+                      isSel ? 'bg-[var(--ios-blue-subtle)]/45' : 'hover:bg-[var(--mac-fill-4)]'
+                    )}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-semibold text-[var(--mac-label-1)] leading-snug">
+                        {formatSubjectName(sub.subject, showFullSubjectNames)}
                       </div>
+                      <div className="text-[11px] text-[var(--mac-label-2)] mt-0.5 tabular-nums">
+                        {t.missedLessonsCount(sub.absentLessons)} {t.ofScheduled(sub.totalLessons)}
+                      </div>
+                    </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="min-w-12 flex items-center justify-end gap-1.5 shrink-0">
-                          {activeNb > 0 && (
-                            <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[10px] font-semibold tabular-nums whitespace-nowrap">
-                              {activeNb} nb
-                            </span>
-                          )}
-                          {spCount > 0 && (
-                            <span className="px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[10px] font-semibold tabular-nums whitespace-nowrap">
-                              {spCount} sp
-                            </span>
-                          )}
-                        </div>
-                        <div className="w-24 h-[5px] rounded-full bg-[var(--mac-fill-2)] overflow-hidden">
-                          <div
-                            className={cn('h-full rounded-full', isDanger ? 'bg-[var(--mac-red)]' : 'bg-[var(--mac-green)]')}
-                            style={{ width: `${Math.min(Math.max(sub.percentage, 0), 100)}%` }}
-                          />
-                        </div>
-                        <span
-                          className={cn(
-                            'w-12 text-right text-[14px] font-semibold tabular-nums',
-                            isDanger ? 'text-[var(--mac-red)]' : 'text-[var(--mac-label-1)]'
-                          )}
-                        >
-                          {sub.percentage}%
-                        </span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="min-w-12 flex items-center justify-end gap-1.5 shrink-0">
+                        {activeNb > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-[var(--ios-red-subtle)] text-[var(--mac-red)] text-[10px] font-semibold tabular-nums whitespace-nowrap">
+                            {activeNb} nb
+                          </span>
+                        )}
+                        {spCount > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[10px] font-semibold tabular-nums whitespace-nowrap">
+                            {spCount} sp
+                          </span>
+                        )}
                       </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </MacGroupBox>
+                      <div className="w-24 h-[5px] rounded-full bg-[var(--mac-fill-2)] overflow-hidden">
+                        <div
+                          className={cn('h-full rounded-full', isDanger ? 'bg-[var(--mac-red)]' : 'bg-[var(--mac-green)]')}
+                          style={{ width: `${Math.min(Math.max(sub.percentage, 0), 100)}%` }}
+                        />
+                      </div>
+                      <span
+                        className={cn(
+                          'w-12 text-right text-[14px] font-semibold tabular-nums',
+                          isDanger ? 'text-[var(--mac-red)]' : 'text-[var(--mac-label-1)]'
+                        )}
+                      >
+                        {sub.percentage}%
+                      </span>
+                    </div>
+                  </button>
+                )
+              }
+
+              if (vocationalList.length > 0) {
+                return (
+                  <>
+                    <MacGroupBox
+                      title={pickText(lang, {
+                        pl: 'Przedmioty zawodowe (próg 75%)',
+                        en: 'Vocational subjects (75% threshold)'
+                      })}
+                      noPadding
+                    >
+                      <div className="mac-divide-y">
+                        {vocationalList.map((sub) => renderSubjectRow(sub, true))}
+                      </div>
+                    </MacGroupBox>
+                    {regularList.length > 0 && (
+                      <MacGroupBox
+                        title={pickText(lang, {
+                          pl: 'Pozostałe przedmioty',
+                          en: 'Other subjects'
+                        })}
+                        noPadding
+                      >
+                        <div className="mac-divide-y">
+                          {regularList.map((sub) => renderSubjectRow(sub, false))}
+                        </div>
+                      </MacGroupBox>
+                    )}
+                  </>
+                )
+              }
+
+              return (
+                <MacGroupBox title={t.subjectsSection} noPadding>
+                  <div className="mac-divide-y">
+                    {regularList.map((sub) => renderSubjectRow(sub, false))}
+                  </div>
+                </MacGroupBox>
+              )
+            })()}
           </div>
 
-          <aside className="w-[340px] shrink-0 border-l border-[var(--mac-row-divider)] bg-[var(--mac-canvas-bg)] p-4 overflow-y-auto flex flex-col gap-3.5">
+          <aside className="w-[340px] shrink-0 p-4 pl-0 overflow-y-auto flex flex-col gap-3.5">
             {selectedSubject ? (
               <>
                 <MacGroupBox contentClassName="p-4 flex flex-col gap-1">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-blue)]">
-                    {t.subjectAttendance}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-blue)]">
+                      {t.subjectAttendance}
+                    </div>
+                    {vocationalSet.has(selectedSubject.subject.trim().toLowerCase()) && (
+                      <span
+                        className={cn(
+                          'px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0',
+                          selectedSubject.percentage < 75
+                            ? 'bg-[var(--ios-red-subtle)] text-[var(--mac-red)]'
+                            : 'bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)]'
+                        )}
+                      >
+                        {pickText(lang, { pl: 'Zawodowy · 75%', en: 'Vocational · 75%' })}
+                      </span>
+                    )}
                   </div>
                   <h3 className="text-[16px] font-bold text-[var(--mac-label-1)] leading-snug mt-0.5">
                     {formatSubjectName(selectedSubject.subject, showFullSubjectNames)}
@@ -733,15 +807,18 @@ export function DesktopAttendanceView({
                 </MacGroupBox>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center text-[var(--mac-label-3)] px-6">
-                <CheckCircle2 className="w-7 h-7 stroke-[1.5]" />
-                <span className="text-[12px] text-[var(--mac-label-2)]">
+              <MacGroupBox
+                className="flex-1"
+                contentClassName="flex-1 flex flex-col items-center justify-center text-center p-6 gap-2 text-[var(--mac-label-2)]"
+              >
+                <CheckCircle2 className="w-6 h-6 text-[var(--mac-label-3)]" strokeWidth={1.7} />
+                <span className="text-[12px]">
                   {pickText(lang, {
                     pl: 'Wybierz przedmiot, aby zobaczyć szczegóły',
                     en: 'Select a subject to view details'
                   })}
                 </span>
-              </div>
+              </MacGroupBox>
             )}
           </aside>
         </div>
@@ -888,15 +965,18 @@ export function DesktopAttendanceView({
                 </MacGroupBox>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center text-[var(--mac-label-3)] px-6">
-                <CheckCircle2 className="w-7 h-7 stroke-[1.5]" />
-                <span className="text-[12px] text-[var(--mac-label-2)]">
+              <MacGroupBox
+                className="flex-1"
+                contentClassName="flex-1 flex flex-col items-center justify-center text-center p-6 gap-2 text-[var(--mac-label-2)]"
+              >
+                <CheckCircle2 className="w-6 h-6 text-[var(--mac-label-3)]" strokeWidth={1.7} />
+                <span className="text-[12px]">
                   {pickText(lang, {
                     pl: 'Wybierz przedmiot, aby zobaczyć szczegóły',
                     en: 'Select a subject to view details'
                   })}
                 </span>
-              </div>
+              </MacGroupBox>
             )}
           </aside>
         </div>

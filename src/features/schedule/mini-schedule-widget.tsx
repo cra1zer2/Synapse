@@ -7,6 +7,7 @@
 'use client'
 
 import { useMemo, useState, useEffect, Fragment } from 'react'
+import { UserX } from 'lucide-react'
 import { SmartTimetableResult, LessonItem } from '@/models/timetable.model'
 import {
   parseLessonTimeRange,
@@ -23,6 +24,7 @@ import {
   isWarsawWeekend
 } from '@/utils/date.util'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
+import { getTeacherAbsencesForDate } from '@/utils/teacher-absence.util'
 import { UiCard, UiBreakDivider } from '@/components/ui/ui-controls'
 import { UiBadge } from '@/components/ui/ui-badge'
 import { cn } from '@/utils/cn.util'
@@ -76,6 +78,7 @@ function MiniLessonItem({
   isActive = false,
   isPassed = false,
   showFull = false,
+  lang = 'pl',
   onSelect,
   t
 }: {
@@ -83,6 +86,7 @@ function MiniLessonItem({
   isActive?: boolean
   isPassed?: boolean
   showFull?: boolean
+  lang?: AppLanguage
   onSelect?: (lesson: LessonItem) => void
   t: AppDictionary
 }) {
@@ -153,6 +157,11 @@ function MiniLessonItem({
       </div>
 
       <div className="shrink-0 flex items-center gap-2 self-center">
+        {!isCancelled && !isSub && lesson.teacherAbsent && (
+          <span className="text-[10.5px] font-semibold text-[var(--ios-orange)] bg-[var(--ios-orange-subtle)] ios-tile px-2 py-0.5 rounded-full whitespace-nowrap">
+            {pickText(lang, { pl: 'Nieobecny', en: 'Absent' })}
+          </span>
+        )}
         {lesson.room ? (
           <span
             className={cn(
@@ -321,6 +330,16 @@ export function MiniScheduleWidget({
     return null
   }, [shouldShowNextDay, nextUpcomingDaySchedule, realTodayIso, todaySchedule, lang])
 
+  const displayDayIso = useMemo(() => {
+    if (shouldShowNextDay && nextUpcomingDaySchedule?.isoDate) return nextUpcomingDaySchedule.isoDate
+    return todaySchedule?.isoDate || realTodayIso
+  }, [shouldShowNextDay, nextUpcomingDaySchedule?.isoDate, todaySchedule?.isoDate, realTodayIso])
+
+  const displayDayAbsences = useMemo(
+    () => getTeacherAbsencesForDate(timetableData?.teacherAbsences, displayDayIso),
+    [timetableData?.teacherAbsences, displayDayIso]
+  )
+
   const handleCardClick = () => {
     if (shouldShowNextDay && nextUpcomingDaySchedule) {
       onOpenFullSchedule(nextUpcomingDaySchedule.dayName, nextUpcomingDaySchedule.isoDate)
@@ -432,6 +451,28 @@ export function MiniScheduleWidget({
         )
       ) : (
         <div className="ios-reveal">
+          {displayDayAbsences.length > 0 && (
+            <div
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCardClick()
+              }}
+              className="px-4 py-2 bg-[var(--ios-orange-subtle)]/55 [border-bottom-width:0.5px] border-b border-[var(--ios-separator)] flex items-center justify-between gap-2 cursor-pointer active:opacity-75 transition-opacity"
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <UserX className="w-3.5 h-3.5 text-[var(--ios-orange)] shrink-0" strokeWidth={2.2} />
+                <span className="text-[12px] font-semibold text-[var(--ios-orange)] shrink-0">
+                  {pickText(lang, { pl: 'Nieobecni:', en: 'Absent:' })}
+                </span>
+                <span className="text-[12px] text-[var(--ios-label)] truncate">
+                  {displayDayAbsences.map((a) => a.teacherName).join(', ')}
+                </span>
+              </div>
+              <span className="text-[11px] font-semibold text-[var(--ios-orange)] shrink-0 tabular-nums">
+                {displayDayAbsences.length}
+              </span>
+            </div>
+          )}
           {!showAllLessons && scheduleState.mode === 'all_ended_today' && !shouldShowNextDay ? (
             <div className="px-4 py-7 flex flex-col items-center justify-center gap-1.5 text-center">
               <div className="w-9 h-9 rounded-full bg-[var(--ios-green-subtle)] ios-tile text-[var(--ios-green)] flex items-center justify-center mb-1">
@@ -511,6 +552,7 @@ export function MiniScheduleWidget({
                       isActive={isOngoing}
                       isPassed={isPassed}
                       showFull={showFullSubjectNames}
+                      lang={lang}
                       onSelect={onSelectLesson}
                       t={t}
                     />

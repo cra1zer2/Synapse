@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Archive, Calendar, ChevronLeft, ChevronRight, PanelLeft, Pencil, RefreshCw, Settings, SquarePen } from 'lucide-react'
+import { Archive, Calendar, ChevronLeft, ChevronRight, PanelLeft, Pencil, RefreshCw, Settings, SlidersHorizontal, SquarePen } from 'lucide-react'
 import { SavedAccount, StudentProfile } from '@/models/account.model'
 import { SmartTimetableResult, LessonItem, TimetableEvent } from '@/models/timetable.model'
 import { GradesResult, GradeItem } from '@/models/grade.model'
@@ -79,6 +79,10 @@ interface DesktopWorkspaceProps {
   onToggleEnableGradeSimulator: (val: boolean) => void
   showHomeworks: boolean
   onToggleShowHomeworks: (val: boolean) => void
+  showTeacherAbsences: boolean
+  onToggleShowTeacherAbsences: (val: boolean) => void
+  vocationalSubjects: string[]
+  onToggleVocationalSubject: (subject: string) => void
   showLuckyNumberBanner: boolean
   onToggleShowLuckyNumberBanner: (val: boolean) => void
   isStudent: boolean
@@ -162,6 +166,10 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
     onToggleEnableGradeSimulator,
     showHomeworks,
     onToggleShowHomeworks,
+    showTeacherAbsences,
+    onToggleShowTeacherAbsences,
+    vocationalSubjects,
+    onToggleVocationalSubject,
     showLuckyNumberBanner,
     onToggleShowLuckyNumberBanner,
     isStudent,
@@ -212,6 +220,25 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
   const [gradesAddedFilter, setGradesAddedFilter] = useState<DesktopGradesAddedFilter>('all')
   const [gradesEditMode, setGradesEditMode] = useState(false)
   const [excuseMode, setExcuseMode] = useState<DesktopExcuseModeTab>('nb')
+
+  const availableSubjects = useMemo(() => {
+    const set = new Set<string>()
+    attendanceData?.subjects?.forEach((s) => {
+      if (s.subject?.trim()) set.add(s.subject.trim())
+    })
+    gradesData?.subjects?.forEach((s) => {
+      if (s.subject?.trim()) set.add(s.subject.trim())
+    })
+    timetableData?.schedule?.forEach((d) => {
+      d.lessons?.forEach((l) => {
+        if (l.subject?.trim()) set.add(l.subject.trim())
+      })
+    })
+    vocationalSubjects.forEach((s) => {
+      if (s.trim()) set.add(s.trim())
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [attendanceData?.subjects, gradesData?.subjects, timetableData?.schedule, vocationalSubjects])
 
   const liveWeekMeta = useMemo(() => computeLiveWeekDays(currentWeekPivot), [currentWeekPivot])
   const allowExcuse = canSubmitExcuse !== undefined ? canSubmitExcuse : !isStudent
@@ -647,12 +674,14 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
                 )}
                 <MacPopupSelect
                   surface="toolbar"
+                  icon={<SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={2.1} />}
+                  active={gradesAddedFilter !== 'all'}
                   value={gradesAddedFilter}
                   onChange={(e) => setGradesAddedFilter(e.target.value as DesktopGradesAddedFilter)}
                   aria-label={pickText(lang, { pl: 'Filtr dodania ocen', en: 'Filter grades by date added' })}
                 >
                   <option value="all">
-                    {pickText(lang, { pl: 'Wszystkie', en: 'All' })}
+                    {pickText(lang, { pl: 'Filtr: Wszystkie', en: 'Filter: All' })}
                   </option>
                   <option value="since-last-visit">
                     {pickText(lang, { pl: 'Od ostatniego wejścia', en: 'Since last visit' })}
@@ -838,6 +867,7 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
               onRetry={onRefresh}
               timetableData={timetableData}
               showFullSubjectNames={showFullSubjectNames}
+              vocationalSubjects={vocationalSubjects}
               isStudent={isStudent}
               canSubmitExcuse={canSubmitExcuse}
               liveJustifications={attendanceCtrl.liveJustifications}
@@ -915,6 +945,11 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
         onToggleShowFullSubjectNames={onToggleShowFullSubjectNames}
         showHomeworks={showHomeworks}
         onToggleShowHomeworks={onToggleShowHomeworks}
+        showTeacherAbsences={showTeacherAbsences}
+        onToggleShowTeacherAbsences={onToggleShowTeacherAbsences}
+        vocationalSubjects={vocationalSubjects}
+        availableSubjects={availableSubjects}
+        onToggleVocationalSubject={onToggleVocationalSubject}
         enableGradeSimulator={enableGradeSimulator}
         onToggleEnableGradeSimulator={onToggleEnableGradeSimulator}
         showLuckyNumberBanner={showLuckyNumberBanner}

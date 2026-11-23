@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo, useState, useEffect, useRef } from 'react'
-import { Calendar, CalendarClock, CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, CalendarClock, CalendarPlus, ChevronLeft, ChevronRight, UserX } from 'lucide-react'
 import { SmartTimetableResult, TimetableEvent } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
 import {
@@ -17,6 +17,7 @@ import {
   resolveEventBadgeLabel
 } from '@/utils/badge.util'
 import { downloadEventIcs } from '@/utils/calendar.util'
+import { formatTeacherAbsenceSpan } from '@/utils/teacher-absence.util'
 import { cn } from '@/utils/cn.util'
 import {
   MacGroupBox,
@@ -94,6 +95,11 @@ export function DesktopDeadlinesView({
   const filteredEvents = useMemo(() => {
     return allEvents.filter((ev) => showArchived || ev.isoDate >= todayIso)
   }, [allEvents, showArchived, todayIso])
+
+  const filteredTeacherAbsences = useMemo(() => {
+    const list = timetableData?.teacherAbsences || []
+    return list.filter((a) => showArchived || a.dateTo >= todayIso)
+  }, [timetableData?.teacherAbsences, showArchived, todayIso])
 
   useEffect(() => {
     if (!hasAutoSelectedRef.current && filteredEvents.length > 0) {
@@ -291,6 +297,46 @@ export function DesktopDeadlinesView({
               <span className="text-[14px] font-medium">
                 {pickText(lang, { pl: 'Brak pasujących wydarzeń', en: 'No matching deadlines' })}
               </span>
+            </div>
+          )}
+
+          {filteredTeacherAbsences.length > 0 && (
+            <div className="mt-4">
+              <MacGroupBox
+                noPadding
+                title={pickText(lang, {
+                  pl: `Nieobecności nauczycieli (${filteredTeacherAbsences.length})`,
+                  en: `Teacher absences (${filteredTeacherAbsences.length})`
+                })}
+              >
+                <div className="mac-divide-y">
+                  {filteredTeacherAbsences.map((abs) => (
+                    <div
+                      key={abs.id}
+                      className="px-4 py-2.5 flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-7 h-7 rounded-[8px] bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] flex items-center justify-center shrink-0">
+                          <UserX className="w-3.5 h-3.5" strokeWidth={2} />
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-semibold text-[var(--mac-label-1)] truncate">
+                            {abs.teacherName}
+                          </div>
+                          {abs.reason && (
+                            <div className="text-[11px] text-[var(--mac-label-2)] truncate">
+                              {abs.reason}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[11px] font-semibold shrink-0 tabular-nums">
+                        {formatTeacherAbsenceSpan(abs, lang)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </MacGroupBox>
             </div>
           )}
         </div>

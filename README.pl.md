@@ -1,4 +1,4 @@
-# Synapse — "E-Dziennik" `v2.0 Beta`
+# Synapse — "E-Dziennik" `v0.4`
 
 **[🇬🇧 English](README.md)** · **[🇵🇱 Polski](README.pl.md)**
 
@@ -8,7 +8,7 @@
 
 > **🚀 Podgląd na żywo i szybkie Demo:** Otwórz **[synapse-ten-smoky.vercel.app](https://synapse-ten-smoky.vercel.app)** i wpisz **`demo` / `demo`** (uczeń) lub **`demor` / `demo`** (rodzic), aby od razu przetestować aplikację na żywo bez własnego konta Librus.
 >
-> **✨ Pełne wydanie v2.0 Beta:** Wersja **v2.0.0-beta.1** łączy kompletny **układ komputerowy (Desktop PC Workspace)** (Pulpit, Tygodniowy plan 0–9, Oceny z symulatorem „Co jeśli?”, Frekwencja z e-Usprawiedliwieniami, Wiadomości i Ogłoszenia) z dopracowaną **wersją mobilną** (Widżety oraz Dolny pasek nawigacji) w jednym wydaniu publicznej bety.
+> **🧪 Wczesna wersja rozwojowa (`v0.4.0`):** Synapse jest w aktywnym rozwoju w drodze do `v1.0.0`. Łączy już **układ komputerowy (Desktop PC Workspace)** (Pulpit, Tygodniowy plan 0–9, Oceny z symulatorem „Co jeśli?”, Frekwencja z e-Usprawiedliwieniami, Wiadomości i Ogłoszenia) z **wersją mobilną** (Widżety oraz Dolny pasek nawigacji), a kolejne poprawki i dopracowanie interfejsu trafiają w regularnych wydaniach `0.x`.
 
 > Zaprojektowany jako responsywna hybryda aplikacji webowej i PWA: płynne karty dotykowe oraz sprężyste przejścia na smartfonie i wielokolumnowe okno robocze w stylu macOS na monitorze — bez reklam, śledzenia i zewnętrznych serwerów.
 

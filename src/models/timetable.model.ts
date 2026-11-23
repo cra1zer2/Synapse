@@ -45,10 +45,22 @@ export interface DaySchedule {
   lessons: LessonItem[]
 }
 
+export interface TeacherAbsenceItem {
+  id: string | number
+  teacherId?: number
+  teacherName: string
+  dateFrom: string
+  dateTo: string
+  timeFrom?: string
+  timeTo?: string
+  reason?: string
+}
+
 export interface SmartTimetableResult {
   weekStart: string
   weekEnd: string
   schedule: DaySchedule[]
   nextUpcomingDay?: DaySchedule
   calendarEvents: TimetableEvent[]
+  teacherAbsences?: TeacherAbsenceItem[]
 }

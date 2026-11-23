@@ -1,5 +1,5 @@
 'use client'
-import { AppDictionary, AppLanguage, NavMode, pickText } from '@/config/dictionary.config'
+import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
 import { UiScreen } from '@/components/ui/ui-screen'
 import { UiListSection, UiCell } from '@/components/ui/ui-list'
 import { UiSwitch } from '@/components/ui/ui-switch'
@@ -17,13 +17,13 @@ interface AdvancedSettingsScreenProps {
   onToggleEnableGradeSimulator?: (val: boolean) => void
   showHomeworks: boolean
   onToggleShowHomeworks?: (val: boolean) => void
+  showTeacherAbsences: boolean
+  onToggleShowTeacherAbsences?: (val: boolean) => void
   showLuckyNumberBanner: boolean
   onToggleShowLuckyNumberBanner?: (val: boolean) => void
   isStudentUser: boolean
   allowStudentJustifications: boolean
   onToggleAllowStudentJustifications?: (val: boolean) => void
-  navMode?: NavMode
-  onSelectNavMode?: (mode: NavMode) => void
   onOpenTimingsDebug: () => void
   t: AppDictionary
 }
@@ -41,13 +41,13 @@ export function AdvancedSettingsScreen({
   onToggleEnableGradeSimulator,
   showHomeworks,
   onToggleShowHomeworks,
+  showTeacherAbsences,
+  onToggleShowTeacherAbsences,
   showLuckyNumberBanner,
   onToggleShowLuckyNumberBanner,
   isStudentUser,
   allowStudentJustifications,
   onToggleAllowStudentJustifications,
-  navMode = 'widgets',
-  onSelectNavMode,
   t,
 }: AdvancedSettingsScreenProps) {
   return (
@@ -109,6 +109,29 @@ export function AdvancedSettingsScreen({
               }
             />
           )}
+          {onToggleShowTeacherAbsences && (
+            <UiCell
+              title={pickText(currentLang, {
+                pl: 'Nieobecności nauczycieli (Beta)',
+                en: 'Teacher absences (Beta)',
+              })}
+              subtitle={pickText(currentLang, {
+                pl: 'Oznaczaj w planie i terminarzu lekcje z nieobecnym nauczycielem',
+                en: 'Highlight absent teachers across schedule and deadlines',
+              })}
+              size="tall"
+              trailing={
+                <UiSwitch
+                  checked={showTeacherAbsences}
+                  onChange={() => onToggleShowTeacherAbsences(!showTeacherAbsences)}
+                  ariaLabel={pickText(currentLang, {
+                    pl: 'Nieobecności nauczycieli (Beta)',
+                    en: 'Teacher absences (Beta)',
+                  })}
+                />
+              }
+            />
+          )}
           {onToggleShowLuckyNumberBanner && (
             <UiCell
               title={pickText(currentLang, { pl: 'Powiadomienie o szczęśliwym numerku', en: 'Lucky number banner' })}
@@ -125,20 +148,6 @@ export function AdvancedSettingsScreen({
                     pl: 'Powiadomienie o szczęśliwym numerku',
                     en: 'Lucky number banner',
                   })}
-                />
-              }
-            />
-          )}
-          {onSelectNavMode && (
-            <UiCell
-              title={t.navModeTitle}
-              subtitle={t.navModeDesc}
-              size="tall"
-              trailing={
-                <UiSwitch
-                  checked={navMode === 'tabs'}
-                  onChange={(next) => onSelectNavMode(next ? 'tabs' : 'widgets')}
-                  ariaLabel={t.navModeTitle}
                 />
               }
             />

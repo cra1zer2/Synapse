@@ -7,7 +7,7 @@
 'use client'
 
 import { useRef, useState, useEffect, useMemo, Fragment } from 'react'
-import { Calendar } from 'lucide-react'
+import { Calendar, ChevronDown, UserX } from 'lucide-react'
 import { SmartTimetableResult, DaySchedule, LessonItem, TimetableEvent } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
 import { formatSubjectName } from '@/utils/text.util'
@@ -28,6 +28,10 @@ import {
 } from '@/utils/time.util'
 import { cn } from '@/utils/cn.util'
 import { useSubTabMotion } from '@/hooks/subtab-motion.hook'
+import {
+  formatTeacherAbsenceSpan,
+  getTeacherAbsencesForDate
+} from '@/utils/teacher-absence.util'
 
 interface ScheduleViewProps {
   timetableData?: SmartTimetableResult | null
@@ -129,6 +133,7 @@ export function ScheduleView({
   const [currentMinutes, setCurrentMinutes] = useState(getCurrentTimeMinutes)
   const [cachedLessonCount, setCachedLessonCount] = useState<number>(6)
   const activeLessonRef = useRef<HTMLDivElement>(null)
+  const dateInputRef = useRef<HTMLInputElement>(null)
   const hasAutoScrolledRef = useRef(false)
   const { animClass: dayAnimClass, trigger: triggerDayMotion } = useSubTabMotion(230)
 
@@ -167,6 +172,21 @@ export function ScheduleView({
     triggerDayMotion(nextIdx >= prevIdx ? 1 : -1)
     hasAutoScrolledRef.current = false
     onSelectDay(dayName)
+  }
+
+  const handleOpenDatePicker = () => {
+    const input = dateInputRef.current
+    if (!input) return
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker()
+        return
+      }
+    } catch {
+      // Fallback below for browsers where showPicker is unsupported or restricted
+    }
+    input.focus()
+    input.click()
   }
 
   const handleDatePick = (isoDate: string) => {
@@ -228,6 +248,11 @@ export function ScheduleView({
   }, [currentDaySchedule, showHomeworks])
 
   const dayLessons = currentDaySchedule?.lessons || []
+  const [showDayAbsences, setShowDayAbsences] = useState(false)
+  const dayAbsences = useMemo(
+    () => getTeacherAbsencesForDate(timetableData?.teacherAbsences, selectedIsoDate),
+    [timetableData?.teacherAbsences, selectedIsoDate]
+  )
 
   return (
     <section className="w-full flex flex-col gap-3.5 pb-12 select-none">
@@ -259,14 +284,23 @@ export function ScheduleView({
                 <UiSpinner size="small" className="text-[var(--ios-blue)]" />
               </div>
             ) : (
-              <div className="relative w-7 h-7 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] active:scale-90 transition-all overflow-hidden cursor-pointer">
-                <Calendar className="w-4 h-4 pointer-events-none" strokeWidth={2} />
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={handleOpenDatePicker}
+                  aria-label={pickText(lang, { pl: 'Wybierz datę', en: 'Pick date' })}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-[var(--ios-secondary)] hover:text-[var(--ios-blue)] active:scale-90 transition-all cursor-pointer"
+                >
+                  <Calendar className="w-4 h-4 pointer-events-none" strokeWidth={2} />
+                </button>
                 <input
+                  ref={dateInputRef}
                   type="date"
                   value={selectedIsoDate}
                   onChange={(e) => handleDatePick(e.target.value)}
-                  className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
-                  aria-label={pickText(lang, { pl: 'Wybierz datę', en: 'Pick date' })}
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="absolute inset-0 w-0 h-0 opacity-0 pointer-events-none"
                 />
               </div>
             )}
@@ -399,6 +433,67 @@ export function ScheduleView({
               </div>
             )}
 
+            {dayAbsences.length > 0 && (
+              <UiCard className="overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowDayAbsences((v) => !v)}
+                  className="w-full px-3.5 py-2.5 flex items-center justify-between gap-2.5 text-left active:bg-[var(--ios-row-active)] transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-6 h-6 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--ios-orange)] flex items-center justify-center shrink-0 ios-tile">
+                      <UserX className="w-3.5 h-3.5" strokeWidth={2.2} />
+                    </span>
+                    <div className="min-w-0 flex flex-col">
+                      <span className="text-[13px] font-semibold text-[var(--ios-label)] leading-tight">
+                        {currentDaySchedule?.isToday
+                          ? pickText(lang, {
+                              pl: `Nieobecni dzisiaj (${dayAbsences.length})`,
+                              en: `Absent today (${dayAbsences.length})`
+                            })
+                          : pickText(lang, {
+                              pl: `Nieobecni nauczyciele (${dayAbsences.length})`,
+                              en: `Absent teachers (${dayAbsences.length})`
+                            })}
+                      </span>
+                      {!showDayAbsences && (
+                        <span className="text-[11.5px] text-[var(--ios-secondary)] truncate">
+                          {dayAbsences.map((a) => a.teacherName).join(', ')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronDown
+                    className={cn(
+                      'w-4 h-4 text-[var(--ios-tertiary)] shrink-0 transition-transform duration-200',
+                      showDayAbsences && 'rotate-180'
+                    )}
+                  />
+                </button>
+                {showDayAbsences && (
+                  <div className="[border-top-width:0.5px] border-t border-[var(--ios-separator)] divide-y divide-[var(--ios-separator)]">
+                    {dayAbsences.map((abs) => (
+                      <div key={abs.id} className="px-3.5 py-2.5 flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex flex-col">
+                          <span className="text-[13px] font-medium text-[var(--ios-label)] truncate">
+                            {abs.teacherName}
+                          </span>
+                          {abs.reason && (
+                            <span className="text-[11.5px] text-[var(--ios-secondary)] truncate">
+                              {abs.reason}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-semibold text-[var(--ios-orange)] bg-[var(--ios-orange-subtle)] ios-tile px-2 py-0.5 rounded-full shrink-0 tabular-nums">
+                          {formatTeacherAbsenceSpan(abs, lang, { includeDate: false })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </UiCard>
+            )}
+
             {currentDaySchedule && dayLessons.length > 0 ? (
               <UiCard className={cn('overflow-hidden', '')}>
                 {dayLessons.map((lesson, idx) => {
@@ -474,6 +569,11 @@ export function ScheduleView({
                           </div>
 
                           <div className="shrink-0 flex items-center gap-2 self-center pr-1">
+                            {!isCancelled && !isSub && lesson.teacherAbsent && (
+                              <span className="text-[10.5px] font-semibold text-[var(--ios-orange)] bg-[var(--ios-orange-subtle)] ios-tile px-2 py-0.5 rounded-full whitespace-nowrap">
+                                {pickText(lang, { pl: 'Nieobecny', en: 'Absent' })}
+                              </span>
+                            )}
                             {lesson.room ? (
                               <span
                                 className={cn(

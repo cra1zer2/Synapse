@@ -692,12 +692,12 @@ export function DesktopGradesView({
         )}
       </div>
 
-      {/* Right Docked Inspector Pane (350px) */}
-      <aside className="w-[350px] shrink-0 border-l border-[var(--mac-row-divider)] bg-[var(--mac-window-bg)] p-4 overflow-y-auto flex flex-col gap-4">
+      {/* Right Floating Card Inspector Column (340px) */}
+      <aside className="w-[340px] shrink-0 p-4 pl-0 overflow-y-auto flex flex-col gap-3.5">
         {inspectorTab === 'details' || !enableGradeSimulator ? (
           selectedDetail ? (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3.5">
+              <MacGroupBox contentClassName="p-4 flex items-center gap-3">
                 {(() => {
                   const st = getGradeBadgeStyle(selectedDetail.grade.grade)
                   return (
@@ -720,7 +720,7 @@ export function DesktopGradesView({
                     {selectedDetail.grade.category || pickText(lang, { pl: 'Ocena cząstkowa', en: 'Partial grade' })}
                   </h3>
                 </div>
-              </div>
+              </MacGroupBox>
 
               {selectedDetail.grade.description && (
                 <MacGroupBox title={pickText(lang, { pl: 'Komentarz', en: 'Comment' })}>
@@ -783,9 +783,15 @@ export function DesktopGradesView({
               )}
             </div>
           ) : (
-            <div className="py-16 text-center text-[12px] text-[var(--mac-label-2)]">
-              {pickText(lang, { pl: 'Kliknij ocenę w tabeli, aby zobaczyć szczegóły.', en: 'Click any grade to inspect details.' })}
-            </div>
+            <MacGroupBox
+              className="flex-1"
+              contentClassName="flex-1 flex flex-col items-center justify-center text-center p-6 gap-2 text-[var(--mac-label-2)]"
+            >
+              <GraduationCap className="w-6 h-6 text-[var(--mac-label-3)]" strokeWidth={1.7} />
+              <p className="text-[12px]">
+                {pickText(lang, { pl: 'Kliknij ocenę w tabeli, aby zobaczyć szczegóły.', en: 'Click any grade to inspect details.' })}
+              </p>
+            </MacGroupBox>
           )
         ) : (
           /* Docked What-If Grade Calculator */

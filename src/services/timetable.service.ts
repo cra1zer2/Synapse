@@ -10,12 +10,14 @@ import {
     LessonItem,
     DaySchedule,
     SmartTimetableResult,
-    TimetableEvent
+    TimetableEvent,
+    TeacherAbsenceItem
 } from '@/models/timetable.model'
 import { translateBatch, resolveTranslateTarget } from '@/services/translation.service'
 import { fetchGatewayEndpoint } from '@/services/gateway.service'
 import { parseLessonTimeRange } from '@/utils/time.util'
 import { getTodayIsoString } from '@/utils/date.util'
+import { doesAbsenceCoverLesson } from '@/utils/teacher-absence.util'
 
 function calculateDuration(timeRange: string): { durationMinutes: number; isShortened: boolean } {
     const parsed = parseLessonTimeRange(timeRange)
@@ -62,7 +64,9 @@ function parseRawDayLessons(
     periodsRaw: any,
     userNames: Map<number, string>,
     classroomMap: Map<number, string>,
-    dayRealized: Record<number, string>
+    dayRealized: Record<number, string>,
+    dayIso?: string,
+    dayAbsences?: TeacherAbsenceItem[]
 ): LessonItem[] {
     const dayLessons: LessonItem[] = []
     const periods = Array.isArray(periodsRaw) ? periodsRaw : (periodsRaw && typeof periodsRaw === 'object' ? Object.values(periodsRaw) : [])
@@ -107,6 +111,24 @@ function parseRawDayLessons(
 
             const realizedTopic = dayRealized[lessonNum] || ''
 
+            const slotTeacherId = slot.Teacher?.Id ? Number(slot.Teacher.Id) : undefined
+            let teacherAbsent = isCancelled
+            if (!isCancelled && !isSubstitution && dayIso && dayAbsences && dayAbsences.length > 0) {
+                const matchedAbsence = dayAbsences.find((abs) =>
+                    doesAbsenceCoverLesson(abs, dayIso, timeStr, finalTeacherName, slotTeacherId)
+                )
+                if (matchedAbsence) {
+                    teacherAbsent = true
+                    if (!teacherAbsenceReason) {
+                        const timeRange = matchedAbsence.timeFrom && matchedAbsence.timeTo
+                            ? `${matchedAbsence.timeFrom.slice(0, 5)}–${matchedAbsence.timeTo.slice(0, 5)}`
+                            : ''
+                        const parts = [matchedAbsence.reason, timeRange].filter(Boolean)
+                        teacherAbsenceReason = parts.length > 0 ? parts.join(' · ') : 'Nieobecność nauczyciela'
+                    }
+                }
+            }
+
             dayLessons.push({
                 number: lessonNum,
                 subject: subjectName,
@@ -118,7 +140,7 @@ function parseRawDayLessons(
                 isCancelled,
                 isSubstitution,
                 flag: isCancelled ? 'Odwołane' : isSubstitution ? 'Zastępstwo' : null,
-                teacherAbsent: isCancelled,
+                teacherAbsent,
                 teacherAbsenceReason,
                 topic: realizedTopic || undefined
             })
@@ -352,14 +374,87 @@ export async function fetchSmartTimetable(
             : []
 
         const homeworkIdSet = new Set<number>()
+        const teacherFreeDayIdSet = new Set<number>()
         for (const calendarRes of calendarResponses) {
             const rawHomeWorks = Array.isArray(calendarRes?.Calendar?.HomeWorks) ? calendarRes.Calendar.HomeWorks : []
             for (const hw of rawHomeWorks) {
                 const id = Number(hw?.Id)
                 if (!isNaN(id) && id > 0) homeworkIdSet.add(id)
             }
+            const rawTeacherFreeDays = Array.isArray(calendarRes?.Calendar?.TeacherFreeDays) ? calendarRes.Calendar.TeacherFreeDays : []
+            for (const tfd of rawTeacherFreeDays) {
+                const id = Number(tfd?.Id)
+                if (!isNaN(id) && id > 0) teacherFreeDayIdSet.add(id)
+            }
         }
         const homeworkIds = Array.from(homeworkIdSet)
+        const teacherFreeDayIds = Array.from(teacherFreeDayIdSet)
+
+        const teacherAbsences: TeacherAbsenceItem[] = []
+        if (teacherFreeDayIds.length > 0) {
+            const tfdChunks: number[][] = []
+            for (let i = 0; i < teacherFreeDayIds.length; i += 25) {
+                tfdChunks.push(teacherFreeDayIds.slice(i, i + 25))
+            }
+            const tfdResponses = await Promise.all(
+                tfdChunks.map((chunk) =>
+                    fetchGatewayEndpoint(username, pass, 'gateway/api/2.0/Calendars/TeacherFreeDays/' + chunk.join(',')).catch(() => null)
+                )
+            )
+            const rawTfdItems = tfdResponses.flatMap((res) =>
+                Array.isArray(res?.TeacherFreeDays) ? res.TeacherFreeDays : (res?.TeacherFreeDay ? [res.TeacherFreeDay] : [])
+            )
+
+            const missingTfdTeacherIds = new Set<number>()
+            for (const tfd of rawTfdItems) {
+                const tId = Number(tfd?.Teacher?.Id)
+                if (tId && !userNames.has(tId)) missingTfdTeacherIds.add(tId)
+            }
+            if (missingTfdTeacherIds.size > 0) {
+                const missingTfdUsersRes = await fetchGatewayEndpoint(
+                    username,
+                    pass,
+                    'gateway/api/2.0/Users/' + Array.from(missingTfdTeacherIds).join(',')
+                ).catch(() => null)
+                const extraUsers = Array.isArray(missingTfdUsersRes?.Users)
+                    ? missingTfdUsersRes.Users
+                    : (missingTfdUsersRes?.User ? [missingTfdUsersRes.User] : [])
+                for (const u of extraUsers) {
+                    const uId = Number(u.Id)
+                    const first = String(u.FirstName || '').trim()
+                    const last = String(u.LastName || '').trim()
+                    const full = [first, last].filter(Boolean).join(' ')
+                    if (uId && full) userNames.set(uId, full)
+                }
+            }
+
+            const seenTfd = new Set<string>()
+            for (const tfd of rawTfdItems) {
+                const dateFrom = String(tfd?.DateFrom || '').slice(0, 10)
+                const dateTo = String(tfd?.DateTo || dateFrom).slice(0, 10)
+                if (!dateFrom) continue
+                const tId = tfd?.Teacher?.Id ? Number(tfd.Teacher.Id) : undefined
+                const teacherName = (tId && userNames.get(tId)) || ''
+                if (!teacherName) continue
+                const timeFrom = tfd?.TimeFrom ? String(tfd.TimeFrom).slice(0, 5) : undefined
+                const timeTo = tfd?.TimeTo ? String(tfd.TimeTo).slice(0, 5) : undefined
+                const reason = String(tfd?.Name || '').trim() || undefined
+                const dedupeKey = `${tId || teacherName}_${dateFrom}_${dateTo}_${timeFrom || ''}_${timeTo || ''}`
+                if (seenTfd.has(dedupeKey)) continue
+                seenTfd.add(dedupeKey)
+                teacherAbsences.push({
+                    id: tfd?.Id ?? dedupeKey,
+                    teacherId: tId,
+                    teacherName,
+                    dateFrom,
+                    dateTo,
+                    timeFrom,
+                    timeTo,
+                    reason
+                })
+            }
+            teacherAbsences.sort((a, b) => a.dateFrom.localeCompare(b.dateFrom) || a.teacherName.localeCompare(b.teacherName))
+        }
 
         const eventsByDate: Record<string, TimetableEvent[]> = {}
 
@@ -513,7 +608,7 @@ export async function fetchSmartTimetable(
             const { dateStr, isoStr } = weekDates[dName]
             const dayRealized = topicsMap[isoStr] || {}
             const periodsRaw = rawWeekTimetable[isoStr]
-            const dayLessons = parseRawDayLessons(periodsRaw, userNames, classroomMap, dayRealized)
+            const dayLessons = parseRawDayLessons(periodsRaw, userNames, classroomMap, dayRealized, isoStr, teacherAbsences)
 
             const dayEvents = (eventsByDate[isoStr] || []).map((ev) => {
                 if (ev.lessonNumber !== undefined && ev.lessonNumber !== null) {
@@ -546,7 +641,14 @@ export async function fetchSmartTimetable(
 
         let nextUpcomingDay: DaySchedule | undefined = undefined
         if (futureCandidateRaw) {
-            const nextLessons = parseRawDayLessons(futureCandidateRaw.periodsRaw, userNames, classroomMap, {})
+            const nextLessons = parseRawDayLessons(
+                futureCandidateRaw.periodsRaw,
+                userNames,
+                classroomMap,
+                {},
+                futureCandidateRaw.isoStr,
+                teacherAbsences
+            )
             nextUpcomingDay = {
                 dayName: futureCandidateRaw.dayName,
                 date: futureCandidateRaw.dateStr,
@@ -582,11 +684,15 @@ export async function fetchSmartTimetable(
             schedule.forEach(collectDay)
             if (nextUpcomingDay) collectDay(nextUpcomingDay)
             collectEvents(allCalendarEvents)
+            teacherAbsences.forEach((a) => {
+                if (a.reason) textsToTranslate.add(a.reason)
+            })
 
             if (targetCode !== 'en') {
                 textsToTranslate.add('Odwołane')
                 textsToTranslate.add('Zastępstwo')
                 textsToTranslate.add('Zastępstwo za:')
+                textsToTranslate.add('Nieobecność nauczyciela')
             }
 
             const translatedMap = await translateBatch(Array.from(textsToTranslate), targetCode)
@@ -606,6 +712,13 @@ export async function fetchSmartTimetable(
             const cancelledWord = targetCode === 'en' ? 'Cancelled' : (translatedMap['Odwołane'] || 'Cancelled')
             const substitutionWord = targetCode === 'en' ? 'Substitution' : (translatedMap['Zastępstwo'] || 'Substitution')
             const subForPrefix = targetCode === 'en' ? 'Substitution for:' : (translatedMap['Zastępstwo za:'] || 'Substitution for:')
+            const teacherAbsentWord = targetCode === 'en' ? 'Teacher absent' : (translatedMap['Nieobecność nauczyciela'] || 'Teacher absent')
+
+            teacherAbsences.forEach((a) => {
+                if (a.reason && translatedMap[a.reason]) {
+                    a.reason = translatedMap[a.reason]
+                }
+            })
 
             const applyDay = (day: typeof schedule[number]) => {
                 day.lessons.forEach((l) => {
@@ -618,6 +731,10 @@ export async function fetchSmartTimetable(
                             l.teacherAbsenceReason = `${subForPrefix} ` + l.teacherAbsenceReason.slice('Zastępstwo za: '.length)
                         } else if (l.teacherAbsenceReason === 'Zastępstwo') {
                             l.teacherAbsenceReason = substitutionWord
+                        } else if (l.teacherAbsenceReason === 'Nieobecność nauczyciela') {
+                            l.teacherAbsenceReason = teacherAbsentWord
+                        } else if (translatedMap[l.teacherAbsenceReason]) {
+                            l.teacherAbsenceReason = translatedMap[l.teacherAbsenceReason]
                         }
                     }
                 })
@@ -636,7 +753,8 @@ export async function fetchSmartTimetable(
                 weekEnd: fridayIso,
                 schedule,
                 nextUpcomingDay,
-                calendarEvents: allCalendarEvents.length > 0 ? allCalendarEvents : schedule.flatMap((d) => d.events)
+                calendarEvents: allCalendarEvents.length > 0 ? allCalendarEvents : schedule.flatMap((d) => d.events),
+                teacherAbsences
             }
         }
     } catch (error: any) {

@@ -8,7 +8,8 @@ import {
   CheckCircle2,
   GraduationCap,
   Inbox,
-  Clock
+  Clock,
+  UserX
 } from 'lucide-react'
 import { SmartTimetableResult, LessonItem, TimetableEvent, DaySchedule } from '@/models/timetable.model'
 import { GradesResult, GradeItem } from '@/models/grade.model'
@@ -33,6 +34,7 @@ import {
   resolveEventBadgeLabel
 } from '@/utils/badge.util'
 import { calculateSubjectWeightedAverage } from '@/utils/grade.util'
+import { getTeacherAbsencesForDate, formatTeacherAbsenceSpan } from '@/utils/teacher-absence.util'
 import { cn } from '@/utils/cn.util'
 import { MacGroupBox, MacPushButton } from './mac-primitives'
 import { DesktopNavSection } from './desktop-sidebar'
@@ -182,14 +184,20 @@ export function DesktopOverview({
     ? `${isDisplayToday ? pickText(lang, { pl: 'Dzisiaj', en: 'Today' }) : getWeekdayLongLabel(displayDay.dayName, lang)} · ${displayDay.date}`
     : t.schedule
 
+  const displayDayAbsences = useMemo(() => {
+    const source = todayTimetableData || timetableData
+    if (!displayDay?.isoDate || !source?.teacherAbsences?.length) return []
+    return getTeacherAbsencesForDate(source.teacherAbsences, displayDay.isoDate)
+  }, [todayTimetableData, timetableData, displayDay?.isoDate])
+
   return (
     <div className="w-full max-w-[1440px] mx-auto px-6 py-3.5 flex flex-col gap-3.5 select-none">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 md:auto-rows-fr gap-3.5 items-stretch">
         <MacGroupBox
-          className="cursor-pointer"
-          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
+          className="h-full cursor-pointer"
+          contentClassName="flex-1 h-full hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
         >
-          <div onClick={() => onNavigate('timetable')} className="flex flex-col justify-between h-full gap-2">
+          <div onClick={() => onNavigate('timetable')} className="flex-1 flex flex-col justify-between h-full gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)]">
                 {lessonFocus?.state === 'active'
@@ -228,10 +236,10 @@ export function DesktopOverview({
         </MacGroupBox>
 
         <MacGroupBox
-          className="cursor-pointer"
-          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
+          className="h-full cursor-pointer"
+          contentClassName="flex-1 h-full hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
         >
-          <div onClick={() => onNavigate('grades')} className="flex flex-col justify-between h-full gap-2">
+          <div onClick={() => onNavigate('grades')} className="flex-1 flex flex-col justify-between h-full gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)]">
                 {t.gpaTitle}
@@ -245,17 +253,24 @@ export function DesktopOverview({
               <div className="flex items-center gap-1">
                 {recentGrades.slice(0, 4).map((g, i) => {
                   const st = getGradeBadgeStyle(g.grade)
+                  const subjectName = g.subject || ''
                   return (
-                    <span
-                      key={i}
+                    <button
+                      key={`${g.id || i}-${g.grade}`}
+                      type="button"
+                      title={[subjectName, g.category].filter(Boolean).join(' · ') || undefined}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onOpenGradeInGrades(g, subjectName)
+                      }}
                       className={cn(
-                        'min-w-[24px] h-[24px] px-1 rounded-[9px] text-[12px] font-semibold flex items-center justify-center tabular-nums',
+                        'min-w-[24px] h-[24px] px-1 rounded-[9px] text-[12px] font-semibold flex items-center justify-center tabular-nums cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-95',
                         st.bg,
                         st.text
                       )}
                     >
                       {g.grade}
-                    </span>
+                    </button>
                   )
                 })}
               </div>
@@ -264,10 +279,10 @@ export function DesktopOverview({
         </MacGroupBox>
 
         <MacGroupBox
-          className="cursor-pointer"
-          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
+          className="h-full cursor-pointer"
+          contentClassName="flex-1 h-full hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
         >
-          <div onClick={() => onNavigate('attendance')} className="flex flex-col justify-between h-full gap-2">
+          <div onClick={() => onNavigate('attendance')} className="flex-1 flex flex-col justify-between h-full gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)]">
                 {t.attendanceRate}
@@ -302,10 +317,10 @@ export function DesktopOverview({
         </MacGroupBox>
 
         <MacGroupBox
-          className="cursor-pointer"
-          contentClassName="hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
+          className="h-full cursor-pointer"
+          contentClassName="flex-1 h-full hover:bg-[var(--mac-fill-4)] transition-colors flex flex-col justify-between min-h-[92px]"
         >
-          <div onClick={() => onNavigate('inbox')} className="flex flex-col justify-between h-full gap-2">
+          <div onClick={() => onNavigate('inbox')} className="flex-1 flex flex-col justify-between h-full gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--mac-label-2)]">
                 {t.messagesInbox}
@@ -342,6 +357,32 @@ export function DesktopOverview({
             }
             noPadding
           >
+            {displayDayAbsences.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onNavigate('timetable')}
+                className="w-full px-4 py-2 bg-[var(--ios-orange-subtle)]/35 border-b border-[var(--mac-row-divider)] flex items-center justify-between gap-2 text-left hover:bg-[var(--ios-orange-subtle)]/50 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <UserX className="w-3.5 h-3.5 text-[var(--mac-orange)] shrink-0" />
+                  <span className="text-[11px] font-semibold text-[var(--mac-orange)] shrink-0">
+                    {pickText(lang, { pl: 'Nieobecni:', en: 'Absent:' })}
+                  </span>
+                  <span className="text-[11px] text-[var(--mac-label-1)] truncate">
+                    {displayDayAbsences
+                      .map((a) =>
+                        a.timeFrom && a.timeTo
+                          ? `${a.teacherName} (${formatTeacherAbsenceSpan(a, lang, { includeDate: false })})`
+                          : a.teacherName
+                      )
+                      .join(', ')}
+                  </span>
+                </div>
+                <span className="text-[10px] font-semibold text-[var(--mac-orange)] shrink-0 tabular-nums">
+                  {displayDayAbsences.length}
+                </span>
+              </button>
+            )}
             {displayDay && displayDay.lessons.length > 0 ? (
               <div className="mac-divide-y flex-1 flex flex-col">
                 {(() => {
@@ -423,6 +464,11 @@ export function DesktopOverview({
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
+                            {!lesson.isCancelled && !lesson.isSubstitution && lesson.teacherAbsent && (
+                              <span className="px-2 py-0.5 rounded-full bg-[var(--ios-orange-subtle)] text-[var(--mac-orange)] text-[10px] font-semibold">
+                                {pickText(lang, { pl: 'Nieobecny', en: 'Absent' })}
+                              </span>
+                            )}
                             {lesson.isSubstitution && !lesson.isCancelled && (
                               <span className="px-2 py-0.5 rounded-full bg-[var(--ios-purple-subtle)] text-[var(--mac-purple)] text-[10px] font-semibold">
                                 {pickText(lang, { pl: 'Zastępstwo', en: 'Sub' })}

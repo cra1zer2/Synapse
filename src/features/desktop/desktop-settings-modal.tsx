@@ -78,6 +78,11 @@ interface DesktopSettingsModalProps {
   onToggleShowFullSubjectNames: (val: boolean) => void
   showHomeworks: boolean
   onToggleShowHomeworks: (val: boolean) => void
+  showTeacherAbsences: boolean
+  onToggleShowTeacherAbsences: (val: boolean) => void
+  vocationalSubjects: string[]
+  availableSubjects: string[]
+  onToggleVocationalSubject: (subject: string) => void
   enableGradeSimulator: boolean
   onToggleEnableGradeSimulator: (val: boolean) => void
   showLuckyNumberBanner: boolean
@@ -117,6 +122,11 @@ export function DesktopSettingsModal({
   onToggleShowFullSubjectNames,
   showHomeworks,
   onToggleShowHomeworks,
+  showTeacherAbsences,
+  onToggleShowTeacherAbsences,
+  vocationalSubjects,
+  availableSubjects,
+  onToggleVocationalSubject,
   enableGradeSimulator,
   onToggleEnableGradeSimulator,
   showLuckyNumberBanner,
@@ -680,6 +690,14 @@ export function DesktopSettingsModal({
                   trailing={<MacSwitch checked={showHomeworks} onChange={onToggleShowHomeworks} />}
                 />
                 <MacFormRow
+                  title={pickText(currentLang, { pl: 'Nieobecności nauczycieli (Beta)', en: 'Teacher absences (Beta)' })}
+                  subtitle={pickText(currentLang, {
+                    pl: 'Oznaczaj w planie, na pulpicie i w terminarzu nieobecnych nauczycieli',
+                    en: 'Highlight absent teachers across schedule, overview, and deadlines'
+                  })}
+                  trailing={<MacSwitch checked={showTeacherAbsences} onChange={onToggleShowTeacherAbsences} />}
+                />
+                <MacFormRow
                   isLast
                   title={pickText(currentLang, { pl: 'Szczęśliwy numerek', en: 'Lucky number badge' })}
                   subtitle={pickText(currentLang, {
@@ -722,6 +740,58 @@ export function DesktopSettingsModal({
                       />
                     }
                   />
+                )}
+              </MacGroupBox>
+
+              <MacGroupBox
+                title={pickText(currentLang, {
+                  pl: `Przedmioty zawodowe (próg 75%)${vocationalSubjects.length > 0 ? ` · ${vocationalSubjects.length}` : ''}`,
+                  en: `Vocational subjects (75% threshold)${vocationalSubjects.length > 0 ? ` · ${vocationalSubjects.length}` : ''}`
+                })}
+                subtitle={pickText(currentLang, {
+                  pl: 'Wybrane przedmioty pojawią się na górze Frekwencji i będą oznaczone na czerwono poniżej 75%',
+                  en: 'Selected subjects are prioritized in Attendance and highlighted red below 75%'
+                })}
+                noPadding
+              >
+                {availableSubjects.length > 0 ? (
+                  <div className="max-h-[220px] overflow-y-auto mac-divide-y">
+                    {availableSubjects.map((subj) => {
+                      const isChecked = vocationalSubjects.includes(subj)
+                      return (
+                        <button
+                          key={subj}
+                          type="button"
+                          onClick={() => onToggleVocationalSubject(subj)}
+                          className={cn(
+                            'w-full px-3.5 py-2 flex items-center justify-between gap-3 text-left transition-colors cursor-pointer',
+                            isChecked ? 'bg-[var(--ios-blue-subtle)]/30 hover:bg-[var(--ios-blue-subtle)]/45' : 'hover:bg-[var(--mac-fill-4)]'
+                          )}
+                        >
+                          <span className="text-[12.5px] font-medium text-[var(--mac-label-1)] leading-snug min-w-0 flex-1 break-words">
+                            {subj}
+                          </span>
+                          <span
+                            className={cn(
+                              'w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center shrink-0 transition-colors',
+                              isChecked
+                                ? 'bg-[var(--mac-blue)] border-[var(--mac-blue)] text-white'
+                                : 'border-[var(--mac-label-3)] bg-transparent'
+                            )}
+                          >
+                            {isChecked && <Check className="w-3 h-3" strokeWidth={2.8} />}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="px-3.5 py-4 text-[12px] text-[var(--mac-label-2)] text-center">
+                    {pickText(currentLang, {
+                      pl: 'Brak załadowanych przedmiotów. Odśwież dane w zakładce Frekwencja lub Plan.',
+                      en: 'No subjects loaded yet. Refresh Attendance or Schedule first.'
+                    })}
+                  </div>
                 )}
               </MacGroupBox>
             </>

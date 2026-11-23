@@ -28,7 +28,7 @@ export function MacGroupBox({
   noPadding = false
 }: MacGroupBoxProps) {
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
+    <div className={cn('flex flex-col gap-1.5 min-w-0', className)}>
       {(title || trailing || subtitle) && (
         <div className="flex items-end justify-between gap-3 px-1">
           <div className="min-w-0">
@@ -349,12 +349,16 @@ export function MacSegmentedControl<T extends string | number>({
 interface MacPopupSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   wrapperClassName?: string
   surface?: 'content' | 'toolbar'
+  icon?: ReactNode
+  active?: boolean
 }
 
 export function MacPopupSelect({
   wrapperClassName = '',
   className = '',
   surface = 'content',
+  icon,
+  active = false,
   children,
   ...rest
 }: MacPopupSelectProps) {
@@ -367,12 +371,32 @@ export function MacPopupSelect({
         wrapperClassName
       )}
     >
+      {icon && (
+        <span
+          className={cn(
+            'pointer-events-none absolute flex items-center justify-center shrink-0',
+            isToolbar ? 'left-3' : 'left-2.5',
+            active ? 'text-[var(--mac-blue)]' : 'text-[var(--mac-blue)]/90'
+          )}
+        >
+          {icon}
+        </span>
+      )}
       <select
         className={cn(
-          'rounded-full text-[var(--mac-label-1)] appearance-none outline-none mac-focus-ring cursor-pointer transition-all duration-150',
+          'rounded-full appearance-none outline-none mac-focus-ring cursor-pointer transition-all duration-150',
           isToolbar
-            ? 'w-auto h-[36px] mac-glass-pill hover:brightness-[0.98] dark:hover:brightness-110 pl-3.5 pr-8 text-[13px] font-medium'
-            : 'w-full h-[28px] bg-[var(--mac-fill-2)] hover:bg-[var(--mac-fill-1)] px-3 pr-7 text-[12px] font-medium',
+            ? cn(
+                'w-auto h-[36px] mac-glass-pill hover:brightness-[0.98] dark:hover:brightness-110 pr-8 text-[13px] font-medium',
+                icon ? 'pl-8' : 'pl-3.5',
+                active
+                  ? '!bg-[var(--ios-blue-subtle)] text-[var(--mac-blue)] ring-1 ring-[var(--mac-blue)]/45 font-semibold'
+                  : 'text-[var(--mac-label-1)] ring-1 ring-[var(--mac-label-1)]/12'
+              )
+            : cn(
+                'w-full h-[28px] bg-[var(--mac-fill-2)] hover:bg-[var(--mac-fill-1)] pr-7 text-[12px] font-medium text-[var(--mac-label-1)]',
+                icon ? 'pl-7' : 'pl-3'
+              ),
           className
         )}
         {...rest}
@@ -381,7 +405,8 @@ export function MacPopupSelect({
       </select>
       <ChevronsUpDown
         className={cn(
-          'w-3.5 h-3.5 text-[var(--mac-label-2)] pointer-events-none absolute shrink-0',
+          'w-3.5 h-3.5 pointer-events-none absolute shrink-0',
+          active ? 'text-[var(--mac-blue)]' : 'text-[var(--mac-label-2)]',
           isToolbar ? 'right-3' : 'right-2.5'
         )}
         strokeWidth={2}

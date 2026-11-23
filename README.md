@@ -1,4 +1,4 @@
-# Synapse — "E-Dziennik" `v2.0 Beta`
+# Synapse — "E-Dziennik" `v0.4`
 
 **[🇬🇧 English](README.md)** · **[🇵🇱 Polski](README.pl.md)**
 
@@ -8,7 +8,7 @@
 
 > **🚀 Live Preview & Instant Demo:** Open **[synapse-ten-smoky.vercel.app](https://synapse-ten-smoky.vercel.app)** and sign in with **`demo` / `demo`** (student) or **`demor` / `demo`** (parent) to explore the full app right away — no Librus account needed.
 >
-> **✨ v2.0 Beta Full Release:** Synapse **v2.0.0-beta.1** unifies the full **Desktop PC Workspace** (Overview, Weekly 0–9 Timetable, Grades & What-If Simulator, Attendance & e-Excuses, Messages & Notices) with the refined **Mobile experience** (Widgets Dashboard & Bottom Navigation Bar) into one cohesive public beta release.
+> **🧪 Active Early Development (`v0.4.0`):** Synapse is actively evolving toward `v1.0.0`. It already unifies the **Desktop PC Workspace** (Overview, Weekly 0–9 Timetable, Grades & What-If Simulator, Attendance & e-Excuses, Messages & Notices) with the **Mobile experience** (Widgets Dashboard & Bottom Navigation Bar), while UI polish and new features continue to land in regular `0.x` releases.
 
 > Designed as an adaptive web and PWA hybrid, Synapse delivers fluid touch cards and spring transitions on smartphones alongside a multi-column macOS-inspired workspace on desktop monitors — with zero ads, zero tracking, and no central servers.
 

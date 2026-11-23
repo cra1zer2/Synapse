@@ -7,6 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { UserX } from 'lucide-react'
 import { LessonItem } from '@/models/timetable.model'
 import { AppDictionary, AppLanguage, pickText } from '@/config/dictionary.config'
 import { parseLessonTimeRange, getCurrentTimeMinutes } from '@/utils/time.util'
@@ -75,6 +76,22 @@ export function LessonDetailModal({
               {activeData.time || activeData.flag || ''}
             </span>
           </div>
+
+          {!activeData.isCancelled && !activeData.isSubstitution && activeData.teacherAbsent && (
+            <div className="rounded-[18px] bg-[var(--ios-orange-subtle)] px-4 py-3 flex items-start gap-2.5 ios-tile">
+              <UserX className="w-4 h-4 text-[var(--ios-orange)] shrink-0 mt-0.5" />
+              <div className="min-w-0 flex flex-col gap-0.5">
+                <span className="text-[12px] font-semibold text-[var(--ios-orange)]">
+                  {pickText(lang, { pl: 'Nauczyciel nieobecny', en: 'Teacher absent' })}
+                </span>
+                {activeData.teacherAbsenceReason && (
+                  <span className="text-[13px] text-[var(--ios-label)] leading-snug">
+                    {activeData.teacherAbsenceReason}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="ios-well rounded-[20px] p-3.5 px-4 flex flex-col gap-1">
             <span className="text-[12px] font-medium text-[var(--ios-secondary)]">

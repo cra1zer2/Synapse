@@ -46,6 +46,8 @@ export function useAppSettings() {
   const [allowStudentJustifications, setAllowStudentJustifications] = useState(false)
   const [enableGradeSimulator, setEnableGradeSimulator] = useState(true)
   const [showHomeworks, setShowHomeworks] = useState(false)
+  const [showTeacherAbsences, setShowTeacherAbsences] = useState(false)
+  const [vocationalSubjects, setVocationalSubjects] = useState<string[]>([])
   const [showMobileTodayAttendance, setShowMobileTodayAttendance] = useState(false)
   const [dashboardOrder, setDashboardOrder] = useState<DashboardWidgetId[]>(DEFAULT_DASHBOARD_ORDER)
   const [dashboardVisible, setDashboardVisible] =
@@ -84,6 +86,7 @@ export function useAppSettings() {
     const rawSim = localStorage.getItem('synapse_grade_simulator')
     const savedSim = rawSim === null ? true : rawSim === 'true'
     const savedHw = localStorage.getItem('synapse_show_homeworks') === 'true'
+    const savedTeacherAbsences = localStorage.getItem('synapse_show_teacher_absences') === 'true'
     const savedMobileTodayAtt = localStorage.getItem('synapse_mobile_today_attendance') === 'true'
     const savedLuckyBanner = localStorage.getItem('synapse_show_lucky_banner') === 'true'
     const savedLuckyDismissed = localStorage.getItem('synapse_lucky_dismissed_date') || ''
@@ -96,6 +99,7 @@ export function useAppSettings() {
     setAllowStudentJustifications(savedStudentJust)
     setEnableGradeSimulator(savedSim)
     setShowHomeworks(savedHw)
+    setShowTeacherAbsences(savedTeacherAbsences)
     setShowMobileTodayAttendance(savedMobileTodayAtt)
     setShowLuckyNumberBanner(savedLuckyBanner)
     setLuckyDismissedDate(savedLuckyDismissed)
@@ -116,6 +120,15 @@ export function useAppSettings() {
       if (rawVis) {
         const parsed = JSON.parse(rawVis) as Partial<Record<DashboardWidgetId, boolean>>
         setDashboardVisible({ ...DEFAULT_DASHBOARD_VISIBLE, ...parsed })
+      }
+    } catch {}
+    try {
+      const rawVoc = localStorage.getItem('synapse_vocational_subjects_v1')
+      if (rawVoc) {
+        const parsed = JSON.parse(rawVoc)
+        if (Array.isArray(parsed)) {
+          setVocationalSubjects(parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0))
+        }
       }
     } catch {}
 
@@ -171,6 +184,22 @@ export function useAppSettings() {
     localStorage.setItem('synapse_show_homeworks', String(val))
   }
 
+  const handleToggleShowTeacherAbsences = (val: boolean) => {
+    setShowTeacherAbsences(val)
+    localStorage.setItem('synapse_show_teacher_absences', String(val))
+  }
+
+  const handleToggleVocationalSubject = (subject: string) => {
+    const clean = subject.trim()
+    if (!clean) return
+    setVocationalSubjects((prev) => {
+      const exists = prev.includes(clean)
+      const next = exists ? prev.filter((s) => s !== clean) : [...prev, clean]
+      localStorage.setItem('synapse_vocational_subjects_v1', JSON.stringify(next))
+      return next
+    })
+  }
+
   const handleToggleMobileTodayAttendance = (val: boolean) => {
     setShowMobileTodayAttendance(val)
     localStorage.setItem('synapse_mobile_today_attendance', String(val))
@@ -209,6 +238,8 @@ export function useAppSettings() {
     allowStudentJustifications,
     enableGradeSimulator,
     showHomeworks,
+    showTeacherAbsences,
+    vocationalSubjects,
     showMobileTodayAttendance,
     dashboardOrder,
     dashboardVisible,
@@ -222,6 +253,8 @@ export function useAppSettings() {
     handleToggleAllowStudentJustifications,
     handleToggleEnableGradeSimulator,
     handleToggleShowHomeworks,
+    handleToggleShowTeacherAbsences,
+    handleToggleVocationalSubject,
     handleToggleMobileTodayAttendance,
     handleChangeDashboardOrder,
     handleToggleDashboardWidget,

@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { ArrowDown, SquarePen } from 'lucide-react'
+import type { SmartTimetableResult } from '@/models/timetable.model'
 import { cn } from '@/utils/cn.util'
 import { getDictionary } from '@/config/dictionary.config'
 import { isStudentUsername } from '@/utils/account.util'
@@ -28,6 +29,27 @@ import type { DesktopNavSection } from '@/features/desktop/desktop-sidebar'
 
 type DashboardSubview = 'schedule' | 'upcoming' | 'grades' | 'attendance' | 'messages' | 'announcements' | null
 
+function filterTeacherAbsencesData(
+  data: SmartTimetableResult | null,
+  enabled: boolean
+): SmartTimetableResult | null {
+  if (!data || enabled) return data
+  const stripLessons = (lessons: SmartTimetableResult['schedule'][number]['lessons']) =>
+    lessons.map((l) =>
+      !l.isCancelled && !l.isSubstitution && l.teacherAbsent
+        ? { ...l, teacherAbsent: false, teacherAbsenceReason: undefined }
+        : l
+    )
+  return {
+    ...data,
+    teacherAbsences: [],
+    schedule: data.schedule.map((d) => ({ ...d, lessons: stripLessons(d.lessons) })),
+    nextUpcomingDay: data.nextUpcomingDay
+      ? { ...data.nextUpcomingDay, lessons: stripLessons(data.nextUpcomingDay.lessons) }
+      : undefined
+  }
+}
+
 export default function Home() {
   const settings = useAppSettings()
   const {
@@ -39,6 +61,8 @@ export default function Home() {
     allowStudentJustifications,
     enableGradeSimulator,
     showHomeworks,
+    showTeacherAbsences,
+    vocationalSubjects,
     showMobileTodayAttendance,
     dashboardOrder,
     dashboardVisible,
@@ -106,10 +130,19 @@ export default function Home() {
           ? activeSubview
           : null
 
+  const effectiveTimetableData = useMemo(
+    () => filterTeacherAbsencesData(timetable.timetableData, showTeacherAbsences),
+    [timetable.timetableData, showTeacherAbsences]
+  )
+  const effectiveTodayTimetableData = useMemo(
+    () => filterTeacherAbsencesData(timetable.todayTimetableData, showTeacherAbsences),
+    [timetable.todayTimetableData, showTeacherAbsences]
+  )
+
   const { badges: sectionBadges } = useSectionBadges({
     username: account.username,
-    timetableData: timetable.timetableData,
-    todayTimetableData: timetable.todayTimetableData,
+    timetableData: effectiveTimetableData,
+    todayTimetableData: effectiveTodayTimetableData,
     gradesData: timetable.gradesData,
     attendanceData: timetable.attendanceData,
     activeSection: activeBadgeSection,
@@ -415,14 +448,18 @@ export default function Home() {
         onToggleEnableGradeSimulator={settings.handleToggleEnableGradeSimulator}
         showHomeworks={showHomeworks}
         onToggleShowHomeworks={settings.handleToggleShowHomeworks}
+        showTeacherAbsences={showTeacherAbsences}
+        onToggleShowTeacherAbsences={settings.handleToggleShowTeacherAbsences}
+        vocationalSubjects={vocationalSubjects}
+        onToggleVocationalSubject={settings.handleToggleVocationalSubject}
         showLuckyNumberBanner={showLuckyNumberBanner}
         onToggleShowLuckyNumberBanner={settings.handleToggleShowLuckyNumberBanner}
         isStudent={isStudentUser}
         canSubmitExcuse={canSubmitExcuse}
         allowStudentJustifications={allowStudentJustifications}
         onToggleAllowStudentJustifications={settings.handleToggleAllowStudentJustifications}
-        timetableData={timetable.timetableData}
-        todayTimetableData={timetable.todayTimetableData}
+        timetableData={effectiveTimetableData}
+        todayTimetableData={effectiveTodayTimetableData}
         gradesData={timetable.gradesData}
         attendanceData={timetable.attendanceData}
         timetableError={timetable.timetableError}
@@ -469,8 +506,8 @@ export default function Home() {
   const widgetCtx: DashboardWidgetRenderContext = {
     lang,
     t,
-    timetableData: timetable.timetableData,
-    todayTimetableData: timetable.todayTimetableData,
+    timetableData: effectiveTimetableData,
+    todayTimetableData: effectiveTodayTimetableData,
     gradesData: timetable.gradesData,
     attendanceData: timetable.attendanceData,
     isUpdating: timetable.isUpdating,
@@ -624,8 +661,8 @@ export default function Home() {
                       mode="tab"
                       onCloseSubview={closeSubview}
                       onSheetChange={setHasScheduleSheet}
-                      timetableData={timetable.timetableData}
-                      todayTimetableData={timetable.todayTimetableData}
+                      timetableData={effectiveTimetableData}
+                      todayTimetableData={effectiveTodayTimetableData}
                       timetableError={timetable.timetableError}
                       onRetry={handleManualRefresh}
                       selectedDay={timetable.selectedDay}
@@ -743,8 +780,8 @@ export default function Home() {
             }
             onCloseSubview={closeSubview}
             onSheetChange={setHasScheduleSheet}
-            timetableData={timetable.timetableData}
-            todayTimetableData={timetable.todayTimetableData}
+            timetableData={effectiveTimetableData}
+            todayTimetableData={effectiveTodayTimetableData}
             timetableError={timetable.timetableError}
             onRetry={handleManualRefresh}
             selectedDay={timetable.selectedDay}
@@ -851,6 +888,8 @@ export default function Home() {
         onToggleEnableGradeSimulator={settings.handleToggleEnableGradeSimulator}
         showHomeworks={showHomeworks}
         onToggleShowHomeworks={settings.handleToggleShowHomeworks}
+        showTeacherAbsences={showTeacherAbsences}
+        onToggleShowTeacherAbsences={settings.handleToggleShowTeacherAbsences}
         dashboardOrder={dashboardOrder}
         onChangeDashboardOrder={settings.handleChangeDashboardOrder}
         dashboardVisible={dashboardVisible}

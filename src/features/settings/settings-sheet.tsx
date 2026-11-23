@@ -54,6 +54,8 @@ interface SettingsSheetProps {
   onToggleEnableGradeSimulator?: (val: boolean) => void
   showHomeworks?: boolean
   onToggleShowHomeworks?: (val: boolean) => void
+  showTeacherAbsences?: boolean
+  onToggleShowTeacherAbsences?: (val: boolean) => void
   dashboardOrder?: DashboardWidgetId[]
   onChangeDashboardOrder?: (newOrder: DashboardWidgetId[]) => void
   dashboardVisible?: Record<DashboardWidgetId, boolean>
@@ -106,6 +108,8 @@ export function SettingsSheet({
   onToggleEnableGradeSimulator,
   showHomeworks = false,
   onToggleShowHomeworks,
+  showTeacherAbsences = false,
+  onToggleShowTeacherAbsences,
   dashboardOrder = DEFAULT_DASHBOARD_ORDER,
   onChangeDashboardOrder,
   dashboardVisible = DEFAULT_DASHBOARD_VISIBLE,
@@ -426,13 +430,13 @@ export function SettingsSheet({
         onToggleEnableGradeSimulator={onToggleEnableGradeSimulator}
         showHomeworks={showHomeworks}
         onToggleShowHomeworks={onToggleShowHomeworks}
+        showTeacherAbsences={showTeacherAbsences}
+        onToggleShowTeacherAbsences={onToggleShowTeacherAbsences}
         showLuckyNumberBanner={showLuckyNumberBanner}
         onToggleShowLuckyNumberBanner={onToggleShowLuckyNumberBanner}
         isStudentUser={isStudentUser}
         allowStudentJustifications={allowStudentJustifications}
         onToggleAllowStudentJustifications={onToggleAllowStudentJustifications}
-        navMode={navMode}
-        onSelectNavMode={onSelectNavMode}
         onOpenTimingsDebug={() => setShowTimingsDebug(true)}
         t={t}
       />
